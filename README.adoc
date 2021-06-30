@@ -1,0 +1,23 @@
+= School Timetabling (Python)
+
+== Prerequisites
+
+Using OptaPlanner in Python requires GraalVM to
+be installed and GRAALVM_HOME to point to its
+installation directory.
+
+== Build the application
+
+[source, shell]
+----
+$ mvn clean install
+----
+
+== Run the application
+
+. Start the application with Maven:
+
+[source, shell]
+----
+$ mvn exec:exec
+----

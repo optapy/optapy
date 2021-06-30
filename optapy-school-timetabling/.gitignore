@@ -1,0 +1,12 @@
+/venv
+/__pycache__
+
+# Eclipse, Netbeans and IntelliJ files
+/.*
+!.gitignore
+!.dockerignore
+!.mvn
+/nbproject
+/*.ipr
+/*.iws
+/*.iml
