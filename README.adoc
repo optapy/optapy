@@ -12,7 +12,22 @@ WARNING: Optapy is an experimental technology and is not supported in any way or
 
 == Building
 
-See `optapy/README.md` for details on building
+In the `optapy` directory, use the command below to
+build the optapy python wheel into the `dist` directory:
+
+[source,bash]
+----
+python -m build
+----
+
+You can then install it into a virtual environment using `pip`:
+
+[source,bash]
+----
+# Activate a virtual environment first
+source my_project/venv/bin/activate
+pip install dist/optapy-0.0.0-py3-none-any.whl
+----
 
 == Running
 
