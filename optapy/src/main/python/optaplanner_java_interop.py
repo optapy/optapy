@@ -7,8 +7,6 @@ except ImportError:
     # Try backported to PY<37 `importlib_resources`.
     import importlib_resources as pkg_resources
 
-print(os.path.join(os.path.dirname(sys.executable), 'test'))
-
 from . import jars
 import java
 

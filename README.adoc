@@ -1,23 +1,192 @@
-= School Timetabling (Python)
+= Optapy
+
+Optapy is an unofficial and experimental GraalVM Python Package
+that allows OptaPlanner Constraint Providers to be written using
+only Python code.
+
+WARNING: Optapy is an experimental technology and is not supported in any way or form. Additionally, it is ~10 times slower than using OptaPlanner in Java. It is not recommended for production use.
 
 == Prerequisites
 
-Using OptaPlanner in Python requires GraalVM to
-be installed and GRAALVM_HOME to point to its
-installation directory.
+- GraalVM 21.1.0 or higher installed
 
-== Build the application
+== Building
 
-[source, shell]
+See `optapy/README.md` for details on building
+
+== Running
+
+Running `run.sh` will run `optapy-school-timetabling/main.py`
+after building `optapy` and installing it to `optapy-school-timetabling/venv`.
+
+== Overview
+
+=== Domain
+
+In OptaPlanner, the domain is separated into three parts
+
+- Problem Facts, which do not change
+- Planning Entities, which have one or more planning variables
+- Planning Solution, which define the facts and entities of the problem
+
+==== Problem Facts
+
+To declare Problem Facts, use the `@ProblemFact` decorator
+
+[source,python]
 ----
-$ mvn clean install
+from optapy import ProblemFact
+@ProblemFact
+class Timeslot:
+    def __init__(self, id, dayOfWeek, startTime, endTime):
+        self.id = id
+        self.dayOfWeek = dayOfWeek
+        self.startTime = startTime
+        self.endTime = endTime
 ----
 
-== Run the application
+==== Planning Entities
 
-. Start the application with Maven:
+To declare Planning Entities, use the `@PlanningEntity` decorator
 
-[source, shell]
+[source,python]
 ----
-$ mvn exec:exec
+from optapy import PlanningEntity, PlanningId, PlanningVariable
+
+@PlanningEntity
+class Lesson:
+    def __init__(self, id, subject, teacher, studentGroup, timeslot=None, room=None):
+        self.id = id
+        self.subject = subject
+        self.teacher = teacher
+        self.studentGroup = studentGroup
+        self.timeslot = timeslot
+        self.room = room
+
+    @PlanningId
+    def getId(self):
+        return self.id
+
+    @PlanningVariable(Timeslot, valueRangeProviderRefs=["timeslotRange"])
+    def getTimeslot(self):
+        return self.timeslot
+
+    def setTimeslot(self, newTimeslot):
+        self.timeslot = newTimeslot
+
+    @PlanningVariable(Room, valueRangeProviderRefs=["roomRange"])
+    def getRoom(self):
+        return self.room
+
+    def setRoom(self, newRoom):
+        self.room = newRoom
 ----
+
+- `@PlanningVariable` method decorators are used to indicate what fields can change. The method MUST follow JavaBean style conventions and have a corresponding setter (i.e. `getRoom(self)`, `setRoom(self, newRoom)`). The first parameter of the decorator is the type of the Planning Variable (required). The `valueRangeProviderRefs` parameter tells OptaPlanner what value range providers on the Planning Solution this Planning Variable can take values from.
+
+- `@PlanningId` is used to uniquely identify an entity object of a particular class. The same Planning Id can be used on entities of different classes, but the ids of all entities in the same class must be different.
+
+==== Planning Solution
+
+To declare the Planning Solution, use the `@PlanningSolution` decorator
+
+[source,python]
+----
+from optapy import PlanningSolution, ProblemFactCollectionProperty, ValueRangeProvider, PlanningEntityCollectionProperty, PlanningScore
+
+@PlanningSolution
+class TimeTable:
+    def __init__(self, timeslotList=[], roomList=[], lessonList=[], score=None):
+        self.timeslotList = timeslotList
+        self.roomList = roomList
+        self.lessonList = lessonList
+        self.score = score
+
+    @ProblemFactCollectionProperty(Timeslot)
+    @ValueRangeProvider(id = "timeslotRange")
+    def getTimeslotList(self):
+        return self.timeslotList
+
+    @ProblemFactCollectionProperty(Room)
+    @ValueRangeProvider(id = "roomRange")
+    def getRoomList(self):
+        return self.roomList
+
+    @PlanningEntityCollectionProperty(Lesson)
+    def getLessonList(self):
+        return self.lessonList
+
+    @PlanningScore(HardSoftScore)
+    def getScore(self):
+        return self.score
+
+    def setScore(self, score):
+        self.score = score
+----
+
+- `@ValueRangeProvider(id)` is used to indicate a method returns values a Planning Variable can take. It can be referenced by its id in the `valueRangeProviderRefs` parameter of `@PlanningVariable`. It should also have a `@ProblemFactCollectionProperty` or a `@PlanningEntityCollectionProperty`.
+
+- `@ProblemFactCollectionProperty(type)` is used to indicate a method returns Problem Facts. The first parameter of the decorator is the type of the Problem Fact Collection (required). It should be a list.
+
+- `@ProblemFactCollectionProperty(type)` is used to indicate a method returns Planning Entities. The first parameter of the decorator is the type of the Planning Entity Collection (required). It should be a list.
+
+- `@PlanningScore(scoreType)` is used to tell OptaPlanner what field holds the score. The method MUST follow JavaBean style conventions and have a corresponding setter (i.e. `getScore(self)`, `setScore(self, score)`). The first parameter of the decorator is the score type (required).
+
+=== Constraints
+
+You define your constraints by using the ConstraintFactory
+[source,python]
+----
+import java
+from domain import Lesson
+from optapy import getClass
+
+# Get the Java class corresponding to the Lesson Python class
+LessonClass = getClass(Lesson)
+
+Joiners = java.type("org.optaplanner.core.api.score.stream.Joiners")
+HardSoftScore = java.type("org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore")
+
+@ConstraintProvider
+def defineConstraints(constraintFactory):
+    return [
+        # Hard constraints
+        roomConflict(constraintFactory),
+        # Other constraints here...
+    ]
+
+def roomConflict(constraintFactory):
+    # A room can accommodate at most one lesson at the same time.
+    return constraintFactory \
+            .fromUniquePair(LessonClass,
+            # ... in the same timeslot ...
+                Joiners.equal(lambda lesson: lesson.timeslot),
+            # ... in the same room ...
+                Joiners.equal(lambda lesson: lesson.room)) \
+            .penalize("Room conflict", HardSoftScore.ONE_HARD)
+----
+for more details on Constraint Streams, see https://docs.optaplanner.org/latest/optaplanner-docs/html_single/index.html#constraintStreams
+
+NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from` function, you access it like `constraintFactory["from"](class)`
+
+=== Solving
+
+[source,python]
+----
+from optapy import getClass, SolverConfig, PythonSolver
+from constraints import defineConstraints
+from domain import TimeTable, Lesson, generateProblem
+import java
+
+Duration = java.type("java.time.Duration")
+
+solverConfig = SolverConfig().withEntityClasses(getClass(Lesson)) \
+    .withSolutionClass(getClass(TimeTable)) \
+    .withConstraintProviderClass(getClass(defineConstraints)) \
+    .withTerminationSpentLimit(Duration.ofSeconds(30))
+
+solution = PythonSolver.solve(solverConfig, generateProblem())
+----
+
+`solution` will be a `TimeTable` instance with planning
+variables set to the final best solution found.
