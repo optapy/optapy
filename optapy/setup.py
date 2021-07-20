@@ -38,7 +38,7 @@ setup(
     packages=['optapy'],
     package_dir={'optapy': 'src/main/python'},
     python_requires='>=3.6',
-    install_requires=['pygal==2.4.0'],
+    install_requires=['JPype1'],
     cmdclass={'build_py': FetchDependencies},
     package_data={
         'optapy': ['classpath.txt'],

@@ -1,4 +1,3 @@
-import java
 from optapy import ProblemFact, PlanningEntity, PlanningSolution, PlanningId, PlanningScore, PlanningVariable, ValueRangeProvider, PlanningEntityCollectionProperty, ProblemFactCollectionProperty
 from datetime import time
 from functools import reduce
@@ -67,7 +66,7 @@ class Lesson:
                 ", teacher=" + str(self.teacher) + ", subject=" + str(self.subject) + \
                 ", studentGroup=" + str(self.studentGroup) + ")"
 
-HardSoftScore = java.type("org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore")
+import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore as HardSoftScore
 
 # For better toString; list default __str__ only print address for some reason
 def listString(aList):

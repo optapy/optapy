@@ -7,21 +7,18 @@ import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyNativeObject;
-import org.graalvm.polyglot.proxy.ProxyObject;
 import org.objectweb.asm.Type;
 import org.optaplanner.core.api.domain.entity.PlanningEntity;
 import org.optaplanner.core.api.domain.lookup.PlanningId;
 import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty;
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
+import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.core.api.score.stream.Constraint;
 import org.optaplanner.core.api.score.stream.ConstraintFactory;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 
 import java.io.PrintStream;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -31,8 +28,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -44,6 +41,39 @@ public class PythonWrapperGenerator {
      * Accessor
      */
     private static final Map<String, byte[]> classNameToBytecode = new HashMap<>();
+    private static Function<String, List<String>> pythonArrayIdToIdArray;
+    private static BiFunction<String, String, Object> pythonObjectIdAndAttributeNameToValue;
+    private static TriFunction<String, String, Object, Object> pythonObjectIdAndAttributeSetter;
+
+    public static Object getValueFromPythonObject(String objectId, String attributeName) {
+        return pythonObjectIdAndAttributeNameToValue.apply(objectId, attributeName);
+    }
+
+    public static void setValueOnPythonObject(String objectId, String attributeName, Object value) {
+        pythonObjectIdAndAttributeSetter.apply(objectId, attributeName, value);
+    }
+
+    public static void setPythonArrayIdToIdArray(Function<String, List<String>> function) {
+        pythonArrayIdToIdArray = function;
+    }
+
+    public static void setPythonObjectIdAndAttributeNameToValue(BiFunction<String, String, Object> function) {
+        pythonObjectIdAndAttributeNameToValue = function;
+    }
+
+    public static void setPythonObjectIdAndAttributeSetter(
+            TriFunction<String, String, Object, Object> setter) {
+        pythonObjectIdAndAttributeSetter = setter;
+    }
+
+    public static String getPythonObjectId(PythonObject pythonObject) {
+        String out = pythonObject.__get__optapy_Id();
+        return out;
+    }
+
+    public static PythonObject getPythonObject(PythonObject parent, String id) {
+        return parent.__get__optapy_ObjectMap().get(id);
+    }
 
     static final String pythonBindingFieldName = "__optaplannerPythonValue";
     static final String valueToInstanceMapFieldName = "__optaplannerPythonValueToInstanceMap";
@@ -75,36 +105,28 @@ public class PythonWrapperGenerator {
         return Array.newInstance(elementClass, 0).getClass();
     }
 
-    public static <T> T wrap(Class<T> javaClass, Value object) {
+    public static <T> T wrap(Class<T> javaClass, String object) {
         return wrap(javaClass, object, new HashMap<>());
     }
 
-    public static Value unwrap(Class<?> javaClass, Object object) {
-        try {
-            return (Value) javaClass.getField(pythonBindingFieldName).get(object);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            throw new IllegalStateException(e);
+    public static <T> T wrap(Class<T> javaClass, String object, Map<String, Object> valueObjectMap) {
+        if (object == null) {
+            return null;
         }
-    }
-
-    public static <T> T wrap(Class<T> javaClass, Value object, Map<Value, Object> valueObjectMap) {
         if (valueObjectMap.containsKey(object)) {
             return (T) valueObjectMap.get(object);
         }
-
-        if (object.isNull()) {
-            return null;
-        }
         try {
             if (javaClass.isArray()) {
-                int length = (int) object.getArraySize();
+                List<String> itemIds = pythonArrayIdToIdArray.apply(object);
+                int length = itemIds.size();
                 Object out = Array.newInstance(javaClass.getComponentType(), length);
                 for (int i = 0; i < length; i++) {
-                    Array.set(out, i, wrap(javaClass.getComponentType(), object.getArrayElement(i), valueObjectMap));
+                    Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i), valueObjectMap));
                 }
                 return (T) out;
             } else {
-                T out = (T) javaClass.getConstructor(Value.class, Map.class).newInstance(object, valueObjectMap);
+                T out = (T) javaClass.getConstructor(String.class, Map.class).newInstance(object, valueObjectMap);
                 valueObjectMap.put(object, out);
                 return out;
             }
@@ -113,7 +135,7 @@ public class PythonWrapperGenerator {
         }
     }
 
-    public static Supplier<Object> wrapObject(Class<?> javaClass, Value object) {
+    public static Supplier<Object> wrapObject(Class<?> javaClass, String object) {
         Object out = wrap(javaClass, object);
         return () -> out;
     }
@@ -142,12 +164,13 @@ public class PythonWrapperGenerator {
                     .getFieldDescriptor();
             MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofMethod(ConstraintProvider.class,
                     "defineConstraints", Constraint[].class, ConstraintFactory.class));
-            ResultHandle pythonMethod = methodCreator.readStaticField(valueField);
+
+            ResultHandle pythonProxy = methodCreator.readStaticField(valueField);
             ResultHandle constraints = methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Function.class, "apply", Object.class, Object.class),
-                    pythonMethod, methodCreator.getMethodParam(0));
+                    pythonProxy, methodCreator.getMethodParam(0));
             methodCreator.returnValue(constraints);
         } catch (Exception e) {
-            throw e;
+            throw new IllegalStateException(e);
         }
         classNameToBytecode.put(className, classBytecodeHolder.get());
         try {
@@ -159,7 +182,7 @@ public class PythonWrapperGenerator {
         }
     }
 
-    public static Class<?> definePlanningEntityClass(String className, Object[][] optaplannerMethodAnnotations) {
+    public static Class<?> definePlanningEntityClass(String className, List<List<Object>> optaplannerMethodAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
@@ -174,11 +197,11 @@ public class PythonWrapperGenerator {
         };
         try(ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
-                .interfaces(ProxyObject.class, ProxyNativeObject.class)
+                .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
             classCreator.addAnnotation(PlanningEntity.class);
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Value.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, String.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -190,7 +213,7 @@ public class PythonWrapperGenerator {
         }
     }
 
-    public static Class<?> defineProblemFactClass(String className, Object[][] optaplannerMethodAnnotations) {
+    public static Class<?> defineProblemFactClass(String className, List<List<Object>> optaplannerMethodAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
@@ -205,10 +228,10 @@ public class PythonWrapperGenerator {
         };
         try(ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
-                .interfaces(ProxyObject.class, ProxyNativeObject.class)
+                .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Value.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, String.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -220,7 +243,7 @@ public class PythonWrapperGenerator {
         }
     }
 
-    public static Class<?> definePlanningSolutionClass(String className, Object[][] optaplannerMethodAnnotations) {
+    public static Class<?> definePlanningSolutionClass(String className, List<List<Object>> optaplannerMethodAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
@@ -235,12 +258,12 @@ public class PythonWrapperGenerator {
         };
         try(ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
-                .interfaces(ProxyObject.class, ProxyNativeObject.class)
+                .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
             classCreator.addAnnotation(PlanningSolution.class)
                 .addValue("solutionCloner", Type.getType(PythonPlanningSolutionCloner.class));
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Value.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, String.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -258,49 +281,28 @@ public class PythonWrapperGenerator {
                 out, toPrint);
     }
 
-    private static void generateProxyObjectMethods(ClassCreator classCreator, FieldDescriptor valueField) {
-        MethodCreator methodCreator;
-        ResultHandle valueResultHandle;
-
-        methodCreator = classCreator.getMethodCreator("getMember", Object.class, String.class);
-        valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
-        methodCreator.returnValue(methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "getMember", Value.class, String.class),
-                valueResultHandle, methodCreator.getMethodParam(0)));
-
-        methodCreator = classCreator.getMethodCreator("getMemberKeys", Object.class);
-        valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
-        methodCreator.returnValue(methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "getMemberKeys", Set.class),
-                valueResultHandle));
-
-        methodCreator = classCreator.getMethodCreator("hasMember", boolean.class, String.class);
-        valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
-        methodCreator.returnValue(methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "hasMember", boolean.class, String.class),
-                valueResultHandle, methodCreator.getMethodParam(0)));
-
-        methodCreator = classCreator.getMethodCreator("putMember", void.class, String.class, Value.class);
-        methodCreator.returnValue(null);
-    }
-
     private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField) {
-        MethodCreator methodCreator = classCreator.getMethodCreator("asPointer", long.class);
+        MethodCreator methodCreator = classCreator.getMethodCreator("__get__optapy_Id", String.class);
         ResultHandle valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
-        methodCreator.returnValue(methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "asNativePointer", long.class),
-                valueResultHandle));
+        methodCreator.returnValue(valueResultHandle);
+
+        methodCreator = classCreator.getMethodCreator("__get__optapy_ObjectMap", Map.class);
+        valueResultHandle = methodCreator.readInstanceField(FieldDescriptor.of(classCreator.getClassName(), valueToInstanceMapFieldName, Map.class), methodCreator.getThis());
+        methodCreator.returnValue(valueResultHandle);
     }
 
-    private static void generateWrapperMethods(ClassCreator classCreator, FieldDescriptor valueField, Object[][] optaplannerMethodAnnotations) {
+    private static void generateWrapperMethods(ClassCreator classCreator, FieldDescriptor valueField, List<List<Object>> optaplannerMethodAnnotations) {
         generateAsPointer(classCreator, valueField);
-        generateProxyObjectMethods(classCreator, valueField);
 
-        List<FieldDescriptor> fieldDescriptorList = new ArrayList<>(optaplannerMethodAnnotations.length);
-        List<Class<?>> returnTypeList = new ArrayList<>(optaplannerMethodAnnotations.length);
-        for (int i = 0; i < optaplannerMethodAnnotations.length; i++) {
-            String methodName = (String) (optaplannerMethodAnnotations[i][0]);
-            Class<?> returnType = (Class<?>) (optaplannerMethodAnnotations[i][1]);
+        List<FieldDescriptor> fieldDescriptorList = new ArrayList<>(optaplannerMethodAnnotations.size());
+        List<Class<?>> returnTypeList = new ArrayList<>(optaplannerMethodAnnotations.size());
+        for (int i = 0; i < optaplannerMethodAnnotations.size(); i++) {
+            String methodName = (String) (optaplannerMethodAnnotations.get(i).get(0));
+            Class<?> returnType = (Class<?>) (optaplannerMethodAnnotations.get(i).get(1));
             if (returnType == null) {
                 returnType = Object.class;
             }
-            Value annotations = Value.asValue(optaplannerMethodAnnotations[i][2]);
+            List<Map<String, Object>> annotations = (List<Map<String, Object>>) optaplannerMethodAnnotations.get(i).get(2);
             fieldDescriptorList.add(generateWrapperMethod(classCreator, valueField, methodName, returnType, annotations, returnTypeList));
         }
         createConstructor(classCreator, valueField, fieldDescriptorList, returnTypeList);
@@ -310,7 +312,7 @@ public class PythonWrapperGenerator {
             List<Class<?>> returnTypeList) {
         FieldDescriptor mapField = classCreator.getFieldCreator(valueToInstanceMapFieldName, Map.class).getFieldDescriptor();
 
-        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), Value.class, Map.class));
+        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), String.class, Map.class));
         methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), methodCreator.getThis());
         ResultHandle value = methodCreator.getMethodParam(0);
         methodCreator.writeInstanceField(valueField, methodCreator.getThis(), value);
@@ -321,50 +323,41 @@ public class PythonWrapperGenerator {
             FieldDescriptor fieldDescriptor = fieldDescriptorList.get(i);
             Class returnType = returnTypeList.get(i);
             String methodName = fieldDescriptor.getName().substring(0, fieldDescriptor.getName().length() - 6);
-            ResultHandle valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
-            ResultHandle getterResultHandle = methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "getMember", Value.class, String.class),
-                    valueResultHandle, methodCreator.load(methodName));
-            ResultHandle outResultHandle = methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "execute", Value.class, Object[].class),
-                    getterResultHandle, methodCreator.newArray(Object.class, 0));
+
+            ResultHandle outResultHandle = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getValueFromPythonObject", Object.class, String.class, String.class),
+                    value, methodCreator.load(methodName));
             if ( Comparable.class.isAssignableFrom(returnType) ) {
-                methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "as", Object.class, Class.class),
-                        outResultHandle, methodCreator.loadClass(returnType)));
+                methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
             } else {
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
                         methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                            "wrap", Object.class, Class.class, Value.class, Map.class),
-                            methodCreator.loadClass(returnType),
-                            outResultHandle,
+                            "wrap", Object.class, Class.class, String.class, Map.class),
+                            methodCreator.loadClass(returnType), outResultHandle,
                             map));
             }
         }
-        // methodCreator.returnValue(null);
         methodCreator.returnValue(methodCreator.getThis());
     }
 
-    private static FieldDescriptor generateWrapperMethod(ClassCreator classCreator, FieldDescriptor valueField, String methodName, Class<?> returnType, Value annotations,
+    private static FieldDescriptor generateWrapperMethod(ClassCreator classCreator, FieldDescriptor valueField, String methodName, Class<?> returnType, List<Map<String, Object>> annotations,
             List<Class<?>> returnTypeList) {
-        for (int i = 0; i < annotations.getArraySize(); i++) {
-            Value value = annotations.getArrayElement(i);
-            Annotation annotation = value.as(Annotation.class);
-            if (PlanningId.class.isAssignableFrom(annotation.annotationType()) && !Comparable.class.isAssignableFrom(returnType)) {
+        for (Map<String,Object> annotation : annotations) {
+            if (PlanningId.class.isAssignableFrom((Class<?>) annotation.get("annotationType")) && !Comparable.class.isAssignableFrom(returnType)) {
                 returnType = Comparable.class;
-            } else if ((ProblemFactCollectionProperty.class.isAssignableFrom(annotation.annotationType()) || PlanningEntityCollectionProperty.class.isAssignableFrom(annotation.annotationType())) && !(Collection.class.isAssignableFrom(returnType) || returnType.isArray())) {
+            } else if ((ProblemFactCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType")) || PlanningEntityCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))) && !(Collection.class.isAssignableFrom(returnType) || returnType.isArray())) {
                 returnType = Object[].class;
             }
         }
         returnTypeList.add(returnType);
         FieldDescriptor fieldDescriptor = classCreator.getFieldCreator(methodName + "$field", returnType).getFieldDescriptor();
         MethodCreator methodCreator = classCreator.getMethodCreator(methodName, returnType);
-        for (int i = 0; i < annotations.getArraySize(); i++) {
-            Value value = annotations.getArrayElement(i);
-            Annotation annotation = value.as(Annotation.class);
-            AnnotationCreator annotationCreator = methodCreator.addAnnotation(annotation.annotationType());
-            for (Method method : annotation.annotationType().getMethods()) {
-                if (method.getParameterCount() != 0 || !method.getDeclaringClass().equals(annotation.annotationType())) {
+        for (Map<String,Object> annotation : annotations) {
+            AnnotationCreator annotationCreator = methodCreator.addAnnotation((Class<?>) annotation.get("annotationType"));
+            for (Method method : ((Class<?>) annotation.get("annotationType")).getMethods()) {
+                if (method.getParameterCount() != 0 || !method.getDeclaringClass().equals((Class<?>) annotation.get("annotationType"))) {
                     continue;
                 }
-                Object annotationValue = value.getMember(method.getName()).execute().as(method.getReturnType());
+                Object annotationValue = annotation.get(method.getName());
                 if (annotationValue != null) {
                     annotationCreator.addValue(method.getName(), annotationValue);
                 }
@@ -376,13 +369,10 @@ public class PythonWrapperGenerator {
             String setterMethodName = "set" + methodName.substring(3);
             MethodCreator setterMethodCreator = classCreator.getMethodCreator(setterMethodName, void.class, returnType);
 
-            ResultHandle pythonSetter = setterMethodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "getMember", Value.class, String.class),
+            setterMethodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class, String.class, String.class, Object.class),
                     setterMethodCreator.readInstanceField(valueField, setterMethodCreator.getThis()),
-                    setterMethodCreator.load(setterMethodName));
-            ResultHandle argsArray = setterMethodCreator.newArray(Object.class, 1);
-            setterMethodCreator.writeArrayValue(argsArray, 0, setterMethodCreator.getMethodParam(0));
-            setterMethodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "execute", Value.class, Object[].class),
-                    pythonSetter, argsArray);
+                    setterMethodCreator.load(setterMethodName),
+                    setterMethodCreator.getMethodParam(0));
             setterMethodCreator.writeInstanceField(fieldDescriptor, setterMethodCreator.getThis(), setterMethodCreator.getMethodParam(0));
             setterMethodCreator.returnValue(null);
         }
