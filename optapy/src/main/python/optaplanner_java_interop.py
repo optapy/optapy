@@ -26,7 +26,7 @@ for jar in classpath_list:
     classpath.append(new_classpath_item)
 
 jpype.startJVM(classpath=classpath)
-from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner, PythonSolver
+from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner, PythonSolver, PythonObject
 from org.optaplanner.core.config.solver import SolverConfig
 
 import java.lang.Object
@@ -169,7 +169,23 @@ PythonPlanningSolutionCloner.setDeepClonePythonObject(JObject(PythonFunction(dee
 
 import java.lang.Exception
 def solve(solverConfig, problem):
-    return PythonSolver.solve(solverConfig, str(id(problem)))
+    return unwrap(PythonSolver.solve(solverConfig, str(id(problem))))
+
+def unwrap(javaObject):
+    if not isinstance(javaObject, (_PythonObject, PythonObject, PythonObjectRef)):
+        pythonObject = javaObject
+    else:
+        pythonObject = ctypes.cast(int(str(javaObject.get__optapy_Id())), ctypes.py_object).value
+    if not hasattr(pythonObject, '__dict__'):
+        return pythonObject
+    for attribute, value in vars(pythonObject).items():
+        if isinstance(value, dict):
+            setattr(pythonObject, attribute, {k: unwrap(v) for k, v in value.items()})
+        elif isinstance(value, list):
+            setattr(pythonObject, attribute, list(map(unwrap, value)))
+        else:
+            setattr(pythonObject, attribute, unwrap(value))
+    return pythonObject
 
 
 def toMap(pythonDict):
