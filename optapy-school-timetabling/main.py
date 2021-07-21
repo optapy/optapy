@@ -2,6 +2,10 @@ from optapy import getClass, SolverConfig, solve, Duration
 from domain import TimeTable, Lesson, generateProblem
 
 try:
+    # Check to determine if we are in GraalPython
+    # (GraalPython and JPype use different name mangling methods
+    # so the constraint files is very sightly different
+    # (GraalPython uses ["from"](...), JPype uses from_(...))
     import java
     java.type('java.lang.String')
     from graalconstraints import defineConstraints
