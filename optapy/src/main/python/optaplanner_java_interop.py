@@ -38,39 +38,6 @@ import java.util.ArrayList
 import org.optaplanner.core.api.score.Score
 import org.optaplanner.core.api.function.TriFunction
 
-optapy_cache = dict()
-
-@JImplements('org.optaplanner.optapy.PythonObject')
-class PythonObjectRef:
-    def __init__(self, ref, item):
-        self.__dict__['__optapy_ref'] = ref.get__optapy_Id()
-        self.__dict__['__optapy_map'] = ref.get__optapy_ObjectMap()
-        self.__dict__['__optapy_item'] = item
-        optapy_cache[id(item)] = self
-
-    def __getattr__(self, name):
-        item = self.__dict__['__optapy_item']
-        out = getattr(item, name)
-        if id(out) in optapy_cache:
-            return optapy_cache[id(out)]
-        pointer = PythonWrapperGenerator.getPythonObject(self, id(out))
-        if pointer is not None:
-            return PythonObjectRef(pointer, out)
-        else:
-            return out
-
-    def __setattr__(self, key, value):
-        item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
-        setattr(item, key, value)
-
-    @JOverride
-    def get__optapy_Id(self):
-        return self.__dict__['__optapy_ref']
-
-    @JOverride
-    def get__optapy_ObjectMap(self):
-        return self.__dict__['__optapy_map']
-
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
 class _PythonObject:
     def __jclass_init__(self):
@@ -79,11 +46,9 @@ class _PythonObject:
     def __getattr__(self, name):
         item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
         out = getattr(item, name)
-        if id(out) in optapy_cache:
-            return optapy_cache[id(out)]
         pointer = PythonWrapperGenerator.getPythonObject(self, id(out))
         if pointer is not None:
-            return PythonObjectRef(pointer, out)
+            return pointer
         else:
             return out
 
@@ -94,13 +59,11 @@ class _PythonObject:
     def __copy__(self):
         item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
         copied_item = copy.copy(item)
-        my_refs.add(copied_item)
         return copied_item
 
     def __deepcopy__(self, memodict={}):
         item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
         copied_item = copy.copy(item)
-        my_refs.add(copied_item)
         for attribute, value in vars(copied_item).items():
             if isinstance(value, _PythonObject):
                 vars(copied_item)[attribute] = value.__deepcopy__(self, memodict)
@@ -156,10 +119,14 @@ def getPythonArrayIdToIdArray(arrayId):
 
 def setPythonObjectAttribute(objectId, name, value):
     the_object = ctypes.cast(objectId, ctypes.py_object).value
-    getattr(the_object, str(name))(value)
+    the_value = value
+    if isinstance(the_value, PythonObject):
+        the_value = ctypes.cast(value.get__optapy_Id(), ctypes.py_object).value
+    getattr(the_object, str(name))(the_value)
 
 def deepClonePythonObject(the_object):
     the_clone = the_object.__deepcopy__()
+    my_refs.add(the_clone)
     return id(the_clone)
 
 PythonWrapperGenerator.setPythonArrayIdToIdArray(JObject(PythonFunction(getPythonArrayIdToIdArray), java.util.function.Function))
@@ -172,21 +139,7 @@ def solve(solverConfig, problem):
     return unwrap(PythonSolver.solve(solverConfig, id(problem)))
 
 def unwrap(javaObject):
-    if not isinstance(javaObject, (_PythonObject, PythonObject, PythonObjectRef)):
-        pythonObject = javaObject
-    else:
-        pythonObject = ctypes.cast(javaObject.get__optapy_Id(), ctypes.py_object).value
-    if not hasattr(pythonObject, '__dict__'):
-        return pythonObject
-    for attribute, value in vars(pythonObject).items():
-        if isinstance(value, dict):
-            setattr(pythonObject, attribute, {k: unwrap(v) for k, v in value.items()})
-        elif isinstance(value, list):
-            setattr(pythonObject, attribute, list(map(unwrap, value)))
-        else:
-            setattr(pythonObject, attribute, unwrap(value))
-    return pythonObject
-
+    return ctypes.cast(javaObject.get__optapy_Id(), ctypes.py_object).value
 
 def toMap(pythonDict):
     out = java.util.HashMap()
