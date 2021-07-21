@@ -67,12 +67,12 @@ public class PythonWrapperGenerator {
     }
 
     public static String getPythonObjectId(PythonObject pythonObject) {
-        String out = pythonObject.__get__optapy_Id();
+        String out = pythonObject.get__optapy_Id();
         return out;
     }
 
     public static PythonObject getPythonObject(PythonObject parent, String id) {
-        return parent.__get__optapy_ObjectMap().get(id);
+        return parent.get__optapy_ObjectMap().get(id);
     }
 
     static final String pythonBindingFieldName = "__optaplannerPythonValue";
@@ -282,11 +282,11 @@ public class PythonWrapperGenerator {
     }
 
     private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField) {
-        MethodCreator methodCreator = classCreator.getMethodCreator("__get__optapy_Id", String.class);
+        MethodCreator methodCreator = classCreator.getMethodCreator("get__optapy_Id", String.class);
         ResultHandle valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
         methodCreator.returnValue(valueResultHandle);
 
-        methodCreator = classCreator.getMethodCreator("__get__optapy_ObjectMap", Map.class);
+        methodCreator = classCreator.getMethodCreator("get__optapy_ObjectMap", Map.class);
         valueResultHandle = methodCreator.readInstanceField(FieldDescriptor.of(classCreator.getClassName(), valueToInstanceMapFieldName, Map.class), methodCreator.getThis());
         methodCreator.returnValue(valueResultHandle);
     }

@@ -17,7 +17,7 @@ import copy
 optaplanner_jars = tempfile.TemporaryDirectory()
 classpath_list = text = pkg_resources.read_text('optapy', 'classpath.txt').splitlines()
 classpath = []
-my_refs = []
+my_refs = set()
 for jar in classpath_list:
     new_classpath_item = os.path.join(optaplanner_jars.name, jar)
     jar_file = pkg_resources.read_binary(jars, jar)
@@ -38,6 +38,39 @@ import java.util.ArrayList
 import org.optaplanner.core.api.score.Score
 import org.optaplanner.core.api.function.TriFunction
 
+optapy_cache = dict()
+
+@JImplements('org.optaplanner.optapy.PythonObject')
+class PythonObjectRef:
+    def __init__(self, ref, item):
+        self.__dict__['__optapy_ref'] = ref.get__optapy_Id()
+        self.__dict__['__optapy_map'] = ref.get__optapy_ObjectMap()
+        self.__dict__['__optapy_item'] = item
+        optapy_cache[id(item)] = self
+
+    def __getattr__(self, name):
+        item = self.__dict__['__optapy_item']
+        out = getattr(item, name)
+        if id(out) in optapy_cache:
+            return optapy_cache[id(out)]
+        pointer = PythonWrapperGenerator.getPythonObject(self, str(id(out)))
+        if pointer is not None:
+            return PythonObjectRef(pointer, out)
+        else:
+            return out
+
+    def __setattr__(self, key, value):
+        item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
+        setattr(item, key, value)
+
+    @JOverride
+    def get__optapy_Id(self):
+        return self.__dict__['__optapy_ref']
+
+    @JOverride
+    def get__optapy_ObjectMap(self):
+        return self.__dict__['__optapy_map']
+
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
 class _PythonObject:
     def __jclass_init__(self):
@@ -46,9 +79,11 @@ class _PythonObject:
     def __getattr__(self, name):
         item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
         out = getattr(item, name)
+        if id(out) in optapy_cache:
+            return optapy_cache[id(out)]
         pointer = PythonWrapperGenerator.getPythonObject(self, str(id(out)))
         if pointer is not None:
-            return pointer
+            return PythonObjectRef(pointer, out)
         else:
             return out
 
@@ -59,11 +94,13 @@ class _PythonObject:
     def __copy__(self):
         item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
         copied_item = copy.copy(item)
+        my_refs.add(copied_item)
         return copied_item
 
     def __deepcopy__(self, memodict={}):
         item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
         copied_item = copy.copy(item)
+        my_refs.add(copied_item)
         for attribute, value in vars(copied_item).items():
             if isinstance(value, _PythonObject):
                 vars(copied_item)[attribute] = value.__deepcopy__(self, memodict)
@@ -107,13 +144,15 @@ def __getPythonObjectAttribute(objectId, name):
     if pythonObject is None:
         return None
     elif isinstance(pythonObject, (str, int, float, complex, org.optaplanner.core.api.score.Score)):
-        return JObject(pythonObject, java.lang.Object)
+        out = JObject(pythonObject, java.lang.Object)
+        return out
     else:
         return str(id(pythonObject))
 
 def getPythonArrayIdToIdArray(arrayId):
     the_object = ctypes.cast(int(str(arrayId)), ctypes.py_object).value
-    return toList(list(map(lambda x: JObject(str(id(x)), java.lang.Object), the_object)))
+    out = toList(list(map(lambda x: JObject(str(id(x)), java.lang.Object), the_object)))
+    return out
 
 def setPythonObjectAttribute(objectId, name, value):
     the_object = ctypes.cast(int(str(objectId)), ctypes.py_object).value
@@ -121,7 +160,6 @@ def setPythonObjectAttribute(objectId, name, value):
 
 def deepClonePythonObject(the_object):
     the_clone = the_object.__deepcopy__()
-    my_refs.append(the_clone)
     return str(id(the_clone))
 
 PythonWrapperGenerator.setPythonArrayIdToIdArray(JObject(PythonFunction(getPythonArrayIdToIdArray), java.util.function.Function))
