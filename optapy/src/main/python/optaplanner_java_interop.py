@@ -53,7 +53,7 @@ class PythonObjectRef:
         out = getattr(item, name)
         if id(out) in optapy_cache:
             return optapy_cache[id(out)]
-        pointer = PythonWrapperGenerator.getPythonObject(self, str(id(out)))
+        pointer = PythonWrapperGenerator.getPythonObject(self, id(out))
         if pointer is not None:
             return PythonObjectRef(pointer, out)
         else:
@@ -77,28 +77,28 @@ class _PythonObject:
         pass
 
     def __getattr__(self, name):
-        item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
+        item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
         out = getattr(item, name)
         if id(out) in optapy_cache:
             return optapy_cache[id(out)]
-        pointer = PythonWrapperGenerator.getPythonObject(self, str(id(out)))
+        pointer = PythonWrapperGenerator.getPythonObject(self, id(out))
         if pointer is not None:
             return PythonObjectRef(pointer, out)
         else:
             return out
 
     def __setattr__(self, key, value):
-        item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
+        item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
         setattr(item, key, value)
 
     def __copy__(self):
-        item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
+        item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
         copied_item = copy.copy(item)
         my_refs.add(copied_item)
         return copied_item
 
     def __deepcopy__(self, memodict={}):
-        item = ctypes.cast(int(str(PythonWrapperGenerator.getPythonObjectId(self))), ctypes.py_object).value
+        item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
         copied_item = copy.copy(item)
         my_refs.add(copied_item)
         for attribute, value in vars(copied_item).items():
@@ -107,7 +107,7 @@ class _PythonObject:
         return copied_item
 
 def getPythonObjectFromId(item_id):
-    out = ctypes.cast(int(str(item_id)), ctypes.py_object)
+    out = ctypes.cast(item_id, ctypes.py_object)
     return out.value
 
 @JImplements(java.util.function.Function)
@@ -138,7 +138,7 @@ class PythonTriFunction:
         return self.delegate(argument1, argument2, argument3)
 
 def __getPythonObjectAttribute(objectId, name):
-    the_object = ctypes.cast(int(str(objectId)), ctypes.py_object).value
+    the_object = ctypes.cast(objectId, ctypes.py_object).value
     pythonObjectGetter = getattr(the_object, str(name))
     pythonObject = pythonObjectGetter()
     if pythonObject is None:
@@ -147,20 +147,20 @@ def __getPythonObjectAttribute(objectId, name):
         out = JObject(pythonObject, java.lang.Object)
         return out
     else:
-        return str(id(pythonObject))
+        return id(pythonObject)
 
 def getPythonArrayIdToIdArray(arrayId):
-    the_object = ctypes.cast(int(str(arrayId)), ctypes.py_object).value
-    out = toList(list(map(lambda x: JObject(str(id(x)), java.lang.Object), the_object)))
+    the_object = ctypes.cast(arrayId, ctypes.py_object).value
+    out = toList(list(map(lambda x: JObject(id(x), java.lang.Object), the_object)))
     return out
 
 def setPythonObjectAttribute(objectId, name, value):
-    the_object = ctypes.cast(int(str(objectId)), ctypes.py_object).value
+    the_object = ctypes.cast(objectId, ctypes.py_object).value
     getattr(the_object, str(name))(value)
 
 def deepClonePythonObject(the_object):
     the_clone = the_object.__deepcopy__()
-    return str(id(the_clone))
+    return id(the_clone)
 
 PythonWrapperGenerator.setPythonArrayIdToIdArray(JObject(PythonFunction(getPythonArrayIdToIdArray), java.util.function.Function))
 PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToValue(JObject(PythonBiFunction(__getPythonObjectAttribute), java.util.function.BiFunction))
@@ -169,13 +169,13 @@ PythonPlanningSolutionCloner.setDeepClonePythonObject(JObject(PythonFunction(dee
 
 import java.lang.Exception
 def solve(solverConfig, problem):
-    return unwrap(PythonSolver.solve(solverConfig, str(id(problem))))
+    return unwrap(PythonSolver.solve(solverConfig, id(problem)))
 
 def unwrap(javaObject):
     if not isinstance(javaObject, (_PythonObject, PythonObject, PythonObjectRef)):
         pythonObject = javaObject
     else:
-        pythonObject = ctypes.cast(int(str(javaObject.get__optapy_Id())), ctypes.py_object).value
+        pythonObject = ctypes.cast(javaObject.get__optapy_Id(), ctypes.py_object).value
     if not hasattr(pythonObject, '__dict__'):
         return pythonObject
     for attribute, value in vars(pythonObject).items():

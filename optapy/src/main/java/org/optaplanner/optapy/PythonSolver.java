@@ -6,7 +6,7 @@ import org.optaplanner.core.api.solver.SolverFactory;
 import org.optaplanner.core.config.solver.SolverConfig;
 
 public class PythonSolver {
-    public static Object solve(SolverConfig solverConfig, String problem) {
+    public static Object solve(SolverConfig solverConfig, Number problem) {
         solverConfig = new SolverConfig().inherit(solverConfig);
         solverConfig.setClassLoader(PythonWrapperGenerator.gizmoClassLoader);
         solverConfig.getScoreDirectorFactoryConfig().withConstraintStreamImplType(ConstraintStreamImplType.BAVET);
