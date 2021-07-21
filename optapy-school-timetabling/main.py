@@ -1,8 +1,13 @@
-from optapy import getClass, SolverConfig, solve
-from constraints import defineConstraints
+from optapy import getClass, SolverConfig, solve, Duration
 from domain import TimeTable, Lesson, generateProblem
 
-import java.time.Duration as Duration
+try:
+    import java
+    java.type('java.lang.String')
+    from graalconstraints import defineConstraints
+except:
+    from constraints import defineConstraints
+
 
 solverConfig = SolverConfig().withEntityClasses(getClass(Lesson)) \
     .withSolutionClass(getClass(TimeTable)) \

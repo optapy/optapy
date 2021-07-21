@@ -1,9 +1,6 @@
-__pycache__
+/dist
+/optapy.egg-info
 /target
-/build
-/local
-venv
-graalvenv
 
 # Eclipse, Netbeans and IntelliJ files
 /.*
@@ -11,6 +8,6 @@ graalvenv
 !.dockerignore
 !.mvn
 /nbproject
-*.ipr
-*.iws
-*.iml
+/*.ipr
+/*.iws
+/*.iml

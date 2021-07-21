@@ -4,7 +4,7 @@ if which python > /dev/null ; then
         echo "Creating venv"
         python -m venv optapy-school-timetabling/venv
     fi
-    cd optapy
+    cd optapy-jpype
     python -m build
     source ../optapy-school-timetabling/venv/bin/activate
     pip uninstall -y optapy
