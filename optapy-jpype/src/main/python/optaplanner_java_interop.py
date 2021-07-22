@@ -65,8 +65,8 @@ class _PythonObject:
         item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
         copied_item = copy.copy(item)
         for attribute, value in vars(copied_item).items():
-            if isinstance(value, _PythonObject):
-                vars(copied_item)[attribute] = value.__deepcopy__(self, memodict)
+            if not isinstance(value, java.lang.Object):
+                vars(copied_item)[attribute] = copy.deepcopy(value, memodict)
         return copied_item
 
 def getPythonObjectFromId(item_id):
@@ -174,7 +174,7 @@ def getOptaPlannerAnnotations(pythonClass):
     return toList(annotated_methods)
 
 def wrap(javaClass, pythonObject):
-    return PythonWrapperGenerator.wrap(javaClass, str(id(pythonObject)))
+    return PythonWrapperGenerator.wrap(javaClass, id(pythonObject))
 
 def getClass(pythonClass):
     return pythonClass.__javaClass
