@@ -19,6 +19,7 @@ import org.optaplanner.core.api.score.stream.ConstraintFactory;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -26,6 +27,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,38 +43,34 @@ public class PythonWrapperGenerator {
      * Accessor
      */
     private static final Map<String, byte[]> classNameToBytecode = new HashMap<>();
-    private static Function<Number, List<Number>> pythonArrayIdToIdArray;
-    private static BiFunction<Number, String, Object> pythonObjectIdAndAttributeNameToValue;
-    private static TriFunction<Number, String, Object, Object> pythonObjectIdAndAttributeSetter;
+    private static Function<Serializable, List<Serializable>> pythonArrayIdToIdArray;
+    private static BiFunction<Serializable, String, Object> pythonObjectIdAndAttributeNameToValue;
+    private static TriFunction<Serializable, String, Object, Object> pythonObjectIdAndAttributeSetter;
 
-    public static Object getValueFromPythonObject(Number objectId, String attributeName) {
+    public static Object getValueFromPythonObject(Serializable objectId, String attributeName) {
         return pythonObjectIdAndAttributeNameToValue.apply(objectId, attributeName);
     }
 
-    public static void setValueOnPythonObject(Number objectId, String attributeName, Object value) {
+    public static void setValueOnPythonObject(Serializable objectId, String attributeName, Object value) {
         pythonObjectIdAndAttributeSetter.apply(objectId, attributeName, value);
     }
 
-    public static void setPythonArrayIdToIdArray(Function<Number, List<Number>> function) {
+    public static void setPythonArrayIdToIdArray(Function<Serializable, List<Serializable>> function) {
         pythonArrayIdToIdArray = function;
     }
 
-    public static void setPythonObjectIdAndAttributeNameToValue(BiFunction<Number, String, Object> function) {
+    public static void setPythonObjectIdAndAttributeNameToValue(BiFunction<Serializable, String, Object> function) {
         pythonObjectIdAndAttributeNameToValue = function;
     }
 
     public static void setPythonObjectIdAndAttributeSetter(
-            TriFunction<Number, String, Object, Object> setter) {
+            TriFunction<Serializable, String, Object, Object> setter) {
         pythonObjectIdAndAttributeSetter = setter;
     }
 
-    public static Number getPythonObjectId(PythonObject pythonObject) {
-        Number out = pythonObject.get__optapy_Id();
+    public static Serializable getPythonObjectId(PythonObject pythonObject) {
+        Serializable out = pythonObject.get__optapy_Id();
         return out;
-    }
-
-    public static PythonObject getPythonObject(PythonObject parent, Number id) {
-        return parent.get__optapy_ObjectMap().get(id);
     }
 
     static final String pythonBindingFieldName = "__optaplannerPythonValue";
@@ -105,29 +103,21 @@ public class PythonWrapperGenerator {
         return Array.newInstance(elementClass, 0).getClass();
     }
 
-    public static <T> T wrap(Class<T> javaClass, Number object) {
-        return wrap(javaClass, object, new HashMap<>());
-    }
-
-    public static <T> T wrap(Class<T> javaClass, Number object, Map<Number, Object> valueObjectMap) {
+    public static <T> T wrap(Class<T> javaClass, Serializable object) {
         if (object == null) {
             return null;
         }
-        if (valueObjectMap.containsKey(object)) {
-            return (T) valueObjectMap.get(object);
-        }
         try {
             if (javaClass.isArray()) {
-                List<Number> itemIds = pythonArrayIdToIdArray.apply(object);
+                List<Serializable> itemIds = pythonArrayIdToIdArray.apply(object);
                 int length = itemIds.size();
                 Object out = Array.newInstance(javaClass.getComponentType(), length);
                 for (int i = 0; i < length; i++) {
-                    Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i), valueObjectMap));
+                    Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i)));
                 }
                 return (T) out;
             } else {
-                T out = (T) javaClass.getConstructor(Number.class, Map.class).newInstance(object, valueObjectMap);
-                valueObjectMap.put(object, out);
+                T out = (T) javaClass.getConstructor(Serializable.class).newInstance(object);
                 return out;
             }
         } catch (IllegalAccessException | NoSuchMethodException | InstantiationException | InvocationTargetException e) {
@@ -135,7 +125,7 @@ public class PythonWrapperGenerator {
         }
     }
 
-    public static Supplier<Object> wrapObject(Class<?> javaClass, Number object) {
+    public static Supplier<Object> wrapObject(Class<?> javaClass, Serializable object) {
         Object out = wrap(javaClass, object);
         return () -> out;
     }
@@ -201,7 +191,7 @@ public class PythonWrapperGenerator {
                 .classOutput(classOutput)
                 .build()) {
             classCreator.addAnnotation(PlanningEntity.class);
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Number.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Serializable.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -231,7 +221,7 @@ public class PythonWrapperGenerator {
                 .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Number.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Serializable.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -263,7 +253,7 @@ public class PythonWrapperGenerator {
                 .build()) {
             classCreator.addAnnotation(PlanningSolution.class)
                 .addValue("solutionCloner", Type.getType(PythonPlanningSolutionCloner.class));
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Number.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Serializable.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -282,7 +272,7 @@ public class PythonWrapperGenerator {
     }
 
     private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField) {
-        MethodCreator methodCreator = classCreator.getMethodCreator("get__optapy_Id", Number.class);
+        MethodCreator methodCreator = classCreator.getMethodCreator("get__optapy_Id", Serializable.class);
         ResultHandle valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
         methodCreator.returnValue(valueResultHandle);
 
@@ -310,30 +300,25 @@ public class PythonWrapperGenerator {
 
     private static void createConstructor(ClassCreator classCreator, FieldDescriptor valueField, List<FieldDescriptor> fieldDescriptorList,
             List<Class<?>> returnTypeList) {
-        FieldDescriptor mapField = classCreator.getFieldCreator(valueToInstanceMapFieldName, Map.class).getFieldDescriptor();
-
-        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), Number.class, Map.class));
+        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), Serializable.class));
         methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), methodCreator.getThis());
         ResultHandle value = methodCreator.getMethodParam(0);
         methodCreator.writeInstanceField(valueField, methodCreator.getThis(), value);
-        ResultHandle map = methodCreator.getMethodParam(1);
-        methodCreator.writeInstanceField(mapField, methodCreator.getThis(), map);
 
         for (int i = 0; i < fieldDescriptorList.size(); i++) {
             FieldDescriptor fieldDescriptor = fieldDescriptorList.get(i);
             Class returnType = returnTypeList.get(i);
             String methodName = fieldDescriptor.getName().substring(0, fieldDescriptor.getName().length() - 6);
 
-            ResultHandle outResultHandle = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getValueFromPythonObject", Object.class, Number.class, String.class),
+            ResultHandle outResultHandle = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getValueFromPythonObject", Object.class, Serializable.class, String.class),
                     value, methodCreator.load(methodName));
             if ( Comparable.class.isAssignableFrom(returnType) ) {
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
             } else {
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
                         methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                            "wrap", Object.class, Class.class, Number.class, Map.class),
-                            methodCreator.loadClass(returnType), outResultHandle,
-                            map));
+                            "wrap", Object.class, Class.class, Serializable.class),
+                            methodCreator.loadClass(returnType), outResultHandle));
             }
         }
         methodCreator.returnValue(methodCreator.getThis());
@@ -369,7 +354,7 @@ public class PythonWrapperGenerator {
             String setterMethodName = "set" + methodName.substring(3);
             MethodCreator setterMethodCreator = classCreator.getMethodCreator(setterMethodName, void.class, returnType);
 
-            setterMethodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class, Number.class, String.class, Object.class),
+            setterMethodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class, Serializable.class, String.class, Object.class),
                     setterMethodCreator.readInstanceField(valueField, setterMethodCreator.getThis()),
                     setterMethodCreator.load(setterMethodName),
                     setterMethodCreator.getMethodParam(0));

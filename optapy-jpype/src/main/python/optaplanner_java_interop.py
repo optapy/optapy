@@ -10,7 +10,7 @@ from . import jars
 import jpype
 import jpype.imports
 from jpype.types import *
-from jpype import JImplements, JOverride, JImplementationFor
+from jpype import JProxy, JImplements, JOverride, JImplementationFor
 import ctypes
 import copy
 
@@ -29,6 +29,7 @@ jpype.startJVM(classpath=classpath)
 from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner, PythonSolver, PythonObject
 from org.optaplanner.core.config.solver import SolverConfig
 
+import java.io.Serializable
 import java.lang.Object
 import java.util.function.Function
 import java.util.function.BiFunction
@@ -38,31 +39,42 @@ import java.util.ArrayList
 import org.optaplanner.core.api.score.Score
 import org.optaplanner.core.api.function.TriFunction
 
+ref_map = dict()
+@JImplements(java.io.Serializable)
+class PythonRef:
+    def __init__(self, ref):
+        self.__dict__['ref'] = ref
+        ref_map[id(ref)] = self
+
+    def __getattr__(self, item):
+        return getattr(self.__dict__['ref'], item)
+
+    def __setattr__(self, key, value):
+        setattr(self.__dict__['ref'], key, value)
+
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
 class _PythonObject:
     def __jclass_init__(self):
         pass
 
     def __getattr__(self, name):
-        item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
+        item = PythonWrapperGenerator.getPythonObjectId(self)
         out = getattr(item, name)
-        pointer = PythonWrapperGenerator.getPythonObject(self, id(out))
-        if pointer is not None:
-            return pointer
-        else:
-            return out
+        if id(out) in ref_map:
+            return ref_map[id(out)]
+        return PythonRef(out)
 
     def __setattr__(self, key, value):
-        item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
+        item = PythonWrapperGenerator.getPythonObjectId(self)
         setattr(item, key, value)
 
     def __copy__(self):
-        item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
+        item = PythonWrapperGenerator.getPythonObjectId(self)
         copied_item = copy.copy(item)
         return copied_item
 
     def __deepcopy__(self, memodict={}):
-        item = ctypes.cast(PythonWrapperGenerator.getPythonObjectId(self), ctypes.py_object).value
+        item = PythonWrapperGenerator.getPythonObjectId(self)
         copied_item = copy.copy(item)
         for attribute, value in vars(copied_item).items():
             if not isinstance(value, java.lang.Object):
@@ -70,8 +82,7 @@ class _PythonObject:
         return copied_item
 
 def getPythonObjectFromId(item_id):
-    out = ctypes.cast(item_id, ctypes.py_object)
-    return out.value
+    return item_id
 
 @JImplements(java.util.function.Function)
 class PythonFunction:
@@ -101,7 +112,7 @@ class PythonTriFunction:
         return self.delegate(argument1, argument2, argument3)
 
 def __getPythonObjectAttribute(objectId, name):
-    the_object = ctypes.cast(objectId, ctypes.py_object).value
+    the_object = objectId
     pythonObjectGetter = getattr(the_object, str(name))
     pythonObject = pythonObjectGetter()
     if pythonObject is None:
@@ -110,24 +121,24 @@ def __getPythonObjectAttribute(objectId, name):
         out = JObject(pythonObject, java.lang.Object)
         return out
     else:
-        return id(pythonObject)
+        return JProxy(java.io.Serializable, inst=pythonObject, convert=True)
 
 def getPythonArrayIdToIdArray(arrayId):
-    the_object = ctypes.cast(arrayId, ctypes.py_object).value
-    out = toList(list(map(lambda x: JObject(id(x), java.lang.Object), the_object)))
+    the_object = arrayId
+    out = toList(list(map(lambda x: JProxy(java.io.Serializable, inst=x, convert=True), the_object)))
     return out
 
 def setPythonObjectAttribute(objectId, name, value):
-    the_object = ctypes.cast(objectId, ctypes.py_object).value
+    the_object = objectId
     the_value = value
     if isinstance(the_value, PythonObject):
-        the_value = ctypes.cast(value.get__optapy_Id(), ctypes.py_object).value
+        the_value = value.get__optapy_Id()
     getattr(the_object, str(name))(the_value)
 
 def deepClonePythonObject(the_object):
     the_clone = the_object.__deepcopy__()
     my_refs.add(the_clone)
-    return id(the_clone)
+    return JProxy(java.io.Serializable, inst=the_clone, convert=True)
 
 PythonWrapperGenerator.setPythonArrayIdToIdArray(JObject(PythonFunction(getPythonArrayIdToIdArray), java.util.function.Function))
 PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToValue(JObject(PythonBiFunction(__getPythonObjectAttribute), java.util.function.BiFunction))
@@ -136,10 +147,10 @@ PythonPlanningSolutionCloner.setDeepClonePythonObject(JObject(PythonFunction(dee
 
 import java.lang.Exception
 def solve(solverConfig, problem):
-    return unwrap(PythonSolver.solve(solverConfig, id(problem)))
+    return unwrap(PythonSolver.solve(solverConfig, JProxy(java.io.Serializable, inst=problem, convert=True)))
 
 def unwrap(javaObject):
-    return ctypes.cast(javaObject.get__optapy_Id(), ctypes.py_object).value
+    return javaObject.get__optapy_Id()
 
 def toMap(pythonDict):
     out = java.util.HashMap()
