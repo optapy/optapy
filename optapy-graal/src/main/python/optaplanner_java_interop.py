@@ -25,6 +25,9 @@ PythonWrapperGenerator = java.type("org.optaplanner.optapy.PythonWrapperGenerato
 SolverConfig = java.type("org.optaplanner.core.config.solver.SolverConfig")
 PythonSolver = java.type("org.optaplanner.optapy.PythonSolver")
 
+def solve(config, problem):
+    return PythonSolver.solve(config, problem)
+
 def getOptaPlannerAnnotations(pythonClass):
     method_list = [attribute for attribute in dir(pythonClass) if callable(getattr(pythonClass, attribute)) and attribute.startswith('__') is False]
     annotated_methods = []

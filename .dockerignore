@@ -1,12 +1,11 @@
+Dockerfile
 __pycache__
-/target
-/build
-/local
+target
 venv
 graalvenv
 
 # Eclipse, Netbeans and IntelliJ files
-/.*
+.*
 !.gitignore
 !.dockerignore
 !.mvn
