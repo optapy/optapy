@@ -5,7 +5,7 @@ if which graalpython > /dev/null ; then
         graalpython -m venv optapy-school-timetabling/graalvenv
     fi
     cd optapy-graal
-    python -m build
+    python -m build || { echo 'Build failed' ; exit 1; }
     source ../optapy-school-timetabling/graalvenv/bin/activate
     pip uninstall -y optapy
     pip install dist/optapy-0.0.0-py3-none-any.whl

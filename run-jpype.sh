@@ -5,7 +5,7 @@ if which python > /dev/null ; then
         python -m venv optapy-school-timetabling/venv
     fi
     cd optapy-jpype
-    python -m build
+    python -m build  || { echo 'Build failed' ; exit 1; }
     source ../optapy-school-timetabling/venv/bin/activate
     pip uninstall -y optapy
     pip install dist/optapy-0.0.0-py3-none-any.whl
