@@ -179,19 +179,26 @@ def wrap(javaClass, pythonObject):
 def getClass(pythonClass):
     return pythonClass.__javaClass
 
+unique_class_id = 0
 def generateProblemFactClass(pythonClass):
+    global unique_class_id
     optaplannerAnnotations = getOptaPlannerAnnotations(pythonClass)
-    out = PythonWrapperGenerator.defineProblemFactClass(pythonClass.__name__, optaplannerAnnotations)
+    out = PythonWrapperGenerator.defineProblemFactClass(pythonClass.__name__ + str(unique_class_id), optaplannerAnnotations)
+    unique_class_id = unique_class_id + 1
     return out
 
 def generatePlanningEntityClass(pythonClass):
+    global unique_class_id
     optaplannerAnnotations = getOptaPlannerAnnotations(pythonClass)
-    out = PythonWrapperGenerator.definePlanningEntityClass(pythonClass.__name__, optaplannerAnnotations)
+    out = PythonWrapperGenerator.definePlanningEntityClass(pythonClass.__name__ + str(unique_class_id), optaplannerAnnotations)
+    unique_class_id = unique_class_id + 1
     return out
 
 def generatePlanningSolutionClass(pythonClass):
+    global unique_class_id
     optaplannerAnnotations = getOptaPlannerAnnotations(pythonClass)
-    out = PythonWrapperGenerator.definePlanningSolutionClass(pythonClass.__name__, optaplannerAnnotations)
+    out = PythonWrapperGenerator.definePlanningSolutionClass(pythonClass.__name__ + str(unique_class_id), optaplannerAnnotations)
+    unique_class_id = unique_class_id + 1
     return out
 
 import org.optaplanner.core.api.score.stream.Constraint as Constraint
@@ -202,5 +209,7 @@ def _toConstraintArray(pythonList):
     return out
 
 def generateConstraintProviderClass(constraintProvider):
-    out = PythonWrapperGenerator.defineConstraintProviderClass(constraintProvider.__name__, JObject(PythonFunction(lambda cf: _toConstraintArray(constraintProvider(cf))), java.util.function.Function))
+    global unique_class_id
+    out = PythonWrapperGenerator.defineConstraintProviderClass(constraintProvider.__name__ + str(unique_class_id), JObject(PythonFunction(lambda cf: _toConstraintArray(constraintProvider(cf))), java.util.function.Function))
+    unique_class_id = unique_class_id + 1
     return out

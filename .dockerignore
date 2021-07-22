@@ -2,6 +2,7 @@ Dockerfile
 __pycache__
 target
 venv
+graalvenv
 
 # Eclipse, Netbeans and IntelliJ files
 .*
