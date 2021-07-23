@@ -1,6 +1,6 @@
 = Optapy
 
-Optapy is an unofficial and experimental GraalVM Python Package
+Optapy is an unofficial and experimental Python Package
 that allows OptaPlanner Constraint Providers to be written using
 only Python code.
 
@@ -8,11 +8,11 @@ WARNING: Optapy is an experimental technology and is not supported in any way or
 
 == Prerequisites
 
-- GraalVM 21.1.0 or higher installed
+- A Java Development Kit (JDK) is installed on your machine
 
 == Building
 
-In the `optapy` directory, use the command below to
+In the `optapy-jpype` directory, use the command below to
 build the optapy python wheel into the `dist` directory:
 
 [source,bash]
@@ -154,13 +154,10 @@ You define your constraints by using the ConstraintFactory
 ----
 import java
 from domain import Lesson
-from optapy import getClass
+from optapy import getClass, Joiners, HardSoftScore
 
 # Get the Java class corresponding to the Lesson Python class
 LessonClass = getClass(Lesson)
-
-Joiners = java.type("org.optaplanner.core.api.score.stream.Joiners")
-HardSoftScore = java.type("org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore")
 
 @ConstraintProvider
 def defineConstraints(constraintFactory):
@@ -173,16 +170,16 @@ def defineConstraints(constraintFactory):
 def roomConflict(constraintFactory):
     # A room can accommodate at most one lesson at the same time.
     return constraintFactory \
-            .fromUniquePair(LessonClass,
+            .fromUniquePair(LessonClass, [
             # ... in the same timeslot ...
                 Joiners.equal(lambda lesson: lesson.timeslot),
             # ... in the same room ...
-                Joiners.equal(lambda lesson: lesson.room)) \
+                Joiners.equal(lambda lesson: lesson.room)]) \
             .penalize("Room conflict", HardSoftScore.ONE_HARD)
 ----
 for more details on Constraint Streams, see https://docs.optaplanner.org/latest/optaplanner-docs/html_single/index.html#constraintStreams
 
-NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from` function, you access it like `constraintFactory["from"](class)`
+NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from` function, you access it like `constraintFactory.from_(class, [joiners...])`
 
 === Solving
 
