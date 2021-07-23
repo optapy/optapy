@@ -185,12 +185,10 @@ NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from` f
 
 [source,python]
 ----
-from optapy import getClass, SolverConfig, PythonSolver
+from optapy import getClass, SolverConfig, PythonSolver, Duration
 from constraints import defineConstraints
 from domain import TimeTable, Lesson, generateProblem
 import java
-
-Duration = java.type("java.time.Duration")
 
 solverConfig = SolverConfig().withEntityClasses(getClass(Lesson)) \
     .withSolutionClass(getClass(TimeTable)) \
