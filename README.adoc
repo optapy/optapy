@@ -6,7 +6,7 @@ Optapy is an unofficial and experimental Python Package
 that allows OptaPlanner Constraint Providers to be written using
 only Python code.
 
-WARNING: Optapy is an experimental technology and is not supported in any way or form. Additionally, it is ~10 times slower than using OptaPlanner in Java. It is not recommended for production use.
+WARNING: Optapy is an experimental technology and is not supported in any way or form. Additionally, it is at least 20 times slower than using OptaPlanner in Java. It is not recommended for production use.
 
 == Prerequisites
 
