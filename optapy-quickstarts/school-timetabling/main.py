@@ -1,4 +1,5 @@
-from optapy import getClass, SolverConfig, solve, Duration
+from optapy import getClass, solve
+from optapy.types import SolverConfig, Duration
 from domain import TimeTable, Lesson, generateProblem
 
 try:

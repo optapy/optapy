@@ -1,4 +1,5 @@
-from optapy import HardSoftScore, ProblemFact, PlanningEntity, PlanningSolution, PlanningId, PlanningScore, PlanningVariable, ValueRangeProvider, PlanningEntityCollectionProperty, ProblemFactCollectionProperty
+from optapy import ProblemFact, PlanningEntity, PlanningSolution, PlanningId, PlanningScore, PlanningVariable, ValueRangeProvider, PlanningEntityCollectionProperty, ProblemFactCollectionProperty
+from optapy.types import HardSoftScore
 from datetime import time
 from functools import reduce
 

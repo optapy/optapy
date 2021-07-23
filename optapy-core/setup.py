@@ -35,7 +35,7 @@ setup(
     author = 'Christopher Chianelli',
     license = 'Apache 2.0',
     description = 'OptaPlanner Annotations and Wrappers through JPype',
-    packages=['optapy'],
+    packages=['optapy', 'optapy.types'],
     package_dir={'optapy': 'src/main/python'},
     python_requires='>=3.6',
     install_requires=['JPype1'],

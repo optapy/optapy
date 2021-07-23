@@ -2,4 +2,3 @@ from .annotations import PlanningEntity, PlanningScore, PlanningSolution, Planni
     PlanningEntityCollectionProperty, ProblemFactCollectionProperty, ProblemFact, PlanningScore, \
     ValueRangeProvider, ConstraintProvider
 from .optaplanner_java_interop import getClass, SolverConfig, solve
-from .types import Joiners, HardSoftScore, Duration
