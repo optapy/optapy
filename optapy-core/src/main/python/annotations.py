@@ -1,14 +1,8 @@
-from .optaplanner_java_interop import generatePlanningEntityClass, generateProblemFactClass, generatePlanningSolutionClass, generateConstraintProviderClass
-
-from org.optaplanner.optapy import PythonWrapperGenerator
-from org.optaplanner.core.api.domain.lookup import PlanningId as JavaPlanningId
-from org.optaplanner.core.api.domain.variable import PlanningVariable as JavaPlanningVariable
-from org.optaplanner.core.api.domain.solution import ProblemFactCollectionProperty as JavaProblemFactCollectionProperty
-from org.optaplanner.core.api.domain.solution import PlanningEntityCollectionProperty as JavaPlanningEntityCollectionProperty
-from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
-from org.optaplanner.core.api.domain.solution import PlanningScore as JavaPlanningScore
+from .optaplanner_java_interop import ensure_init, generatePlanningEntityClass, generateProblemFactClass, generatePlanningSolutionClass, generateConstraintProviderClass
 
 def PlanningId(getterFunction):
+    ensure_init()
+    from org.optaplanner.core.api.domain.lookup import PlanningId as JavaPlanningId
     getterFunction.__optaplannerPlanningId = {
         'annotationType': JavaPlanningId
     }
@@ -17,6 +11,8 @@ def PlanningId(getterFunction):
 def PlanningVariable(type, valueRangeProviderRefs, nullable=False, graphType=None,
                      strengthComparatorClass=None, strengthWeightFactoryClass=None):
     def PlanningVariableFunctionWrapper(variableGetterFunction):
+        ensure_init()
+        from org.optaplanner.core.api.domain.variable import PlanningVariable as JavaPlanningVariable
         variableGetterFunction.__optaplannerPlanningVariable = {
             'annotationType': JavaPlanningVariable,
             'valueRangeProviderRefs': valueRangeProviderRefs,
@@ -31,6 +27,9 @@ def PlanningVariable(type, valueRangeProviderRefs, nullable=False, graphType=Non
 
 def ProblemFactCollectionProperty(type):
     def ProblemFactCollectionPropertyFunctionMapper(getterFunction):
+        ensure_init()
+        from org.optaplanner.optapy import PythonWrapperGenerator
+        from org.optaplanner.core.api.domain.solution import ProblemFactCollectionProperty as JavaProblemFactCollectionProperty
         getterFunction.__return = PythonWrapperGenerator.getArrayClass(type.__javaClass)
         getterFunction.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaProblemFactCollectionProperty
@@ -40,6 +39,9 @@ def ProblemFactCollectionProperty(type):
 
 def PlanningEntityCollectionProperty(type):
     def PlanningEntityCollectionPropertyFunctionMapper(getterFunction):
+        ensure_init()
+        from org.optaplanner.optapy import PythonWrapperGenerator
+        from org.optaplanner.core.api.domain.solution import PlanningEntityCollectionProperty as JavaPlanningEntityCollectionProperty
         getterFunction.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaPlanningEntityCollectionProperty
         }
@@ -49,6 +51,8 @@ def PlanningEntityCollectionProperty(type):
 
 def ValueRangeProvider(id):
     def ValueRangeProviderFunctionWrapper(getterFunction):
+        ensure_init()
+        from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
         getterFunction.__optaplannerValueRangeProvider = {
             'annotationType': JavaValueRangeProvider,
             'id': id
@@ -57,10 +61,12 @@ def ValueRangeProvider(id):
     return ValueRangeProviderFunctionWrapper
 
 def PlanningScore(type,
-                  bendableHardLevelsSize=JavaPlanningScore.NO_LEVEL_SIZE,
-                  bendableSoftLevelsSize=JavaPlanningScore.NO_LEVEL_SIZE,
+                  bendableHardLevelsSize=None,
+                  bendableSoftLevelsSize=None,
                   scoreDefinitionClass=None):
     def PlanningScoreFunctionWrapper(getterFunction):
+        ensure_init()
+        from org.optaplanner.core.api.domain.solution import PlanningScore as JavaPlanningScore
         getterFunction.__optaplannerPlanningScore = {
             'annotationType': JavaPlanningScore,
             'bendableHardLevelsSize': bendableHardLevelsSize,
@@ -72,17 +78,21 @@ def PlanningScore(type,
     return PlanningScoreFunctionWrapper
 
 def PlanningEntity(planningEntityClass):
+    ensure_init()
     planningEntityClass.__javaClass = generatePlanningEntityClass(planningEntityClass)
     return planningEntityClass
 
 def ProblemFact(problemFactClass):
+    ensure_init()
     problemFactClass.__javaClass = generateProblemFactClass(problemFactClass)
     return problemFactClass
 
 def PlanningSolution(planningSolutionClass):
+    ensure_init()
     planningSolutionClass.__javaClass = generatePlanningSolutionClass(planningSolutionClass)
     return planningSolutionClass
 
 def ConstraintProvider(constraintProviderFunction):
+    ensure_init()
     constraintProviderFunction.__javaClass = generateConstraintProviderClass(constraintProviderFunction)
     return constraintProviderFunction

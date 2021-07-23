@@ -1,4 +1,5 @@
-from optapy import ConstraintProvider, getClass, Joiners, HardSoftScore
+from optapy import ConstraintProvider, getClass
+from optapy.types import Joiners, HardSoftScore
 from domain import TimeTable, Lesson, Room
 from datetime import datetime, date, timedelta
 
