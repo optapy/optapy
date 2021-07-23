@@ -1,5 +1,7 @@
 = Optapy
 
+https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[image:https://mybinder.org/badge_logo.svg[Binder]]
+
 Optapy is an unofficial and experimental Python Package
 that allows OptaPlanner Constraint Providers to be written using
 only Python code.
