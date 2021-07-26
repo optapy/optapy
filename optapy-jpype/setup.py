@@ -34,7 +34,7 @@ setup(
     version = '0.0.0',
     author = 'Christopher Chianelli',
     license = 'Apache 2.0',
-    description = 'OptaPlanner Annotations and Wrappers for GraalVM',
+    description = 'OptaPlanner Annotations and Wrappers through JPype',
     packages=['optapy'],
     package_dir={'optapy': 'src/main/python'},
     python_requires='>=3.6',

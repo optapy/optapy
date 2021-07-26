@@ -1,29 +1,38 @@
-= Optapy
+= OptaPy
 
 https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[image:https://mybinder.org/badge_logo.svg[Binder]]
 
-Optapy is an unofficial and experimental Python Package
-that allows OptaPlanner Constraint Providers to be written using
-only Python code.
+OptaPy is *an AI constraint solver for Python* to optimize
+the Vehicle Routing Problem, Employee Rostering, Maintenance Scheduling, Task Assignment, School Timetabling,
+Cloud Optimization, Conference Scheduling, Job Shop Scheduling, Bin Packing and many more planning problems.
 
-WARNING: Optapy is an experimental technology and is not supported in any way or form. Additionally, it is at least 20 times slower than using OptaPlanner in Java. It is not recommended for production use.
+OptaPy wraps the https://www.optaplanner.org/[OptaPlanner] engine internally,
+but using OptaPy in Python is significantly slower than using OptaPlanner in Java or Kotlin.
 
-== Prerequisites
+WARNING: OptaPy is an experimental technology.
+It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
+It is currently not supported in any way or form for production use.
 
-- A Java Development Kit (JDK) is installed on your machine
+== Get started
 
-== Building
+=== Prerequisites
 
-In the `optapy-jpype` directory, use the command below to
+. https://www.python.org[Install Python 3.9 or later]
+. https://adoptopenjdk.net[Install JDK 11 or later] with `JAVA_HOME` configured appropriately.
+
+=== Build
+
+. In the `optapy-jpype` directory, use the command below to
 build the optapy python wheel into the `dist` directory:
-
++
 [source,bash]
 ----
+cd optapy-jpype
 python -m build
 ----
 
-You can then install it into a virtual environment using `pip`:
-
+. Install it into a virtual environment using `pip`:
++
 [source,bash]
 ----
 # Activate a virtual environment first
@@ -31,16 +40,16 @@ source my_project/venv/bin/activate
 pip install dist/optapy-0.0.0-py3-none-any.whl
 ----
 
-== Running
+=== Run
 
-Running `run.sh` will run `optapy-school-timetabling/main.py`
+Running `run.sh` runs `optapy-school-timetabling/main.py`
 after building `optapy` and installing it to `optapy-school-timetabling/venv`.
 
-== Overview
+== Source code overview
 
 === Domain
 
-In OptaPlanner, the domain is separated into three parts
+In OptaPlanner, the domain has three parts:
 
 - Problem Facts, which do not change
 - Planning Entities, which have one or more planning variables
@@ -183,7 +192,7 @@ for more details on Constraint Streams, see https://docs.optaplanner.org/latest/
 
 NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from` function, you access it like `constraintFactory.from_(class, [joiners...])`
 
-=== Solving
+=== Solve
 
 [source,python]
 ----
@@ -202,3 +211,7 @@ solution = PythonSolver.solve(solverConfig, generateProblem())
 
 `solution` will be a `TimeTable` instance with planning
 variables set to the final best solution found.
+
+== More information
+
+Visit https://www.optaplanner.org/[www.optaplanner.org].
