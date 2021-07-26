@@ -1,17 +1,21 @@
-from optapy import ConstraintProvider, getClass, Joiners, HardSoftScore
+from optapy import constraint_provider, get_class, Joiners, HardSoftScore
 from domain import TimeTable, Lesson, Room
 from datetime import datetime, date, timedelta
 
-TimeTableClass = getClass(TimeTable)
-LessonClass = getClass(Lesson)
-RoomClass = getClass(Room)
+
+TimeTableClass = get_class(TimeTable)
+LessonClass = get_class(Lesson)
+RoomClass = get_class(Room)
 
 today = date.today()
+
+
 def within30Mins(lesson1, lesson2):
     between = datetime.combine(today, lesson1.timeslot.endTime) - datetime.combine(today, lesson2.timeslot.startTime)
     return timedelta(minutes=0) <= between <= timedelta(minutes=30)
 
-@ConstraintProvider
+
+@constraint_provider
 def defineConstraints(constraintFactory):
     return [
         # Hard constraints

@@ -1,22 +1,22 @@
-from optapy import ProblemFact, PlanningEntity, PlanningSolution, PlanningId, PlanningScore, PlanningVariable, ValueRangeProvider, PlanningEntityCollectionProperty, ProblemFactCollectionProperty
+from optapy import *
 from optapy.types import HardSoftScore
 from datetime import time
 from functools import reduce
 
-@ProblemFact
+@problem_fact
 class Room:
     def __init__(self, id, name):
         self.id = id
         self.name = name
 
-    @PlanningId
+    @planning_id
     def getId(self):
         return self.id
 
     def __str__(self):
         return "Room(id=" + str(self.id) + ", name=" + str(self.name) + ")"
 
-@ProblemFact
+@problem_fact
 class Timeslot:
     def __init__(self, id, dayOfWeek, startTime, endTime):
         self.id = id
@@ -24,7 +24,7 @@ class Timeslot:
         self.startTime = startTime
         self.endTime = endTime
 
-    @PlanningId
+    @planning_id
     def getId(self):
         return self.id
 
@@ -33,7 +33,7 @@ class Timeslot:
                ", dayOfWeek=" + str(self.dayOfWeek) + ", startTime=" + str(self.startTime) + \
                ", endTime=" + str(self.endTime) + ")"
 
-@PlanningEntity
+@planning_entity
 class Lesson:
     def __init__(self, id, subject, teacher, studentGroup, timeslot=None, room=None):
         self.id = id
@@ -43,18 +43,18 @@ class Lesson:
         self.timeslot = timeslot
         self.room = room
 
-    @PlanningId
+    @planning_id
     def getId(self):
         return self.id
 
-    @PlanningVariable(Timeslot, valueRangeProviderRefs=["timeslotRange"])
+    @planning_variable(Timeslot, value_range_provider_refs=["timeslotRange"])
     def getTimeslot(self):
         return self.timeslot
 
     def setTimeslot(self, newTimeslot):
         self.timeslot = newTimeslot
 
-    @PlanningVariable(Room, valueRangeProviderRefs=["roomRange"])
+    @planning_variable(Room, value_range_provider_refs=["roomRange"])
     def getRoom(self):
         return self.room
 
@@ -78,7 +78,7 @@ def listString(aList):
     else:
         return "[" + reduce(itemConcat, aList[1:], str(aList[0])) + "]"
 
-@PlanningSolution
+@planning_solution
 class TimeTable:
     def __init__(self, timeslotList=[], roomList=[], lessonList=[], score=None):
         self.timeslotList = timeslotList
@@ -86,21 +86,21 @@ class TimeTable:
         self.lessonList = lessonList
         self.score = score
 
-    @ProblemFactCollectionProperty(Timeslot)
-    @ValueRangeProvider(id = "timeslotRange")
+    @problem_fact_collection_property(Timeslot)
+    @value_range_provider("timeslotRange")
     def getTimeslotList(self):
         return self.timeslotList
 
-    @ProblemFactCollectionProperty(Room)
-    @ValueRangeProvider(id = "roomRange")
+    @problem_fact_collection_property(Room)
+    @value_range_provider("roomRange")
     def getRoomList(self):
         return self.roomList
 
-    @PlanningEntityCollectionProperty(Lesson)
+    @planning_entity_collection_property(Lesson)
     def getLessonList(self):
         return self.lessonList
 
-    @PlanningScore(HardSoftScore)
+    @planning_score(HardSoftScore)
     def getScore(self):
         return self.score
 
