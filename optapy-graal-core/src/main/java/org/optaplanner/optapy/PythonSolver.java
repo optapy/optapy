@@ -4,12 +4,14 @@ import org.graalvm.polyglot.Value;
 import org.optaplanner.core.api.score.stream.ConstraintStreamImplType;
 import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
+import org.optaplanner.core.config.solver.EnvironmentMode;
 import org.optaplanner.core.config.solver.SolverConfig;
 
 public class PythonSolver {
     public static Object solve(SolverConfig solverConfig, Value problem) {
         solverConfig = new SolverConfig().inherit(solverConfig);
         solverConfig.setClassLoader(PythonWrapperGenerator.gizmoClassLoader);
+        solverConfig.setEnvironmentMode(EnvironmentMode.FULL_ASSERT);
         solverConfig.getScoreDirectorFactoryConfig().withConstraintStreamImplType(ConstraintStreamImplType.BAVET);
         Solver solver = SolverFactory.create(solverConfig).buildSolver();
         return PythonWrapperGenerator.unwrap(solverConfig.getSolutionClass(),

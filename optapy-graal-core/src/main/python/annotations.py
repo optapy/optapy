@@ -15,7 +15,7 @@ class MyPlanningId(MyAnnotation):
     def __init__(self):
         super().__init__(JavaPlanningId)
 
-def PlanningId(getterFunction):
+def planning_id(getterFunction):
     getterFunction.__optaplannerPlanningId = MyPlanningId()
     return getterFunction
 
@@ -41,10 +41,10 @@ class MyPlanningVariable(MyAnnotation):
     def strengthWeightFactoryClass(self):
         return self.__strengthWeightFactoryClass
 
-def PlanningVariable(type, valueRangeProviderRefs, nullable=False, graphType=None,
-                     strengthComparatorClass=None, strengthWeightFactoryClass=None):
+def planning_variable(type, value_range_provider_refs, nullable=False, graphType=None,
+                      strengthComparatorClass=None, strengthWeightFactoryClass=None):
     def PlanningVariableFunctionWrapper(variableGetterFunction):
-        variableGetterFunction.__optaplannerPlanningVariable = MyPlanningVariable(valueRangeProviderRefs, nullable, graphType, strengthComparatorClass,
+        variableGetterFunction.__optaplannerPlanningVariable = MyPlanningVariable(value_range_provider_refs, nullable, graphType, strengthComparatorClass,
                                                                                   strengthWeightFactoryClass)
         variableGetterFunction.__return = type.__javaClass
         return variableGetterFunction
@@ -55,7 +55,7 @@ class MyProblemFactCollectionProperty(MyAnnotation):
     def __init__(self):
         super().__init__(JavaProblemFactCollectionProperty)
 
-def ProblemFactCollectionProperty(type):
+def problem_fact_collection_property(type):
     def ProblemFactCollectionPropertyFunctionMapper(getterFunction):
         getterFunction.__return = PythonWrapperGenerator.getArrayClass(type.__javaClass)
         getterFunction.__optaplannerPlanningEntityCollectionProperty = MyProblemFactCollectionProperty()
@@ -67,7 +67,7 @@ class MyPlanningEntityCollectionProperty(MyAnnotation):
     def __init__(self):
         super().__init__(JavaPlanningEntityCollectionProperty)
 
-def PlanningEntityCollectionProperty(type):
+def planning_entity_collection_property(type):
     def PlanningEntityCollectionPropertyFunctionMapper(getterFunction):
         getterFunction.__optaplannerPlanningEntityCollectionProperty = MyPlanningEntityCollectionProperty()
         getterFunction.__return = PythonWrapperGenerator.getArrayClass(type.__javaClass)
@@ -83,7 +83,7 @@ class MyValueRangeProvider(MyAnnotation):
     def id(self):
         return self.__id
 
-def ValueRangeProvider(id):
+def value_range_provider(id):
     def ValueRangeProviderFunctionWrapper(getterFunction):
         getterFunction.__optaplannerValueRangeProvider = MyValueRangeProvider(id)
         return getterFunction
@@ -107,28 +107,28 @@ class MyPlanningScore(MyAnnotation):
     def scoreDefinitionClass(self):
         return self.__scoreDefinitionClass
 
-def PlanningScore(type,
-                  bendableHardLevelsSize=JavaPlanningScore.NO_LEVEL_SIZE,
-                  bendableSoftLevelsSize=JavaPlanningScore.NO_LEVEL_SIZE,
-                  scoreDefinitionClass=None):
+def planning_score(type,
+                   bendableHardLevelsSize=JavaPlanningScore.NO_LEVEL_SIZE,
+                   bendableSoftLevelsSize=JavaPlanningScore.NO_LEVEL_SIZE,
+                   scoreDefinitionClass=None):
     def PlanningScoreFunctionWrapper(getterFunction):
         getterFunction.__optaplannerPlanningScore = MyPlanningScore(bendableHardLevelsSize, bendableSoftLevelsSize, scoreDefinitionClass)
         getterFunction.__return = type
         return getterFunction
     return PlanningScoreFunctionWrapper
 
-def PlanningEntity(planningEntityClass):
+def planning_entity(planningEntityClass):
     planningEntityClass.__javaClass = generatePlanningEntityClass(planningEntityClass)
     return planningEntityClass
 
-def ProblemFact(problemFactClass):
+def problem_fact(problemFactClass):
     problemFactClass.__javaClass = generateProblemFactClass(problemFactClass)
     return problemFactClass
 
-def PlanningSolution(planningSolutionClass):
+def planning_solution(planningSolutionClass):
     planningSolutionClass.__javaClass = generatePlanningSolutionClass(planningSolutionClass)
     return planningSolutionClass
 
-def ConstraintProvider(constraintProviderFunction):
+def constraint_provider(constraintProviderFunction):
     constraintProviderFunction.__javaClass = generateConstraintProviderClass(constraintProviderFunction)
     return constraintProviderFunction
