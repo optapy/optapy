@@ -21,13 +21,18 @@ It is currently not supported in any way or form for production use.
 . https://adoptopenjdk.net[Install JDK 11 or later] with `JAVA_HOME` configured appropriately.
 
 === Build
-
-. In the `optapy-jpype` directory, use the command below to
+. Install the python `build` module (if not already installed):
++
+[source,bash]
+----
+pip install build
+----
+. In the `optapy` directory, use the command below to
 build the optapy python wheel into the `dist` directory:
 +
 [source,bash]
 ----
-cd optapy-jpype
+cd optapy
 python -m build
 ----
 
@@ -42,8 +47,8 @@ pip install dist/optapy-0.0.0-py3-none-any.whl
 
 === Run
 
-Running `run.sh` runs `optapy-school-timetabling/main.py`
-after building `optapy` and installing it to `optapy-school-timetabling/venv`.
+Running `run.sh` runs `optapy-quickstarts/school-timetabling/main.py`
+after building `optapy` and installing it to `optapy-quickstarts/school-timetabling/venv`.
 
 == Source code overview
 
