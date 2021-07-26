@@ -101,15 +101,17 @@ def deepClonePythonObject(the_object):
 
 
 def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
+    if jpype.isJVMStarted():
+        raise RuntimeError('JVM already started. Maybe call init before optapy.type imports?')
     if path is None:
         include_optaplanner_jars = True
         path = []
     if include_optaplanner_jars:
         path = path + extract_optaplanner_jars()
     if len(args) == 0:
-        args = (jpype.getDefaultJVMPath(), '-Dlogging.level.root={}'.format(log_level))
+        args = (jpype.getDefaultJVMPath(), '-Dlogback.level.org.optaplanner={}'.format(log_level))
     else:
-        args = args + ('-Dlogging.level.root={}'.format(log_level),)
+        args = args + ('-Dlogback.level.org.optaplanner={}'.format(log_level),)
     jpype.startJVM(*args, classpath=path)
     import java.util.function.Function
     import java.util.function.BiFunction
