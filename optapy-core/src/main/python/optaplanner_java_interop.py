@@ -58,6 +58,14 @@ class PythonTriFunction:
         return self.delegate(argument1, argument2, argument3)
 
 
+def _get_python_object_id(item):
+    return id(item)
+
+
+def _get_python_object_str(item):
+    return str(item)
+
+
 def _get_python_object_from_id(item_id):
     return item_id
 
@@ -96,7 +104,9 @@ def _set_python_object_attribute(object_id, name, value):
 
 def _deep_clone_python_object(the_object):
     import java.io.Serializable
-    the_clone = the_object.__deepcopy__()
+    # ...Python evaluate default arg once, so if we don't set the memo arg to a new dictionary,
+    # the same dictionary is reused!
+    the_clone = the_object.__deepcopy__(memo={})
     my_refs.add(the_clone)
     return JProxy(java.io.Serializable, inst=the_clone, convert=True)
 
@@ -118,6 +128,8 @@ def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
     from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner
+    PythonWrapperGenerator.setPythonObjectToId(JObject(PythonFunction(_get_python_object_id), java.util.function.Function))
+    PythonWrapperGenerator.setPythonObjectToString(JObject(PythonFunction(_get_python_object_str), java.util.function.Function))
     PythonWrapperGenerator.setPythonArrayIdToIdArray(JObject(PythonFunction(_get_python_array_to_id_array), java.util.function.Function))
     PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToValue(JObject(PythonBiFunction(_get_python_object_attribute), java.util.function.BiFunction))
     PythonWrapperGenerator.setPythonObjectIdAndAttributeSetter(JObject(PythonTriFunction(_set_python_object_attribute), org.optaplanner.core.api.function.TriFunction))
@@ -155,7 +167,7 @@ class _PythonObject:
 
     def __getattr__(self, name):
         from org.optaplanner.optapy import PythonWrapperGenerator
-        item = PythonWrapperGenerator.getPythonObjectId(self)
+        item = PythonWrapperGenerator.getPythonObject(self)
         out = getattr(item, name)
         if id(out) in ref_map:
             return ref_map[id(out)]
@@ -163,23 +175,23 @@ class _PythonObject:
 
     def __setattr__(self, key, value):
         from org.optaplanner.optapy import PythonWrapperGenerator
-        item = PythonWrapperGenerator.getPythonObjectId(self)
+        item = PythonWrapperGenerator.getPythonObject(self)
         setattr(item, key, value)
 
     def __copy__(self):
         from org.optaplanner.optapy import PythonWrapperGenerator
-        item = PythonWrapperGenerator.getPythonObjectId(self)
+        item = PythonWrapperGenerator.getPythonObject(self)
         copied_item = copy.copy(item)
         return copied_item
 
-    def __deepcopy__(self, memodict={}):
+    def __deepcopy__(self, memo={}):
         from org.optaplanner.optapy import PythonWrapperGenerator
         import java.lang.Object
-        item = PythonWrapperGenerator.getPythonObjectId(self)
-        copied_item = copy.copy(item)
-        for attribute, value in vars(copied_item).items():
-            if not isinstance(value, java.lang.Object):
-                vars(copied_item)[attribute] = copy.deepcopy(value, memodict)
+        item = PythonWrapperGenerator.getPythonObject(self)
+        for attribute, value in vars(item).items():
+            if isinstance(value, java.lang.Object):
+                memo[id(value)] = value
+        copied_item = copy.deepcopy(item, memo)
         return copied_item
 
 

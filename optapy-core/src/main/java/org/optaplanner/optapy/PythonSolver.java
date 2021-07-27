@@ -1,6 +1,7 @@
 package org.optaplanner.optapy;
 
 import java.io.Serializable;
+import java.util.HashMap;
 
 import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
@@ -13,6 +14,6 @@ public class PythonSolver {
         solverConfig.setEnvironmentMode(EnvironmentMode.FULL_ASSERT);
         solverConfig.setClassLoader(PythonWrapperGenerator.gizmoClassLoader);
         Solver solver = SolverFactory.create(solverConfig).buildSolver();
-        return solver.solve(PythonWrapperGenerator.wrap(solverConfig.getSolutionClass(), problem));
+        return solver.solve(PythonWrapperGenerator.wrap(solverConfig.getSolutionClass(), problem, new HashMap<>()));
     }
 }
