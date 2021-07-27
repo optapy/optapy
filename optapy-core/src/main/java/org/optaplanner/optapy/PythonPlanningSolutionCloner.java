@@ -3,6 +3,8 @@ package org.optaplanner.optapy;
 import org.optaplanner.core.api.domain.solution.cloner.SolutionCloner;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 public class PythonPlanningSolutionCloner implements SolutionCloner {
@@ -14,7 +16,7 @@ public class PythonPlanningSolutionCloner implements SolutionCloner {
 
     @Override
     public Object cloneSolution(Object o) {
-        Serializable deepCloneId = deepClonePythonObject.apply((PythonObject) o);
-        return PythonWrapperGenerator.wrap(o.getClass(), deepCloneId);
+        Serializable deepClone = deepClonePythonObject.apply((PythonObject) o);
+        return PythonWrapperGenerator.wrap(o.getClass(), deepClone, new HashMap<>());
     }
 }

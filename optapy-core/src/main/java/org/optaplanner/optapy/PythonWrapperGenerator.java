@@ -43,9 +43,19 @@ public class PythonWrapperGenerator {
      * Accessor
      */
     private static final Map<String, byte[]> classNameToBytecode = new HashMap<>();
+    static Function<Serializable, Number> pythonObjectToId;
+    private static Function<Serializable, String> pythonObjectToString;
     private static Function<Serializable, List<Serializable>> pythonArrayIdToIdArray;
     private static BiFunction<Serializable, String, Object> pythonObjectIdAndAttributeNameToValue;
     private static TriFunction<Serializable, String, Object, Object> pythonObjectIdAndAttributeSetter;
+
+    public static void setPythonObjectToString(Function<Serializable, String> pythonObjectToString) {
+        PythonWrapperGenerator.pythonObjectToString = pythonObjectToString;
+    }
+
+    public static void setPythonObjectToId(Function<Serializable, Number> pythonObjectToId) {
+        PythonWrapperGenerator.pythonObjectToId = pythonObjectToId;
+    }
 
     public static Object getValueFromPythonObject(Serializable objectId, String attributeName) {
         return pythonObjectIdAndAttributeNameToValue.apply(objectId, attributeName);
@@ -68,7 +78,11 @@ public class PythonWrapperGenerator {
         pythonObjectIdAndAttributeSetter = setter;
     }
 
-    public static Serializable getPythonObjectId(PythonObject pythonObject) {
+    public static String getPythonObjectString(Serializable pythonObject) {
+        return pythonObjectToString.apply(pythonObject);
+    }
+
+    public static Serializable getPythonObject(PythonObject pythonObject) {
         Serializable out = pythonObject.get__optapy_Id();
         return out;
     }
@@ -103,21 +117,26 @@ public class PythonWrapperGenerator {
         return Array.newInstance(elementClass, 0).getClass();
     }
 
-    public static <T> T wrap(Class<T> javaClass, Serializable object) {
+    public static <T> T wrap(Class<T> javaClass, Serializable object, Map<Number, Object> map) {
         if (object == null) {
             return null;
+        }
+        Number id = pythonObjectToId.apply(object);
+        if (map.containsKey(id)) {
+            return (T) map.get(id);
         }
         try {
             if (javaClass.isArray()) {
                 List<Serializable> itemIds = pythonArrayIdToIdArray.apply(object);
                 int length = itemIds.size();
                 Object out = Array.newInstance(javaClass.getComponentType(), length);
+                map.put(id, out);
                 for (int i = 0; i < length; i++) {
-                    Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i)));
+                    Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i), map));
                 }
                 return (T) out;
             } else {
-                T out = (T) javaClass.getConstructor(Serializable.class).newInstance(object);
+                T out = (T) javaClass.getConstructor(Serializable.class, Number.class, Map.class).newInstance(object, id, map);
                 return out;
             }
         } catch (IllegalAccessException | NoSuchMethodException | InstantiationException | InvocationTargetException e) {
@@ -126,7 +145,7 @@ public class PythonWrapperGenerator {
     }
 
     public static Supplier<Object> wrapObject(Class<?> javaClass, Serializable object) {
-        Object out = wrap(javaClass, object);
+        Object out = wrap(javaClass, object, new HashMap<>());
         return () -> out;
     }
 
@@ -296,12 +315,21 @@ public class PythonWrapperGenerator {
             fieldDescriptorList.add(generateWrapperMethod(classCreator, valueField, methodName, returnType, annotations, returnTypeList));
         }
         createConstructor(classCreator, valueField, fieldDescriptorList, returnTypeList);
+        createToString(classCreator, valueField);
+    }
+
+    private static void createToString(ClassCreator classCreator, FieldDescriptor valueField) {
+        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofMethod(classCreator.getClassName(), "toString", String.class));
+        methodCreator.returnValue(methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getPythonObjectString", String.class, Serializable.class),
+                                                                   methodCreator.readInstanceField(valueField, methodCreator.getThis())));
     }
 
     private static void createConstructor(ClassCreator classCreator, FieldDescriptor valueField, List<FieldDescriptor> fieldDescriptorList,
             List<Class<?>> returnTypeList) {
-        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), Serializable.class));
+        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), Serializable.class, Number.class, Map.class));
         methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), methodCreator.getThis());
+        methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Map.class, "put", Object.class, Object.class, Object.class),
+                                            methodCreator.getMethodParam(2), methodCreator.getMethodParam(1), methodCreator.getThis());
         ResultHandle value = methodCreator.getMethodParam(0);
         methodCreator.writeInstanceField(valueField, methodCreator.getThis(), value);
 
@@ -317,8 +345,8 @@ public class PythonWrapperGenerator {
             } else {
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
                         methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                            "wrap", Object.class, Class.class, Serializable.class),
-                            methodCreator.loadClass(returnType), outResultHandle));
+                            "wrap", Object.class, Class.class, Serializable.class, Map.class),
+                            methodCreator.loadClass(returnType), outResultHandle, methodCreator.getMethodParam(2)));
             }
         }
         methodCreator.returnValue(methodCreator.getThis());
