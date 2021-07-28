@@ -62,12 +62,12 @@ In OptaPlanner, the domain has three parts:
 
 ==== Problem Facts
 
-To declare Problem Facts, use the `@ProblemFact` decorator
+To declare Problem Facts, use the `@problem_fact` decorator
 
 [source,python]
 ----
-from optapy import ProblemFact
-@ProblemFact
+from optapy import problem_fact
+@problem_fact
 class Timeslot:
     def __init__(self, id, dayOfWeek, startTime, endTime):
         self.id = id
@@ -78,13 +78,13 @@ class Timeslot:
 
 ==== Planning Entities
 
-To declare Planning Entities, use the `@PlanningEntity` decorator
+To declare Planning Entities, use the `@planning_entity` decorator
 
 [source,python]
 ----
-from optapy import PlanningEntity, PlanningId, PlanningVariable
+from optapy import planning_entity, planning_id, planning_variable
 
-@PlanningEntity
+@planning_entity
 class Lesson:
     def __init__(self, id, subject, teacher, studentGroup, timeslot=None, room=None):
         self.id = id
@@ -94,18 +94,18 @@ class Lesson:
         self.timeslot = timeslot
         self.room = room
 
-    @PlanningId
+    @planning_id
     def getId(self):
         return self.id
 
-    @PlanningVariable(Timeslot, valueRangeProviderRefs=["timeslotRange"])
+    @planning_variable(Timeslot, value_range_provider_refs=["timeslotRange"])
     def getTimeslot(self):
         return self.timeslot
 
     def setTimeslot(self, newTimeslot):
         self.timeslot = newTimeslot
 
-    @PlanningVariable(Room, valueRangeProviderRefs=["roomRange"])
+    @planning_variable(Room, value_range_provider_refs=["roomRange"])
     def getRoom(self):
         return self.room
 
@@ -113,19 +113,19 @@ class Lesson:
         self.room = newRoom
 ----
 
-- `@PlanningVariable` method decorators are used to indicate what fields can change. The method MUST follow JavaBean style conventions and have a corresponding setter (i.e. `getRoom(self)`, `setRoom(self, newRoom)`). The first parameter of the decorator is the type of the Planning Variable (required). The `valueRangeProviderRefs` parameter tells OptaPlanner what value range providers on the Planning Solution this Planning Variable can take values from.
+- `@planning_variable` method decorators are used to indicate what fields can change. The method MUST follow JavaBean style conventions and have a corresponding setter (i.e. `getRoom(self)`, `setRoom(self, newRoom)`). The first parameter of the decorator is the type of the Planning Variable (required). The `value_range_provider_refs` parameter tells OptaPlanner what value range providers on the Planning Solution this Planning Variable can take values from.
 
-- `@PlanningId` is used to uniquely identify an entity object of a particular class. The same Planning Id can be used on entities of different classes, but the ids of all entities in the same class must be different.
+- `@planning_id` is used to uniquely identify an entity object of a particular class. The same Planning Id can be used on entities of different classes, but the ids of all entities in the same class must be different.
 
 ==== Planning Solution
 
-To declare the Planning Solution, use the `@PlanningSolution` decorator
+To declare the Planning Solution, use the `@planning_solution` decorator
 
 [source,python]
 ----
-from optapy import PlanningSolution, ProblemFactCollectionProperty, ValueRangeProvider, PlanningEntityCollectionProperty, PlanningScore
+from optapy import planning_solution, problem_fact_collection_property, value_range_provider, planning_entity_collection_property, planning_score
 
-@PlanningSolution
+@planning_solution
 class TimeTable:
     def __init__(self, timeslotList=[], roomList=[], lessonList=[], score=None):
         self.timeslotList = timeslotList
@@ -133,21 +133,21 @@ class TimeTable:
         self.lessonList = lessonList
         self.score = score
 
-    @ProblemFactCollectionProperty(Timeslot)
-    @ValueRangeProvider(id = "timeslotRange")
+    @problem_fact_collection_property(Timeslot)
+    @value_range_provider(range_id = "timeslotRange")
     def getTimeslotList(self):
         return self.timeslotList
 
-    @ProblemFactCollectionProperty(Room)
-    @ValueRangeProvider(id = "roomRange")
+    @problem_fact_collection_property(Room)
+    @value_range_provider(range_id = "roomRange")
     def getRoomList(self):
         return self.roomList
 
-    @PlanningEntityCollectionProperty(Lesson)
+    @planning_entity_collection_property(Lesson)
     def getLessonList(self):
         return self.lessonList
 
-    @PlanningScore(HardSoftScore)
+    @planning_score(HardSoftScore)
     def getScore(self):
         return self.score
 
@@ -155,13 +155,13 @@ class TimeTable:
         self.score = score
 ----
 
-- `@ValueRangeProvider(id)` is used to indicate a method returns values a Planning Variable can take. It can be referenced by its id in the `valueRangeProviderRefs` parameter of `@PlanningVariable`. It should also have a `@ProblemFactCollectionProperty` or a `@PlanningEntityCollectionProperty`.
+- `@value_range_provider(range_id)` is used to indicate a method returns values a Planning Variable can take. It can be referenced by its id in the `valueRangeProviderRefs` parameter of `@planning_variable`. It should also have a `@problem_fact_collection_property` or a `@planning_entity_collection_property`.
 
-- `@ProblemFactCollectionProperty(type)` is used to indicate a method returns Problem Facts. The first parameter of the decorator is the type of the Problem Fact Collection (required). It should be a list.
+- `@problem_fact_collection_property(type)` is used to indicate a method returns Problem Facts. The first parameter of the decorator is the type of the Problem Fact Collection (required). It should be a list.
 
-- `@ProblemFactCollectionProperty(type)` is used to indicate a method returns Planning Entities. The first parameter of the decorator is the type of the Planning Entity Collection (required). It should be a list.
+- `@planning_entity_collection_property(type)` is used to indicate a method returns Planning Entities. The first parameter of the decorator is the type of the Planning Entity Collection (required). It should be a list.
 
-- `@PlanningScore(scoreType)` is used to tell OptaPlanner what field holds the score. The method MUST follow JavaBean style conventions and have a corresponding setter (i.e. `getScore(self)`, `setScore(self, score)`). The first parameter of the decorator is the score type (required).
+- `@planning_score(scoreType)` is used to tell OptaPlanner what field holds the score. The method MUST follow JavaBean style conventions and have a corresponding setter (i.e. `getScore(self)`, `setScore(self, score)`). The first parameter of the decorator is the score type (required).
 
 === Constraints
 
@@ -170,12 +170,13 @@ You define your constraints by using the ConstraintFactory
 ----
 import java
 from domain import Lesson
-from optapy import getClass, Joiners, HardSoftScore
+from optapy import get_class, constraint_provider
+from optapy.types import Joiners, HardSoftScore
 
 # Get the Java class corresponding to the Lesson Python class
-LessonClass = getClass(Lesson)
+LessonClass = get_class(Lesson)
 
-@ConstraintProvider
+@constraint_provider
 def defineConstraints(constraintFactory):
     return [
         # Hard constraints
@@ -201,17 +202,18 @@ NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from` f
 
 [source,python]
 ----
-from optapy import getClass, SolverConfig, PythonSolver, Duration
+from optapy import get_class, solve
+from optapy.types import SolverConfig, Duration
 from constraints import defineConstraints
 from domain import TimeTable, Lesson, generateProblem
 import java
 
-solverConfig = SolverConfig().withEntityClasses(getClass(Lesson)) \
-    .withSolutionClass(getClass(TimeTable)) \
-    .withConstraintProviderClass(getClass(defineConstraints)) \
+solverConfig = SolverConfig().withEntityClasses(get_class(Lesson)) \
+    .withSolutionClass(get_class(TimeTable)) \
+    .withConstraintProviderClass(get_class(defineConstraints)) \
     .withTerminationSpentLimit(Duration.ofSeconds(30))
 
-solution = PythonSolver.solve(solverConfig, generateProblem())
+solution = solve(solverConfig, generateProblem())
 ----
 
 `solution` will be a `TimeTable` instance with planning
