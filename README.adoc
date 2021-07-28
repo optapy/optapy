@@ -27,12 +27,12 @@ It is currently not supported in any way or form for production use.
 ----
 pip install build
 ----
-. In the `optapy` directory, use the command below to
+. In the `optapy-core` directory, use the command below to
 build the optapy python wheel into the `dist` directory:
 +
 [source,bash]
 ----
-cd optapy
+cd optapy-core
 python -m build
 ----
 
