@@ -1,5 +1,5 @@
-from .optaplanner_java_interop import ensure_init, _generate_planning_entity_class, _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class
-
+from .optaplanner_java_interop import ensure_init, _add_deep_copy_to_class, _generate_planning_entity_class, _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class
+from jpype import JImplements
 
 def planning_id(getter_function):
     ensure_init()
@@ -86,20 +86,26 @@ def planning_score(score_type,
 
 def planning_entity(entity_class):
     ensure_init()
-    entity_class.__javaClass = _generate_planning_entity_class(entity_class)
-    return entity_class
+    out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(entity_class)
+    out.__javaClass = _generate_planning_entity_class(entity_class)
+    _add_deep_copy_to_class(out)
+    return out
 
 
 def problem_fact(fact_class):
     ensure_init()
-    fact_class.__javaClass = _generate_problem_fact_class(fact_class)
-    return fact_class
+    out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(fact_class)
+    out.__javaClass = _generate_problem_fact_class(fact_class)
+    _add_deep_copy_to_class(out)
+    return out
 
 
 def planning_solution(planning_solution_class):
     ensure_init()
-    planning_solution_class.__javaClass = _generate_planning_solution_class(planning_solution_class)
-    return planning_solution_class
+    out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(planning_solution_class)
+    out.__javaClass = _generate_planning_solution_class(planning_solution_class)
+    _add_deep_copy_to_class(out)
+    return out
 
 
 def constraint_provider(constraint_provider_function):

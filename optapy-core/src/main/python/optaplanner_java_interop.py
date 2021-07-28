@@ -5,6 +5,7 @@ import jpype
 import jpype.imports
 from jpype.types import *
 from jpype import JProxy, JImplements, JOverride, JImplementationFor
+from inspect import signature, Parameter
 import copy
 try:
     import importlib.resources as pkg_resources
@@ -82,14 +83,13 @@ def _get_python_object_attribute(object_id, name):
         out = JObject(python_object, java.lang.Object)
         return out
     else:
-        return JProxy(java.io.Serializable, inst=python_object, convert=True)
+        return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=python_object, convert=True)
 
 
 def _get_python_array_to_id_array(arrayId):
-    import java.lang.Object
-    import java.io.Serializable
+    import org.optaplanner.optapy.OpaquePythonReference
     the_object = arrayId
-    out = _to_java_list(list(map(lambda x: JProxy(java.io.Serializable, inst=x, convert=True), the_object)))
+    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=x, convert=True), the_object)))
     return out
 
 
@@ -103,12 +103,12 @@ def _set_python_object_attribute(object_id, name, value):
 
 
 def _deep_clone_python_object(the_object):
-    import java.io.Serializable
+    import org.optaplanner.optapy.OpaquePythonReference
     # ...Python evaluate default arg once, so if we don't set the memo arg to a new dictionary,
     # the same dictionary is reused!
     the_clone = the_object.__deepcopy__(memo={})
     my_refs.add(the_clone)
-    return JProxy(java.io.Serializable, inst=the_clone, convert=True)
+    return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=the_clone, convert=True)
 
 
 def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
@@ -144,20 +144,6 @@ def ensure_init():
 
 
 my_refs = set()
-ref_map = dict()
-
-
-@JImplements('java.io.Serializable', deferred=True)
-class _PythonRef:
-    def __init__(self, ref):
-        self.__dict__['ref'] = ref
-        ref_map[id(ref)] = self
-
-    def __getattr__(self, item):
-        return getattr(self.__dict__['ref'], item)
-
-    def __setattr__(self, key, value):
-        setattr(self.__dict__['ref'], key, value)
 
 
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
@@ -168,37 +154,56 @@ class _PythonObject:
     def __getattr__(self, name):
         from org.optaplanner.optapy import PythonWrapperGenerator
         item = PythonWrapperGenerator.getPythonObject(self)
-        out = getattr(item, name)
-        if id(out) in ref_map:
-            return ref_map[id(out)]
-        return _PythonRef(out)
+        return getattr(item, name)
 
     def __setattr__(self, key, value):
         from org.optaplanner.optapy import PythonWrapperGenerator
         item = PythonWrapperGenerator.getPythonObject(self)
         setattr(item, key, value)
 
-    def __copy__(self):
+    def __deepcopy__(self, memo):
         from org.optaplanner.optapy import PythonWrapperGenerator
         item = PythonWrapperGenerator.getPythonObject(self)
-        copied_item = copy.copy(item)
-        return copied_item
+        return copy.deepcopy(item, memo=memo)
 
-    def __deepcopy__(self, memo={}):
-        from org.optaplanner.optapy import PythonWrapperGenerator
+
+def _add_deep_copy_to_class(the_class):
+    if callable(getattr(the_class, '__deepcopy__', None)):
+        return
+    sig = signature(the_class.__init__)
+    keyword_args = dict()
+    positional_args = list()
+    skip_self_parameter = True
+    for parameter_name, parameter in sig.parameters.items():
+        if skip_self_parameter:
+            skip_self_parameter = False
+            continue
+        if parameter.default == Parameter.empty and parameter.kind != Parameter.VAR_POSITIONAL and \
+                parameter.kind != Parameter.VAR_KEYWORD:
+            if parameter.kind == Parameter.POSITIONAL_ONLY or parameter.kind == Parameter.POSITIONAL_OR_KEYWORD:
+                positional_args.append(None)
+            else:
+                keyword_args[parameter_name] = None
+
+    def class_deep_copy(self, memo):
         import java.lang.Object
-        item = PythonWrapperGenerator.getPythonObject(self)
-        for attribute, value in vars(item).items():
+        clone = the_class.__new__(the_class, *positional_args, **keyword_args)
+        memo[id(self)] = clone
+        item_vars = vars(self)
+        for attribute, value in item_vars.items():
             if isinstance(value, java.lang.Object):
                 memo[id(value)] = value
-        copied_item = copy.deepcopy(item, memo)
-        return copied_item
+                setattr(clone, attribute, value)
+            else:
+                setattr(clone, attribute, copy.deepcopy(value, memo=memo))
+        return clone
+    the_class.__deepcopy__ = class_deep_copy
 
 
 def solve(solverConfig, problem):
     from org.optaplanner.optapy import PythonSolver
-    import java.io.Serializable
-    return _unwrap_java_object(PythonSolver.solve(solverConfig, JProxy(java.io.Serializable, inst=problem, convert=True)))
+    import org.optaplanner.optapy.OpaquePythonReference
+    return _unwrap_java_object(PythonSolver.solve(solverConfig, JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=problem, convert=True)))
 
 
 def _unwrap_java_object(javaObject):

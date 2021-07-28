@@ -19,7 +19,6 @@ import org.optaplanner.core.api.score.stream.ConstraintFactory;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 
 import java.io.PrintStream;
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -27,7 +26,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,47 +41,47 @@ public class PythonWrapperGenerator {
      * Accessor
      */
     private static final Map<String, byte[]> classNameToBytecode = new HashMap<>();
-    static Function<Serializable, Number> pythonObjectToId;
-    private static Function<Serializable, String> pythonObjectToString;
-    private static Function<Serializable, List<Serializable>> pythonArrayIdToIdArray;
-    private static BiFunction<Serializable, String, Object> pythonObjectIdAndAttributeNameToValue;
-    private static TriFunction<Serializable, String, Object, Object> pythonObjectIdAndAttributeSetter;
+    static Function<OpaquePythonReference, Number> pythonObjectToId;
+    private static Function<OpaquePythonReference, String> pythonObjectToString;
+    private static Function<OpaquePythonReference, List<OpaquePythonReference>> pythonArrayIdToIdArray;
+    private static BiFunction<OpaquePythonReference, String, Object> pythonObjectIdAndAttributeNameToValue;
+    private static TriFunction<OpaquePythonReference, String, Object, Object> pythonObjectIdAndAttributeSetter;
 
-    public static void setPythonObjectToString(Function<Serializable, String> pythonObjectToString) {
+    public static void setPythonObjectToString(Function<OpaquePythonReference, String> pythonObjectToString) {
         PythonWrapperGenerator.pythonObjectToString = pythonObjectToString;
     }
 
-    public static void setPythonObjectToId(Function<Serializable, Number> pythonObjectToId) {
+    public static void setPythonObjectToId(Function<OpaquePythonReference, Number> pythonObjectToId) {
         PythonWrapperGenerator.pythonObjectToId = pythonObjectToId;
     }
 
-    public static Object getValueFromPythonObject(Serializable objectId, String attributeName) {
+    public static Object getValueFromPythonObject(OpaquePythonReference objectId, String attributeName) {
         return pythonObjectIdAndAttributeNameToValue.apply(objectId, attributeName);
     }
 
-    public static void setValueOnPythonObject(Serializable objectId, String attributeName, Object value) {
+    public static void setValueOnPythonObject(OpaquePythonReference objectId, String attributeName, Object value) {
         pythonObjectIdAndAttributeSetter.apply(objectId, attributeName, value);
     }
 
-    public static void setPythonArrayIdToIdArray(Function<Serializable, List<Serializable>> function) {
+    public static void setPythonArrayIdToIdArray(Function<OpaquePythonReference, List<OpaquePythonReference>> function) {
         pythonArrayIdToIdArray = function;
     }
 
-    public static void setPythonObjectIdAndAttributeNameToValue(BiFunction<Serializable, String, Object> function) {
+    public static void setPythonObjectIdAndAttributeNameToValue(BiFunction<OpaquePythonReference, String, Object> function) {
         pythonObjectIdAndAttributeNameToValue = function;
     }
 
     public static void setPythonObjectIdAndAttributeSetter(
-            TriFunction<Serializable, String, Object, Object> setter) {
+            TriFunction<OpaquePythonReference, String, Object, Object> setter) {
         pythonObjectIdAndAttributeSetter = setter;
     }
 
-    public static String getPythonObjectString(Serializable pythonObject) {
+    public static String getPythonObjectString(OpaquePythonReference pythonObject) {
         return pythonObjectToString.apply(pythonObject);
     }
 
-    public static Serializable getPythonObject(PythonObject pythonObject) {
-        Serializable out = pythonObject.get__optapy_Id();
+    public static OpaquePythonReference getPythonObject(PythonObject pythonObject) {
+        OpaquePythonReference out = pythonObject.get__optapy_Id();
         return out;
     }
 
@@ -117,7 +115,7 @@ public class PythonWrapperGenerator {
         return Array.newInstance(elementClass, 0).getClass();
     }
 
-    public static <T> T wrap(Class<T> javaClass, Serializable object, Map<Number, Object> map) {
+    public static <T> T wrap(Class<T> javaClass, OpaquePythonReference object, Map<Number, Object> map) {
         if (object == null) {
             return null;
         }
@@ -127,7 +125,7 @@ public class PythonWrapperGenerator {
         }
         try {
             if (javaClass.isArray()) {
-                List<Serializable> itemIds = pythonArrayIdToIdArray.apply(object);
+                List<OpaquePythonReference> itemIds = pythonArrayIdToIdArray.apply(object);
                 int length = itemIds.size();
                 Object out = Array.newInstance(javaClass.getComponentType(), length);
                 map.put(id, out);
@@ -136,7 +134,7 @@ public class PythonWrapperGenerator {
                 }
                 return (T) out;
             } else {
-                T out = (T) javaClass.getConstructor(Serializable.class, Number.class, Map.class).newInstance(object, id, map);
+                T out = (T) javaClass.getConstructor(OpaquePythonReference.class, Number.class, Map.class).newInstance(object, id, map);
                 return out;
             }
         } catch (IllegalAccessException | NoSuchMethodException | InstantiationException | InvocationTargetException e) {
@@ -144,7 +142,7 @@ public class PythonWrapperGenerator {
         }
     }
 
-    public static Supplier<Object> wrapObject(Class<?> javaClass, Serializable object) {
+    public static Supplier<Object> wrapObject(Class<?> javaClass, OpaquePythonReference object) {
         Object out = wrap(javaClass, object, new HashMap<>());
         return () -> out;
     }
@@ -210,7 +208,7 @@ public class PythonWrapperGenerator {
                 .classOutput(classOutput)
                 .build()) {
             classCreator.addAnnotation(PlanningEntity.class);
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Serializable.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, OpaquePythonReference.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -240,7 +238,7 @@ public class PythonWrapperGenerator {
                 .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Serializable.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, OpaquePythonReference.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -272,7 +270,7 @@ public class PythonWrapperGenerator {
                 .build()) {
             classCreator.addAnnotation(PlanningSolution.class)
                 .addValue("solutionCloner", Type.getType(PythonPlanningSolutionCloner.class));
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, Serializable.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, OpaquePythonReference.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
         }
@@ -291,7 +289,7 @@ public class PythonWrapperGenerator {
     }
 
     private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField) {
-        MethodCreator methodCreator = classCreator.getMethodCreator("get__optapy_Id", Serializable.class);
+        MethodCreator methodCreator = classCreator.getMethodCreator("get__optapy_Id", OpaquePythonReference.class);
         ResultHandle valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
         methodCreator.returnValue(valueResultHandle);
 
@@ -320,13 +318,13 @@ public class PythonWrapperGenerator {
 
     private static void createToString(ClassCreator classCreator, FieldDescriptor valueField) {
         MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofMethod(classCreator.getClassName(), "toString", String.class));
-        methodCreator.returnValue(methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getPythonObjectString", String.class, Serializable.class),
+        methodCreator.returnValue(methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getPythonObjectString", String.class, OpaquePythonReference.class),
                                                                    methodCreator.readInstanceField(valueField, methodCreator.getThis())));
     }
 
     private static void createConstructor(ClassCreator classCreator, FieldDescriptor valueField, List<FieldDescriptor> fieldDescriptorList,
             List<Class<?>> returnTypeList) {
-        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), Serializable.class, Number.class, Map.class));
+        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), OpaquePythonReference.class, Number.class, Map.class));
         methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), methodCreator.getThis());
         methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Map.class, "put", Object.class, Object.class, Object.class),
                                             methodCreator.getMethodParam(2), methodCreator.getMethodParam(1), methodCreator.getThis());
@@ -338,14 +336,14 @@ public class PythonWrapperGenerator {
             Class returnType = returnTypeList.get(i);
             String methodName = fieldDescriptor.getName().substring(0, fieldDescriptor.getName().length() - 6);
 
-            ResultHandle outResultHandle = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getValueFromPythonObject", Object.class, Serializable.class, String.class),
+            ResultHandle outResultHandle = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getValueFromPythonObject", Object.class, OpaquePythonReference.class, String.class),
                     value, methodCreator.load(methodName));
             if ( Comparable.class.isAssignableFrom(returnType) ) {
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
             } else {
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
                         methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                            "wrap", Object.class, Class.class, Serializable.class, Map.class),
+                            "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
                             methodCreator.loadClass(returnType), outResultHandle, methodCreator.getMethodParam(2)));
             }
         }
@@ -382,7 +380,7 @@ public class PythonWrapperGenerator {
             String setterMethodName = "set" + methodName.substring(3);
             MethodCreator setterMethodCreator = classCreator.getMethodCreator(setterMethodName, void.class, returnType);
 
-            setterMethodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class, Serializable.class, String.class, Object.class),
+            setterMethodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class, OpaquePythonReference.class, String.class, Object.class),
                     setterMethodCreator.readInstanceField(valueField, setterMethodCreator.getThis()),
                     setterMethodCreator.load(setterMethodName),
                     setterMethodCreator.getMethodParam(0));

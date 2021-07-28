@@ -8,15 +8,15 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class PythonPlanningSolutionCloner implements SolutionCloner {
-    private static Function<PythonObject, Serializable> deepClonePythonObject;
+    private static Function<PythonObject, OpaquePythonReference> deepClonePythonObject;
 
-    public static void setDeepClonePythonObject(Function<PythonObject, Serializable> cloner) {
+    public static void setDeepClonePythonObject(Function<PythonObject, OpaquePythonReference> cloner) {
         deepClonePythonObject = cloner;
     }
 
     @Override
     public Object cloneSolution(Object o) {
-        Serializable deepClone = deepClonePythonObject.apply((PythonObject) o);
+        OpaquePythonReference deepClone = deepClonePythonObject.apply((PythonObject) o);
         return PythonWrapperGenerator.wrap(o.getClass(), deepClone, new HashMap<>());
     }
 }

@@ -9,7 +9,7 @@ import org.optaplanner.core.config.solver.EnvironmentMode;
 import org.optaplanner.core.config.solver.SolverConfig;
 
 public class PythonSolver {
-    public static Object solve(SolverConfig solverConfig, Serializable problem) {
+    public static Object solve(SolverConfig solverConfig, OpaquePythonReference problem) {
         solverConfig = new SolverConfig().inherit(solverConfig);
         solverConfig.setEnvironmentMode(EnvironmentMode.FULL_ASSERT);
         solverConfig.setClassLoader(PythonWrapperGenerator.gizmoClassLoader);
