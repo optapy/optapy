@@ -21,7 +21,7 @@ RUN chown -R $NB_UID $HOME
 USER $NB_USER
 ENV PATH "$HOME/.local/bin:$PATH"
 RUN pip install --no-cache --user JPype1 jupyter build wheel
-WORKDIR $HOME/optapy-jpype
+WORKDIR $HOME/optapy-core
 RUN python -m build
 RUN pip install --no-cache --user dist/optapy-0.0.0-py3-none-any.whl
 WORKDIR $HOME/notebook
