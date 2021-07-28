@@ -104,10 +104,14 @@ def _set_python_object_attribute(object_id, name, value):
 
 def _deep_clone_python_object(the_object):
     import org.optaplanner.optapy.OpaquePythonReference
+    from org.optaplanner.optapy import PythonWrapperGenerator
     # ...Python evaluate default arg once, so if we don't set the memo arg to a new dictionary,
     # the same dictionary is reused!
-    the_clone = the_object.__deepcopy__(memo={})
-    my_refs.add(the_clone)
+    item = PythonWrapperGenerator.getPythonObject(the_object)
+    the_clone = copy.deepcopy(item, memo={})
+    for run_id in ref_id_to_solver_run_id[id(item)]:
+        solver_run_id_to_refs[run_id].add(the_clone)
+    ref_id_to_solver_run_id[id(the_clone)] = ref_id_to_solver_run_id[id(item)]
     return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=the_clone, convert=True)
 
 
@@ -143,8 +147,8 @@ def ensure_init():
         init()
 
 
-my_refs = set()
-
+solver_run_id_to_refs = dict()
+ref_id_to_solver_run_id = dict()
 
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
 class _PythonObject:
@@ -160,11 +164,6 @@ class _PythonObject:
         from org.optaplanner.optapy import PythonWrapperGenerator
         item = PythonWrapperGenerator.getPythonObject(self)
         setattr(item, key, value)
-
-    def __deepcopy__(self, memo):
-        from org.optaplanner.optapy import PythonWrapperGenerator
-        item = PythonWrapperGenerator.getPythonObject(self)
-        return copy.deepcopy(item, memo=memo)
 
 
 def _add_deep_copy_to_class(the_class):
@@ -203,8 +202,22 @@ def _add_deep_copy_to_class(the_class):
 def solve(solverConfig, problem):
     from org.optaplanner.optapy import PythonSolver
     import org.optaplanner.optapy.OpaquePythonReference
-    return _unwrap_java_object(PythonSolver.solve(solverConfig, JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=problem, convert=True)))
-
+    solver_run_id = max(solver_run_id_to_refs.keys(), default=0) + 1
+    solver_run_ref_set = set()
+    solver_run_ref_set.add(problem)
+    solver_run_id_to_refs[solver_run_id] = solver_run_ref_set
+    if id(problem) in ref_id_to_solver_run_id:
+        ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
+    else:
+        ref_id_to_solver_run_id[id(problem)] = set()
+        ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
+    solution = _unwrap_java_object(PythonSolver.solve(solverConfig, JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=problem, convert=True)))
+    ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
+    for ref in solver_run_ref_set:
+        if len(ref_id_to_solver_run_id[id(ref)]) == 0:
+            del ref_id_to_solver_run_id[id(ref)]
+    del solver_run_id_to_refs[solver_run_id]
+    return solution
 
 def _unwrap_java_object(javaObject):
     return javaObject.get__optapy_Id()
