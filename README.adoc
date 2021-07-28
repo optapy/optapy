@@ -155,7 +155,7 @@ class TimeTable:
         self.score = score
 ----
 
-- `@value_range_provider(range_id)` is used to indicate a method returns values a Planning Variable can take. It can be referenced by its id in the `valueRangeProviderRefs` parameter of `@planning_variable`. It should also have a `@problem_fact_collection_property` or a `@planning_entity_collection_property`.
+- `@value_range_provider(range_id)` is used to indicate a method returns values a Planning Variable can take. It can be referenced by its id in the `value_range_provider_refs` parameter of `@planning_variable`. It should also have a `@problem_fact_collection_property` or a `@planning_entity_collection_property`.
 
 - `@problem_fact_collection_property(type)` is used to indicate a method returns Problem Facts. The first parameter of the decorator is the type of the Problem Fact Collection (required). It should be a list.
 
