@@ -1,6 +1,8 @@
 package org.optaplanner.optapy;
 
 import io.quarkus.gizmo.AnnotationCreator;
+import io.quarkus.gizmo.BranchResult;
+import io.quarkus.gizmo.BytecodeCreator;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.FieldDescriptor;
@@ -380,9 +382,18 @@ public class PythonWrapperGenerator {
                     setterMethodCreator.readInstanceField(valueField, setterMethodCreator.getThis()),
                     setterMethodCreator.load(setterMethodName));
             ResultHandle argsArray = setterMethodCreator.newArray(Object.class, 1);
-            setterMethodCreator.writeArrayValue(argsArray, 0, setterMethodCreator.getMethodParam(0));
+            if (ProxyObject.class.isAssignableFrom(returnType)) {
+                ResultHandle parmeter = setterMethodCreator.getMethodParam(0);
+                BranchResult branchResult = setterMethodCreator.ifNull(parmeter);
+                branchResult.trueBranch().writeArrayValue(argsArray, 0, parmeter);
+                BytecodeCreator notNullBranch = branchResult.falseBranch();
+                notNullBranch.writeArrayValue(argsArray, 0, notNullBranch.readInstanceField(FieldDescriptor.of(returnType, valueField.getName(), valueField.getType()),
+                                                                                                        parmeter));
+            } else {
+                setterMethodCreator.writeArrayValue(argsArray, 0, setterMethodCreator.getMethodParam(0));
+            }
             setterMethodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Value.class, "execute", Value.class, Object[].class),
-                    pythonSetter, argsArray);
+                                                    pythonSetter, argsArray);
             setterMethodCreator.writeInstanceField(fieldDescriptor, setterMethodCreator.getThis(), setterMethodCreator.getMethodParam(0));
             setterMethodCreator.returnValue(null);
         }

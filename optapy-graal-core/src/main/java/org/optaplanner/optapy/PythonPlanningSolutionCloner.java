@@ -12,14 +12,14 @@ public class PythonPlanningSolutionCloner implements SolutionCloner {
     private static Source getCloneFunctionSource() {
         try {
             return Source.newBuilder("python", "from copy import copy, deepcopy\n" +
-                    // Shallow Copy solution since score cannot be deepcloned in python
-                    "clone = copy(__optaplanner_object__)\n" +
-                    "variables = vars(clone)\n" +
-                    "for variable in variables:\n" +
-                    // Deep clone each attribute that is not score
-                    "    if variable != \"score\":\n" +
-                    "        variables[variable] = deepcopy(variables[variable])\n" +
-                    "clone", null).build();
+                    "import java\n" +
+                    "memo = dict()\n" +
+                    "Score = java.type(\"org.optaplanner.core.api.score.Score\")\n" +
+                    "variables = vars(__optaplanner_object__)\n" +
+                    "for attribute, value in variables.items():\n" +
+                    "    if java.instanceof(value, Score):\n" +
+                    "        memo[id(value)] = value\n" +
+                    "deepcopy(__optaplanner_object__, memo)\n", null).build();
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }

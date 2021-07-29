@@ -19,6 +19,12 @@ for classpath in classpath_list:
         temp_file.write(jar_file)
     java.add_to_classpath(new_classpath_item)
 
+LoggerFactory = java.type("org.slf4j.LoggerFactory")
+Logger = java.type("org.slf4j.Logger")
+Level = java.type("ch.qos.logback.classic.Level")
+root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)
+root.setLevel(Level.INFO)
+
 PythonWrapperGenerator = java.type("org.optaplanner.optapy.PythonWrapperGenerator")
 
 # Exported types
