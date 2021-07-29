@@ -110,7 +110,7 @@ class TimeTable:
     def __str__(self):
         return "TimeTable(timeSlotList=" + listString(self.timeslotList) + \
                ",\nroomList=" + listString(self.roomList) + ",\nlessonList=" + listString(self.lessonList) + \
-               ",\nscore=" + str(self.score.toString()) + ")"
+               ",\nscore=" + (str(self.score.toString()) if self.score is not None else 'None') + ")"
 
 def generateProblem():
     timeslotList = [
