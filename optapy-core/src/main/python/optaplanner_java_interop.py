@@ -17,7 +17,16 @@ except ImportError:
 _optaplanner_jars = tempfile.TemporaryDirectory()
 
 
-def extract_optaplanner_jars():
+def extract_optaplanner_jars() -> list[str]:
+    """Extracts and return a list of OptaPy Java dependencies
+
+    Invoking this function extracts OptaPy Dependencies from the optapy.jars module
+    into a temporary directory and returns a list contains classpath entries for
+    those dependencies. The temporary directory exists for the entire execution of the
+    program.
+
+    :return: None
+    """
     classpath_list = pkg_resources.read_text('optapy', 'classpath.txt').splitlines()
     classpath = []
     for jar in classpath_list:
@@ -28,7 +37,9 @@ def extract_optaplanner_jars():
         classpath.append(new_classpath_item)
     return classpath
 
-
+# ***********************************************************
+# Python Wrapper for Java Interfaces
+# ***********************************************************
 @JImplements('java.util.function.Function', deferred=True)
 class PythonFunction:
     def __init__(self, delegate):
@@ -58,20 +69,25 @@ class PythonTriFunction:
     def apply(self, argument1, argument2, argument3):
         return self.delegate(argument1, argument2, argument3)
 
+# ****************************************************************************
 
 def _get_python_object_id(item):
+    """Returns a unique id for a Python Object (used in cloning)"""
     return id(item)
 
 
 def _get_python_object_str(item):
+    """Returns the Python Object represented as a String (used in toString)"""
     return str(item)
 
 
+# No Op -- is this needed?
 def _get_python_object_from_id(item_id):
     return item_id
 
 
 def _get_python_object_attribute(object_id, name):
+    """Gets an attribute from a Python Object"""
     import java.lang.Object
     import org.optaplanner.core.api.score.Score
     the_object = object_id
@@ -86,14 +102,15 @@ def _get_python_object_attribute(object_id, name):
         return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=python_object, convert=True)
 
 
-def _get_python_array_to_id_array(arrayId):
+def _get_python_array_to_id_array(the_object):
+    """Maps a Python List to a Java List of OpaquePythonReference"""
     import org.optaplanner.optapy.OpaquePythonReference
-    the_object = arrayId
     out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=x, convert=True), the_object)))
     return out
 
 
 def _set_python_object_attribute(object_id, name, value):
+    """Sets an attribute on an Python Object"""
     from org.optaplanner.optapy import PythonObject
     the_object = object_id
     the_value = value
@@ -103,6 +120,15 @@ def _set_python_object_attribute(object_id, name, value):
 
 
 def _deep_clone_python_object(the_object):
+    """Deeps clone a Python Object, and keeps a reference to it
+
+    Java Objects are shallowed copied. A reference is kept since
+    the Object is kept in Java NOT in Python, meaning it'll be
+    garbage collected.
+
+    :parameter the_object: the object to be cloned.
+    :return: An OpaquePythonReference of the cloned Python Object
+    """
     import org.optaplanner.optapy.OpaquePythonReference
     from org.optaplanner.optapy import PythonWrapperGenerator
     # ...Python evaluate default arg once, so if we don't set the memo arg to a new dictionary,
@@ -116,6 +142,16 @@ def _deep_clone_python_object(the_object):
 
 
 def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
+    """Start the JVM. Throws a RuntimeError if it is already started.
+
+    :param args: JVM args.
+    :param path: If not None, a list of dependencies to use as the classpath. Default to None.
+    :param include_optaplanner_jars: If True, add optaplanner jars to path. Default to True.
+    :param log_level: What OptaPlanner log level should be set to.
+                      Must be one of 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR'.
+                      Defaults to 'INFO'
+    :return: None
+    """
     if jpype.isJVMStarted():
         raise RuntimeError('JVM already started. Maybe call init before optapy.type imports?')
     if path is None:
@@ -141,17 +177,38 @@ def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
 
 
 def ensure_init():
+    """Start the JVM if it isn't started; does nothing otherwise
+
+    Used by OptaPy to start the JVM when needed by a method, so
+    users don't need to start the JVM themselves.
+
+    :return: None
+    """
     if jpype.isJVMStarted():
         return
     else:
         init()
 
 
+"""Maps solver run id to solution clones it references"""
 solver_run_id_to_refs = dict()
+
+"""Maps solution clone ids to the solver runs it is used in"""
 ref_id_to_solver_run_id = dict()
 
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
 class _PythonObject:
+    """Maps a Java Python Object to a Python Python Object.
+
+    Overrides __getattr__ and __setattr__ so it can be
+    accessed like a normal Python Object in Python code.
+    Note: JPype goes into infinite recursion when trying
+    to access an attribute on the Java Object when
+    used in a @JImplementationFor class with __getattr__
+    overridden, which is why we pass the Java Object
+    to PythonWrapperGenerator to get the corresponding
+    Python Object versus accessing it directly.
+    """
     def __jclass_init__(self):
         pass
 
@@ -167,6 +224,16 @@ class _PythonObject:
 
 
 def _add_deep_copy_to_class(the_class):
+    """Adds a __deepcopy__ method to a class if it does not have one
+
+    Java Objects cannot be deep copied, thus the pickle default deepcopy
+    method does not work. The __deepcopy__ method calls the __new__ method
+    of the class with None passed for each of __init__ parameters. It then
+    calls setattr for each variable in the original object on the clone.
+
+    :param the_class: the class to add the deep copy method to.
+    :return: None
+    """
     if callable(getattr(the_class, '__deepcopy__', None)):
         return
     sig = signature(the_class.__init__)
@@ -199,7 +266,14 @@ def _add_deep_copy_to_class(the_class):
     the_class.__deepcopy__ = class_deep_copy
 
 
-def solve(solverConfig, problem):
+def solve(solver_config, problem):
+    """Waits for solving to terminate and return the best solution found for the given problem using the solver_config.
+
+    Calling multiple time starts a different solver.
+    :param solver_config: The Java SolverConfig. See OptaPlanner docs for details.
+    :param problem: The (potentially uninitialized) Python Planning Solution object.
+    :return: The best solution found.
+    """
     from org.optaplanner.optapy import PythonSolver
     import org.optaplanner.optapy.OpaquePythonReference
     solver_run_id = max(solver_run_id_to_refs.keys(), default=0) + 1
@@ -211,7 +285,7 @@ def solve(solverConfig, problem):
     else:
         ref_id_to_solver_run_id[id(problem)] = set()
         ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
-    solution = _unwrap_java_object(PythonSolver.solve(solverConfig, JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=problem, convert=True)))
+    solution = _unwrap_java_object(PythonSolver.solve(solver_config, JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=problem, convert=True)))
     ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
     for ref in solver_run_ref_set:
         if len(ref_id_to_solver_run_id[id(ref)]) == 0:
@@ -219,11 +293,14 @@ def solve(solverConfig, problem):
     del solver_run_id_to_refs[solver_run_id]
     return solution
 
-def _unwrap_java_object(javaObject):
-    return javaObject.get__optapy_Id()
+
+def _unwrap_java_object(java_object):
+    """Gets the Python Python Object for the given Java Python Object"""
+    return java_object.get__optapy_Id()
 
 
 def _to_java_map(pythonDict):
+    """Converts a Python dict to a Java Map"""
     import java.lang.Object
     import java.util.HashMap
     out = java.util.HashMap()
@@ -236,6 +313,7 @@ def _to_java_map(pythonDict):
 
 
 def _to_java_list(pythonList):
+    """Converts a Python list to a Java List"""
     import java.lang.Object
     import java.util.ArrayList
     out = java.util.ArrayList()
@@ -247,24 +325,27 @@ def _to_java_list(pythonList):
     return out
 
 
-def _get_optaplanner_annotations(pythonClass):
-    method_list = [attribute for attribute in dir(pythonClass) if callable(getattr(pythonClass, attribute)) and attribute.startswith('__') is False]
+def _get_optaplanner_annotations(python_class) -> list[tuple[str, JClass, list[dict]]]:
+    """Gets the methods with OptaPlanner annotations in the given class"""
+    method_list = [attribute for attribute in dir(python_class) if callable(getattr(python_class, attribute)) and attribute.startswith('__') is False]
     annotated_methods = []
     for method in method_list:
-        optaplanner_annotations = [attribute for attribute in dir(getattr(pythonClass, method)) if attribute.startswith('__optaplanner')]
+        optaplanner_annotations = [attribute for attribute in dir(getattr(python_class, method)) if attribute.startswith('__optaplanner')]
         if optaplanner_annotations:
-            returnType = getattr(getattr(pythonClass, method), "__return", None)
+            returnType = getattr(getattr(python_class, method), "__return", None)
             annotated_methods.append(
                 _to_java_list([method, returnType,
-                               _to_java_list(list(map(lambda annotation: getattr(getattr(pythonClass, method), annotation), optaplanner_annotations)))
+                               _to_java_list(list(map(lambda annotation: getattr(getattr(python_class, method), annotation), optaplanner_annotations)))
                                ]))
     return _to_java_list(annotated_methods)
 
 
 def get_class(python_class):
+    """Return the Java Class for the given Python Class"""
     return python_class.__javaClass
 
 
+"""A unique identifier; used to guarantee the generated class java name is unique"""
 unique_class_id = 0
 
 
