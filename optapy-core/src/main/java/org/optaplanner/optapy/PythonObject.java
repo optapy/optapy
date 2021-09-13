@@ -11,7 +11,7 @@ public interface PythonObject {
      * represents. Used in Python code to read/modify the Python Object.
      *
      * @return An opaque pointer to the Python Object represented by
-     * this PythonObject.
+     *         this PythonObject.
      */
     OpaquePythonReference get__optapy_Id();
 }

@@ -1,45 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <groupId>org.optaplanner</groupId>
+    <artifactId>optaplanner-build-parent</artifactId>
+    <version>8.11.0.Final</version>
+  </parent>
   <modelVersion>4.0.0</modelVersion>
-
-  <groupId>org.optaplanner</groupId>
   <artifactId>optapy</artifactId>
-  <version>1.0-SNAPSHOT</version>
 
   <properties>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
     <maven.compiler.release>11</maven.compiler.release>
+    <java.module.name>org.optaplanner.optapy</java.module.name>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-    <version.io.quarkus>1.13.7.Final</version.io.quarkus>
-    <version.org.optaplanner>8.8.0-SNAPSHOT</version.org.optaplanner>
+    <version.logback>1.2.3</version.logback>
 
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>2.22.2</version.surefire.plugin>
   </properties>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>io.quarkus</groupId>
-        <!-- Alternatively, use <artifactId>quarkus-universe-bom</artifactId>
-         which includes both quarkus-bom and optaplanner-bom. -->
-        <artifactId>quarkus-bom</artifactId>
-        <version>${version.io.quarkus}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.optaplanner</groupId>
-        <artifactId>optaplanner-bom</artifactId>
-        <version>${version.org.optaplanner}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -47,17 +27,16 @@
       <artifactId>optaplanner-core</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.quarkus.gizmo</groupId>
       <artifactId>gizmo</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.2.3</version>
       <scope>runtime</scope>
     </dependency>
   </dependencies>
@@ -67,12 +46,10 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.2.0</version>
         <executions>
           <execution>
             <id>copy-dependencies</id>

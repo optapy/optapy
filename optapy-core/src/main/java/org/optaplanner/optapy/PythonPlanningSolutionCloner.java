@@ -1,16 +1,15 @@
 package org.optaplanner.optapy;
 
-import org.optaplanner.core.api.domain.solution.cloner.SolutionCloner;
-
-import java.io.Serializable;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
-public class PythonPlanningSolutionCloner implements SolutionCloner {
+import org.optaplanner.core.api.domain.solution.cloner.SolutionCloner;
+
+public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
     // A function in python that deep clones a given OpaquePythonReference
     private static Function<PythonObject, OpaquePythonReference> deepClonePythonObject;
 
+    @SuppressWarnings("unused")
     public static void setDeepClonePythonObject(Function<PythonObject, OpaquePythonReference> cloner) {
         deepClonePythonObject = cloner;
     }
