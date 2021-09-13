@@ -1,43 +1,76 @@
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 from distutils.command.build_py import build_py
 import glob
 import os
 import subprocess
 from shutil import copyfile
 
+
 class FetchDependencies(build_py):
+    """
+    A command class that fetch Java Dependencies and
+    add them as files within a python package
+    """
     def run(self):
         if not self.dry_run:
             project_root = os.environ.get("PWD")
+            # Do a mvn clean install
+            # which is configured to add dependency jars to 'target/dependency'
             subprocess.run([os.path.join(project_root, 'mvnw'), 'clean', 'install'], cwd=project_root, check=True)
-            classpath_jars=[]
+            classpath_jars = []
+            # Add the main artifact
             classpath_jars.extend(glob.glob(os.path.join(project_root, 'target', '*.jar')))
+            # Add the main artifact's dependencies
             classpath_jars.extend(glob.glob(os.path.join(project_root, 'target', 'dependency', '*.jar')))
+            # Get the basename of each file (to be stored in classpath.txt, which is used
+            # when setting the classpath)
             filenames = list(map(os.path.basename, classpath_jars))
             classpath_list_text = "\n".join(filenames)
 
             self.mkpath(os.path.join(self.build_lib, 'optapy', 'jars'))
 
+            # Copy classpath jars to optapy.jars
             for file in classpath_jars:
                 copyfile(file, os.path.join(self.build_lib, 'optapy', 'jars', os.path.basename(file)))
 
+            # Add classpath.txt to optapy
             fp = open(os.path.join(self.build_lib, 'optapy', 'classpath.txt'), 'w')
             fp.write(classpath_list_text)
             fp.close()
 
+            # Make optapy.jars a Python module
             fp = open(os.path.join(self.build_lib, 'optapy', 'jars', '__init__.py'), 'w')
             fp.close()
         build_py.run(self)
 
+
 setup(
-    name = 'optapy',
-    version = '0.0.0',
-    author = 'Christopher Chianelli',
-    license = 'Apache 2.0',
-    description = 'OptaPlanner Annotations and Wrappers through JPype',
+    name='optapy',
+    version='8.11.0a0',
+    license='Apache 2.0',
+    license_file='LICENSE',
+    description='OptaPlanner Annotations and Wrappers through JPype',
+    long_description='file: README.md',
+    long_description_content_type='text/markdown',
+    url='https://github.com/optapy/optapy',
+    project_urls={
+        'OptaPlanner Home Page': 'https://www.optaplanner.org/',
+        'OptaPlanner Documentation': 'https://docs.optaplanner.org/8.11.0.Final/optaplanner-docs/html_single/index.html'
+    },
+    classifiers=[
+        'Development Status :: 2 - Pre-Alpha',
+        'Programming Language :: Python :: 3',
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'Topic :: Software Development :: Libraries :: Java Libraries',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: OS Independent'
+    ],
     packages=['optapy', 'optapy.types'],
     package_dir={'optapy': 'src/main/python'},
-    python_requires='>=3.6',
+    python_requires='>=3.9',
     install_requires=['JPype1'],
     cmdclass={'build_py': FetchDependencies},
     package_data={

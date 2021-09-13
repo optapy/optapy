@@ -8,7 +8,7 @@ if which python > /dev/null ; then
     python -m build  || { echo 'Build failed' ; exit 1; }
     . ../optapy-quickstarts/school-timetabling/venv/bin/activate
     pip uninstall -y optapy
-    pip install dist/optapy-0.0.0-py3-none-any.whl
+    pip install dist/optapy-8.11.0a0-py3-none-any.whl
     cd ../optapy-quickstarts/school-timetabling || { echo 'Unable to find the optapy-quickstarts/school-timetabling directory. Maybe it was accidently deleted?'; exit 1; }
     python main.py
     deactivate

@@ -40,6 +40,8 @@ def extract_optaplanner_jars() -> list[str]:
 # ***********************************************************
 # Python Wrapper for Java Interfaces
 # ***********************************************************
+
+
 @JImplements('java.util.function.Function', deferred=True)
 class PythonFunction:
     def __init__(self, delegate):
@@ -70,6 +72,7 @@ class PythonTriFunction:
         return self.delegate(argument1, argument2, argument3)
 
 # ****************************************************************************
+
 
 def _get_python_object_id(item):
     """Returns a unique id for a Python Object (used in cloning)"""
@@ -105,7 +108,8 @@ def _get_python_object_attribute(object_id, name):
 def _get_python_array_to_id_array(the_object):
     """Maps a Python List to a Java List of OpaquePythonReference"""
     import org.optaplanner.optapy.OpaquePythonReference
-    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=x, convert=True), the_object)))
+    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=x, convert=True),
+                                 the_object)))
     return out
 
 
@@ -168,12 +172,18 @@ def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
     from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner
-    PythonWrapperGenerator.setPythonObjectToId(JObject(PythonFunction(_get_python_object_id), java.util.function.Function))
-    PythonWrapperGenerator.setPythonObjectToString(JObject(PythonFunction(_get_python_object_str), java.util.function.Function))
-    PythonWrapperGenerator.setPythonArrayIdToIdArray(JObject(PythonFunction(_get_python_array_to_id_array), java.util.function.Function))
-    PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToValue(JObject(PythonBiFunction(_get_python_object_attribute), java.util.function.BiFunction))
-    PythonWrapperGenerator.setPythonObjectIdAndAttributeSetter(JObject(PythonTriFunction(_set_python_object_attribute), org.optaplanner.core.api.function.TriFunction))
-    PythonPlanningSolutionCloner.setDeepClonePythonObject(JObject(PythonFunction(_deep_clone_python_object), java.util.function.Function))
+    PythonWrapperGenerator.setPythonObjectToId(JObject(PythonFunction(_get_python_object_id),
+                                                       java.util.function.Function))
+    PythonWrapperGenerator.setPythonObjectToString(JObject(PythonFunction(_get_python_object_str),
+                                                           java.util.function.Function))
+    PythonWrapperGenerator.setPythonArrayIdToIdArray(JObject(PythonFunction(_get_python_array_to_id_array),
+                                                             java.util.function.Function))
+    PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToValue(
+        JObject(PythonBiFunction(_get_python_object_attribute), java.util.function.BiFunction))
+    PythonWrapperGenerator.setPythonObjectIdAndAttributeSetter(JObject(PythonTriFunction(_set_python_object_attribute),
+                                                                       org.optaplanner.core.api.function.TriFunction))
+    PythonPlanningSolutionCloner.setDeepClonePythonObject(JObject(PythonFunction(_deep_clone_python_object),
+                                                                  java.util.function.Function))
 
 
 def ensure_init():
@@ -195,6 +205,7 @@ solver_run_id_to_refs = dict()
 
 """Maps solution clone ids to the solver runs it is used in"""
 ref_id_to_solver_run_id = dict()
+
 
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
 class _PythonObject:
@@ -285,7 +296,9 @@ def solve(solver_config, problem):
     else:
         ref_id_to_solver_run_id[id(problem)] = set()
         ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
-    solution = _unwrap_java_object(PythonSolver.solve(solver_config, JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=problem, convert=True)))
+    solution = _unwrap_java_object(PythonSolver.solve(solver_config,
+                                                      JProxy(org.optaplanner.optapy.OpaquePythonReference,
+                                                             inst=problem, convert=True)))
     ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
     for ref in solver_run_ref_set:
         if len(ref_id_to_solver_run_id[id(ref)]) == 0:
@@ -299,12 +312,12 @@ def _unwrap_java_object(java_object):
     return java_object.get__optapy_Id()
 
 
-def _to_java_map(pythonDict):
+def _to_java_map(python_dict):
     """Converts a Python dict to a Java Map"""
     import java.lang.Object
     import java.util.HashMap
     out = java.util.HashMap()
-    for key, value in pythonDict.items():
+    for key, value in python_dict.items():
         if isinstance(value, list):
             out.put(JObject(key, java.lang.Object), _to_java_list(value).toArray())
         else:
@@ -312,12 +325,12 @@ def _to_java_map(pythonDict):
     return out
 
 
-def _to_java_list(pythonList):
+def _to_java_list(python_list):
     """Converts a Python list to a Java List"""
     import java.lang.Object
     import java.util.ArrayList
     out = java.util.ArrayList()
-    for item in pythonList:
+    for item in python_list:
         if isinstance(item, dict):
             out.add(_to_java_map(item))
         else:
@@ -327,15 +340,18 @@ def _to_java_list(pythonList):
 
 def _get_optaplanner_annotations(python_class) -> list[tuple[str, JClass, list[dict]]]:
     """Gets the methods with OptaPlanner annotations in the given class"""
-    method_list = [attribute for attribute in dir(python_class) if callable(getattr(python_class, attribute)) and attribute.startswith('__') is False]
+    method_list = [attribute for attribute in dir(python_class) if callable(getattr(python_class, attribute)) and
+                   attribute.startswith('__') is False]
     annotated_methods = []
     for method in method_list:
-        optaplanner_annotations = [attribute for attribute in dir(getattr(python_class, method)) if attribute.startswith('__optaplanner')]
+        optaplanner_annotations = [attribute for attribute in dir(getattr(python_class, method)) if
+                                   attribute.startswith('__optaplanner')]
         if optaplanner_annotations:
-            returnType = getattr(getattr(python_class, method), "__return", None)
+            return_type = getattr(getattr(python_class, method), "__return", None)
             annotated_methods.append(
-                _to_java_list([method, returnType,
-                               _to_java_list(list(map(lambda annotation: getattr(getattr(python_class, method), annotation), optaplanner_annotations)))
+                _to_java_list([method, return_type,
+                               _to_java_list(list(map(lambda annotation: getattr(getattr(python_class, method),
+                                                                                 annotation), optaplanner_annotations)))
                                ]))
     return _to_java_list(annotated_methods)
 
@@ -354,7 +370,8 @@ def _generate_problem_fact_class(python_class):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
-    out = PythonWrapperGenerator.defineProblemFactClass(python_class.__name__ + str(unique_class_id), optaplanner_annotations)
+    out = PythonWrapperGenerator.defineProblemFactClass(python_class.__name__ + str(unique_class_id),
+                                                        optaplanner_annotations)
     unique_class_id = unique_class_id + 1
     return out
 
@@ -364,7 +381,8 @@ def _generate_planning_entity_class(python_class):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
-    out = PythonWrapperGenerator.definePlanningEntityClass(python_class.__name__ + str(unique_class_id), optaplanner_annotations)
+    out = PythonWrapperGenerator.definePlanningEntityClass(python_class.__name__ + str(unique_class_id),
+                                                           optaplanner_annotations)
     unique_class_id = unique_class_id + 1
     return out
 
@@ -374,7 +392,8 @@ def _generate_planning_solution_class(python_class):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
-    out = PythonWrapperGenerator.definePlanningSolutionClass(python_class.__name__ + str(unique_class_id), optaplanner_annotations)
+    out = PythonWrapperGenerator.definePlanningSolutionClass(python_class.__name__ + str(unique_class_id),
+                                                             optaplanner_annotations)
     unique_class_id = unique_class_id + 1
     return out
 
@@ -392,6 +411,9 @@ def _generate_constraint_provider_class(constraint_provider):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator
     import java.util.function.Function
-    out = PythonWrapperGenerator.defineConstraintProviderClass(constraint_provider.__name__ + str(unique_class_id), JObject(PythonFunction(lambda cf: _to_constraint_java_array(constraint_provider(cf))), java.util.function.Function))
+    out = PythonWrapperGenerator.defineConstraintProviderClass(
+        constraint_provider.__name__ + str(unique_class_id),
+        JObject(PythonFunction(lambda cf: _to_constraint_java_array(constraint_provider(cf))),
+                java.util.function.Function))
     unique_class_id = unique_class_id + 1
     return out

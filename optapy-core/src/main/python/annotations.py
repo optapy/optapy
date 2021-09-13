@@ -17,6 +17,7 @@ For classes, JImplements('org.optaplanner.optapy.OpaquePythonReference')(the_cla
 is called and used (which allows __getattr__ to work w/o casting to a Java Proxy).
 """
 
+
 def planning_id(getter_function):
     """Specifies that a bean property is the id to match when locating an externalObject (often from another Thread).
 
@@ -135,6 +136,13 @@ def planning_score(score_type,
     This property is modified by the Solver, every time when the Score of this PlanningSolution has been calculated.
 
     :param score_type: The type of the score. Should be imported from optapy.types.
+    :param bendable_hard_levels_size: Required for bendable scores.
+                                      For example with 3 hard levels, hard level 0 always outweighs hard level 1 which
+                                      always outweighs hard level 2, which outweighs all the soft levels.
+    :param bendable_soft_levels_size: Required for bendable scores. For example with 3 soft levels,
+                                      soft level 0 always outweighs soft level 1 which always outweighs soft level 2.
+    :param score_definition_class: Overrides the default determined ScoreDefinition to implement a custom one.
+                                   In most cases, this should not be used.
     """
     def planning_score_function_wrapper(getter_function):
         ensure_init()
@@ -151,7 +159,8 @@ def planning_score(score_type,
 
 
 def planning_entity(entity_class):
-    """Specifies that the class is a planning entity. Each planning entity must have at least 1 PlanningVariable property.
+    """Specifies that the class is a planning entity. Each planning entity must have at least
+    1 PlanningVariable property.
 
     The class MUST allow passing None to all of __init__ arguments, so it can be cloned.
     (ex: this is allowed:
