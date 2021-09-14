@@ -168,7 +168,6 @@ class TimeTable:
 You define your constraints by using the ConstraintFactory
 [source,python]
 ----
-import java
 from domain import Lesson
 from optapy import get_class, constraint_provider
 from optapy.types import Joiners, HardSoftScore
@@ -206,7 +205,6 @@ from optapy import get_class, solve
 from optapy.types import SolverConfig, Duration
 from constraints import defineConstraints
 from domain import TimeTable, Lesson, generateProblem
-import java
 
 solverConfig = SolverConfig().withEntityClasses(get_class(Lesson)) \
     .withSolutionClass(get_class(TimeTable)) \
