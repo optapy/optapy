@@ -11,14 +11,13 @@ but using OptaPy in Python is significantly slower than using OptaPlanner in Jav
 
 WARNING: OptaPy is an experimental technology.
 It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
-It is currently not supported in any way or form for production use.
 
 == Get started
 
 === Prerequisites
 
-. https://www.python.org[Install Python 3.9 or later]
-. https://adoptopenjdk.net[Install JDK 11 or later] with `JAVA_HOME` configured appropriately.
+. https://www.python.org[Install Python 3.9 or later.]
+. https://adoptopenjdk.net[Install JDK 11 or later] with the environment variable `JAVA_HOME` configured to the JDK installation directory.
 
 === Build
 . Install the python `build` module (if not already installed):
@@ -54,7 +53,7 @@ after building `optapy` and installing it to `optapy-quickstarts/school-timetabl
 
 === Domain
 
-In OptaPlanner, the domain has three parts:
+In OptaPy, the domain has three parts:
 
 - Problem Facts, which do not change
 - Planning Entities, which have one or more planning variables
@@ -195,7 +194,7 @@ def roomConflict(constraintFactory):
 ----
 for more details on Constraint Streams, see https://docs.optaplanner.org/latest/optaplanner-docs/html_single/index.html#constraintStreams
 
-NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from` function, you access it like `constraintFactory.from_(class, [joiners...])`
+NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from(class, [joiners...])` function, you access it like `constraintFactory.from_(class, [joiners...])`
 
 === Solve
 
@@ -219,4 +218,5 @@ variables set to the final best solution found.
 
 == More information
 
-Visit https://www.optaplanner.org/[www.optaplanner.org].
+For a complete example, see https://github.com/optapy/optapy/tree/main/optapy-quickstarts/school-timetabling[the school timetabling quickstart].
+For a full API spec, visit https://www.optaplanner.org/learn/documentation.html[OptaPlanner Documentation].
