@@ -6,6 +6,7 @@ from distutils.command.build_py import build_py
 import glob
 import os
 import subprocess
+from pathlib import Path
 from shutil import copyfile
 
 
@@ -47,13 +48,15 @@ class FetchDependencies(build_py):
         build_py.run(self)
 
 
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 setup(
     name='optapy',
     version='8.11.0a0',
     license='Apache License Version 2.0',
     license_file='LICENSE',
     description='An AI constraint solver that optimizes planning and scheduling problems',
-    long_description='file: README.md',
+    long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/optapy/optapy',
     project_urls={
