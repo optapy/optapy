@@ -15,15 +15,12 @@ RUN adduser --disabled-password \
     $NB_USER
 
 USER root
-COPY . $HOME
+COPY notebook $HOME/notebook
 RUN chown -R $NB_UID $HOME
 
 USER $NB_USER
 ENV PATH "$HOME/.local/bin:$PATH"
-RUN pip install --no-cache --user JPype1 jupyter build wheel
-WORKDIR $HOME/optapy-core
-RUN python -m build
-RUN pip install --no-cache --user dist/optapy-0.0.0-py3-none-any.whl
+RUN pip install --no-cache --user optapy jupyter build wheel
 WORKDIR $HOME/notebook
 
 CMD ["jupyter", "notebook", "--ip", "0.0.0.0"]
