@@ -50,18 +50,19 @@ class FetchDependencies(build_py):
 setup(
     name='optapy',
     version='8.11.0a0',
-    license='Apache 2.0',
+    license='Apache License Version 2.0',
     license_file='LICENSE',
-    description='OptaPlanner Annotations and Wrappers through JPype',
+    description='An AI constraint solver that optimizes planning and scheduling problems',
     long_description='file: README.md',
     long_description_content_type='text/markdown',
     url='https://github.com/optapy/optapy',
     project_urls={
-        'OptaPlanner Home Page': 'https://www.optaplanner.org/',
-        'OptaPlanner Documentation': 'https://docs.optaplanner.org/8.11.0.Final/optaplanner-docs/html_single/index.html'
+        'OptaPy Homepage': 'https://github.com/optapy/optapy',
+        'OptaPlanner Homepage': 'https://www.optaplanner.org/',
+        'OptaPlanner Documentation': 'https://www.optaplanner.org/learn/documentation.html'
     },
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Software Development :: Libraries :: Java Libraries',
