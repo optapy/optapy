@@ -20,7 +20,7 @@ RUN chown -R $NB_UID $HOME
 
 USER $NB_USER
 ENV PATH "$HOME/.local/bin:$PATH"
-RUN pip install --no-cache --user optapy jupyter build wheel
+RUN pip install --no-cache --user optapy jupyterlab build wheel
 WORKDIR $HOME/notebook
 
-CMD ["jupyter", "notebook", "--ip", "0.0.0.0"]
+CMD ["jupyter", "lab", "--ip", "0.0.0.0"]
