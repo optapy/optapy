@@ -1,5 +1,6 @@
 = OptaPy
 
+https://pypi.org/project/optapy/[image:https://img.shields.io/pypi/v/optapy[PyPI]]
 https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[image:https://mybinder.org/badge_logo.svg[Binder]]
 
 OptaPy is *an AI constraint solver for Python* to optimize
