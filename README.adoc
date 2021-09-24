@@ -10,6 +10,8 @@ Cloud Optimization, Conference Scheduling, Job Shop Scheduling, Bin Packing and 
 OptaPy wraps the https://www.optaplanner.org/[OptaPlanner] engine internally,
 but using OptaPy in Python is significantly slower than using OptaPlanner in Java or Kotlin.
 
+https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[Try the OptaPy Jupyter notebook.]
+
 WARNING: OptaPy is an experimental technology.
 It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
 
@@ -20,35 +22,12 @@ It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
 . https://www.python.org[Install Python 3.9 or later.]
 . https://adoptopenjdk.net[Install JDK 11 or later] with the environment variable `JAVA_HOME` configured to the JDK installation directory.
 
-=== Build
-. Install the python `build` module (if not already installed):
-+
+== Installing
+
 [source,bash]
 ----
-pip install build
+pip install optapy
 ----
-. In the `optapy-core` directory, use the command below to
-build the optapy python wheel into the `dist` directory:
-+
-[source,bash]
-----
-cd optapy-core
-python -m build
-----
-
-. Install it into a virtual environment using `pip`:
-+
-[source,bash]
-----
-# Activate a virtual environment first
-source my_project/venv/bin/activate
-pip install dist/optapy-0.0.0-py3-none-any.whl
-----
-
-=== Run
-
-Running `run.sh` runs `optapy-quickstarts/school-timetabling/main.py`
-after building `optapy` and installing it to `optapy-quickstarts/school-timetabling/venv`.
 
 == Source code overview
 
@@ -216,6 +195,36 @@ solution = solve(solverConfig, generateProblem())
 
 `solution` will be a `TimeTable` instance with planning
 variables set to the final best solution found.
+
+=== Build
+. Install the python `build` module (if not already installed):
++
+[source,bash]
+----
+pip install build
+----
+. In the `optapy-core` directory, use the command below to
+build the optapy python wheel into the `dist` directory:
++
+[source,bash]
+----
+cd optapy-core
+python -m build
+----
+
+. Install it into a virtual environment using `pip`:
++
+[source,bash]
+----
+# Activate a virtual environment first
+source my_project/venv/bin/activate
+pip install dist/optapy-*-py3-none-any.whl
+----
+
+=== Run
+
+Running `run.sh` runs `optapy-quickstarts/school-timetabling/main.py`
+after building `optapy` and installing it to `optapy-quickstarts/school-timetabling/venv`.
 
 == More information
 
