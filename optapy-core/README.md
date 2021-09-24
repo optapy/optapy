@@ -9,6 +9,8 @@ Cloud Optimization, Conference Scheduling, Job Shop Scheduling, Bin Packing and 
 OptaPy wraps the [OptaPlanner](https://www.optaplanner.org/) engine internally,
 but using OptaPy in Python is significantly slower than using OptaPlanner in Java or Kotlin.
 
+[Try the OptaPy Jupyter notebook.](https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb)
+
 >**WARNING**: OptaPy is an experimental technology.
 >It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
 
