@@ -5,6 +5,7 @@ except ImportError:
 from distutils.command.build_py import build_py
 import glob
 import os
+import platform
 import subprocess
 from pathlib import Path
 from shutil import copyfile
@@ -17,10 +18,13 @@ class FetchDependencies(build_py):
     """
     def run(self):
         if not self.dry_run:
-            project_root = os.environ.get("PWD")
+            project_root = Path(__file__).parent
             # Do a mvn clean install
             # which is configured to add dependency jars to 'target/dependency'
-            subprocess.run([os.path.join(project_root, 'mvnw'), 'clean', 'install'], cwd=project_root, check=True)
+            command = 'mvnw'
+            if platform.system() == 'Windows':
+                command = 'mvnw.cmd'
+            subprocess.run([str((project_root / command).absolute()), 'clean', 'install'], cwd=project_root, check=True)
             classpath_jars = []
             # Add the main artifact
             classpath_jars.extend(glob.glob(os.path.join(project_root, 'target', '*.jar')))
