@@ -154,7 +154,8 @@ def _shutdown_jvm_if_still_running():
     Windows.
     """
     if jpype.isJVMStarted():
-        jpype.shutdownJVM()
+        from org.optaplanner.optapy import PythonWrapperGenerator
+        PythonWrapperGenerator.shutdownJVM()
 
 
 def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
