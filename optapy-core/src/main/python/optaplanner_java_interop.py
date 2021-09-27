@@ -7,6 +7,7 @@ from jpype.types import *
 from jpype import JProxy, JImplements, JOverride, JImplementationFor
 from inspect import signature, Parameter
 import copy
+import atexit
 try:
     import importlib.resources as pkg_resources
 except ImportError:
@@ -145,6 +146,17 @@ def _deep_clone_python_object(the_object):
     return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=the_clone, convert=True)
 
 
+def _shutdown_jvm_if_still_running():
+    """Shutdown the JVM if it is still running.
+
+    Called when Python exits so the temporary directory that
+    stores the Jars can be removed without causing an error in
+    Windows.
+    """
+    if jpype.isJVMStarted():
+        jpype.shutdownJVM()
+
+
 def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
     """Start the JVM. Throws a RuntimeError if it is already started.
 
@@ -168,6 +180,7 @@ def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
     else:
         args = args + ('-Dlogback.level.org.optaplanner={}'.format(log_level),)
     jpype.startJVM(*args, classpath=path)
+    atexit.register(_shutdown_jvm_if_still_running)
     import java.util.function.Function
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
