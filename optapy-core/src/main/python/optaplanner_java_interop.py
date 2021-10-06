@@ -1,18 +1,11 @@
-import os
 import tempfile
-from . import jars
 import jpype
 import jpype.imports
 from jpype.types import *
 from jpype import JProxy, JImplements, JOverride, JImplementationFor
+import importlib.metadata
 from inspect import signature, Parameter
 import copy
-import atexit
-try:
-    import importlib.resources as pkg_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources as pkg_resources
 
 # Need to be global; directory is deleted when it out of scope
 _optaplanner_jars = tempfile.TemporaryDirectory()
@@ -28,15 +21,7 @@ def extract_optaplanner_jars() -> list[str]:
 
     :return: None
     """
-    classpath_list = pkg_resources.read_text('optapy', 'classpath.txt').splitlines()
-    classpath = []
-    for jar in classpath_list:
-        new_classpath_item = os.path.join(_optaplanner_jars.name, jar)
-        jar_file = pkg_resources.read_binary(jars, jar)
-        with open(new_classpath_item, 'wb') as temp_file:
-            temp_file.write(jar_file)
-        classpath.append(new_classpath_item)
-    return classpath
+    return [str(p.locate()) for p in importlib.metadata.files('optapy') if p.name.endswith('.jar')]
 
 # ***********************************************************
 # Python Wrapper for Java Interfaces
@@ -146,18 +131,6 @@ def _deep_clone_python_object(the_object):
     return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=the_clone, convert=True)
 
 
-def _shutdown_jvm_if_still_running():
-    """Shutdown the JVM if it is still running.
-
-    Called when Python exits so the temporary directory that
-    stores the Jars can be removed without causing an error in
-    Windows.
-    """
-    if jpype.isJVMStarted():
-        from org.optaplanner.optapy import PythonWrapperGenerator
-        PythonWrapperGenerator.shutdownJVM()
-
-
 def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
     """Start the JVM. Throws a RuntimeError if it is already started.
 
@@ -181,7 +154,6 @@ def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
     else:
         args = args + ('-Dlogback.level.org.optaplanner={}'.format(log_level),)
     jpype.startJVM(*args, classpath=path)
-    atexit.register(_shutdown_jvm_if_still_running)
     import java.util.function.Function
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
