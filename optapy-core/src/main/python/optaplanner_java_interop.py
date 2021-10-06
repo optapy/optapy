@@ -1,3 +1,6 @@
+import os
+import os.path
+
 import jpype
 import jpype.imports
 from jpype.types import *
@@ -5,9 +8,17 @@ from jpype import JProxy, JImplements, JOverride, JImplementationFor
 import importlib.metadata
 from inspect import signature, Parameter
 import copy
+from io import BytesIO
+from zipfile import ZipFile
+import urllib.request
 
 
-def extract_optaplanner_jars() -> list[str]:
+def _get_jars_from_directory(jar_location: str) -> list[str]:
+    """Return a list of jars contained in a directory"""
+    return [os.path.join(jar_location, file) for file in os.listdir(jar_location)]
+
+
+def extract_optaplanner_jars(extract_jar_to: str) -> list[str]:
     """Extracts and return a list of OptaPy Java dependencies
 
     Invoking this function extracts OptaPy Dependencies from the optapy.jars module
@@ -17,7 +28,21 @@ def extract_optaplanner_jars() -> list[str]:
 
     :return: None
     """
-    return [str(p.locate()) for p in importlib.metadata.files('optapy') if p.name.endswith('.jar')]
+    optapy_version = importlib.metadata.version('optapy')
+    jar_for_version_path = os.path.join(extract_jar_to, 'optapy-jars', 'VERSION')
+    if os.path.isfile(jar_for_version_path):
+        with open(jar_for_version_path) as version_file:
+            existing_jar_optapy_version = version_file.read()
+            if optapy_version == existing_jar_optapy_version:
+                return _get_jars_from_directory(os.path.join(extract_jar_to, 'optapy-jars', 'jars'))
+    # If the jars for this version exists, we would have returned early
+    # Thus, the jars must not exist/exist for a different version
+    optapy_jars_download_url = "https://github.com/Christopher-Chianelli/optapy/releases/download/{}/optapy-jars.zip"\
+        .format(optapy_version)
+    url_connection = urllib.request.urlopen(optapy_jars_download_url)
+    with ZipFile(BytesIO(url_connection.read())) as my_zip_file:
+        my_zip_file.extractall(path=extract_jar_to)
+    return _get_jars_from_directory(os.path.join(extract_jar_to, 'optapy-jars', 'jars'))
 
 # ***********************************************************
 # Python Wrapper for Java Interfaces
@@ -127,12 +152,14 @@ def _deep_clone_python_object(the_object):
     return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=the_clone, convert=True)
 
 
-def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
+def init(*args, path=None, include_optaplanner_jars=True, optaplanner_jar_location=None, log_level='INFO'):
     """Start the JVM. Throws a RuntimeError if it is already started.
 
     :param args: JVM args.
     :param path: If not None, a list of dependencies to use as the classpath. Default to None.
     :param include_optaplanner_jars: If True, add optaplanner jars to path. Default to True.
+    :param optaplanner_jar_location: If not None, a directory to extract optapy jars to.
+                                     If None, {current working directory}/.optapy is used. Default to None.
     :param log_level: What OptaPlanner log level should be set to.
                       Must be one of 'TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR'.
                       Defaults to 'INFO'
@@ -144,7 +171,9 @@ def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
         include_optaplanner_jars = True
         path = []
     if include_optaplanner_jars:
-        path = path + extract_optaplanner_jars()
+        extract_jar_to = optaplanner_jar_location if optaplanner_jar_location is not None else \
+            os.path.join(os.getcwd(), '.optapy')
+        path = path + extract_optaplanner_jars(extract_jar_to)
     if len(args) == 0:
         args = (jpype.getDefaultJVMPath(), '-Dlogback.level.org.optaplanner={}'.format(log_level))
     else:

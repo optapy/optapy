@@ -17,7 +17,7 @@ but using OptaPy in Python is significantly slower than using OptaPlanner in Jav
 ## Requirements
 
 - [Install Python 3.9 or later.](https://www.python.org)
-- [Install JDK 11 or later](https://adoptopenjdk.net) with the environment variable `JAVA_HOME` configured to the JDK installation directory.
+- [Install JDK 11 or later](https://adoptium.net/) with the environment variable `JAVA_HOME` configured to the JDK installation directory.
 
 ## Source code overview
 

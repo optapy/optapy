@@ -180,7 +180,9 @@ public class PythonWrapperGenerator {
      * {@code 
      * 
      *
-     * <pre>
+     * 
+    
+    <pre>
      * class PythonConstraintProvider implements ConstraintProvider {
      *     public static Function<ConstraintFactory, Constraint[]> defineConstraintsImpl;
      *

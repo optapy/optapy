@@ -49,21 +49,20 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
+        <artifactId>maven-assembly-plugin</artifactId>
         <executions>
           <execution>
-            <id>copy-dependencies</id>
+            <id>package-sources</id>
+            <phase>package</phase>
             <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>dependency-classpath</id>
-            <goals>
-              <goal>build-classpath</goal>
+              <goal>single</goal>
             </goals>
             <configuration>
-              <outputFile>target/classpath.txt</outputFile>
+              <finalName>${project.artifactId}-jars</finalName>
+              <descriptors>
+                <descriptor>src/main/assembly/assembly-optapy-jar-distribution.xml</descriptor>
+              </descriptors>
+              <appendAssemblyId>false</appendAssemblyId>
             </configuration>
           </execution>
         </executions>
