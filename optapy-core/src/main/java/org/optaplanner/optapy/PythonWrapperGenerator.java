@@ -134,18 +134,6 @@ public class PythonWrapperGenerator {
         return Array.newInstance(elementClass, 0).getClass();
     }
 
-    // Used in Python to exit the JVM.
-    // There an issue in Windows where if the JVM
-    // is not terminated, a file in use error occurs
-    // when removing the temporary directories
-    // that contain the dependency jars.
-    //
-    // TODO: Remove when https://github.com/jpype-project/jpype/issues/1006 is fixed
-    @SuppressWarnings("unused")
-    public static void shutdownJVM() {
-        System.exit(0);
-    }
-
     // Holds the OpaquePythonReference
     static final String pythonBindingFieldName = "__optaplannerPythonValue";
 
