@@ -1,5 +1,7 @@
 import os
 import os.path
+from pathlib import Path
+import shutil
 
 import jpype
 import jpype.imports
@@ -37,9 +39,18 @@ def extract_optaplanner_jars(extract_jar_to: str) -> list[str]:
                 return _get_jars_from_directory(os.path.join(extract_jar_to, 'optapy-jars', 'jars'))
     # If the jars for this version exists, we would have returned early
     # Thus, the jars must not exist/exist for a different version
-    optapy_jars_download_url = "https://github.com/Christopher-Chianelli/optapy/releases/download/{}/optapy-jars.zip"\
+    # Delete the file/directory and its contents if it exists
+    extract_jar_to_path = Path(extract_jar_to)
+    if extract_jar_to_path.exists() and extract_jar_to_path.is_dir():
+        shutil.rmtree(extract_jar_to_path)
+    elif extract_jar_to_path.exists() and extract_jar_to_path.is_file():
+        extract_jar_to_path.unlink()
+
+    # Download the jars and extract the zip
+    optapy_jars_download_url = "https://github.com/optapy/optapy/releases/download/{}/optapy-jars.zip" \
         .format(optapy_version)
     url_connection = urllib.request.urlopen(optapy_jars_download_url)
+    print('Downloading jars and extracting to {}'.format(extract_jar_to))
     with ZipFile(BytesIO(url_connection.read())) as my_zip_file:
         my_zip_file.extractall(path=extract_jar_to)
     return _get_jars_from_directory(os.path.join(extract_jar_to, 'optapy-jars', 'jars'))
