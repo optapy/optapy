@@ -1,4 +1,3 @@
-import tempfile
 import jpype
 import jpype.imports
 from jpype.types import *
@@ -6,9 +5,6 @@ from jpype import JProxy, JImplements, JOverride, JImplementationFor
 import importlib.metadata
 from inspect import signature, Parameter
 import copy
-
-# Need to be global; directory is deleted when it out of scope
-_optaplanner_jars = tempfile.TemporaryDirectory()
 
 
 def extract_optaplanner_jars() -> list[str]:
