@@ -2,16 +2,18 @@ from functools import reduce
 
 from optapy import get_class, solve
 from optapy.types import SolverConfig, Duration
-from domain import TimeTable, Lesson, generateProblem
-from constraints import defineConstraints
+from domain import TimeTable, Lesson, generate_problem
+from constraints import define_constraints
 
 
 def print_timetable(timetable: TimeTable):
-    room_list = timetable.roomList
-    lesson_list = timetable.lessonList
-    timeslot_room_lesson_triple_list = list(map(lambda lesson: (lesson.timeslot, lesson.room, lesson),
-                          filter(lambda lesson: lesson.timeslot is not None and lesson.room is not None,
-                                 lesson_list)))
+    room_list = timetable.room_list
+    lesson_list = timetable.lesson_list
+    timeslot_room_lesson_triple_list = list(map(lambda the_lesson: (the_lesson.timeslot, the_lesson.room, the_lesson),
+                                                filter(lambda the_lesson:
+                                                       the_lesson.timeslot is not None and
+                                                       the_lesson.room is not None,
+                                                lesson_list)))
     lesson_map = dict()
     for timeslot, room, lesson in timeslot_room_lesson_triple_list:
         if timeslot in lesson_map:
@@ -24,19 +26,19 @@ def print_timetable(timetable: TimeTable):
 
     print("|" + ("------------|" * (len(room_list) + 1)))
     print(reduce(lambda a, b: a + b + " | ",
-                 map(lambda room: "{:<10}".format(room.name)[0:10], room_list),
+                 map(lambda the_room: "{:<10}".format(the_room.name)[0:10], room_list),
                  "|            | "))
     print("|" + ("------------|" * (len(room_list) + 1)))
-    for timeslot in timetable.timeslotList:
-        cell_list = list(map(lambda room: lesson_map.get(timeslot, {}).get(room, []),
+    for timeslot in timetable.timeslot_list:
+        cell_list = list(map(lambda the_room: lesson_map.get(timeslot, {}).get(the_room, []),
                              room_list))
-        out = "| " + (timeslot.dayOfWeek[0:3] + " " + str(timeslot.startTime))[0:10] + " | "
+        out = "| " + (timeslot.day_of_week[0:3] + " " + str(timeslot.start_time))[0:10] + " | "
         for cell in cell_list:
             if len(cell) == 0:
                 out += "           | "
             else:
                 out += "{:<10}".format(reduce(lambda a, b: a + "," + b,
-                                              map(lambda lesson: lesson.subject,
+                                              map(lambda assigned_lesson: assigned_lesson.subject,
                                                   cell)))[0:10] + " | "
         print(out)
         out = "|            | "
@@ -45,7 +47,7 @@ def print_timetable(timetable: TimeTable):
                 out += "           | "
             else:
                 out += "{:<10}".format(reduce(lambda a, b: a + "," + b,
-                                              map(lambda lesson: lesson.teacher,
+                                              map(lambda assigned_lesson: assigned_lesson.teacher,
                                                   cell)))[0:10] + " | "
         print(out)
         out = "|            | "
@@ -54,24 +56,25 @@ def print_timetable(timetable: TimeTable):
                 out += "           | "
             else:
                 out += "{:<10}".format(reduce(lambda a, b: a + "," + b,
-                                                     map(lambda lesson: lesson.studentGroup,
-                                                         cell)))[0:10] + " | "
+                                              map(lambda assigned_lesson: assigned_lesson.student_group,
+                                                  cell)))[0:10] + " | "
         print(out)
         print("|" + ("------------|" * (len(room_list) + 1)))
-    unassigned_lessons = list(filter(lambda lesson: lesson.timeslot is None or lesson.room is None,
-                                lesson_list))
+    unassigned_lessons = list(
+        filter(lambda unassigned_lesson: unassigned_lesson.timeslot is None or unassigned_lesson.room is None,
+               lesson_list))
     if len(unassigned_lessons) > 0:
         print()
         print("Unassigned lessons")
         for lesson in unassigned_lessons:
-            print(" " + lesson.subject + " - " + lesson.teacher + " - " + lesson.studentGroup)
+            print(" " + lesson.subject + " - " + lesson.teacher + " - " + lesson.student_group)
 
 
-solverConfig = SolverConfig().withEntityClasses(get_class(Lesson)) \
+solver_config = SolverConfig().withEntityClasses(get_class(Lesson)) \
     .withSolutionClass(get_class(TimeTable)) \
-    .withConstraintProviderClass(get_class(defineConstraints)) \
+    .withConstraintProviderClass(get_class(define_constraints)) \
     .withTerminationSpentLimit(Duration.ofSeconds(30))
 
-solution = solve(solverConfig, generateProblem())
+solution = solve(solver_config, generate_problem())
 
 print_timetable(solution)

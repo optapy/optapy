@@ -46,13 +46,14 @@ To declare Problem Facts, use the `@problem_fact` decorator
 [source,python]
 ----
 from optapy import problem_fact
+
 @problem_fact
 class Timeslot:
-    def __init__(self, id, dayOfWeek, startTime, endTime):
+    def __init__(self, id, day_of_week, start_time, end_time):
         self.id = id
-        self.dayOfWeek = dayOfWeek
-        self.startTime = startTime
-        self.endTime = endTime
+        self.day_of_week = day_of_week
+        self.start_time = start_time
+        self.end_time = end_time
 ----
 
 ==== Planning Entities
@@ -65,34 +66,34 @@ from optapy import planning_entity, planning_id, planning_variable
 
 @planning_entity
 class Lesson:
-    def __init__(self, id, subject, teacher, studentGroup, timeslot=None, room=None):
+    def __init__(self, id, subject, teacher, student_group, timeslot=None, room=None):
         self.id = id
         self.subject = subject
         self.teacher = teacher
-        self.studentGroup = studentGroup
+        self.student_group = student_group
         self.timeslot = timeslot
         self.room = room
 
     @planning_id
-    def getId(self):
+    def get_id(self):
         return self.id
 
     @planning_variable(Timeslot, value_range_provider_refs=["timeslotRange"])
-    def getTimeslot(self):
+    def get_timeslot(self):
         return self.timeslot
 
-    def setTimeslot(self, newTimeslot):
-        self.timeslot = newTimeslot
+    def set_timeslot(self, new_timeslot):
+        self.timeslot = new_timeslot
 
     @planning_variable(Room, value_range_provider_refs=["roomRange"])
-    def getRoom(self):
+    def get_room(self):
         return self.room
 
-    def setRoom(self, newRoom):
+    def set_room(self, new_room):
         self.room = newRoom
 ----
 
-- `@planning_variable` method decorators are used to indicate what fields can change. The method MUST follow JavaBean style conventions and have a corresponding setter (i.e. `getRoom(self)`, `setRoom(self, newRoom)`). The first parameter of the decorator is the type of the Planning Variable (required). The `value_range_provider_refs` parameter tells OptaPlanner what value range providers on the Planning Solution this Planning Variable can take values from.
+- `@planning_variable` method decorators are used to indicate what fields can change. The method MUST begin with get and have a corresponding set method (i.e. `get_room(self)`, `set_room(self, newRoom)`). The first parameter of the decorator is the type of the Planning Variable (required). The `value_range_provider_refs` parameter tells OptaPlanner what value range providers on the Planning Solution this Planning Variable can take values from.
 
 - `@planning_id` is used to uniquely identify an entity object of a particular class. The same Planning Id can be used on entities of different classes, but the ids of all entities in the same class must be different.
 
@@ -106,31 +107,31 @@ from optapy import planning_solution, problem_fact_collection_property, value_ra
 
 @planning_solution
 class TimeTable:
-    def __init__(self, timeslotList=[], roomList=[], lessonList=[], score=None):
-        self.timeslotList = timeslotList
-        self.roomList = roomList
-        self.lessonList = lessonList
+    def __init__(self, timeslot_list=[], room_list=[], lesson_list=[], score=None):
+        self.timeslot_list = timeslot_list
+        self.room_list = room_list
+        self.lesson_list = lesson_list
         self.score = score
 
     @problem_fact_collection_property(Timeslot)
     @value_range_provider(range_id = "timeslotRange")
-    def getTimeslotList(self):
-        return self.timeslotList
+    def get_timeslot_list(self):
+        return self.timeslot_list
 
     @problem_fact_collection_property(Room)
     @value_range_provider(range_id = "roomRange")
-    def getRoomList(self):
-        return self.roomList
+    def get_room_list(self):
+        return self.room_list
 
     @planning_entity_collection_property(Lesson)
-    def getLessonList(self):
-        return self.lessonList
+    def get_lesson_list(self):
+        return self.lesson_list
 
     @planning_score(HardSoftScore)
-    def getScore(self):
+    def get_score(self):
         return self.score
 
-    def setScore(self, score):
+    def set_score(self, score):
         self.score = score
 ----
 
@@ -140,7 +141,7 @@ class TimeTable:
 
 - `@planning_entity_collection_property(type)` is used to indicate a method returns Planning Entities. The first parameter of the decorator is the type of the Planning Entity Collection (required). It should be a list.
 
-- `@planning_score(scoreType)` is used to tell OptaPlanner what field holds the score. The method MUST follow JavaBean style conventions and have a corresponding setter (i.e. `getScore(self)`, `setScore(self, score)`). The first parameter of the decorator is the score type (required).
+- `@planning_score(scoreType)` is used to tell OptaPlanner what field holds the score. The method MUST begin with get and have a corresponding set method (i.e. `get_score(self)`, `set_score(self, score)`). The first parameter of the decorator is the score type (required).
 
 === Constraints
 
@@ -155,16 +156,16 @@ from optapy.types import Joiners, HardSoftScore
 LessonClass = get_class(Lesson)
 
 @constraint_provider
-def defineConstraints(constraintFactory):
+def define_constraints(constraint_factory):
     return [
         # Hard constraints
-        roomConflict(constraintFactory),
+        room_conflict(constraint_factory),
         # Other constraints here...
     ]
 
-def roomConflict(constraintFactory):
+def room_conflict(constraint_factory):
     # A room can accommodate at most one lesson at the same time.
-    return constraintFactory \
+    return constraint_factory \
             .fromUniquePair(LessonClass, [
             # ... in the same timeslot ...
                 Joiners.equal(lambda lesson: lesson.timeslot),
@@ -174,7 +175,7 @@ def roomConflict(constraintFactory):
 ----
 for more details on Constraint Streams, see https://docs.optaplanner.org/latest/optaplanner-docs/html_single/index.html#constraintStreams
 
-NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from(class, [joiners...])` function, you access it like `constraintFactory.from_(class, [joiners...])`
+NOTE: Since `from` is a keyword in python, to use the `constraint_factory.from(class, [joiners...])` function, you access it like `constraint_factory.from_(class, [joiners...])`
 
 === Solve
 
@@ -182,15 +183,15 @@ NOTE: Since `from` is a keyword in python, to use the `constraintFactory.from(cl
 ----
 from optapy import get_class, solve
 from optapy.types import SolverConfig, Duration
-from constraints import defineConstraints
-from domain import TimeTable, Lesson, generateProblem
+from constraints import define_constraints
+from domain import TimeTable, Lesson, generate_problem
 
-solverConfig = SolverConfig().withEntityClasses(get_class(Lesson)) \
+solver_config = SolverConfig().withEntityClasses(get_class(Lesson)) \
     .withSolutionClass(get_class(TimeTable)) \
-    .withConstraintProviderClass(get_class(defineConstraints)) \
+    .withConstraintProviderClass(get_class(define_constraints)) \
     .withTerminationSpentLimit(Duration.ofSeconds(30))
 
-solution = solve(solverConfig, generateProblem())
+solution = solve(solver_config, generate_problem())
 ----
 
 `solution` will be a `TimeTable` instance with planning
