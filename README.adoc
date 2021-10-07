@@ -107,7 +107,7 @@ from optapy import planning_solution, problem_fact_collection_property, value_ra
 
 @planning_solution
 class TimeTable:
-    def __init__(self, timeslot_list=[], room_list=[], lesson_list=[], score=None):
+    def __init__(self, timeslot_list, room_list, lesson_list, score=None):
         self.timeslot_list = timeslot_list
         self.room_list = room_list
         self.lesson_list = lesson_list
