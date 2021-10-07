@@ -1,7 +1,10 @@
-from optapy import *
+from optapy import problem_fact, planning_id, planning_entity, planning_variable, \
+    planning_solution, planning_entity_collection_property, \
+    problem_fact_collection_property, \
+    value_range_provider, planning_score
 from optapy.types import HardSoftScore
 from datetime import time
-from functools import reduce
+
 
 @problem_fact
 class Room:
@@ -10,110 +13,122 @@ class Room:
         self.name = name
 
     @planning_id
-    def getId(self):
+    def get_id(self):
         return self.id
 
     def __str__(self):
-        return "Room(id=" + str(self.id) + ", name=" + str(self.name) + ")"
+        return f"Room(id={self.id}, name={self.name})"
+
 
 @problem_fact
 class Timeslot:
-    def __init__(self, id, dayOfWeek, startTime, endTime):
+    def __init__(self, id, day_of_week, start_time, end_time):
         self.id = id
-        self.dayOfWeek = dayOfWeek
-        self.startTime = startTime
-        self.endTime = endTime
+        self.day_of_week = day_of_week
+        self.start_time = start_time
+        self.end_time = end_time
 
     @planning_id
-    def getId(self):
+    def get_id(self):
         return self.id
 
     def __str__(self):
-        return "Timeslot(id=" + str(self.id) + \
-               ", dayOfWeek=" + str(self.dayOfWeek) + ", startTime=" + str(self.startTime) + \
-               ", endTime=" + str(self.endTime) + ")"
+        return (
+                f"Timeslot("
+                f"id={self.id}, "
+                f"day_of_week={self.day_of_week}, "
+                f"start_time={self.start_time}, "
+                f"end_time={self.end_time})"
+        )
+
 
 @planning_entity
 class Lesson:
-    def __init__(self, id, subject, teacher, studentGroup, timeslot=None, room=None):
+    def __init__(self, id, subject, teacher, student_group, timeslot=None, room=None):
         self.id = id
         self.subject = subject
         self.teacher = teacher
-        self.studentGroup = studentGroup
+        self.student_group = student_group
         self.timeslot = timeslot
         self.room = room
 
     @planning_id
-    def getId(self):
+    def get_id(self):
         return self.id
 
-    @planning_variable(Timeslot, value_range_provider_refs=["timeslotRange"])
-    def getTimeslot(self):
+    @planning_variable(Timeslot, ["timeslotRange"])
+    def get_timeslot(self):
         return self.timeslot
 
-    def setTimeslot(self, newTimeslot):
-        self.timeslot = newTimeslot
+    def set_timeslot(self, new_timeslot):
+        self.timeslot = new_timeslot
 
-    @planning_variable(Room, value_range_provider_refs=["roomRange"])
-    def getRoom(self):
+    @planning_variable(Room, ["roomRange"])
+    def get_room(self):
         return self.room
 
-    def setRoom(self, newRoom):
-        self.room = newRoom
+    def set_room(self, new_room):
+        self.room = new_room
 
     def __str__(self):
-        return "Lesson(id=" + str(self.id) + \
-                ", timeslot=" + str(self.timeslot) + ", room=" + str(self.room) + \
-                ", teacher=" + str(self.teacher) + ", subject=" + str(self.subject) + \
-                ", studentGroup=" + str(self.studentGroup) + ")"
+        return (
+            f"Lesson("
+            f"id={self.id}, "
+            f"timeslot={self.timeslot}, "
+            f"room={self.room}, "
+            f"teacher={self.teacher}, "
+            f"subject={self.subject}, "
+            f"student_group={self.student_group}"
+            f")"
+        )
 
-# For better toString; list default __str__ only print address for some reason
-def listString(aList):
-    def itemConcat(soFar, newItem):
-        return soFar + ",\n" + str(newItem)
-    if len(aList) == 0:
-        return "[]"
-    elif len(aList) == 1:
-        return "[" + str(aList[0]) + "]"
-    else:
-        return "[" + reduce(itemConcat, aList[1:], str(aList[0])) + "]"
+
+def format_list(a_list):
+    return ',\n'.join(map(str, a_list))
+
 
 @planning_solution
 class TimeTable:
-    def __init__(self, timeslotList=[], roomList=[], lessonList=[], score=None):
-        self.timeslotList = timeslotList
-        self.roomList = roomList
-        self.lessonList = lessonList
+    def __init__(self, timeslot_list, room_list, lesson_list, score=None):
+        self.timeslot_list = timeslot_list
+        self.room_list = room_list
+        self.lesson_list = lesson_list
         self.score = score
 
     @problem_fact_collection_property(Timeslot)
     @value_range_provider("timeslotRange")
-    def getTimeslotList(self):
-        return self.timeslotList
+    def get_timeslot_list(self):
+        return self.timeslot_list
 
     @problem_fact_collection_property(Room)
     @value_range_provider("roomRange")
-    def getRoomList(self):
-        return self.roomList
+    def get_room_list(self):
+        return self.room_list
 
     @planning_entity_collection_property(Lesson)
-    def getLessonList(self):
-        return self.lessonList
+    def get_lesson_list(self):
+        return self.lesson_list
 
     @planning_score(HardSoftScore)
-    def getScore(self):
+    def get_score(self):
         return self.score
 
-    def setScore(self, score):
+    def set_score(self, score):
         self.score = score
-
+    
     def __str__(self):
-        return "TimeTable(timeSlotList=" + listString(self.timeslotList) + \
-               ",\nroomList=" + listString(self.roomList) + ",\nlessonList=" + listString(self.lessonList) + \
-               ",\nscore=" + (str(self.score.toString()) if self.score is not None else 'None') + ")"
+        return (
+            f"TimeTable("
+            f"timeslot_list={format_list(self.timeslot_list)},\n"
+            f"room_list={format_list(self.room_list)},\n"
+            f"lesson_list={format_list(self.lesson_list)},\n"
+            f"score={str(self.score.toString()) if self.score is not None else 'None'}"
+            f")"
+        )
 
-def generateProblem():
-    timeslotList = [
+
+def generate_problem():
+    timeslot_list = [
         Timeslot(1, "MONDAY", time(hour=8, minute=30), time(hour=9, minute=30)),
         Timeslot(2, "MONDAY", time(hour=9, minute=30), time(hour=10, minute=30)),
         Timeslot(3, "MONDAY", time(hour=10, minute=30), time(hour=11, minute=30)),
@@ -125,12 +140,12 @@ def generateProblem():
         Timeslot(9, "TUESDAY", time(hour=13, minute=30), time(hour=14, minute=30)),
         Timeslot(10, "TUESDAY", time(hour=14, minute=30), time(hour=15, minute=30)),
     ]
-    roomList = [
+    room_list = [
         Room(1, "Room A"),
         Room(2, "Room B"),
         Room(3, "Room C")
     ]
-    lessonList = [
+    lesson_list = [
         Lesson(1, "Math", "A. Turing", "9th grade"),
         Lesson(2, "Math", "A. Turing", "9th grade"),
         Lesson(3, "Physics", "M. Curie", "9th grade"),
@@ -152,8 +167,8 @@ def generateProblem():
         Lesson(19, "English", "P. Cruz", "10th grade"),
         Lesson(20, "Spanish", "P. Cruz", "10th grade"),
     ]
-    lesson = lessonList[0]
-    lesson.setTimeslot(timeslotList[0])
-    lesson.setRoom(roomList[0])
+    lesson = lesson_list[0]
+    lesson.set_timeslot(timeslot_list[0])
+    lesson.set_room(room_list[0])
 
-    return TimeTable(timeslotList, roomList, lessonList)
+    return TimeTable(timeslot_list, room_list, lesson_list)

@@ -1,87 +1,109 @@
 from optapy import constraint_provider, get_class
 from optapy.types import Joiners, HardSoftScore
-from domain import TimeTable, Lesson, Room
+from domain import Lesson, Room
 from datetime import datetime, date, timedelta
 
-TimeTableClass = get_class(TimeTable)
 LessonClass = get_class(Lesson)
 RoomClass = get_class(Room)
 
+# Trick since timedelta only works with datetime instances
 today = date.today()
 
 
-def within30Mins(lesson1, lesson2):
-    between = datetime.combine(today, lesson1.timeslot.endTime) - datetime.combine(today, lesson2.timeslot.startTime)
+def within_30_minutes(lesson1, lesson2):
+    between = datetime.combine(today, lesson1.timeslot.end_time) - datetime.combine(today, lesson2.timeslot.start_time)
     return timedelta(minutes=0) <= between <= timedelta(minutes=30)
 
 
 @constraint_provider
-def defineConstraints(constraintFactory):
+def define_constraints(constraint_factory):
     return [
         # Hard constraints
-        roomConflict(constraintFactory),
-        teacherConflict(constraintFactory),
-        studentGroupConflict(constraintFactory),
+        room_conflict(constraint_factory),
+        teacher_conflict(constraint_factory),
+        student_group_conflict(constraint_factory),
         # Soft constraints
-        teacherRoomStability(constraintFactory),
-        teacherTimeEfficiency(constraintFactory),
-        studentGroupSubjectVariety(constraintFactory)
+        teacher_room_stability(constraint_factory),
+        teacher_time_efficiency(constraint_factory),
+        student_group_subject_variety(constraint_factory)
     ]
 
 
-def roomConflict(constraintFactory):
+def room_conflict(constraint_factory):
     # A room can accommodate at most one lesson at the same time.
-    return constraintFactory \
-            .fromUniquePair(LessonClass,
-            # ... in the same timeslot ...
-                [Joiners.equal(lambda lesson: lesson.timeslot),
-            # ... in the same room ...
-                Joiners.equal(lambda lesson: lesson.room)]) \
-            .penalize("Room conflict", HardSoftScore.ONE_HARD)
-
-
-def teacherConflict(constraintFactory):
-    # A teacher can teach at most one lesson at the same time.
-    return constraintFactory \
-                .fromUniquePair(LessonClass,
-                        [Joiners.equal(lambda lesson: lesson.timeslot),
-                        Joiners.equal(lambda lesson: lesson.teacher)]) \
-                .penalize("Teacher conflict", HardSoftScore.ONE_HARD)
-
-
-def studentGroupConflict(constraintFactory):
-    # A student can attend at most one lesson at the same time.
-    return constraintFactory \
-            .fromUniquePair(LessonClass,
-                [Joiners.equal(lambda lesson: lesson.timeslot),
-                Joiners.equal(lambda lesson: lesson.studentGroup)]) \
-            .penalize("Student group conflict", HardSoftScore.ONE_HARD)
-
-
-def teacherRoomStability(constraintFactory):
-    # A teacher prefers to teach in a single room.
-    return constraintFactory \
-                .fromUniquePair(LessonClass,
-                        [Joiners.equal(lambda lesson: lesson.teacher)]) \
-                .filter(lambda lesson1, lesson2: lesson1.room != lesson2.room) \
-                .penalize("Teacher room stability", HardSoftScore.ONE_SOFT)
-
-
-def teacherTimeEfficiency(constraintFactory):
-    # A teacher prefers to teach sequential lessons and dislikes gaps between lessons.
-    return constraintFactory.from_(LessonClass)\
-                .join(LessonClass, [Joiners.equal(lambda lesson: lesson.teacher),
-                        Joiners.equal(lambda lesson: lesson.timeslot.dayOfWeek)]) \
-                .filter(within30Mins) \
-                .reward("Teacher time efficiency", HardSoftScore.ONE_SOFT)
-
-
-def studentGroupSubjectVariety(constraintFactory):
-    # A student group dislikes sequential lessons on the same subject.
-    return constraintFactory.from_(LessonClass) \
+    return constraint_factory \
+        .from_(LessonClass) \
         .join(LessonClass,
-                        [Joiners.equal(lambda lesson: lesson.subject),
-                        Joiners.equal(lambda lesson: lesson.studentGroup),
-                        Joiners.equal(lambda lesson: lesson.timeslot.dayOfWeek)]) \
-        .filter(within30Mins) \
+              [
+                  # ... in the same timeslot ...
+                  Joiners.equal(lambda lesson: lesson.timeslot),
+                  # ... in the same room ...
+                  Joiners.equal(lambda lesson: lesson.room),
+                  # form unique pairs
+                  Joiners.lessThan(lambda lesson: lesson.id)
+              ]) \
+        .penalize("Room conflict", HardSoftScore.ONE_HARD)
+
+
+def teacher_conflict(constraint_factory):
+    # A teacher can teach at most one lesson at the same time.
+    return constraint_factory \
+        .from_(LessonClass) \
+        .join(LessonClass,
+              [
+                  Joiners.equal(lambda lesson: lesson.timeslot),
+                  Joiners.equal(lambda lesson: lesson.teacher),
+                  Joiners.lessThan(lambda lesson: lesson.id)
+              ]) \
+        .penalize("Teacher conflict", HardSoftScore.ONE_HARD)
+
+
+def student_group_conflict(constraint_factory):
+    # A student can attend at most one lesson at the same time.
+    return constraint_factory \
+        .from_(LessonClass) \
+        .join(LessonClass,
+              [
+                  Joiners.equal(lambda lesson: lesson.timeslot),
+                  Joiners.equal(lambda lesson: lesson.student_group),
+                  Joiners.lessThan(lambda lesson: lesson.id)
+              ]) \
+        .penalize("Student group conflict", HardSoftScore.ONE_HARD)
+
+
+def teacher_room_stability(constraint_factory):
+    # A teacher prefers to teach in a single room.
+    return constraint_factory \
+        .from_(LessonClass) \
+        .join(LessonClass,
+              [
+                  Joiners.equal(lambda lesson: lesson.teacher),
+                  Joiners.lessThan(lambda lesson: lesson.id)
+              ]) \
+        .filter(lambda lesson1, lesson2: lesson1.room != lesson2.room) \
+        .penalize("Teacher room stability", HardSoftScore.ONE_SOFT)
+
+
+def teacher_time_efficiency(constraint_factory):
+    # A teacher prefers to teach sequential lessons and dislikes gaps between lessons.
+    return constraint_factory.from_(LessonClass) \
+        .join(LessonClass,
+              [
+                  Joiners.equal(lambda lesson: lesson.teacher),
+                  Joiners.equal(lambda lesson: lesson.timeslot.day_of_week)
+              ]) \
+        .filter(within_30_minutes) \
+        .reward("Teacher time efficiency", HardSoftScore.ONE_SOFT)
+
+
+def student_group_subject_variety(constraint_factory):
+    # A student group dislikes sequential lessons on the same subject.
+    return constraint_factory.from_(LessonClass) \
+        .join(LessonClass,
+              [
+                  Joiners.equal(lambda lesson: lesson.subject),
+                  Joiners.equal(lambda lesson: lesson.student_group),
+                  Joiners.equal(lambda lesson: lesson.timeslot.day_of_week)
+              ]) \
+        .filter(within_30_minutes) \
         .penalize("Student group subject variety", HardSoftScore.ONE_SOFT)
