@@ -7,15 +7,20 @@ OptaPy is *an AI constraint solver for Python* to optimize
 the Vehicle Routing Problem, Employee Rostering, Maintenance Scheduling, Task Assignment, School Timetabling,
 Cloud Optimization, Conference Scheduling, Job Shop Scheduling, Bin Packing and many more planning problems.
 
-OptaPy wraps the https://www.optaplanner.org/[OptaPlanner] engine internally,
-but using OptaPy in Python is significantly slower than using OptaPlanner in Java or Kotlin.
+Questions? https://stackoverflow.com/questions/tagged/optapy[Ask us on StackOverflow.] Found an issue? https://github.com/optapy/optapy/issues[Report it here].
 
-https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[Try the OptaPy Jupyter notebook.]
+OptaPy wraps the https://www.optaplanner.org/[OptaPlanner] engine internally, so it needs a JDK installed.
 
 WARNING: OptaPy is an experimental technology.
 It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
 
 == Get started
+
+This quickstart uses OptaPy to optimize a school timetable for student and teachers.
+
+=== Jupyter notebook
+
+Instead of going through this tutorial, you can also https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[follow along in the OptaPy Jupyter notebook.]
 
 === Prerequisites
 
