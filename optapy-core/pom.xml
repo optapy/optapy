@@ -71,6 +71,23 @@
     </plugins>
   </build>
 
+  <profiles>
+    <profile>
+      <id>stubs</id>
+      <activation>
+        <property>
+          <name>stubs</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.kie.kogito</groupId>
+          <artifactId>kogito-legacy-api</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
   <repositories>
     <repository>
       <id>jboss-public-repository-group</id>

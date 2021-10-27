@@ -1,6 +1,6 @@
 from functools import reduce
 
-from optapy import getClass, solve
+from optapy import get_class, solve
 from optapy.types import SolverConfig, Duration
 from domain import TimeTable, Lesson, generate_problem
 from constraints import define_constraints
@@ -70,9 +70,9 @@ def print_timetable(timetable: TimeTable):
             print(" " + lesson.subject + " - " + lesson.teacher + " - " + lesson.student_group)
 
 
-solver_config = SolverConfig().withEntityClasses(getClass(Lesson)) \
-    .withSolutionClass(getClass(TimeTable)) \
-    .withConstraintProviderClass(getClass(define_constraints)) \
+solver_config = SolverConfig().withEntityClasses(get_class(Lesson)) \
+    .withSolutionClass(get_class(TimeTable)) \
+    .withConstraintProviderClass(get_class(define_constraints)) \
     .withTerminationSpentLimit(Duration.ofSeconds(30))
 
 solution = solve(solver_config, generate_problem())
