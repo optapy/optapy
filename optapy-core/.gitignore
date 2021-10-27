@@ -1,6 +1,7 @@
-**/dist
-**/*.egg-info
-**/target
+/dist
+/*.egg-info
+/target
+/*-stubs
 
 # Eclipse, Netbeans and IntelliJ files
 /.*
