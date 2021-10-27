@@ -72,12 +72,10 @@ def find_stub_files(stub_root: str):
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
-data_dir_content = []
-version = '8.11.0a2'
 
 setup(
     name='optapy',
-    version=version,
+    version='8.11.0a2',
     license='Apache License Version 2.0',
     license_file='LICENSE',
     description='An AI constraint solver that optimizes planning and scheduling problems',
@@ -97,20 +95,23 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent'
     ],
-    packages=['optapy', 'optapy.types'],
+    packages=['optapy', 'optapy.types', 'java-stubs', 'jpype-stubs', 'org-stubs'],
     package_dir={
         'optapy': 'src/main/python',
+        'java-stubs': 'java-stubs',
+        'jpype-stubs': 'jpype-stubs',
+        'org-stubs': 'org-stubs',
     },
     python_requires='>=3.9',
     install_requires=[
         'JPype1',
-        'optapy-optaplanner-stubs=={}'.format(version),
-        'optapy-java-stubs=={}'.format(version),
-        'optapy-jpype-stubs=={}'.format(version),
     ],
     cmdclass={'build_py': FetchDependencies},
     package_data={
         'optapy': ['classpath.txt'],
         'optapy.jars': ['*.jar'],
+        'java-stubs': find_stub_files('java-stubs'),
+        'jpype-stubs': find_stub_files('jpype-stubs'),
+        'org-stubs': find_stub_files('org-stubs'),
     },
 )
