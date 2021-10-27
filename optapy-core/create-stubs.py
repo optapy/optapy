@@ -1,10 +1,6 @@
 import pathlib
 import jpype
-
-try:
-    from stubgenj.stubgenj._stubgenj import generateJavaStubs # noqa
-except ModuleNotFoundError:
-    pass
+from stubgenj import stubgenj
 
 jars = list(map(str, pathlib.Path('target/dependency').glob('**/*.jar')))
 
@@ -15,5 +11,5 @@ import org.optaplanner  # noqa
 import java.time # noqa
 import java.util # noqa
 
-generateJavaStubs([java.time, java.util, org.optaplanner], useStubsSuffix=True)
+stubgenj.generateJavaStubs([java.time, java.util, org.optaplanner], useStubsSuffix=True)
 
