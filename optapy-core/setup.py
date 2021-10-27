@@ -52,11 +52,32 @@ class FetchDependencies(build_py):
         build_py.run(self)
 
 
+def find_stub_files(stub_root: str):
+    """
+    This function is taken from the awesome sqlalchey-stubs:
+    https://github.com/dropbox/sqlalchemy-stubs/blob/master/setup.py#L32
+    It's licensed under Apache 2.0:
+    https://github.com/dropbox/sqlalchemy-stubs/blob/master/LICENSE
+    """
+    result = []
+    for root, dirs, files in os.walk(stub_root):
+        for file in files:
+            if file.endswith(".pyi"):
+                if os.path.sep in root:
+                    sub_root = root.split(os.path.sep, 1)[-1]
+                    file = os.path.join(sub_root, file)
+                result.append(file)
+    return result
+
+
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
+data_dir_content = []
+version = '8.11.0a2'
+
 setup(
     name='optapy',
-    version='8.11.0a2',
+    version=version,
     license='Apache License Version 2.0',
     license_file='LICENSE',
     description='An AI constraint solver that optimizes planning and scheduling problems',
@@ -77,9 +98,16 @@ setup(
         'Operating System :: OS Independent'
     ],
     packages=['optapy', 'optapy.types'],
-    package_dir={'optapy': 'src/main/python'},
+    package_dir={
+        'optapy': 'src/main/python',
+    },
     python_requires='>=3.9',
-    install_requires=['JPype1'],
+    install_requires=[
+        'JPype1',
+        'optapy-optaplanner-stubs=={}'.format(version),
+        'optapy-java-stubs=={}'.format(version),
+        'optapy-jpype-stubs=={}'.format(version),
+    ],
     cmdclass={'build_py': FetchDependencies},
     package_data={
         'optapy': ['classpath.txt'],
