@@ -1,6 +1,6 @@
 import pathlib
 import jpype
-from stubgenj import stubgenj
+import stubgenj
 
 jars = list(map(str, pathlib.Path('target/dependency').glob('**/*.jar')))
 

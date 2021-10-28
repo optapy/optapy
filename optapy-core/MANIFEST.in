@@ -1,7 +1,4 @@
 graft .mvn
 graft src/main/java
 graft src/main/resources
-graft java-stubs
-graft jpype-stubs
-graft org-stubs
-include mvnw mvnw.cmd pom.xml
+include mvnw mvnw.cmd pom.xml create-stubs.py
