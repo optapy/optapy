@@ -9,13 +9,35 @@ import platform
 import subprocess
 from pathlib import Path
 from shutil import copyfile
-
+import sys
 
 class FetchDependencies(build_py):
     """
     A command class that fetch Java Dependencies and
     add them as files within a python package
     """
+    def create_stubs(self, project_root, command):
+        subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies', '-Dstubs'],
+                       cwd=project_root, check=True)
+        subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies', '-Dstubs',
+                        '-Dclassifier=javadoc'], cwd=project_root, check=True)
+        subprocess.run([sys.executable, str((project_root / 'create-stubs.py').absolute())], cwd=project_root,
+                       check=True)
+        target_dir = os.path.join(self.build_lib, 'java-stubs')
+        for fn in find_stub_files('java-stubs'):
+            os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
+            copyfile(os.path.join('java-stubs', fn), os.path.join(target_dir, fn))
+        target_dir = os.path.join(self.build_lib, 'jpype-stubs')
+        for fn in find_stub_files('jpype-stubs'):
+            os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
+            copyfile(os.path.join('jpype-stubs', fn), os.path.join(target_dir, fn))
+        target_dir = os.path.join(self.build_lib, 'org-stubs')
+        for fn in find_stub_files('org-stubs'):
+            os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
+            copyfile(os.path.join('org-stubs', fn), os.path.join(target_dir, fn))
+
+
+
     def run(self):
         if not self.dry_run:
             project_root = Path(__file__).parent
@@ -24,6 +46,7 @@ class FetchDependencies(build_py):
             command = 'mvnw'
             if platform.system() == 'Windows':
                 command = 'mvnw.cmd'
+            self.create_stubs(project_root, command)
             subprocess.run([str((project_root / command).absolute()), 'clean', 'install'], cwd=project_root, check=True)
             classpath_jars = []
             # Add the main artifact
@@ -98,9 +121,9 @@ setup(
     packages=['optapy', 'optapy.types', 'java-stubs', 'jpype-stubs', 'org-stubs'],
     package_dir={
         'optapy': 'src/main/python',
-        'java-stubs': 'java-stubs',
-        'jpype-stubs': 'jpype-stubs',
-        'org-stubs': 'org-stubs',
+        'java-stubs': 'src/main/resources',
+        'jpype-stubs': 'src/main/resources',
+        'org-stubs': 'src/main/resources',
     },
     python_requires='>=3.9',
     install_requires=[
@@ -110,8 +133,5 @@ setup(
     package_data={
         'optapy': ['classpath.txt'],
         'optapy.jars': ['*.jar'],
-        'java-stubs': find_stub_files('java-stubs'),
-        'jpype-stubs': find_stub_files('jpype-stubs'),
-        'org-stubs': find_stub_files('org-stubs'),
     },
 )
