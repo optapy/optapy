@@ -121,6 +121,11 @@ setup(
     packages=['optapy', 'optapy.types', 'java-stubs', 'jpype-stubs', 'org-stubs'],
     package_dir={
         'optapy': 'src/main/python',
+        # Setup tools need a non-empty directory to use as base
+        # Since these packages are generated during the build,
+        # we use the src/main/resources package, which does
+        # not contain any python files and is already included
+        # in the build
         'java-stubs': 'src/main/resources',
         'jpype-stubs': 'src/main/resources',
         'org-stubs': 'src/main/resources',
