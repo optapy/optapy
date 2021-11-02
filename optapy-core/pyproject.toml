@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     "setuptools>=42",
-    "stubgenj==0.2.3",
+    "stubgenj>=0.2.4",
     "JPype1",
     "wheel"
 ]
