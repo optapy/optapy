@@ -1,6 +1,7 @@
 from .optaplanner_java_interop import ensure_init, _add_deep_copy_to_class, _generate_planning_entity_class,\
-    _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class
+    _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, get_class
 from jpype import JImplements
+from typing import Union, List, Callable, Type
 
 """
 All OptaPlanner Python annotations work like this:
@@ -18,7 +19,7 @@ is called and used (which allows __getattr__ to work w/o casting to a Java Proxy
 """
 
 
-def planning_id(getter_function):
+def planning_id(getter_function: Callable[[], Union[int, str]]):
     """Specifies that a bean property is the id to match when locating an externalObject (often from another Thread).
 
     Used during Move rebasing and in a ProblemFactChange.
@@ -36,7 +37,30 @@ def planning_id(getter_function):
     return getter_function
 
 
-def planning_variable(variable_type, value_range_provider_refs, nullable=False, graph_type=None,
+def planning_pin(getter_function: Callable[[], bool]):
+    """Specifies that a boolean property (or field) of a {@link PlanningEntity} determines if the planning entity is pinned.
+       A pinned planning entity is never changed during planning.
+       For example, it allows the user to pin a shift to a specific employee before solving
+       and the solver will not undo that, regardless of the constraints.
+
+       The boolean is false if the planning entity is movable and true if the planning entity is pinned.
+
+       It applies to all the planning variables of that planning entity.
+       To make individual variables pinned, see https://issues.redhat.com/browse/PLANNER-124
+
+       This is syntactic sugar for @planning_entity(pinning_filter=is_pinned_function),
+       which is a more flexible and verbose way to pin a planning entity.
+    """
+    ensure_init()
+    from org.optaplanner.core.api.domain.entity import PlanningPin as JavaPlanningPin
+    getter_function.__optaplannerPlanningId = {
+        'annotationType': JavaPlanningPin
+    }
+    getter_function.__return = get_class(bool)
+    return getter_function
+
+
+def planning_variable(variable_type: Type, value_range_provider_refs: List[str], nullable=False, graph_type=None,
                       strength_comparator_class=None, strength_weight_factory_class=None):
     """Specifies that a bean property can be changed and should be optimized by the optimization algorithms.
 
@@ -57,6 +81,7 @@ def planning_variable(variable_type, value_range_provider_refs, nullable=False, 
     def planning_variable_function_wrapper(variable_getter_function):
         ensure_init()
         from org.optaplanner.core.api.domain.variable import PlanningVariable as JavaPlanningVariable
+        from java.lang import String, Integer
         variable_getter_function.__optaplannerPlanningVariable = {
             'annotationType': JavaPlanningVariable,
             'valueRangeProviderRefs': value_range_provider_refs,
@@ -65,12 +90,61 @@ def planning_variable(variable_type, value_range_provider_refs, nullable=False, 
             'strengthComparatorClass': strength_comparator_class,
             'strengthWeightFactoryClass': strength_weight_factory_class
         }
-        variable_getter_function.__return = variable_type.__javaClass
+        variable_getter_function.__return = get_class(variable_type)
         return variable_getter_function
     return planning_variable_function_wrapper
 
 
-def problem_fact_collection_property(fact_type):
+def anchor_shadow_variable(source_variable_name: str):
+    """
+    Specifies that a bean property (or a field) is the anchor of a chained {@link PlanningVariable}, which implies it's
+    a shadow variable.
+
+    It is specified on a getter of a java bean property (or a field) of a {@link PlanningEntity} class.
+    :param source_variable_name: The source planning variable is a chained planning variable that leads to the anchor.
+           Both the genuine variable and the shadow variable should be consistent:
+           if A chains to B, then A must have the same anchor as B (unless B is the anchor).
+
+           When the Solver changes a genuine variable, it adjusts the shadow variable accordingly.
+           In practice, the Solver ignores shadow variables (except for consistency housekeeping).
+    """
+    def anchor_shadow_variable_function_mapper(anchor_getter_function):
+        ensure_init()
+        from org.optaplanner.core.api.domain.variable import AnchorShadowVariable as JavaAnchorShadowVariable
+        anchor_getter_function.__optaplannerPlanningVariable = {
+            'annotationType': JavaAnchorShadowVariable,
+            'sourceVariableName': source_variable_name,
+        }
+        return anchor_getter_function
+    return anchor_shadow_variable_function_mapper
+
+
+def inverse_relation_shadow_variable(source_variable_name: str):
+    """
+    Specifies that a bean property (or a field) is the inverse of a PlanningVariable, which implies it's a shadow
+    variable.
+
+    It is specified on a getter of a java bean property (or a field) of a PlanningEntity class.
+    :param source_variable_name: In a bidirectional relationship, the shadow side (= the follower side) uses this
+           property (and nothing else) to declare for which {@link PlanningVariable} (= the leader side) it is a shadow.
+
+           Both sides of a bidirectional relationship should be consistent: if A points to B, then B must point to A.
+
+           When the Solver changes a genuine variable, it adjusts the shadow variable accordingly.
+           In practice, the Solver ignores shadow variables (except for consistency housekeeping).
+    """
+    def anchor_shadow_variable_function_mapper(anchor_getter_function):
+        ensure_init()
+        from org.optaplanner.core.api.domain.variable import InverseRelationShadowVariable as JavaInverseRelationShadowVariable
+        anchor_getter_function.__optaplannerPlanningVariable = {
+            'annotationType': JavaInverseRelationShadowVariable,
+            'sourceVariableName': source_variable_name,
+        }
+        return anchor_getter_function
+    return anchor_shadow_variable_function_mapper
+
+
+def problem_fact_collection_property(fact_type: Type):
     """Specifies that a property on a PlanningSolution class is a Collection of problem facts.
 
     A problem fact must not change during solving (except through a ProblemFactChange event). The constraints in a
@@ -83,7 +157,7 @@ def problem_fact_collection_property(fact_type):
         from org.optaplanner.optapy import PythonWrapperGenerator
         from org.optaplanner.core.api.domain.solution import \
             ProblemFactCollectionProperty as JavaProblemFactCollectionProperty
-        getter_function.__return = PythonWrapperGenerator.getArrayClass(fact_type.__javaClass)
+        getter_function.__return = PythonWrapperGenerator.getArrayClass(get_class(fact_type))
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaProblemFactCollectionProperty
         }
@@ -91,7 +165,7 @@ def problem_fact_collection_property(fact_type):
     return problem_fact_collection_property_function_mapper
 
 
-def planning_entity_collection_property(entity_type):
+def planning_entity_collection_property(entity_type: Type):
     """Specifies that a property on a PlanningSolution class is a Collection of planning entities.
 
     Every element in the planning entity collection should have the PlanningEntity annotation. Every element in the
@@ -105,12 +179,12 @@ def planning_entity_collection_property(entity_type):
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaPlanningEntityCollectionProperty
         }
-        getter_function.__return = PythonWrapperGenerator.getArrayClass(entity_type.__javaClass)
+        getter_function.__return = PythonWrapperGenerator.getArrayClass(get_class(entity_type))
         return getter_function
     return planning_entity_collection_property_function_mapper
 
 
-def value_range_provider(range_id):
+def value_range_provider(range_id: str):
     """Provides the planning values that can be used for a PlanningVariable.
 
     This is specified on a getter which returns a list or ValueRange. A list is implicitly converted to a ValueRange.
@@ -126,7 +200,7 @@ def value_range_provider(range_id):
     return value_range_provider_function_wrapper
 
 
-def planning_score(score_type,
+def planning_score(score_type: Type,
                    bendable_hard_levels_size=None,
                    bendable_soft_levels_size=None,
                    score_definition_class=None):
@@ -153,12 +227,12 @@ def planning_score(score_type,
             'bendableSoftLevelsSize': bendable_soft_levels_size,
             'scoreDefinitionClass': score_definition_class
         }
-        getter_function.__return = score_type
+        getter_function.__return = get_class(score_type)
         return getter_function
     return planning_score_function_wrapper
 
 
-def planning_entity(entity_class):
+def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = None):
     """Specifies that the class is a planning entity. Each planning entity must have at least
     1 PlanningVariable property.
 
@@ -174,15 +248,32 @@ def planning_entity(entity_class):
         self.a_list = a_list
         self.list_length = len(a_list)
     )
+
+    Optional Parameters: @:param pinning_filter: A function that takes the @planning_solution class and an entity,
+    and return true if the entity cannot be changed, false otherwise
     """
     ensure_init()
-    out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(entity_class)
-    out.__javaClass = _generate_planning_entity_class(entity_class)
-    _add_deep_copy_to_class(out)
-    return out
+    from org.optaplanner.core.api.domain.entity import PlanningEntity as JavaPlanningEntity
+    annotation_data = {
+        'annotationType': JavaPlanningEntity,
+        'pinningFilter': pinning_filter,
+        'difficultyComparatorClass': None,
+        'difficultyWeightFactoryClass': None,
+    }
+
+    def planning_entity_wrapper(entity_class_argument):
+        out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(entity_class)
+        out.__javaClass = _generate_planning_entity_class(entity_class, annotation_data)
+        _add_deep_copy_to_class(out)
+        return out
+
+    if entity_class:  # Called as @planning_entity
+        return planning_entity_wrapper(entity_class)
+    else:  # Called as @planning_entity(pinning_filter=some_function)
+        return planning_entity_wrapper
 
 
-def problem_fact(fact_class):
+def problem_fact(fact_class: Type):
     """Specifies that a class is a problem fact.
 
     A problem fact must not change during solving (except through a ProblemFactChange event).
@@ -197,7 +288,7 @@ def problem_fact(fact_class):
     return out
 
 
-def planning_solution(planning_solution_class):
+def planning_solution(planning_solution_class: Type):
     """Specifies that the class is a planning solution (represents a problem and a possible solution of that problem).
 
     A possible solution does not need to be optimal or even feasible.
@@ -230,7 +321,7 @@ def planning_solution(planning_solution_class):
     return out
 
 
-def constraint_provider(constraint_provider_function):
+def constraint_provider(constraint_provider_function: Callable):
     """Marks a function as a ConstraintProvider.
 
     The function takes a single parameter, the ConstraintFactory, and
