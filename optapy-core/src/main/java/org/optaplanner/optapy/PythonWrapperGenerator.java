@@ -14,15 +14,16 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import io.quarkus.gizmo.BranchResult;
+import io.quarkus.gizmo.BytecodeCreator;
 import org.objectweb.asm.Type;
+import org.optaplanner.core.api.domain.entity.PinningFilter;
 import org.optaplanner.core.api.domain.entity.PlanningEntity;
 import org.optaplanner.core.api.domain.lookup.PlanningId;
 import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty;
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
 import org.optaplanner.core.api.function.TriFunction;
-import org.optaplanner.core.api.score.stream.Constraint;
-import org.optaplanner.core.api.score.stream.ConstraintFactory;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 
 import io.quarkus.gizmo.AnnotationCreator;
@@ -68,10 +69,14 @@ public class PythonWrapperGenerator {
     // These functions are set in Python code
     // Maps a OpaquePythonReference to a unique, numerical id
     static Function<OpaquePythonReference, Number> pythonObjectToId;
+
     private static Function<OpaquePythonReference, String> pythonObjectToString;
 
-    // Maps a OpaquePythonReference that represents an array to a list of its values
+    // Maps a OpaquePythonReference that represents an array of objects to a list of its values
     private static Function<OpaquePythonReference, List<OpaquePythonReference>> pythonArrayIdToIdArray;
+
+    // Maps a OptaquePythonReference that represents an array of primitive types to their values
+    private static Function<OpaquePythonReference, List<Object>> pythonArrayToJavaList;
 
     // Reads an attribute on a OpaquePythonReference
     private static BiFunction<OpaquePythonReference, String, Object> pythonObjectIdAndAttributeNameToValue;
@@ -103,6 +108,11 @@ public class PythonWrapperGenerator {
     @SuppressWarnings("unused")
     public static void setPythonArrayIdToIdArray(Function<OpaquePythonReference, List<OpaquePythonReference>> function) {
         pythonArrayIdToIdArray = function;
+    }
+
+    @SuppressWarnings("unused")
+    public static void setPythonArrayToJavaList(Function<OpaquePythonReference, List<Object>> function) {
+        pythonArrayToJavaList = function;
     }
 
     @SuppressWarnings("unused")
@@ -152,6 +162,25 @@ public class PythonWrapperGenerator {
             if (javaClass.isArray()) {
                 // If the class is an array, we need to extract
                 // its elements from the OpaquePythonReference
+                if (Comparable.class.isAssignableFrom(javaClass.getComponentType()) ||
+                        Number.class.isAssignableFrom(javaClass.getComponentType())) {
+                    List<Object> items = pythonArrayToJavaList.apply(object);
+                    int length = items.size();
+                    Object out = Array.newInstance(javaClass.getComponentType(), length);
+
+                    // Put the array into the python id to java instance map
+                    map.put(id, out);
+
+                    // Set the elements of the array to the wrapped python items
+                    for (int i = 0; i < length; i++) {
+                        Object item = items.get(i);
+                        if (javaClass.getComponentType().equals(Integer.class) && item instanceof Long) {
+                            item = ((Long) item).intValue();
+                        }
+                        Array.set(out, i, item);
+                    }
+                    return (T) out;
+                }
                 List<OpaquePythonReference> itemIds = pythonArrayIdToIdArray.apply(object);
                 int length = itemIds.size();
                 Object out = Array.newInstance(javaClass.getComponentType(), length);
@@ -171,6 +200,91 @@ public class PythonWrapperGenerator {
             }
         } catch (IllegalAccessException | NoSuchMethodException | InstantiationException | InvocationTargetException e) {
             throw new IllegalStateException(e);
+        }
+    }
+
+    private static ClassOutput getClassOutput(AtomicReference<byte[]> bytesReference) {
+        return (path, byteCode) -> {
+            bytesReference.set(byteCode);
+        };
+    }
+
+    /**
+     * Creates a class that looks like this:
+     *
+     * {@code
+     *
+     *
+     * <pre>
+     * class JavaWrapper implements NaryFunction<A0,A1,A2,...,AN> {
+     *     public static NaryFunction<A0,A1,A2,...,AN> delegate;
+     *
+     *     &#64;Override
+     *     public AN defineConstraints(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
+     *         return delegate.apply(arg0,arg1,...,finalArg);
+     *     }
+     * }
+     * </pre>
+     *
+     * }
+     *
+     * @param className The simple name of the generated class
+     * @param baseInterface the base interface
+     * @param delegate The Python function to delegate to
+     * @return never null
+     */
+    @SuppressWarnings({"unused", "unchecked"})
+    public static <A> Class<? extends A> defineWrapperFunction(String className, Class<A> baseInterface,
+                                                               Object delegate) {
+        Method[] interfaceMethods = baseInterface.getMethods();
+        if (interfaceMethods.length != 1) {
+            throw new IllegalArgumentException("Can only call this function for functional interfaces (only 1 method)");
+        }
+        className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
+        if (classNameToBytecode.containsKey(className)) {
+            try {
+                return (Class<? extends A>) gizmoClassLoader.loadClass(className);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException(
+                        "Impossible State: the class (" + className + ") should exists since it was created");
+            }
+        }
+        AtomicReference<byte[]> classBytecodeHolder = new AtomicReference<>();
+        ClassOutput classOutput = getClassOutput(classBytecodeHolder);
+
+        // holds the "defineConstraints" implementation function
+        FieldDescriptor valueField;
+        try (ClassCreator classCreator = ClassCreator.builder()
+                .className(className)
+                .interfaces(ConstraintProvider.class)
+                .classOutput(classOutput)
+                .build()) {
+            valueField = classCreator.getFieldCreator("delegate", baseInterface)
+                    .setModifiers(Modifier.STATIC | Modifier.PUBLIC)
+                    .getFieldDescriptor();
+            MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofMethod(interfaceMethods[0]));
+
+            ResultHandle pythonProxy = methodCreator.readStaticField(valueField);
+            ResultHandle[] args = new ResultHandle[interfaceMethods[0].getParameterCount()];
+            for (int i = 0; i < args.length; i++) {
+                args[i] = methodCreator.getMethodParam(i);
+            }
+            ResultHandle constraints = methodCreator.invokeInterfaceMethod(
+                    MethodDescriptor.ofMethod(interfaceMethods[0]),
+                    pythonProxy, args);
+            methodCreator.returnValue(constraints);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        classNameToBytecode.put(className, classBytecodeHolder.get());
+        try {
+            // Now that the class created, we need to set it static field to the definedConstraints function
+            Class<? extends A> out = (Class<? extends A>) gizmoClassLoader.loadClass(className);
+            out.getField(valueField.getName()).set(null, delegate);
+            return out;
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Impossible State: the class (" + className + ") should exists since it was just created");
         }
     }
 
@@ -199,52 +313,8 @@ public class PythonWrapperGenerator {
      */
     @SuppressWarnings("unused")
     public static Class<?> defineConstraintProviderClass(String className,
-            Function<ConstraintFactory, Constraint[]> defineConstraintsImpl) {
-        className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
-        if (classNameToBytecode.containsKey(className)) {
-            try {
-                return gizmoClassLoader.loadClass(className);
-            } catch (ClassNotFoundException e) {
-                throw new IllegalStateException(
-                        "Impossible State: the class (" + className + ") should exists since it was created");
-            }
-        }
-        AtomicReference<byte[]> classBytecodeHolder = new AtomicReference<>();
-        ClassOutput classOutput = (path, byteCode) -> {
-            classBytecodeHolder.set(byteCode);
-        };
-
-        // holds the "defineConstraints" implementation function
-        FieldDescriptor valueField;
-        try (ClassCreator classCreator = ClassCreator.builder()
-                .className(className)
-                .interfaces(ConstraintProvider.class)
-                .classOutput(classOutput)
-                .build()) {
-            valueField = classCreator.getFieldCreator("__defineConstraintsImpl", Function.class)
-                    .setModifiers(Modifier.STATIC | Modifier.PUBLIC)
-                    .getFieldDescriptor();
-            MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofMethod(ConstraintProvider.class,
-                    "defineConstraints", Constraint[].class, ConstraintFactory.class));
-
-            ResultHandle pythonProxy = methodCreator.readStaticField(valueField);
-            ResultHandle constraints = methodCreator.invokeInterfaceMethod(
-                    MethodDescriptor.ofMethod(Function.class, "apply", Object.class, Object.class),
-                    pythonProxy, methodCreator.getMethodParam(0));
-            methodCreator.returnValue(constraints);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-        classNameToBytecode.put(className, classBytecodeHolder.get());
-        try {
-            // Now that the class created, we need to set it static field to the definedConstraints function
-            Class<?> out = gizmoClassLoader.loadClass(className);
-            out.getField(valueField.getName()).set(null, defineConstraintsImpl);
-            return out;
-        } catch (Exception e) {
-            throw new IllegalStateException(
-                    "Impossible State: the class (" + className + ") should exists since it was just created");
-        }
+            ConstraintProvider defineConstraintsImpl) {
+        return defineWrapperFunction(className, ConstraintProvider.class, defineConstraintsImpl);
     }
 
     /*
@@ -282,7 +352,8 @@ public class PythonWrapperGenerator {
      * }
      */
     @SuppressWarnings("unused")
-    public static Class<?> definePlanningEntityClass(String className, List<List<Object>> optaplannerMethodAnnotations) {
+    public static Class<?> definePlanningEntityClass(String className, List<List<Object>> optaplannerMethodAnnotations,
+                                                     Map<String, Object> planningEntityAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
@@ -293,15 +364,18 @@ public class PythonWrapperGenerator {
             }
         }
         AtomicReference<byte[]> classBytecodeHolder = new AtomicReference<>();
-        ClassOutput classOutput = (path, byteCode) -> {
-            classBytecodeHolder.set(byteCode);
-        };
+        ClassOutput classOutput = getClassOutput(classBytecodeHolder);
         try (ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
                 .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
-            classCreator.addAnnotation(PlanningEntity.class);
+            AnnotationCreator annotationCreator = classCreator.addAnnotation(PlanningEntity.class);
+            Object pinningFilter = planningEntityAnnotations.get("pinningFilter");
+            if (pinningFilter != null) {
+                Class<? extends PinningFilter> pinningFilterClass = defineWrapperFunction(className + "PinningFilter",
+                                                                                          PinningFilter.class, pinningFilter);
+            }
             FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, OpaquePythonReference.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, valueField, optaplannerMethodAnnotations);
@@ -327,9 +401,7 @@ public class PythonWrapperGenerator {
             }
         }
         AtomicReference<byte[]> classBytecodeHolder = new AtomicReference<>();
-        ClassOutput classOutput = (path, byteCode) -> {
-            classBytecodeHolder.set(byteCode);
-        };
+        ClassOutput classOutput = getClassOutput(classBytecodeHolder);
         try (ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
                 .interfaces(PythonObject.class)
@@ -360,9 +432,7 @@ public class PythonWrapperGenerator {
             }
         }
         AtomicReference<byte[]> classBytecodeHolder = new AtomicReference<>();
-        ClassOutput classOutput = (path, byteCode) -> {
-            classBytecodeHolder.set(byteCode);
-        };
+        ClassOutput classOutput = getClassOutput(classBytecodeHolder);
         try (ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
                 .interfaces(PythonObject.class)
@@ -452,9 +522,20 @@ public class PythonWrapperGenerator {
                     MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getValueFromPythonObject", Object.class,
                             OpaquePythonReference.class, String.class),
                     value, methodCreator.load(methodName));
-            if (Comparable.class.isAssignableFrom(returnType)) {
+            if (Comparable.class.isAssignableFrom(returnType) || Number.class.isAssignableFrom(returnType)) {
                 // It is a number/String, so it already translated to the corresponding Java type
-                methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                if (Integer.class.equals(returnType)) {
+                    ResultHandle isLong = methodCreator.instanceOf(outResultHandle, Long.class);
+                    BranchResult ifLongBranchResult = methodCreator.ifTrue(isLong);
+                    BytecodeCreator bytecodeCreator = ifLongBranchResult.trueBranch();
+                    bytecodeCreator.writeInstanceField(fieldDescriptor, bytecodeCreator.getThis(),
+                                                       bytecodeCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Long.class, "intValue",
+                                                                                       int.class), outResultHandle));
+                    bytecodeCreator = ifLongBranchResult.falseBranch();
+                    bytecodeCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                } else {
+                    methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                }
             } else {
                 // We need to wrap it
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
