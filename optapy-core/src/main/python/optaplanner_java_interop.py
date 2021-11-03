@@ -401,8 +401,9 @@ def get_class(python_class: Union[Type, Callable]) -> JClass:
                     ))
 
 
-"""A unique identifier; used to guarantee the generated class java name is unique"""
+
 unique_class_id = 0
+"""A unique identifier; used to guarantee the generated class java name is unique"""
 
 
 def _generate_problem_fact_class(python_class):
@@ -423,7 +424,7 @@ def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[st
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     out = PythonWrapperGenerator.definePlanningEntityClass(python_class.__name__ + str(unique_class_id),
                                                            optaplanner_annotations,
-                                                           annotation_data)
+                                                           _to_java_map(annotation_data))
     unique_class_id = unique_class_id + 1
     return out
 

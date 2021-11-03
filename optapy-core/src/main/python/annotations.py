@@ -1,6 +1,6 @@
 from .optaplanner_java_interop import ensure_init, _add_deep_copy_to_class, _generate_planning_entity_class,\
     _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, get_class
-from jpype import JImplements
+from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
@@ -243,6 +243,17 @@ def planning_score(score_type: Type['Score'],
     return planning_score_function_wrapper
 
 
+@JImplements('org.optaplanner.core.api.domain.entity.PinningFilter', deferred=True)
+class _PythonPinningFilter:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def accept(self, solution, entity):
+        return self.delegate(solution, entity)
+
+
+
 def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = None) -> Union[Type,
                                                                                                Callable[[Type], Type]]:
     """Specifies that the class is a planning entity. Each planning entity must have at least
@@ -268,7 +279,7 @@ def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = 
     from org.optaplanner.core.api.domain.entity import PlanningEntity as JavaPlanningEntity
     annotation_data = {
         'annotationType': JavaPlanningEntity,
-        'pinningFilter': pinning_filter,
+        'pinningFilter': _PythonPinningFilter(pinning_filter),
         'difficultyComparatorClass': None,
         'difficultyWeightFactoryClass': None,
     }

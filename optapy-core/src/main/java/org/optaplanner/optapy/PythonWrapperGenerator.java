@@ -256,7 +256,7 @@ public class PythonWrapperGenerator {
         FieldDescriptor valueField;
         try (ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
-                .interfaces(ConstraintProvider.class)
+                .interfaces(baseInterface)
                 .classOutput(classOutput)
                 .build()) {
             valueField = classCreator.getFieldCreator("delegate", baseInterface)
@@ -375,6 +375,7 @@ public class PythonWrapperGenerator {
             if (pinningFilter != null) {
                 Class<? extends PinningFilter> pinningFilterClass = defineWrapperFunction(className + "PinningFilter",
                                                                                           PinningFilter.class, pinningFilter);
+                annotationCreator.addValue("pinningFilter", pinningFilterClass);
             }
             FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, OpaquePythonReference.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
