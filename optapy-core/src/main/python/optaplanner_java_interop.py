@@ -4,7 +4,13 @@ from jpype.types import *
 from jpype import JProxy, JImplements, JOverride, JImplementationFor
 import importlib.metadata
 from inspect import signature, Parameter
+from typing import cast, List, Tuple, Type, Callable, Dict, Any, Union, TYPE_CHECKING
 import copy
+
+if TYPE_CHECKING:
+    # These imports require a JVM to be running, so only import if type checking
+    from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
+    from org.optaplanner.core.config.solver import SolverConfig
 
 
 def extract_optaplanner_jars() -> list[str]:
@@ -88,7 +94,7 @@ def _get_python_object_attribute(object_id, name):
     the_object = object_id
     python_object_getter = getattr(the_object, str(name))
     if not callable(python_object_getter):
-        from org.optaplanner.optapy import OptaPyException
+        from org.optaplanner.optapy import OptaPyException # noqa
         error = (f'The attribute {name} on {object_id }is not callable (got {python_object_getter}, '
                  f'expecting a function). You might have overridden the function {name} with a value.')
         raise OptaPyException(error)
@@ -102,7 +108,7 @@ def _get_python_object_attribute(object_id, name):
         return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=python_object, convert=True)
 
 
-def _get_python_array_to_id_array(the_object):
+def _get_python_array_to_id_array(the_object: List):
     """Maps a Python List to a Java List of OpaquePythonReference"""
     import org.optaplanner.optapy.OpaquePythonReference
     out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=x, convert=True),
@@ -110,13 +116,14 @@ def _get_python_array_to_id_array(the_object):
     return out
 
 
-def _get_python_array_to_java_list(the_object):
+def _get_python_array_to_java_list(the_object: List):
+    """Maps a Python List of primitive elements to """
     return _to_java_list(the_object)
 
 
-def _set_python_object_attribute(object_id, name, value):
+def _set_python_object_attribute(object_id: int, name: str, value: Any) -> None:
     """Sets an attribute on an Python Object"""
-    from org.optaplanner.optapy import PythonObject
+    from org.optaplanner.optapy import PythonObject # noqa
     the_object = object_id
     the_value = value
     if isinstance(the_value, PythonObject):
@@ -124,7 +131,7 @@ def _set_python_object_attribute(object_id, name, value):
     getattr(the_object, str(name))(the_value)
 
 
-def _deep_clone_python_object(the_object):
+def _deep_clone_python_object(the_object: Any):
     """Deeps clone a Python Object, and keeps a reference to it
 
     Java Objects are shallowed copied. A reference is kept since
@@ -135,7 +142,7 @@ def _deep_clone_python_object(the_object):
     :return: An OpaquePythonReference of the cloned Python Object
     """
     import org.optaplanner.optapy.OpaquePythonReference
-    from org.optaplanner.optapy import PythonWrapperGenerator
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
     # ...Python evaluate default arg once, so if we don't set the memo arg to a new dictionary,
     # the same dictionary is reused!
     item = PythonWrapperGenerator.getPythonObject(the_object)
@@ -146,7 +153,7 @@ def _deep_clone_python_object(the_object):
     return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=the_clone, convert=True)
 
 
-def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
+def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, log_level='INFO'):
     """Start the JVM. Throws a RuntimeError if it is already started.
 
     :param args: JVM args.
@@ -172,7 +179,7 @@ def init(*args, path=None, include_optaplanner_jars=True, log_level='INFO'):
     import java.util.function.Function
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
-    from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner
+    from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner # noqa
     PythonWrapperGenerator.setPythonObjectToId(JObject(PythonFunction(_get_python_object_id),
                                                        java.util.function.Function))
     PythonWrapperGenerator.setPythonObjectToString(JObject(PythonFunction(_get_python_object_str),
@@ -203,11 +210,12 @@ def ensure_init():
         init()
 
 
-"""Maps solver run id to solution clones it references"""
 solver_run_id_to_refs = dict()
+"""Maps solver run id to solution clones it references"""
 
-"""Maps solution clone ids to the solver runs it is used in"""
+
 ref_id_to_solver_run_id = dict()
+"""Maps solution clone ids to the solver runs it is used in"""
 
 
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
@@ -227,17 +235,17 @@ class _PythonObject:
         pass
 
     def __getattr__(self, name):
-        from org.optaplanner.optapy import PythonWrapperGenerator
+        from org.optaplanner.optapy import PythonWrapperGenerator # noqa
         item = PythonWrapperGenerator.getPythonObject(self)
         return getattr(item, name)
 
     def __setattr__(self, key, value):
-        from org.optaplanner.optapy import PythonWrapperGenerator
+        from org.optaplanner.optapy import PythonWrapperGenerator # noqa
         item = PythonWrapperGenerator.getPythonObject(self)
         setattr(item, key, value)
 
 
-def _add_deep_copy_to_class(the_class):
+def _add_deep_copy_to_class(the_class: Type):
     """Adds a __deepcopy__ method to a class if it does not have one
 
     Java Objects cannot be deep copied, thus the pickle default deepcopy
@@ -267,7 +275,7 @@ def _add_deep_copy_to_class(the_class):
 
     def class_deep_copy(self, memo):
         import java.lang.Object
-        clone = the_class.__new__(the_class, *positional_args, **keyword_args)
+        clone = the_class.__new__(the_class, *positional_args, **keyword_args) # noqa
         memo[id(self)] = clone
         item_vars = vars(self)
         for attribute, value in item_vars.items():
@@ -280,7 +288,7 @@ def _add_deep_copy_to_class(the_class):
     the_class.__deepcopy__ = class_deep_copy
 
 
-def solve(solver_config, problem):
+def solve(solver_config: 'SolverConfig', problem: Any):
     """Waits for solving to terminate and return the best solution found for the given problem using the solver_config.
 
     Calling multiple time starts a different solver.
@@ -288,7 +296,7 @@ def solve(solver_config, problem):
     :param problem: The (potentially uninitialized) Python Planning Solution object.
     :return: The best solution found.
     """
-    from org.optaplanner.optapy import PythonSolver, OptaPyException
+    from org.optaplanner.optapy import PythonSolver, OptaPyException # noqa
     from jpype import JException
     import org.optaplanner.optapy.OpaquePythonReference
     solver_run_id = max(solver_run_id_to_refs.keys(), default=0) + 1
@@ -327,7 +335,7 @@ def _unwrap_java_object(java_object):
     return java_object.get__optapy_Id()
 
 
-def _to_java_map(python_dict):
+def _to_java_map(python_dict: Dict):
     """Converts a Python dict to a Java Map"""
     import java.lang.Object
     import java.util.HashMap
@@ -340,7 +348,7 @@ def _to_java_map(python_dict):
     return out
 
 
-def _to_java_list(python_list):
+def _to_java_list(python_list: List):
     """Converts a Python list to a Java List"""
     import java.lang.Object
     import java.util.ArrayList
@@ -353,7 +361,7 @@ def _to_java_list(python_list):
     return out
 
 
-def _get_optaplanner_annotations(python_class) -> list[tuple[str, JClass, list[dict]]]:
+def _get_optaplanner_annotations(python_class: Type) -> List[Tuple[str, JClass, List[dict]]]:
     """Gets the methods with OptaPlanner annotations in the given class"""
     method_list = [attribute for attribute in dir(python_class) if callable(getattr(python_class, attribute)) and
                    attribute.startswith('__') is False]
@@ -371,21 +379,21 @@ def _get_optaplanner_annotations(python_class) -> list[tuple[str, JClass, list[d
     return _to_java_list(annotated_methods)
 
 
-def get_class(python_class):
+def get_class(python_class: Union[Type, Callable]) -> JClass:
     """Return the Java Class for the given Python Class"""
     if isinstance(python_class, jpype.JClass):
-        return python_class
+        return cast(JClass, python_class)
     if hasattr(python_class, '__javaClass'):
         return python_class.__javaClass
     if python_class == int:
         from java.lang import Integer
-        return Integer
+        return cast(JClass, Integer)
     if python_class == str:
         from java.lang import String
-        return String
+        return cast(JClass, String)
     if python_class == bool:
         from java.lang import Boolean
-        return Boolean
+        return cast(JClass, Boolean)
     raise ValueError((
                       f"python_class {python_class} is not annotated with @planning_entity, @problem_fact or "
                       f"@planning_solution, is not a Java class, and is not int or str. Maybe annotate {python_class} "
@@ -400,7 +408,7 @@ unique_class_id = 0
 def _generate_problem_fact_class(python_class):
     global unique_class_id
     ensure_init()
-    from org.optaplanner.optapy import PythonWrapperGenerator
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     out = PythonWrapperGenerator.defineProblemFactClass(python_class.__name__ + str(unique_class_id),
                                                         optaplanner_annotations)
@@ -408,10 +416,10 @@ def _generate_problem_fact_class(python_class):
     return out
 
 
-def _generate_planning_entity_class(python_class, annotation_data):
+def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[str, Any]):
     global unique_class_id
     ensure_init()
-    from org.optaplanner.optapy import PythonWrapperGenerator
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     out = PythonWrapperGenerator.definePlanningEntityClass(python_class.__name__ + str(unique_class_id),
                                                            optaplanner_annotations,
@@ -420,10 +428,10 @@ def _generate_planning_entity_class(python_class, annotation_data):
     return out
 
 
-def _generate_planning_solution_class(python_class):
+def _generate_planning_solution_class(python_class: Type) -> JClass:
     global unique_class_id
     ensure_init()
-    from org.optaplanner.optapy import PythonWrapperGenerator
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     out = PythonWrapperGenerator.definePlanningSolutionClass(python_class.__name__ + str(unique_class_id),
                                                              optaplanner_annotations)
@@ -431,18 +439,20 @@ def _generate_planning_solution_class(python_class):
     return out
 
 
-def _to_constraint_java_array(python_list):
-    import org.optaplanner.core.api.score.stream.Constraint as Constraint
-    out = jpype.JArray(Constraint)(len(python_list))
+def _to_constraint_java_array(python_list: List['Constraint']) -> JArray:
+    # reimport since the one in global scope is only for type checking
+    import org.optaplanner.core.api.score.stream.Constraint as ActualConstraintClass
+    out = jpype.JArray(ActualConstraintClass)(len(python_list))
     for i in range(len(python_list)):
         out[i] = python_list[i]
     return out
 
 
-def _generate_constraint_provider_class(constraint_provider):
+def _generate_constraint_provider_class(constraint_provider: Callable[['ConstraintFactory'], List['Constraint']]) -> \
+        JClass:
     global unique_class_id
     ensure_init()
-    from org.optaplanner.optapy import PythonWrapperGenerator
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
     from org.optaplanner.core.api.score.stream import ConstraintProvider
     out = PythonWrapperGenerator.defineConstraintProviderClass(
         constraint_provider.__name__ + str(unique_class_id),
