@@ -253,7 +253,6 @@ class _PythonPinningFilter:
         return self.delegate(solution, entity)
 
 
-
 def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = None) -> Union[Type,
                                                                                                Callable[[Type], Type]]:
     """Specifies that the class is a planning entity. Each planning entity must have at least
@@ -279,7 +278,7 @@ def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = 
     from org.optaplanner.core.api.domain.entity import PlanningEntity as JavaPlanningEntity
     annotation_data = {
         'annotationType': JavaPlanningEntity,
-        'pinningFilter': _PythonPinningFilter(pinning_filter),
+        'pinningFilter': _PythonPinningFilter(pinning_filter) if pinning_filter is not None else None,
         'difficultyComparatorClass': None,
         'difficultyWeightFactoryClass': None,
     }
