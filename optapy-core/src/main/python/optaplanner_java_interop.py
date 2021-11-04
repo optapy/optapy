@@ -1,16 +1,19 @@
 import jpype
 import jpype.imports
 from jpype.types import *
-from jpype import JProxy, JImplements, JOverride, JImplementationFor
+from jpype import JProxy, JImplements, JOverride, JImplementationFor, JConversion
 import importlib.metadata
 from inspect import signature, Parameter
-from typing import cast, List, Tuple, Type, Callable, Dict, Any, Union, TYPE_CHECKING
+from typing import cast, List, Tuple, Type, TypeVar, Callable, Dict, Any, Union, TYPE_CHECKING
 import copy
 
 if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
     from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
     from org.optaplanner.core.config.solver import SolverConfig
+
+
+Solution_ = TypeVar('Solution_')
 
 
 def extract_optaplanner_jars() -> list[str]:
@@ -288,7 +291,7 @@ def _add_deep_copy_to_class(the_class: Type):
     the_class.__deepcopy__ = class_deep_copy
 
 
-def solve(solver_config: 'SolverConfig', problem: Any):
+def solve(solver_config: 'SolverConfig', problem: Solution_) -> Solution_:
     """Waits for solving to terminate and return the best solution found for the given problem using the solver_config.
 
     Calling multiple time starts a different solver.
@@ -328,6 +331,31 @@ def solve(solver_config: 'SolverConfig', problem: Any):
             del ref_id_to_solver_run_id[id(ref)]
     del solver_run_id_to_refs[solver_run_id]
     return solution
+
+
+# Jpype convert int to primitive, but not to their wrappers, so add implicit conversion to wrappers
+@JConversion('java.lang.Integer', exact=int)
+def _convert_to_integer(jcls, obj):
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
+    return PythonWrapperGenerator.wrapInt(obj)
+
+
+@JConversion('java.lang.Long', exact=int)
+def _convert_to_long(jcls, obj):
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
+    return PythonWrapperGenerator.wrapLong(obj)
+
+
+@JConversion('java.lang.Short', exact=int)
+def _convert_to_short(jcls, obj):
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
+    return PythonWrapperGenerator.wrapShort(obj)
+
+
+@JConversion('java.lang.Byte', exact=int)
+def _convert_to_byte(jcls, obj):
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
+    return PythonWrapperGenerator.wrapByte(obj)
 
 
 def _unwrap_java_object(java_object):

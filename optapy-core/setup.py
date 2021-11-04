@@ -118,7 +118,7 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent'
     ],
-    packages=['optapy', 'optapy.types', 'java-stubs', 'jpype-stubs', 'org-stubs'],
+    packages=['optapy', 'optapy.config', 'optapy.constraint', 'optapy.score', 'optapy.types', 'java-stubs', 'jpype-stubs', 'org-stubs'],
     package_dir={
         'optapy': 'src/main/python',
         # Setup tools need a non-empty directory to use as base
@@ -130,6 +130,7 @@ setup(
         'jpype-stubs': 'src/main/resources',
         'org-stubs': 'src/main/resources',
     },
+    test_suite='tests',
     python_requires='>=3.9',
     install_requires=[
         'JPype1',

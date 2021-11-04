@@ -136,6 +136,22 @@ public class PythonWrapperGenerator {
         return pythonObject.get__optapy_Id();
     }
 
+    public static Byte wrapByte(byte value) {
+        return value;
+    }
+
+    public static Short wrapShort(short value) {
+        return value;
+    }
+
+    public static Integer wrapInt(int value) {
+        return value;
+    }
+
+    public static Long wrapLong(long value) {
+        return value;
+    }
+
     // Used in Python to get the array type of a class; used in
     // determining what class a @ProblemFactCollection / @PlanningEntityCollection
     // should be
