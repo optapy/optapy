@@ -124,6 +124,12 @@ def _get_python_array_to_java_list(the_object: List):
     return _to_java_list(the_object)
 
 
+def _get_python_object_java_class(the_object):
+    if the_object is not None:
+        return get_class(the_object)
+    return None
+
+
 def _set_python_object_attribute(object_id: int, name: str, value: Any) -> None:
     """Sets an attribute on an Python Object"""
     from org.optaplanner.optapy import PythonObject # noqa
@@ -149,6 +155,7 @@ def _deep_clone_python_object(the_object: Any):
     # ...Python evaluate default arg once, so if we don't set the memo arg to a new dictionary,
     # the same dictionary is reused!
     item = PythonWrapperGenerator.getPythonObject(the_object)
+
     the_clone = copy.deepcopy(item, memo={})
     for run_id in ref_id_to_solver_run_id[id(item)]:
         solver_run_id_to_refs[run_id].add(the_clone)
@@ -186,6 +193,8 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
     PythonWrapperGenerator.setPythonObjectToId(JObject(PythonFunction(_get_python_object_id),
                                                        java.util.function.Function))
     PythonWrapperGenerator.setPythonObjectToString(JObject(PythonFunction(_get_python_object_str),
+                                                           java.util.function.Function))
+    PythonWrapperGenerator.setPythonGetJavaClass(JObject(PythonFunction(_get_python_object_java_class),
                                                            java.util.function.Function))
     PythonWrapperGenerator.setPythonArrayIdToIdArray(JObject(PythonFunction(_get_python_array_to_id_array),
                                                              java.util.function.Function))
@@ -259,8 +268,6 @@ def _add_deep_copy_to_class(the_class: Type):
     :param the_class: the class to add the deep copy method to.
     :return: None
     """
-    if callable(getattr(the_class, '__deepcopy__', None)):
-        return
     sig = signature(the_class.__init__)
     keyword_args = dict()
     positional_args = list()
@@ -439,7 +446,11 @@ def _generate_problem_fact_class(python_class):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator # noqa
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
+    parent_class = None
+    if len(python_class.__bases__) == 1 and hasattr(python_class.__bases__[0], '__javaClass'):
+        parent_class = get_class(python_class.__bases__[0])
     out = PythonWrapperGenerator.defineProblemFactClass(python_class.__name__ + str(unique_class_id),
+                                                        parent_class,
                                                         optaplanner_annotations)
     unique_class_id = unique_class_id + 1
     return out
@@ -450,7 +461,11 @@ def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[st
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator # noqa
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
+    parent_class = None
+    if len(python_class.__bases__) == 1 and hasattr(python_class.__bases__[0], '__javaClass'):
+        parent_class = get_class(python_class.__bases__[0])
     out = PythonWrapperGenerator.definePlanningEntityClass(python_class.__name__ + str(unique_class_id),
+                                                           parent_class,
                                                            optaplanner_annotations,
                                                            _to_java_map(annotation_data))
     unique_class_id = unique_class_id + 1

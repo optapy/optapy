@@ -9,6 +9,8 @@ from ..config import *
 from ..score import *
 from ..constraint import *
 
+from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType
+
 SolverConfig = solver.SolverConfig
 TerminationConfig = solver.termination.TerminationConfig
 
