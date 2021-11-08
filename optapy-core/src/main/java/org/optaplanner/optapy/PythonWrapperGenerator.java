@@ -148,18 +148,22 @@ public class PythonWrapperGenerator {
         return pythonGetJavaClass.apply(object);
     }
 
+    @SuppressWarnings("unused")
     public static Byte wrapByte(byte value) {
         return value;
     }
 
+    @SuppressWarnings("unused")
     public static Short wrapShort(short value) {
         return value;
     }
 
+    @SuppressWarnings("unused")
     public static Integer wrapInt(int value) {
         return value;
     }
 
+    @SuppressWarnings("unused")
     public static Long wrapLong(long value) {
         return value;
     }
@@ -172,14 +176,68 @@ public class PythonWrapperGenerator {
         return Array.newInstance(elementClass, 0).getClass();
     }
 
+    @SuppressWarnings("unused")
+    public static <T> String getCollectionSignature(Class<T> elementClass) {
+        StringBuilder out = new StringBuilder();
+        out.append('L').append(Type.getInternalName(Collection.class)); // Return is of class Collection
+        out.append("<"); // Collection is of generic type...
+        out.append('L').append(Type.getInternalName(elementClass)); // The collection type
+        out.append(";>;"); // end of signature
+        String result = out.toString();
+        return result;
+    }
+
     // Holds the OpaquePythonReference
     static final String pythonBindingFieldName = "__optaplannerPythonValue";
+
+    private static <T> T wrapArray(Class<T> javaClass, OpaquePythonReference object, Number id, Map<Number, Object> map) {
+        // If the class is an array, we need to extract
+        // its elements from the OpaquePythonReference
+        if (Comparable.class.isAssignableFrom(javaClass.getComponentType()) ||
+                Number.class.isAssignableFrom(javaClass.getComponentType())) {
+            List<Object> items = pythonArrayToJavaList.apply(object);
+            int length = items.size();
+            Object out = Array.newInstance(javaClass.getComponentType(), length);
+
+            // Put the array into the python id to java instance map
+            map.put(id, out);
+
+            // Set the elements of the array to the wrapped python items
+            for (int i = 0; i < length; i++) {
+                Object item = items.get(i);
+                if (javaClass.getComponentType().equals(Integer.class) && item instanceof Long) {
+                    item = ((Long) item).intValue();
+                }
+                Array.set(out, i, item);
+            }
+            return (T) out;
+        }
+        List<OpaquePythonReference> itemIds = pythonArrayIdToIdArray.apply(object);
+        int length = itemIds.size();
+        Object out = Array.newInstance(javaClass.getComponentType(), length);
+
+        // Put the array into the python id to java instance map
+        map.put(id, out);
+
+        // Set the elements of the array to the wrapped python items
+        for (int i = 0; i < length; i++) {
+            Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i), map));
+        }
+        return (T) out;
+    }
+
+    public static <T> T wrapCollection(Class<T> javaClass, OpaquePythonReference object, Number id, Map<Number, Object> map) {
+        PythonList out = new PythonList(object, id, map);
+        map.put(id, out);
+        return (T) out;
+    }
 
     @SuppressWarnings("unchecked")
     public static <T> T wrap(Class<T> javaClass, OpaquePythonReference object, Map<Number, Object> map) {
         if (object == null) {
             return null;
         }
+
         // Check to see if we already created the object
         Number id = pythonObjectToId.apply(object);
         if (map.containsKey(id)) {
@@ -188,45 +246,16 @@ public class PythonWrapperGenerator {
 
         try {
             if (javaClass.isArray()) {
-                // If the class is an array, we need to extract
-                // its elements from the OpaquePythonReference
-                if (Comparable.class.isAssignableFrom(javaClass.getComponentType()) ||
-                        Number.class.isAssignableFrom(javaClass.getComponentType())) {
-                    List<Object> items = pythonArrayToJavaList.apply(object);
-                    int length = items.size();
-                    Object out = Array.newInstance(javaClass.getComponentType(), length);
-
-                    // Put the array into the python id to java instance map
-                    map.put(id, out);
-
-                    // Set the elements of the array to the wrapped python items
-                    for (int i = 0; i < length; i++) {
-                        Object item = items.get(i);
-                        if (javaClass.getComponentType().equals(Integer.class) && item instanceof Long) {
-                            item = ((Long) item).intValue();
-                        }
-                        Array.set(out, i, item);
-                    }
-                    return (T) out;
-                }
-                List<OpaquePythonReference> itemIds = pythonArrayIdToIdArray.apply(object);
-                int length = itemIds.size();
-                Object out = Array.newInstance(javaClass.getComponentType(), length);
-
-                // Put the array into the python id to java instance map
-                map.put(id, out);
-
-                // Set the elements of the array to the wrapped python items
-                for (int i = 0; i < length; i++) {
-                    Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i), map));
-                }
-                return (T) out;
+                return wrapArray(javaClass, object, id, map);
+            } else if (javaClass.isAssignableFrom(PythonList.class)) {
+                return wrapCollection(javaClass, object, id, map);
             } else {
                 // Create a new instance of the Java Class. Its constructor will put the instance into the map
                 return javaClass.getConstructor(OpaquePythonReference.class, Number.class, Map.class).newInstance(object,
                         id, map);
             }
         } catch (IllegalAccessException | NoSuchMethodException | InstantiationException | InvocationTargetException e) {
+            e.printStackTrace();
             throw new IllegalStateException(e);
         }
     }
@@ -522,12 +551,14 @@ public class PythonWrapperGenerator {
         for (List<Object> optaplannerMethodAnnotation : optaplannerMethodAnnotations) {
             String methodName = (String) (optaplannerMethodAnnotation.get(0));
             Class<?> returnType = (Class<?>) (optaplannerMethodAnnotation.get(1));
+            String signature = (String) (optaplannerMethodAnnotation.get(2));
             if (returnType == null) {
                 returnType = Object.class;
             }
-            List<Map<String, Object>> annotations = (List<Map<String, Object>>) optaplannerMethodAnnotation.get(2);
+            List<Map<String, Object>> annotations = (List<Map<String, Object>>) optaplannerMethodAnnotation.get(3);
             fieldDescriptorList
-                    .add(generateWrapperMethod(classCreator, valueField, methodName, returnType, annotations, returnTypeList));
+                    .add(generateWrapperMethod(classCreator, valueField, methodName, returnType, signature, annotations,
+                                               returnTypeList));
         }
         createConstructor(classCreator, valueField, parentClass, fieldDescriptorList, returnTypeList);
 
@@ -597,6 +628,8 @@ public class PythonWrapperGenerator {
 
                 if (returnType.isArray()) {
                     actualClass = methodCreator.loadClass(returnType);
+                } else if (Collection.class.isAssignableFrom(returnType)) {
+                    actualClass = methodCreator.loadClass(PythonList.class);
                 } else {
                     actualClass = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getJavaClass", Class.class, OpaquePythonReference.class),
                                                                             outResultHandle);
@@ -611,7 +644,7 @@ public class PythonWrapperGenerator {
     }
 
     private static FieldDescriptor generateWrapperMethod(ClassCreator classCreator, FieldDescriptor valueField,
-            String methodName, Class<?> returnType, List<Map<String, Object>> annotations,
+            String methodName, Class<?> returnType, String signature, List<Map<String, Object>> annotations,
             List<Class<?>> returnTypeList) {
         // Python types are not required, so we need to discover them. If the type is unknown, we default to Object,
         // but some annotations need something more specific than Object
@@ -630,6 +663,9 @@ public class PythonWrapperGenerator {
         returnTypeList.add(returnType);
         FieldDescriptor fieldDescriptor = classCreator.getFieldCreator(methodName + "$field", returnType).getFieldDescriptor();
         MethodCreator methodCreator = classCreator.getMethodCreator(methodName, returnType);
+        if (signature != null) {
+            methodCreator.setSignature("()" + signature);
+        }
 
         // Create method annotations for each annotation in the list
         for (Map<String, Object> annotation : annotations) {
@@ -655,6 +691,9 @@ public class PythonWrapperGenerator {
         if (methodName.startsWith("get")) {
             String setterMethodName = "set" + methodName.substring(3);
             MethodCreator setterMethodCreator = classCreator.getMethodCreator(setterMethodName, void.class, returnType);
+            if (signature != null) {
+                setterMethodCreator.setSignature("(" + signature + ")V;");
+            }
 
             // Use PythonWrapperGenerator.setValueOnPythonObject(obj, attribute, value)
             // to set the value on the Python Object

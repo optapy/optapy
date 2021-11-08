@@ -2,8 +2,6 @@ from .optaplanner_java_interop import ensure_init, _add_deep_copy_to_class, _gen
     _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, get_class
 from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING
-import inspect
-import functools
 if TYPE_CHECKING:
     from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
     from org.optaplanner.core.api.score import Score
@@ -73,7 +71,7 @@ def planning_pin(getter_function: Callable[[], bool]) -> Callable[[], bool]:
     getter_function.__optaplannerPlanningId = {
         'annotationType': JavaPlanningPin
     }
-    getter_function.__return = get_class(bool)
+    getter_function.__optapy_return = get_class(bool)
     return getter_function
 
 
@@ -107,7 +105,7 @@ def planning_variable(variable_type: Type, value_range_provider_refs: List[str],
             'strengthComparatorClass': strength_comparator_class,
             'strengthWeightFactoryClass': strength_weight_factory_class
         }
-        variable_getter_function.__return = get_class(variable_type)
+        variable_getter_function.__optapy_return = get_class(variable_type)
         return variable_getter_function
     return planning_variable_function_wrapper
 
@@ -140,14 +138,15 @@ def anchor_shadow_variable(source_variable_name: str) -> Callable[[Callable[[], 
     return anchor_shadow_variable_function_mapper
 
 
-def inverse_relation_shadow_variable(source_variable_name: str):
+def inverse_relation_shadow_variable(source_variable_type: Type, source_variable_name: str) -> Callable[[Callable[[], Any]],
+                                                                                                        Callable[[], Any]]:
     """
     Specifies that a bean property (or a field) is the inverse of a @planning_variable, which implies it's a shadow
     variable.
 
     It is specified on a getter of a java bean property (or a field) of a @planning_entity class.
     :param source_variable_name: In a bidirectional relationship, the shadow side (= the follower side) uses this
-           property (and nothing else) to declare for which {@link PlanningVariable} (= the leader side) it is a shadow.
+           property (and nothing else) to declare for which @planning_variable (= the leader side) it is a shadow.
 
            Both sides of a bidirectional relationship should be consistent: if A points to B, then B must point to A.
 
@@ -156,8 +155,10 @@ def inverse_relation_shadow_variable(source_variable_name: str):
     """
     def inverse_relation_shadow_variable_function_mapper(inverse_relation_getter_function):
         ensure_init()
+        from org.optaplanner.optapy import PythonWrapperGenerator
         from org.optaplanner.core.api.domain.variable import InverseRelationShadowVariable as \
             JavaInverseRelationShadowVariable
+        from java.util import Collection
         planning_variable_name = source_variable_name
         if is_snake_case(inverse_relation_getter_function):
             planning_variable_name = f'_{planning_variable_name}'
@@ -165,8 +166,10 @@ def inverse_relation_shadow_variable(source_variable_name: str):
             'annotationType': JavaInverseRelationShadowVariable,
             'sourceVariableName': planning_variable_name,
         }
+        inverse_relation_getter_function.__optapy_return = Collection
+        inverse_relation_getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(get_class(source_variable_type))
         return inverse_relation_getter_function
-    return inverse_relation_shadow_variable_function_mapper
+    return inverse_relation_shadow_variable_function_mapper # noqa
 
 
 def problem_fact_collection_property(fact_type: Type) -> Callable[[Callable[[], List]],
@@ -183,7 +186,7 @@ def problem_fact_collection_property(fact_type: Type) -> Callable[[Callable[[], 
         from org.optaplanner.optapy import PythonWrapperGenerator # noqa
         from org.optaplanner.core.api.domain.solution import \
             ProblemFactCollectionProperty as JavaProblemFactCollectionProperty
-        getter_function.__return = PythonWrapperGenerator.getArrayClass(get_class(fact_type))
+        getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(get_class(fact_type))
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaProblemFactCollectionProperty
         }
@@ -206,7 +209,7 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaPlanningEntityCollectionProperty
         }
-        getter_function.__return = PythonWrapperGenerator.getArrayClass(get_class(entity_type))
+        getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(get_class(entity_type))
         return getter_function
     return planning_entity_collection_property_function_mapper
 
@@ -255,7 +258,7 @@ def planning_score(score_type: Type['Score'],
             'bendableSoftLevelsSize': bendable_soft_levels_size,
             'scoreDefinitionClass': score_definition_class
         }
-        getter_function.__return = get_class(score_type)
+        getter_function.__optapy_return = get_class(score_type)
         return getter_function
     return planning_score_function_wrapper
 
@@ -302,7 +305,7 @@ def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = 
 
     def planning_entity_wrapper(entity_class_argument):
         out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(entity_class_argument)
-        out.__javaClass = _generate_planning_entity_class(entity_class_argument, annotation_data)
+        out.__optapy_java_class = _generate_planning_entity_class(entity_class_argument, annotation_data)
         _add_deep_copy_to_class(out)
         return out
 
@@ -322,7 +325,7 @@ def problem_fact(fact_class: Type) -> Type:
     """
     ensure_init()
     out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(fact_class)
-    out.__javaClass = _generate_problem_fact_class(fact_class)
+    out.__optapy_java_class = _generate_problem_fact_class(fact_class)
     _add_deep_copy_to_class(out)
     return out
 
@@ -355,7 +358,7 @@ def planning_solution(planning_solution_class: Type) -> Type:
     """
     ensure_init()
     out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(planning_solution_class)
-    out.__javaClass = _generate_planning_solution_class(planning_solution_class)
+    out.__optapy_java_class = _generate_planning_solution_class(planning_solution_class)
     _add_deep_copy_to_class(out)
     return out
 
@@ -369,5 +372,5 @@ def constraint_provider(constraint_provider_function: Callable[['ConstraintFacto
     To create a Constraint, start with ConstraintFactory.from(get_class(PythonClass)).
     """
     ensure_init()
-    constraint_provider_function.__javaClass = _generate_constraint_provider_class(constraint_provider_function)
+    constraint_provider_function.__optapy_java_class = _generate_constraint_provider_class(constraint_provider_function)
     return constraint_provider_function
