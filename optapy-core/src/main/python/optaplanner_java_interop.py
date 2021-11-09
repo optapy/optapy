@@ -72,6 +72,26 @@ class PythonTriFunction:
     def apply(self, argument1, argument2, argument3):
         return self.delegate(argument1, argument2, argument3)
 
+
+@JImplements('org.optaplanner.core.api.function.QuadFunction', deferred=True)
+class PythonQuadFunction:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def apply(self, argument1, argument2, argument3, argument4):
+        return self.delegate(argument1, argument2, argument3, argument4)
+
+
+@JImplements('org.optaplanner.core.api.function.PentaFunction', deferred=True)
+class PythonPentaFunction:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def apply(self, argument1, argument2, argument3, argument4, argument5):
+        return self.delegate(argument1, argument2, argument3, argument4, argument5)
+
 # ****************************************************************************
 
 
@@ -250,7 +270,7 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
         args = (jpype.getDefaultJVMPath(), '-Dlogback.level.org.optaplanner={}'.format(log_level))
     else:
         args = args + ('-Dlogback.level.org.optaplanner={}'.format(log_level),)
-    jpype.startJVM(*args, classpath=path)
+    jpype.startJVM(*args, classpath=path, convertStrings=True)
     import java.util.function.Function
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
