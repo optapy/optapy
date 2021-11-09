@@ -1,7 +1,8 @@
-from .optaplanner_java_interop import ensure_init, _add_deep_copy_to_class, _generate_planning_entity_class,\
+from .optaplanner_java_interop import ensure_init, _add_deep_copy_to_class, _generate_planning_entity_class, \
     _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, get_class
 from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
     from org.optaplanner.core.api.score import Score
@@ -94,6 +95,7 @@ def planning_variable(variable_type: Type, value_range_provider_refs: List[str],
     :param strength_comparator_class: Allows a collection of planning values for this variable to be sorted by strength.
     :param strength_weight_factory_class: The SelectionSorterWeightFactory alternative for strength_comparator_class.
     """
+
     def planning_variable_function_wrapper(variable_getter_function: Callable[[], Any]):
         ensure_init()
         from org.optaplanner.core.api.domain.variable import PlanningVariable as JavaPlanningVariable
@@ -107,6 +109,7 @@ def planning_variable(variable_type: Type, value_range_provider_refs: List[str],
         }
         variable_getter_function.__optapy_return = get_class(variable_type)
         return variable_getter_function
+
     return planning_variable_function_wrapper
 
 
@@ -124,6 +127,7 @@ def anchor_shadow_variable(source_variable_name: str) -> Callable[[Callable[[], 
            When the Solver changes a genuine variable, it adjusts the shadow variable accordingly.
            In practice, the Solver ignores shadow variables (except for consistency housekeeping).
     """
+
     def anchor_shadow_variable_function_mapper(anchor_getter_function: Callable[[], Any]):
         ensure_init()
         from org.optaplanner.core.api.domain.variable import AnchorShadowVariable as JavaAnchorShadowVariable
@@ -135,11 +139,13 @@ def anchor_shadow_variable(source_variable_name: str) -> Callable[[Callable[[], 
             'sourceVariableName': planning_variable_name,
         }
         return anchor_getter_function
+
     return anchor_shadow_variable_function_mapper
 
 
-def inverse_relation_shadow_variable(source_variable_type: Type, source_variable_name: str) -> Callable[[Callable[[], Any]],
-                                                                                                        Callable[[], Any]]:
+def inverse_relation_shadow_variable(source_variable_type: Type, source_variable_name: str) -> Callable[
+    [Callable[[], Any]],
+    Callable[[], Any]]:
     """
     Specifies that a bean property (or a field) is the inverse of a @planning_variable, which implies it's a shadow
     variable.
@@ -153,6 +159,7 @@ def inverse_relation_shadow_variable(source_variable_type: Type, source_variable
            When the Solver changes a genuine variable, it adjusts the shadow variable accordingly.
            In practice, the Solver ignores shadow variables (except for consistency housekeeping).
     """
+
     def inverse_relation_shadow_variable_function_mapper(inverse_relation_getter_function):
         ensure_init()
         from org.optaplanner.optapy import PythonWrapperGenerator
@@ -167,9 +174,36 @@ def inverse_relation_shadow_variable(source_variable_type: Type, source_variable
             'sourceVariableName': planning_variable_name,
         }
         inverse_relation_getter_function.__optapy_return = Collection
-        inverse_relation_getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(get_class(source_variable_type))
+        inverse_relation_getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
+            get_class(source_variable_type))
         return inverse_relation_getter_function
-    return inverse_relation_shadow_variable_function_mapper # noqa
+
+    return inverse_relation_shadow_variable_function_mapper  # noqa
+
+
+def problem_fact_property(fact_type: Type) -> Callable[[Callable[[], List]],
+                                                       Callable[[], List]]:
+    """Specifies that a property on a @planning_solution class is a problem fact.
+
+    A problem fact must not change during solving (except through a ProblemFactChange event). The constraints in a
+    ConstraintProvider rely on problem facts for ConstraintFactory.from(Class).
+
+    Do not annotate planning entities as problem facts: they are automatically available as facts for
+    ConstraintFactory.from(Class).
+    """
+
+    def problem_fact_property_function_mapper(getter_function: Callable[[], Any]):
+        ensure_init()
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+        from org.optaplanner.core.api.domain.solution import \
+            ProblemFactProperty as JavaProblemFactProperty
+        getter_function.__optapy_return = get_class(fact_type)
+        getter_function.__optaplannerPlanningEntityCollectionProperty = {
+            'annotationType': JavaProblemFactProperty
+        }
+        return getter_function
+
+    return problem_fact_property_function_mapper
 
 
 def problem_fact_collection_property(fact_type: Type) -> Callable[[Callable[[], List]],
@@ -181,9 +215,10 @@ def problem_fact_collection_property(fact_type: Type) -> Callable[[Callable[[], 
     Do not annotate planning entities as problem facts: they are automatically available as facts for
     ConstraintFactory.from(Class).
     """
+
     def problem_fact_collection_property_function_mapper(getter_function: Callable[[], List]):
         ensure_init()
-        from org.optaplanner.optapy import PythonWrapperGenerator # noqa
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.solution import \
             ProblemFactCollectionProperty as JavaProblemFactCollectionProperty
         getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(get_class(fact_type))
@@ -191,7 +226,30 @@ def problem_fact_collection_property(fact_type: Type) -> Callable[[Callable[[], 
             'annotationType': JavaProblemFactCollectionProperty
         }
         return getter_function
+
     return problem_fact_collection_property_function_mapper
+
+
+def planning_entity_property(entity_type: Type) -> Callable[[Callable[[], List]],
+                                                            Callable[[], List]]:
+    """Specifies that a property on a PlanningSolution class is a Collection of planning entities.
+
+    Every element in the planning entity collection should have the @planning_entity annotation. Every element in the
+    planning entity collection will be added to the ScoreDirector.
+    """
+
+    def planning_entity_property_function_mapper(getter_function: Callable[[], List]):
+        ensure_init()
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+        from org.optaplanner.core.api.domain.solution import \
+            PlanningEntityProperty as JavaPlanningEntityProperty
+        getter_function.__optaplannerPlanningEntityCollectionProperty = {
+            'annotationType': JavaPlanningEntityProperty
+        }
+        getter_function.__optapy_return = get_class(entity_type)
+        return getter_function
+
+    return planning_entity_property_function_mapper
 
 
 def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable[[], List]],
@@ -201,9 +259,10 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
     Every element in the planning entity collection should have the @planning_entity annotation. Every element in the
     planning entity collection will be added to the ScoreDirector.
     """
+
     def planning_entity_collection_property_function_mapper(getter_function: Callable[[], List]):
         ensure_init()
-        from org.optaplanner.optapy import PythonWrapperGenerator # noqa
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.solution import \
             PlanningEntityCollectionProperty as JavaPlanningEntityCollectionProperty
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
@@ -211,6 +270,7 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
         }
         getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(get_class(entity_type))
         return getter_function
+
     return planning_entity_collection_property_function_mapper
 
 
@@ -220,6 +280,7 @@ def value_range_provider(range_id: str) -> Callable[[Callable[[], Union[List, 'V
 
     This is specified on a getter which returns a list or ValueRange. A list is implicitly converted to a ValueRange.
     """
+
     def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, 'ValueRange']]):
         ensure_init()
         from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
@@ -228,6 +289,7 @@ def value_range_provider(range_id: str) -> Callable[[Callable[[], Union[List, 'V
             'id': range_id
         }
         return getter_function
+
     return value_range_provider_function_wrapper
 
 
@@ -249,6 +311,7 @@ def planning_score(score_type: Type['Score'],
     :param score_definition_class: Overrides the default determined ScoreDefinition to implement a custom one.
                                    In most cases, this should not be used.
     """
+
     def planning_score_function_wrapper(getter_function):
         ensure_init()
         from org.optaplanner.core.api.domain.solution import PlanningScore as JavaPlanningScore
@@ -260,6 +323,7 @@ def planning_score(score_type: Type['Score'],
         }
         getter_function.__optapy_return = get_class(score_type)
         return getter_function
+
     return planning_score_function_wrapper
 
 
