@@ -188,7 +188,8 @@ public class PythonWrapperGenerator {
     }
 
     // Holds the OpaquePythonReference
-    static final String pythonBindingFieldName = "__optaplannerPythonValue";
+    static final String PYTHON_BINDING_FIELD_NAME = "__optaplannerPythonValue";
+    static final String REFERENCE_MAP_FIELD_NAME = "__optaplannerReferenceMap";
 
     private static <T> T wrapArray(Class<T> javaClass, OpaquePythonReference object, Number id, Map<Number, Object> map) {
         // If the class is an array, we need to extract
@@ -439,12 +440,14 @@ public class PythonWrapperGenerator {
             FieldDescriptor valueField;
 
             if (parentClass == null) {
-                valueField = classCreator.getFieldCreator(pythonBindingFieldName, OpaquePythonReference.class)
+                valueField = classCreator.getFieldCreator(PYTHON_BINDING_FIELD_NAME, OpaquePythonReference.class)
                         .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             } else {
-                valueField = FieldDescriptor.of(parentClass, pythonBindingFieldName, OpaquePythonReference.class);
+                valueField = FieldDescriptor.of(parentClass, PYTHON_BINDING_FIELD_NAME, OpaquePythonReference.class);
             }
-            generateWrapperMethods(classCreator, parentClass, valueField, optaplannerMethodAnnotations);
+            FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
+                    .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
+            generateWrapperMethods(classCreator, parentClass, valueField, referenceMapField, optaplannerMethodAnnotations);
         }
         classNameToBytecode.put(className, classBytecodeHolder.get());
         try {
@@ -475,9 +478,11 @@ public class PythonWrapperGenerator {
                 .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, OpaquePythonReference.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(PYTHON_BINDING_FIELD_NAME, OpaquePythonReference.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, parentClass, valueField, optaplannerMethodAnnotations);
+            FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
+                    .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
+            generateWrapperMethods(classCreator, parentClass, valueField, referenceMapField, optaplannerMethodAnnotations);
         }
         classNameToBytecode.put(className, classBytecodeHolder.get());
         try {
@@ -508,9 +513,11 @@ public class PythonWrapperGenerator {
                 .build()) {
             classCreator.addAnnotation(PlanningSolution.class)
                     .addValue("solutionCloner", Type.getType(PythonPlanningSolutionCloner.class));
-            FieldDescriptor valueField = classCreator.getFieldCreator(pythonBindingFieldName, OpaquePythonReference.class)
+            FieldDescriptor valueField = classCreator.getFieldCreator(PYTHON_BINDING_FIELD_NAME, OpaquePythonReference.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, null, valueField, optaplannerMethodAnnotations);
+            FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
+                    .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
+            generateWrapperMethods(classCreator, null, valueField, referenceMapField, optaplannerMethodAnnotations);
         }
         classNameToBytecode.put(className, classBytecodeHolder.get());
         try {
@@ -529,18 +536,23 @@ public class PythonWrapperGenerator {
     }
 
     // Generate PythonObject interface methods
-    private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField) {
+    private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField, FieldDescriptor referenceMapField) {
         MethodCreator methodCreator = classCreator.getMethodCreator("get__optapy_Id", OpaquePythonReference.class);
         ResultHandle valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
         methodCreator.returnValue(valueResultHandle);
+
+        methodCreator = classCreator.getMethodCreator("get__optapy_reference_map", Map.class);
+        ResultHandle referenceMapResultHandle = methodCreator.readInstanceField(referenceMapField, methodCreator.getThis());
+        methodCreator.returnValue(referenceMapResultHandle);
     }
 
     // Create all methods in the class
     @SuppressWarnings("unchecked")
     private static void generateWrapperMethods(ClassCreator classCreator, Class<?> parentClass, FieldDescriptor valueField,
-            List<List<Object>> optaplannerMethodAnnotations) {
+                                               FieldDescriptor referenceMapField,
+                                               List<List<Object>> optaplannerMethodAnnotations) {
         if (parentClass == null) {
-            generateAsPointer(classCreator, valueField);
+            generateAsPointer(classCreator, valueField, referenceMapField);
         }
 
         // We only need to create methods/fields for methods with OptaPlanner annotations
@@ -560,7 +572,7 @@ public class PythonWrapperGenerator {
                     .add(generateWrapperMethod(classCreator, valueField, methodName, returnType, signature, annotations,
                                                returnTypeList));
         }
-        createConstructor(classCreator, valueField, parentClass, fieldDescriptorList, returnTypeList);
+        createConstructor(classCreator, valueField, referenceMapField, parentClass, fieldDescriptorList, returnTypeList);
 
         if (parentClass == null) {
             createToString(classCreator, valueField);
@@ -577,9 +589,8 @@ public class PythonWrapperGenerator {
     }
 
     private static void createConstructor(ClassCreator classCreator, FieldDescriptor valueField,
-            Class<?> parentClass,
-            List<FieldDescriptor> fieldDescriptorList,
-            List<Class<?>> returnTypeList) {
+                                          FieldDescriptor referenceMapField, Class<?> parentClass,
+                                          List<FieldDescriptor> fieldDescriptorList, List<Class<?>> returnTypeList) {
         MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(),
                 OpaquePythonReference.class, Number.class, Map.class));
         methodCreator.setModifiers(Modifier.PUBLIC);
@@ -595,6 +606,7 @@ public class PythonWrapperGenerator {
                     MethodDescriptor.ofMethod(Map.class, "put", Object.class, Object.class, Object.class),
                     methodCreator.getMethodParam(2), methodCreator.getMethodParam(1), methodCreator.getThis());
             methodCreator.writeInstanceField(valueField, methodCreator.getThis(), value);
+            methodCreator.writeInstanceField(referenceMapField, methodCreator.getThis(),  methodCreator.getMethodParam(2));
         }
 
 
