@@ -1,4 +1,4 @@
-from .optaplanner_java_interop import ensure_init, _add_deep_copy_to_class, _generate_planning_entity_class, \
+from .optaplanner_java_interop import ensure_init, _add_shallow_copy_to_class, _generate_planning_entity_class, \
     _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, get_class
 from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING
@@ -370,7 +370,8 @@ def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = 
     def planning_entity_wrapper(entity_class_argument):
         out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(entity_class_argument)
         out.__optapy_java_class = _generate_planning_entity_class(entity_class_argument, annotation_data)
-        _add_deep_copy_to_class(out)
+        out.__optapy_is_planning_clone = True
+        _add_shallow_copy_to_class(out)
         return out
 
     if entity_class:  # Called as @planning_entity
@@ -390,7 +391,6 @@ def problem_fact(fact_class: Type) -> Type:
     ensure_init()
     out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(fact_class)
     out.__optapy_java_class = _generate_problem_fact_class(fact_class)
-    _add_deep_copy_to_class(out)
     return out
 
 
@@ -423,7 +423,8 @@ def planning_solution(planning_solution_class: Type) -> Type:
     ensure_init()
     out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(planning_solution_class)
     out.__optapy_java_class = _generate_planning_solution_class(planning_solution_class)
-    _add_deep_copy_to_class(out)
+    out.__optapy_is_planning_clone = True
+    _add_shallow_copy_to_class(out)
     return out
 
 

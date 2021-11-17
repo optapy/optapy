@@ -17,6 +17,7 @@ public class PythonSolver {
         Solver<Object> solver = SolverFactory.create(solverConfig).buildSolver();
 
         // Wrap the problem into a PythonObject then solve it
+        // TODO: Maybe use a weak reference map?
         return solver.solve(PythonWrapperGenerator.wrap(solverConfig.getSolutionClass(), problem, new HashMap<>()));
     }
 }

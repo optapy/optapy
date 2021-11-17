@@ -63,14 +63,21 @@ public class PythonList<T> implements PythonObject, List<T> {
     }
 
     private OpaquePythonReference pythonListOpaqueReference;
+    private Map<Number, Object> idMap;
 
-    public PythonList(OpaquePythonReference pythonListOpaqueReference, Number id, Map<Number, OpaquePythonReference> idMap) {
+    public PythonList(OpaquePythonReference pythonListOpaqueReference, Number id, Map<Number, Object> idMap) {
         this.pythonListOpaqueReference = pythonListOpaqueReference;
+        this.idMap = idMap;
     }
 
     @Override
     public OpaquePythonReference get__optapy_Id() {
         return pythonListOpaqueReference;
+    }
+
+    @Override
+    public Map<Number, Object> get__optapy_reference_map() {
+        return idMap;
     }
 
     @Override
