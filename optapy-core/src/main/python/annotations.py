@@ -143,7 +143,8 @@ def anchor_shadow_variable(source_variable_name: str) -> Callable[[Callable[[], 
     return anchor_shadow_variable_function_mapper
 
 
-def inverse_relation_shadow_variable(source_variable_type: Type, source_variable_name: str) -> Callable[
+def inverse_relation_shadow_variable(source_variable_name: str, source_type: Type = None,
+                                     is_singleton: bool = False) -> Callable[
     [Callable[[], Any]],
     Callable[[], Any]]:
     """
@@ -158,14 +159,22 @@ def inverse_relation_shadow_variable(source_variable_type: Type, source_variable
 
            When the Solver changes a genuine variable, it adjusts the shadow variable accordingly.
            In practice, the Solver ignores shadow variables (except for consistency housekeeping).
-    """
 
+    :param source_type: The planning entity that contains the planning variable that reference this entity.
+                        Must be specified if the planning variable is not on this entity.
+
+    :param is_singleton: True if and only if the shadow variable has a 1-to-{0,1} relationship
+                         (i.e. if at most one planning variable can take this value). Defaults to False.
+    """
     def inverse_relation_shadow_variable_function_mapper(inverse_relation_getter_function):
         ensure_init()
-        from org.optaplanner.optapy import PythonWrapperGenerator
+        from org.optaplanner.optapy import PythonWrapperGenerator, SelfType
         from org.optaplanner.core.api.domain.variable import InverseRelationShadowVariable as \
             JavaInverseRelationShadowVariable
         from java.util import Collection
+        the_source_type = source_type
+        if the_source_type is None:
+            the_source_type = SelfType
         planning_variable_name = source_variable_name
         if is_snake_case(inverse_relation_getter_function):
             planning_variable_name = f'_{planning_variable_name}'
@@ -173,9 +182,12 @@ def inverse_relation_shadow_variable(source_variable_type: Type, source_variable
             'annotationType': JavaInverseRelationShadowVariable,
             'sourceVariableName': planning_variable_name,
         }
-        inverse_relation_getter_function.__optapy_return = Collection
-        inverse_relation_getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
-            get_class(source_variable_type))
+        if is_singleton:
+            inverse_relation_getter_function.__optapy_return = the_source_type
+        else:
+            inverse_relation_getter_function.__optapy_return = Collection
+            inverse_relation_getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
+                get_class(the_source_type))
         return inverse_relation_getter_function
 
     return inverse_relation_shadow_variable_function_mapper  # noqa
@@ -426,6 +438,26 @@ def planning_solution(planning_solution_class: Type) -> Type:
     out.__optapy_is_planning_clone = True
     _add_shallow_copy_to_class(out)
     return out
+
+
+def deep_planning_clone(planning_clone_object: Union[Type, Callable]):
+    """
+    Marks a problem fact class as being required to be deep planning cloned.
+    Not needed for a @planning_solution or @planning_entity because those are automatically deep cloned.
+
+    It can also mark a property (getter for a field) as being required to be deep planning cloned.
+    This is especially useful for list (or dictionary) properties.
+    Not needed for a list or map that contain only planning entities or planning solution as values,
+    because they are automatically deep cloned.
+    Note: If a list or map contains both planning entities and problem facts, this decorator is needed.
+
+    :param planning_clone_object: The class or property that should be deep planning cloned.
+    :return: planning_clone_object marked as being required for deep planning clone.
+    """
+    planning_clone_object.__optapy_is_planning_clone = True
+    if isinstance(planning_clone_object, type):
+        _add_shallow_copy_to_class(planning_clone_object)
+    return planning_clone_object
 
 
 def constraint_provider(constraint_provider_function: Callable[['ConstraintFactory'], List['Constraint']]) -> \
