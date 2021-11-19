@@ -219,13 +219,16 @@ def _planning_clone(item, memo):
         out = list()
         memo[item_id] = out
         for element in item:
-            planning_clone = _planning_clone(element, memo)
-            out.append(planning_clone)
+            if _is_deep_planning_clone(element):
+                planning_clone = _planning_clone(element, memo)
+                out.append(planning_clone)
+            else:
+                out.append(element)
         return out
     elif isinstance(item, dict):
         out = dict()
         memo[item_id] = out
-        for key, value in item:
+        for key, value in item.items():
             new_key = key
             new_value = value
             if _is_deep_planning_clone(key):
@@ -252,10 +255,14 @@ def _planning_clone(item, memo):
             (key, value) = next(iter(planning_clone_attribute.items()))
             if _is_deep_planning_clone(key) or _is_deep_planning_clone(value):
                 setattr(planning_clone, planning_clone_attribute_name, _planning_clone(planning_clone_attribute, memo))
-        elif inspect.isfunction(planning_clone_attribute) and hasattr(planning_clone_attribute, '__optapy_is_planning_clone'):
+    # Need to go to type to look at methods
+    planning_clone_type = type(planning_clone)
+    for planning_clone_attribute_name in dir(planning_clone_type):
+        planning_clone_attribute = getattr(planning_clone_type, planning_clone_attribute_name)
+        if inspect.isfunction(planning_clone_attribute) and hasattr(planning_clone_attribute, '__optapy_is_planning_clone'):
             setter = f'set{planning_clone_attribute_name[3:]}'
             try:
-                attribute_value = planning_clone_attribute()
+                attribute_value = getattr(planning_clone, planning_clone_attribute_name)()
             except Exception as e:
                 from org.optaplanner.optapy import OptaPyException  # noqa
                 error = (f'An exception occur when getting the @deep_planning_clone property'
