@@ -508,3 +508,153 @@ def test_clone_chained_shadowing_solution():
     a3.set_chained_object(b1)
     assert a3.chained_object.code == 'b1'
     assert clone_a3.chained_object.code == 'a2'
+
+
+@optapy.planning_entity
+class ExampleDeepCloningEntity:
+    def __init__(self, code, value, shadow_variable_list, shadow_variable_map):
+        self.code = code
+        self.value = value
+        self.shadow_variable_list = shadow_variable_list
+        self.shadow_variable_map = shadow_variable_map
+
+    @optapy.planning_variable(ExampleValue, value_range_provider_refs=['value_range'])
+    def get_value(self):
+        return self.value
+
+    def set_value(self, value):
+        self.value = value
+
+    @optapy.deep_planning_clone
+    def get_shadow_variable_list(self):
+        return self.shadow_variable_list
+
+    def set_shadow_variable_list(self, shadow_variable_list):
+        self.shadow_variable_list = shadow_variable_list
+
+    @optapy.deep_planning_clone
+    def get_shadow_variable_map(self):
+        return self.shadow_variable_map
+
+    def set_shadow_variable_map(self, shadow_variable_map):
+        self.shadow_variable_map = shadow_variable_map
+
+
+@optapy.planning_solution
+class ExampleDeepCloningSolution:
+    def __init__(self, code, value_list, entity_list, general_shadow_variable_list, score=None):
+        self.code = code
+        self.value_list = value_list,
+        self.entity_list = entity_list
+        self.general_shadow_variable_list = general_shadow_variable_list
+        self.score = score
+
+    @optapy.value_range_provider('value_range')
+    @optapy.problem_fact_collection_property
+    def get_value_list(self):
+        return self.value_list
+
+    @optapy.planning_entity_collection_property(ExampleDeepCloningEntity)
+    def get_entity_list(self):
+        return self.entity_list
+
+    @optapy.deep_planning_clone
+    def get_general_shadow_variable_list(self):
+        return self.general_shadow_variable_list
+
+    def set_general_shadow_variable_list(self, general_shadow_variable_list):
+        self.general_shadow_variable_list = general_shadow_variable_list
+
+    @optapy.planning_score(optapy.score.SimpleScore)
+    def get_score(self):
+        return self.score
+
+    def set_score(self, score):
+        self.score = score
+
+
+def assert_deep_cloning_entity_clone(original_entity, clone_entity, entity_code):
+    assert original_entity is not clone_entity
+    assert original_entity.code == entity_code
+    assert clone_entity.code == entity_code
+    assert clone_entity.value is original_entity.value
+
+    original_shadow_variable_list = original_entity.shadow_variable_list
+    clone_shadow_variable_list = clone_entity.shadow_variable_list
+
+    if original_shadow_variable_list is None:
+        assert clone_shadow_variable_list is None
+    else:
+        assert clone_shadow_variable_list is not original_shadow_variable_list
+        assert len(clone_shadow_variable_list) == len(original_shadow_variable_list)
+        for i in range(len(original_shadow_variable_list)):
+            assert clone_shadow_variable_list[i] is original_shadow_variable_list[i]
+
+    original_shadow_variable_map = original_entity.shadow_variable_map
+    clone_shadow_variable_map = clone_entity.shadow_variable_map
+    if original_shadow_variable_map is None:
+        assert clone_shadow_variable_map is None
+    else:
+        assert clone_shadow_variable_map is not original_shadow_variable_map
+        assert len(clone_shadow_variable_map) == len(original_shadow_variable_map)
+        for key in original_shadow_variable_map.keys():
+            assert clone_shadow_variable_map[key] is original_shadow_variable_map[key]
+
+
+def test_deep_planning_clone():
+    val1 = ExampleValue('1')
+    val2 = ExampleValue('2')
+    val3 = ExampleValue('3')
+    a_shadow_variable_list = ['shadow a1', 'shadow a2']
+    a = ExampleDeepCloningEntity('a', val1, a_shadow_variable_list, None)
+
+    b_shadow_variable_map = {
+        'shadow key b1': 'shadow value b1',
+        'shadow key b2': 'shadow value b2'
+    }
+    b = ExampleDeepCloningEntity('b', val1, None, b_shadow_variable_map)
+
+    c_shadow_variable_list = ['shadow c1', 'shadow c2']
+    c = ExampleDeepCloningEntity('c', val3, c_shadow_variable_list, None)
+    d = ExampleDeepCloningEntity('d', val3, None, None)
+
+    value_list = [val1, val2, val3]
+    original_entity_list = [a, b, c, d]
+    general_shadow_variable_list = ['shadow g1', 'shadow g2']
+    original = ExampleDeepCloningSolution('solution', value_list, original_entity_list,
+                                          general_shadow_variable_list, None)
+    # ...somehow passing it to the constructor changes it?
+    value_list = original.value_list
+    clone = optapy._planning_clone(original, dict())
+
+    assert clone is not original
+    assert clone.code == 'solution'
+    assert clone.value_list is value_list
+    assert clone.score is None
+
+    clone_entity_list = clone.entity_list
+    assert clone_entity_list is not original_entity_list
+    assert len(clone_entity_list) == 4
+    clone_a = clone_entity_list[0]
+    assert_deep_cloning_entity_clone(a, clone_a, 'a')
+    clone_b = clone_entity_list[1]
+    assert_deep_cloning_entity_clone(b, clone_b, 'b')
+    clone_c = clone_entity_list[2]
+    assert_deep_cloning_entity_clone(c, clone_c, 'c')
+    clone_d = clone_entity_list[3]
+    assert_deep_cloning_entity_clone(d, clone_d, 'd')
+
+    clone_general_shadow_variable_list = clone.general_shadow_variable_list
+    assert clone_general_shadow_variable_list is not general_shadow_variable_list
+    assert len(clone_general_shadow_variable_list) == 2
+    assert clone_general_shadow_variable_list[0] is general_shadow_variable_list[0]
+    assert clone_general_shadow_variable_list[1] is general_shadow_variable_list[1]
+
+    b.set_value(val2)
+    assert b.value.code == '2'
+    assert clone_b.value.code == '1'
+
+    b.shadow_variable_map['shadow key b1'] = 'other shadow value b1'
+    assert b.shadow_variable_map['shadow key b1'] == 'other shadow value b1'
+    assert clone_b.shadow_variable_map['shadow key b1'] == 'shadow value b1'
+
