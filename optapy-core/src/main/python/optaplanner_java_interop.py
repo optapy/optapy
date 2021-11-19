@@ -1,3 +1,5 @@
+import inspect
+
 import jpype
 import jpype.imports
 from jpype.types import *
@@ -183,14 +185,21 @@ def _deep_clone_python_object(the_object: Any):
     """
     import org.optaplanner.optapy.OpaquePythonReference
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    # ...Python evaluate default arg once, so if we don't set the memo arg to a new dictionary,
-    # the same dictionary is reused!
     item = PythonWrapperGenerator.getPythonObject(the_object)
     the_clone = _planning_clone(item, dict())
     for run_id in ref_id_to_solver_run_id[id(item)]:
         solver_run_id_to_refs[run_id].add(the_clone)
     ref_id_to_solver_run_id[id(the_clone)] = ref_id_to_solver_run_id[id(item)]
     return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=the_clone, convert=True)
+
+
+def _is_deep_planning_clone(object):
+    """
+    Return True iff object should be deep planning cloned, False otherwise.
+    :param object: The object to check if it should be deep planning cloned.
+    :return: True iff object should be deep planning cloned, False otherwise.
+    """
+    return hasattr(type(object), '__optapy_is_planning_clone')
 
 
 def _planning_clone(item, memo):
@@ -204,7 +213,7 @@ def _planning_clone(item, memo):
     if item is None:
         return None
     item_id = id(item)
-    if id(item_id) in memo:
+    if item_id in memo:
         return memo[item_id]
     elif isinstance(item, list):
         out = list()
@@ -217,8 +226,13 @@ def _planning_clone(item, memo):
         out = dict()
         memo[item_id] = out
         for key, value in item:
-            planning_clone = _planning_clone(value, memo)
-            out[key] = planning_clone
+            new_key = key
+            new_value = value
+            if _is_deep_planning_clone(key):
+                new_key = _planning_clone(key, memo)
+            if _is_deep_planning_clone(value):
+                new_value = _planning_clone(value, memo)
+            out[new_key] = new_value
         return out
     planning_clone = copy.copy(item)
     memo[item_id] = planning_clone
@@ -229,15 +243,33 @@ def _planning_clone(item, memo):
             continue
         elif id(planning_clone_attribute) in memo:
             setattr(planning_clone, planning_clone_attribute_name, memo[id(planning_clone_attribute)])
-        elif hasattr(type(planning_clone_attribute), '__optapy_is_planning_clone'):
+        elif _is_deep_planning_clone(planning_clone_attribute):
             setattr(planning_clone, planning_clone_attribute_name, _planning_clone(planning_clone_attribute, memo))
         elif (isinstance(planning_clone_attribute, list) and len(planning_clone_attribute) > 0 and
-              hasattr(type(planning_clone_attribute[0]), '__optapy_is_planning_clone')):
+              _is_deep_planning_clone(planning_clone_attribute[0])):
             setattr(planning_clone, planning_clone_attribute_name, _planning_clone(planning_clone_attribute, memo))
         elif isinstance(planning_clone_attribute, dict) and len(planning_clone_attribute) > 0:
             (key, value) = next(iter(planning_clone_attribute.items()))
-            if hasattr(type(value), '__optapy_is_planning_clone'):
+            if _is_deep_planning_clone(key) or _is_deep_planning_clone(value):
                 setattr(planning_clone, planning_clone_attribute_name, _planning_clone(planning_clone_attribute, memo))
+        elif inspect.isfunction(planning_clone_attribute) and hasattr(planning_clone_attribute, '__optapy_is_planning_clone'):
+            setter = f'set{planning_clone_attribute_name[3:]}'
+            try:
+                attribute_value = planning_clone_attribute()
+            except Exception as e:
+                from org.optaplanner.optapy import OptaPyException  # noqa
+                error = (f'An exception occur when getting the @deep_planning_clone property'
+                         f'{planning_clone_attribute_name} on object {str(item)}: {str(e)}')
+                raise OptaPyException(error)
+            attribute_value_clone = _planning_clone(attribute_value, memo)
+            try:
+                getattr(planning_clone, setter)(attribute_value_clone)
+            except AttributeError as e:
+                from org.optaplanner.optapy import OptaPyException  # noqa
+                error = (f'There is no corresponding setter {setter} for deep cloned property '
+                         f'{planning_clone_attribute_name} on object {str(item)}. Maybe add a setter? '
+                         f'Original exception: {str(e)}')
+                raise OptaPyException(error)
     return planning_clone
 
 

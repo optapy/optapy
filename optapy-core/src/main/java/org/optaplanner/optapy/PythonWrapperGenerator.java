@@ -559,7 +559,7 @@ public class PythonWrapperGenerator {
         // optaplannerMethodAnnotations: list of tuples (methodName, returnType, annotationList)
         // (Each annotation is represented by a Map)
         List<FieldDescriptor> fieldDescriptorList = new ArrayList<>(optaplannerMethodAnnotations.size());
-        List<Class<?>> returnTypeList = new ArrayList<>(optaplannerMethodAnnotations.size());
+        List<Object> returnTypeList = new ArrayList<>(optaplannerMethodAnnotations.size());
         for (List<Object> optaplannerMethodAnnotation : optaplannerMethodAnnotations) {
             String methodName = (String) (optaplannerMethodAnnotation.get(0));
             Class<?> returnType = (Class<?>) (optaplannerMethodAnnotation.get(1));
@@ -590,7 +590,7 @@ public class PythonWrapperGenerator {
 
     private static void createConstructor(ClassCreator classCreator, FieldDescriptor valueField,
                                           FieldDescriptor referenceMapField, Class<?> parentClass,
-                                          List<FieldDescriptor> fieldDescriptorList, List<Class<?>> returnTypeList) {
+                                          List<FieldDescriptor> fieldDescriptorList, List<Object> returnTypeList) {
         MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(),
                 OpaquePythonReference.class, Number.class, Map.class));
         methodCreator.setModifiers(Modifier.PUBLIC);
@@ -612,7 +612,7 @@ public class PythonWrapperGenerator {
 
         for (int i = 0; i < fieldDescriptorList.size(); i++) {
             FieldDescriptor fieldDescriptor = fieldDescriptorList.get(i);
-            Class<?> returnType = returnTypeList.get(i);
+            Object returnType = returnTypeList.get(i);
             String methodName = fieldDescriptor.getName().substring(0, fieldDescriptor.getName().length() - 6);
 
             ResultHandle outResultHandle = methodCreator.invokeStaticMethod(
@@ -620,36 +620,46 @@ public class PythonWrapperGenerator {
                             OpaquePythonReference.class, String.class),
                     value, methodCreator.load(methodName));
 
-            if (Comparable.class.isAssignableFrom(returnType) || Number.class.isAssignableFrom(returnType)) {
-                // It is a number/String, so it already translated to the corresponding Java type
-                if (Integer.class.equals(returnType)) {
-                    ResultHandle isLong = methodCreator.instanceOf(outResultHandle, Long.class);
-                    BranchResult ifLongBranchResult = methodCreator.ifTrue(isLong);
-                    BytecodeCreator bytecodeCreator = ifLongBranchResult.trueBranch();
-                    bytecodeCreator.writeInstanceField(fieldDescriptor, bytecodeCreator.getThis(),
-                                                       bytecodeCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Long.class, "intValue",
-                                                                                       int.class), outResultHandle));
-                    bytecodeCreator = ifLongBranchResult.falseBranch();
-                    bytecodeCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+            if (returnType instanceof Class) {
+                Class<?> returnTypeClass = (Class<?>) returnType;
+                if (Comparable.class.isAssignableFrom(returnTypeClass) || Number.class.isAssignableFrom(returnTypeClass)) {
+                    // It is a number/String, so it already translated to the corresponding Java type
+                    if (Integer.class.equals(returnTypeClass)) {
+                        ResultHandle isLong = methodCreator.instanceOf(outResultHandle, Long.class);
+                        BranchResult ifLongBranchResult = methodCreator.ifTrue(isLong);
+                        BytecodeCreator bytecodeCreator = ifLongBranchResult.trueBranch();
+                        bytecodeCreator.writeInstanceField(fieldDescriptor, bytecodeCreator.getThis(),
+                                                           bytecodeCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Long.class, "intValue",
+                                                                                           int.class), outResultHandle));
+                        bytecodeCreator = ifLongBranchResult.falseBranch();
+                        bytecodeCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                    } else {
+                        methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                    }
                 } else {
-                    methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                    // We need to wrap it
+                    ResultHandle actualClass;
+
+                    if (returnTypeClass.isArray()) {
+                        actualClass = methodCreator.loadClass(returnTypeClass);
+                    } else if (Collection.class.isAssignableFrom(returnTypeClass)) {
+                        actualClass = methodCreator.loadClass(PythonList.class);
+                    } else {
+                        actualClass = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getJavaClass", Class.class, OpaquePythonReference.class),
+                                                                                outResultHandle);
+                    }
+                    methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
+                            methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
+                                    "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
+                                         actualClass, outResultHandle, methodCreator.getMethodParam(2)));
                 }
             } else {
-                // We need to wrap it
-                ResultHandle actualClass;
-
-                if (returnType.isArray()) {
-                    actualClass = methodCreator.loadClass(returnType);
-                } else if (Collection.class.isAssignableFrom(returnType)) {
-                    actualClass = methodCreator.loadClass(PythonList.class);
-                } else {
-                    actualClass = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getJavaClass", Class.class, OpaquePythonReference.class),
-                                                                            outResultHandle);
-                }
+                // It a reference to the current class; need to be wrapped
+                ResultHandle actualClass = methodCreator.loadClass(classCreator.getClassName());
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
-                        methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                                "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
-                                     actualClass, outResultHandle, methodCreator.getMethodParam(2)));
+                                                 methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
+                                                                                                            "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
+                                                                                  actualClass, outResultHandle, methodCreator.getMethodParam(2)));
             }
         }
         methodCreator.returnValue(methodCreator.getThis());
@@ -657,24 +667,27 @@ public class PythonWrapperGenerator {
 
     private static FieldDescriptor generateWrapperMethod(ClassCreator classCreator, FieldDescriptor valueField,
             String methodName, Class<?> returnType, String signature, List<Map<String, Object>> annotations,
-            List<Class<?>> returnTypeList) {
+            List<Object> returnTypeList) {
         // Python types are not required, so we need to discover them. If the type is unknown, we default to Object,
         // but some annotations need something more specific than Object
+        Object actualReturnType = returnType;
         for (Map<String, Object> annotation : annotations) {
             if (PlanningId.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
                     && !Comparable.class.isAssignableFrom(returnType)) {
                 // A PlanningId MUST be comparable
-                returnType = Comparable.class;
+                actualReturnType = Comparable.class;
             } else if ((ProblemFactCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
                     || PlanningEntityCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType")))
                     && !(Collection.class.isAssignableFrom(returnType) || returnType.isArray())) {
                 // A ProblemFactCollection/PlanningEntityCollection MUST be a collection or array
-                returnType = Object[].class;
+                actualReturnType = Object[].class;
+            } else if (SelfType.class.equals(returnType)) {
+                actualReturnType = classCreator.getClassName();
             }
         }
-        returnTypeList.add(returnType);
-        FieldDescriptor fieldDescriptor = classCreator.getFieldCreator(methodName + "$field", returnType).getFieldDescriptor();
-        MethodCreator methodCreator = classCreator.getMethodCreator(methodName, returnType);
+        returnTypeList.add(actualReturnType);
+        FieldDescriptor fieldDescriptor = classCreator.getFieldCreator(methodName + "$field", actualReturnType).getFieldDescriptor();
+        MethodCreator methodCreator = classCreator.getMethodCreator(methodName, actualReturnType);
         if (signature != null) {
             methodCreator.setSignature("()" + signature);
         }
@@ -702,7 +715,7 @@ public class PythonWrapperGenerator {
         // Assumption: all getters have a setter
         if (methodName.startsWith("get")) {
             String setterMethodName = "set" + methodName.substring(3);
-            MethodCreator setterMethodCreator = classCreator.getMethodCreator(setterMethodName, void.class, returnType);
+            MethodCreator setterMethodCreator = classCreator.getMethodCreator(setterMethodName, void.class, actualReturnType);
             if (signature != null) {
                 setterMethodCreator.setSignature("(" + signature + ")V;");
             }
