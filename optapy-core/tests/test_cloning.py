@@ -658,3 +658,71 @@ def test_deep_planning_clone():
     assert b.shadow_variable_map['shadow key b1'] == 'other shadow value b1'
     assert clone_b.shadow_variable_map['shadow key b1'] == 'shadow value b1'
 
+
+@optapy.planning_entity
+class ExampleSolutionBacklinkingEntity:
+    def __init__(self, code, value, solution):
+        self.code = code
+        self.value = value
+        self.solution = solution
+
+    @optapy.planning_variable(ExampleValue, value_range_provider_refs=['value_range'])
+    def get_value(self):
+        return self.value
+
+    def set_value(self, value):
+        self.value = value
+
+
+@optapy.planning_solution
+class ExampleBacklinkingSolution:
+    def __init__(self, code, value_list, entity_list, score=None):
+        self.code = code
+        self.value_list = value_list
+        self.entity_list = entity_list
+        self.score = score
+
+    @optapy.problem_fact_collection_property(ExampleValue)
+    @optapy.value_range_provider('value_range')
+    def get_value_list(self):
+        return self.value_list
+
+    @optapy.planning_entity_collection_property(ExampleSolutionBacklinkingEntity)
+    def get_entity_list(self):
+        return self.entity_list
+
+    @optapy.planning_score(optapy.score.SimpleScore)
+    def get_score(self):
+        return self.score
+
+    def set_score(self, score):
+        self.score = score
+
+
+def test_supports_entity_to_solution_backlinking():
+    val1 = ExampleValue("1")
+    val2 = ExampleValue("2")
+    original_value_list = [val1, val2]
+    original_entity_list = []
+    original_score = optapy.score.SimpleScore.ONE
+    original_solution = ExampleSolution("solution", original_value_list, original_entity_list, original_score)
+    a = ExampleSolutionBacklinkingEntity('A', None, original_solution)
+    original_entity_list.append(a)
+    clone_solution = optapy._planning_clone(original_solution, dict())
+    assert a.solution is original_solution
+    assert original_solution is not clone_solution
+    assert original_solution.code == clone_solution.code
+    assert clone_solution.value_list is original_value_list
+    assert clone_solution.entity_list is not original_entity_list
+    assert clone_solution.score is original_solution.score
+    assert len(clone_solution.entity_list) == len(original_solution.entity_list)
+    for i in range(len(clone_solution.entity_list)):
+        clone_entity = clone_solution.entity_list[i]
+        original_entity = original_entity_list[i]
+        assert clone_entity is not original_entity
+        assert clone_entity.code == original_entity.code
+        assert clone_entity.value is original_entity.value
+        assert clone_entity.solution is clone_solution
+    clone_solution.get_entity_list()[0].set_value(val2)
+    assert clone_solution.get_entity_list()[0].get_value() is val2
+    assert a.get_value() is None
