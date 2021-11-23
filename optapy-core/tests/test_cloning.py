@@ -2,6 +2,7 @@ import optapy
 import optapy.score
 from abc import ABC, abstractmethod
 
+
 # Using Testdata as prefix to name causes PyTest warnings because it think it is a test class
 
 
@@ -657,6 +658,102 @@ def test_deep_planning_clone():
     b.shadow_variable_map['shadow key b1'] = 'other shadow value b1'
     assert b.shadow_variable_map['shadow key b1'] == 'other shadow value b1'
     assert clone_b.shadow_variable_map['shadow key b1'] == 'shadow value b1'
+
+
+@optapy.problem_fact
+@optapy.deep_planning_clone
+class ExampleDeepPlanningCloneValue:
+    def __init__(self, code):
+        self.code = code
+
+
+@optapy.planning_entity
+class ExampleDeepPlanningCloneEntity:
+    def __init__(self, code, value):
+        self.code = code
+        self.value = value
+
+    @optapy.planning_variable(ExampleDeepPlanningCloneValue, value_range_provider_refs=['value_range'])
+    def get_value(self):
+        return self.value
+
+    def set_value(self, value):
+        self.value = value
+
+
+@optapy.planning_solution
+class ExampleDeepPlanningCloneSolution:
+    def __init__(self, code, value_list, entity_list, score=None):
+        self.code = code
+        self.value_list = value_list
+        self.entity_list = entity_list
+        self.score = score
+
+    @optapy.problem_fact_collection_property(ExampleDeepPlanningCloneValue)
+    @optapy.value_range_provider('value_range')
+    def get_value_list(self):
+        return self.value_list
+
+    @optapy.planning_entity_collection_property(ExampleDeepPlanningCloneEntity)
+    def get_entity_list(self):
+        return self.entity_list
+
+    @optapy.planning_score(optapy.score.SimpleScore)
+    def get_score(self):
+        return self.score
+
+    def set_score(self, score):
+        self.score = score
+
+
+def test_clone_custom_deep_clone_class():
+    val1 = ExampleDeepPlanningCloneValue("1")
+    val2 = ExampleDeepPlanningCloneValue("2")
+    val3 = ExampleDeepPlanningCloneValue("3")
+    a = ExampleDeepPlanningCloneEntity("a", val1)
+    b = ExampleDeepPlanningCloneEntity("b", val1)
+    c = ExampleDeepPlanningCloneEntity("c", val3)
+    d = ExampleDeepPlanningCloneEntity("d", val3)
+
+    original_value_list = [val1, val2, val3]
+    original_entity_list = [a, b, c, d]
+    original_score = optapy.score.SimpleScore.ONE
+
+    original_solution = ExampleDeepPlanningCloneSolution("solution", original_value_list, original_entity_list,
+                                                         original_score)
+
+    clone_solution = optapy._planning_clone(original_solution, dict())
+    assert original_solution is not clone_solution
+    assert original_solution.code == clone_solution.code
+    assert clone_solution.value_list is not original_value_list
+    assert clone_solution.entity_list is not original_entity_list
+    assert clone_solution.score is original_solution.score
+    assert len(clone_solution.value_list) == len(original_solution.value_list)
+    assert len(clone_solution.entity_list) == len(original_solution.entity_list)
+
+    assert clone_solution.value_list[0] is not val1
+    assert clone_solution.value_list[0].code is val1.code
+    assert clone_solution.value_list[1] is not val2
+    assert clone_solution.value_list[1].code is val2.code
+    assert clone_solution.value_list[2] is not val3
+    assert clone_solution.value_list[2].code is val3.code
+
+    expected_values = [clone_solution.value_list[0],
+                       clone_solution.value_list[0],
+                       clone_solution.value_list[2],
+                       clone_solution.value_list[2]]
+
+    for i in range(len(clone_solution.entity_list)):
+        clone_entity = clone_solution.entity_list[i]
+        original_entity = original_entity_list[i]
+        assert clone_entity is not original_entity
+        assert clone_entity.code == original_entity.code
+        assert clone_entity.value is not original_entity.value
+        assert clone_entity.value is expected_values[i]
+        assert clone_entity.value.code is original_entity.value.code
+    clone_solution.get_entity_list()[1].set_value(clone_solution.value_list[1])
+    assert clone_solution.get_entity_list()[1].get_value() is clone_solution.value_list[1]
+    assert b.get_value() is val1
 
 
 @optapy.planning_entity
