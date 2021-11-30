@@ -49,7 +49,7 @@ def test_pinning_filter():
     @optapy.constraint_provider
     def my_constraints(constraint_factory):
         return [
-            constraint_factory.from_(optapy.get_class(Point))
+            constraint_factory.forEach(optapy.get_class(Point))
                               .penalize("Minimize Value", optapy.score.SimpleScore.ONE, lambda point: point.value)
         ]
 
@@ -113,7 +113,7 @@ def test_planning_pin():
     @optapy.constraint_provider
     def my_constraints(constraint_factory):
         return [
-            constraint_factory.from_(optapy.get_class(Point))
+            constraint_factory.forEach(optapy.get_class(Point))
                 .penalize("Minimize Value", optapy.score.SimpleScore.ONE, lambda point: point.value)
         ]
 

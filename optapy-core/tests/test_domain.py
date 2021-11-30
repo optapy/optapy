@@ -25,10 +25,10 @@ def test_single_property():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.from_(optapy.get_class(Entity))
+            constraint_factory.forEach(optapy.get_class(Entity))
                               .join(optapy.get_class(Value),
-                                    optapy.constraint.Joiners.equal(optapy.constraint.cast(lambda entity: entity.value),
-                                                                    optapy.constraint.cast(lambda value: value.code)))
+                                    [optapy.constraint.Joiners.equal(lambda entity: entity.value,
+                                                                     lambda value: value.code)])
                               .reward('Same as value', optapy.score.SimpleScore.ONE),
         ]
 

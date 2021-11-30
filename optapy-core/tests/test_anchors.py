@@ -71,7 +71,7 @@ class ChainedSolution:
 @optapy.constraint_provider
 def chained_constraints(constraint_factory):
     return [
-        constraint_factory.from_(optapy.get_class(ChainedEntity))
+        constraint_factory.forEach(optapy.get_class(ChainedEntity))
                           .groupBy(lambda entity: entity.anchor, optapy.constraint.ConstraintCollectors.count())
                           .reward('Maximize chain length', optapy.score.SimpleScore.ONE, lambda anchor, count: count * count)
     ]

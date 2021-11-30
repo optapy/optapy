@@ -60,7 +60,7 @@ class InverseRelationSolution:
 @optapy.constraint_provider
 def inverse_relation_constraints(constraint_factory):
     return [
-        constraint_factory.from_(optapy.get_class(InverseRelationValue))
+        constraint_factory.forEach(optapy.get_class(InverseRelationValue))
                           .filter(lambda value: len(value.entities) > 1)
                           .penalize('Only one entity per value', optapy.score.SimpleScore.ONE)
     ]
