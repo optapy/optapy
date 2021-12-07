@@ -32,6 +32,14 @@ public class PythonComparable implements Comparable<PythonComparable> {
     }
 
     public static boolean isPythonObjectEqualToOther(OpaquePythonReference a, OpaquePythonReference b) {
+        if (a == b) {
+            return true;
+        }
+        if (a == null || b == null) {
+            // a != b, and one of a/b is null, so they are not the same
+            return false;
+        }
+
         return pythonObjectEquals.apply(a, b);
     }
 
