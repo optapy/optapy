@@ -1,4 +1,4 @@
-from ..optaplanner_java_interop import ensure_init
+from ..optaplanner_java_interop import ensure_init, has_java_class
 from jpype import JProxy
 import jpype.imports  # noqa
 import inspect
@@ -77,18 +77,33 @@ def _proxy(value):
     return JProxy(OpaquePythonReference, inst=value, convert=True)
 
 
+# Cannot use weakref.WeakKeyDict for this
+_comparable_cache = dict()
+
+
+def _compute_comparable_if_absent(item):
+    if has_java_class(item):
+        return item
+    if item in _comparable_cache:
+        return _comparable_cache[item]
+    else:
+        comparable = _PythonComparable(_proxy(item))
+        _comparable_cache[item] = comparable
+        return comparable
+
+
 def _cast(function):
     arg_count = len(inspect.signature(function).parameters)
     if arg_count == 1:
-        return _PythonFunction(lambda a: _PythonComparable(_proxy(function(a))))
+        return _PythonFunction(lambda a: _compute_comparable_if_absent(function(a)))
     elif arg_count == 2:
-        return _PythonBiFunction(lambda a, b: _PythonComparable(_proxy(function(a, b))))
+        return _PythonBiFunction(lambda a, b: _compute_comparable_if_absent(function(a, b)))
     elif arg_count == 3:
-        return _PythonTriFunction(lambda a, b, c: _PythonComparable(_proxy(function(a, b, c))))
+        return _PythonTriFunction(lambda a, b, c: _compute_comparable_if_absent(function(a, b, c)))
     elif arg_count == 4:
-        return _PythonQuadFunction(lambda a, b, c, d: _PythonComparable(_proxy(function(a, b, c, d))))
+        return _PythonQuadFunction(lambda a, b, c, d: _compute_comparable_if_absent(function(a, b, c, d)))
     elif arg_count == 5:
-        return _PythonPentaFunction(lambda a, b, c, d, e: _PythonComparable(_proxy(function(a, b, c, d, e))))
+        return _PythonPentaFunction(lambda a, b, c, d, e: _compute_comparable_if_absent(function(a, b, c, d, e)))
 
 
 def _filtering_cast(predicate):

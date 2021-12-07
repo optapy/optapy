@@ -4,7 +4,7 @@ import stubgenj
 
 jars = list(map(str, pathlib.Path('target/dependency').glob('**/*.jar')))
 
-jpype.startJVM(classpath=jars)
+jpype.startJVM(classpath=jars, convertStrings=True)
 
 import jpype.imports  # noqa
 import org.optaplanner.core.api  # noqa

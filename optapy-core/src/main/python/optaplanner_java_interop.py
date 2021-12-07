@@ -675,6 +675,14 @@ def get_class(python_class: Union[Type, Callable]) -> JClass:
     ))
 
 
+def has_java_class(item):
+    if isinstance(item, (jpype.JObject, int, str, bool)):
+        return True
+    if hasattr(type(item), '__optapy_java_class'):
+        return True
+    return False
+
+
 unique_class_id = 0
 """A unique identifier; used to guarantee the generated class java name is unique"""
 
