@@ -1,4 +1,5 @@
 from ..optaplanner_java_interop import ensure_init
+from jpype import JProxy
 import jpype.imports  # noqa
 import inspect
 from typing import TYPE_CHECKING
@@ -6,6 +7,7 @@ from typing import TYPE_CHECKING
 ensure_init()
 
 Joiners = None
+from org.optaplanner.optapy import PythonComparable as _PythonComparable
 from org.optaplanner.core.api.score.stream import Joiners as JavaJoiners, ConstraintCollectors, Constraint, ConstraintFactory  # noqa
 if TYPE_CHECKING:
     Joiners = JavaJoiners
@@ -70,18 +72,23 @@ class _PythonPentaPredicate:
         return self.delegate(argument1, argument2, argument3, argument4, argument5)
 
 
+def _proxy(value):
+    from org.optaplanner.optapy import OpaquePythonReference
+    return JProxy(OpaquePythonReference, inst=value, convert=True)
+
+
 def _cast(function):
     arg_count = len(inspect.signature(function).parameters)
     if arg_count == 1:
-        return _PythonFunction(function)
+        return _PythonFunction(lambda a: _PythonComparable(_proxy(function(a))))
     elif arg_count == 2:
-        return _PythonBiFunction(function)
+        return _PythonBiFunction(lambda a, b: _PythonComparable(_proxy(function(a, b))))
     elif arg_count == 3:
-        return _PythonTriFunction(function)
+        return _PythonTriFunction(lambda a, b, c: _PythonComparable(_proxy(function(a, b, c))))
     elif arg_count == 4:
-        return _PythonQuadFunction(function)
+        return _PythonQuadFunction(lambda a, b, c, d: _PythonComparable(_proxy(function(a, b, c, d))))
     elif arg_count == 5:
-        return _PythonPentaFunction(function)
+        return _PythonPentaFunction(lambda a, b, c, d, e: _PythonComparable(_proxy(function(a, b, c, d, e))))
 
 
 def _filtering_cast(predicate):

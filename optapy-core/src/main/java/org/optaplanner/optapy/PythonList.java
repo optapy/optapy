@@ -30,11 +30,13 @@ public class PythonList<T> implements PythonObject, List<T> {
         PythonList.getPythonListLength = getPythonListLength;
     }
 
-    public static void setGetItemAtIndexInPythonList(BiFunction<OpaquePythonReference, Integer, Object> getItemAtIndexInPythonList) {
+    public static void
+            setGetItemAtIndexInPythonList(BiFunction<OpaquePythonReference, Integer, Object> getItemAtIndexInPythonList) {
         PythonList.getItemAtIndexInPythonList = getItemAtIndexInPythonList;
     }
 
-    public static void setSetItemAtIndexInPythonList(TriFunction<OpaquePythonReference, Integer, Object, Object> setItemAtIndexInPythonList) {
+    public static void setSetItemAtIndexInPythonList(
+            TriFunction<OpaquePythonReference, Integer, Object, Object> setItemAtIndexInPythonList) {
         PythonList.setItemAtIndexInPythonList = setItemAtIndexInPythonList;
     }
 
@@ -42,23 +44,28 @@ public class PythonList<T> implements PythonObject, List<T> {
         PythonList.addItemToPythonList = addItemToPythonList;
     }
 
-    public static void setAddItemAtIndexInPythonList(TriFunction<OpaquePythonReference, Integer, Object, Object> addItemAtIndexInPythonList) {
+    public static void setAddItemAtIndexInPythonList(
+            TriFunction<OpaquePythonReference, Integer, Object, Object> addItemAtIndexInPythonList) {
         PythonList.addItemAtIndexInPythonList = addItemAtIndexInPythonList;
     }
 
-    public static void setRemoveItemFromPythonList(BiFunction<OpaquePythonReference, Object, Boolean> removeItemFromPythonList) {
+    public static void
+            setRemoveItemFromPythonList(BiFunction<OpaquePythonReference, Object, Boolean> removeItemFromPythonList) {
         PythonList.removeItemFromPythonList = removeItemFromPythonList;
     }
 
-    public static void setRemoveItemAtIndexFromPythonList(BiFunction<OpaquePythonReference, Integer, Boolean> removeItemAtIndexFromPythonList) {
+    public static void setRemoveItemAtIndexFromPythonList(
+            BiFunction<OpaquePythonReference, Integer, Boolean> removeItemAtIndexFromPythonList) {
         PythonList.removeItemAtIndexFromPythonList = removeItemAtIndexFromPythonList;
     }
 
-    public static void setDoesPythonListContainItem(BiFunction<OpaquePythonReference, Object, Boolean> doesPythonListContainItem) {
+    public static void
+            setDoesPythonListContainItem(BiFunction<OpaquePythonReference, Object, Boolean> doesPythonListContainItem) {
         PythonList.doesPythonListContainItem = doesPythonListContainItem;
     }
 
-    public static void setSlicePythonList(TriFunction<OpaquePythonReference, Integer, Integer, OpaquePythonReference> slicePythonList) {
+    public static void
+            setSlicePythonList(TriFunction<OpaquePythonReference, Integer, Integer, OpaquePythonReference> slicePythonList) {
         PythonList.slicePythonList = slicePythonList;
     }
 

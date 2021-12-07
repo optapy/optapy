@@ -14,8 +14,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import io.quarkus.gizmo.BranchResult;
-import io.quarkus.gizmo.BytecodeCreator;
 import org.objectweb.asm.Type;
 import org.optaplanner.core.api.domain.entity.PinningFilter;
 import org.optaplanner.core.api.domain.entity.PlanningEntity;
@@ -27,6 +25,8 @@ import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 
 import io.quarkus.gizmo.AnnotationCreator;
+import io.quarkus.gizmo.BranchResult;
+import io.quarkus.gizmo.BytecodeCreator;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.FieldDescriptor;
@@ -250,14 +250,16 @@ public class PythonWrapperGenerator {
                 return wrapArray(javaClass, object, id, map);
             } else if (javaClass.isAssignableFrom(PythonList.class)) {
                 return wrapCollection(javaClass, object, id, map);
+            } else if (javaClass.isAssignableFrom(OpaquePythonReference.class)) {
+                // Don't wrap OpaquePythonReference if it is a pointer to an OpaquePythonReference
+                return (T) object;
             } else {
                 // Create a new instance of the Java Class. Its constructor will put the instance into the map
                 return javaClass.getConstructor(OpaquePythonReference.class, Number.class, Map.class).newInstance(object,
                         id, map);
             }
         } catch (IllegalAccessException | NoSuchMethodException | InstantiationException | InvocationTargetException e) {
-            e.printStackTrace();
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Error occurred when wrapping object (" + getPythonObjectString(object) + ")", e);
         }
     }
 
@@ -273,7 +275,9 @@ public class PythonWrapperGenerator {
      * {@code
      *
      *
-     * <pre>
+     * 
+    
+    <pre>
      * class JavaWrapper implements NaryFunction<A0,A1,A2,...,AN> {
      *     public static NaryFunction<A0,A1,A2,...,AN> delegate;
      *
@@ -291,9 +295,9 @@ public class PythonWrapperGenerator {
      * @param delegate The Python function to delegate to
      * @return never null
      */
-    @SuppressWarnings({"unused", "unchecked"})
+    @SuppressWarnings({ "unused", "unchecked" })
     public static <A> Class<? extends A> defineWrapperFunction(String className, Class<A> baseInterface,
-                                                               Object delegate) {
+            Object delegate) {
         Method[] interfaceMethods = baseInterface.getMethods();
         if (interfaceMethods.length != 1) {
             throw new IllegalArgumentException("Can only call this function for functional interfaces (only 1 method)");
@@ -352,7 +356,9 @@ public class PythonWrapperGenerator {
      * {@code 
      * 
      *
-     * <pre>
+     * 
+    
+    <pre>
      * class PythonConstraintProvider implements ConstraintProvider {
      *     public static Function<ConstraintFactory, Constraint[]> defineConstraintsImpl;
      *
@@ -411,8 +417,8 @@ public class PythonWrapperGenerator {
      */
     @SuppressWarnings("unused")
     public static Class<?> definePlanningEntityClass(String className, Class<?> parentClass,
-                                                     List<List<Object>> optaplannerMethodAnnotations,
-                                                     Map<String, Object> planningEntityAnnotations) {
+            List<List<Object>> optaplannerMethodAnnotations,
+            Map<String, Object> planningEntityAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
@@ -426,7 +432,7 @@ public class PythonWrapperGenerator {
         ClassOutput classOutput = getClassOutput(classBytecodeHolder);
         try (ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
-                .superClass(parentClass != null? parentClass : Object.class)
+                .superClass(parentClass != null ? parentClass : Object.class)
                 .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
@@ -434,7 +440,7 @@ public class PythonWrapperGenerator {
             Object pinningFilter = planningEntityAnnotations.get("pinningFilter");
             if (pinningFilter != null) {
                 Class<? extends PinningFilter> pinningFilterClass = defineWrapperFunction(className + "PinningFilter",
-                                                                                          PinningFilter.class, pinningFilter);
+                        PinningFilter.class, pinningFilter);
                 annotationCreator.addValue("pinningFilter", pinningFilterClass);
             }
             FieldDescriptor valueField;
@@ -460,7 +466,7 @@ public class PythonWrapperGenerator {
 
     @SuppressWarnings("unused")
     public static Class<?> defineProblemFactClass(String className, Class<?> parentClass,
-                                                  List<List<Object>> optaplannerMethodAnnotations) {
+            List<List<Object>> optaplannerMethodAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
@@ -474,7 +480,7 @@ public class PythonWrapperGenerator {
         ClassOutput classOutput = getClassOutput(classBytecodeHolder);
         try (ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
-                .superClass(parentClass != null? parentClass : Object.class)
+                .superClass(parentClass != null ? parentClass : Object.class)
                 .interfaces(PythonObject.class)
                 .classOutput(classOutput)
                 .build()) {
@@ -536,7 +542,8 @@ public class PythonWrapperGenerator {
     }
 
     // Generate PythonObject interface methods
-    private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField, FieldDescriptor referenceMapField) {
+    private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField,
+            FieldDescriptor referenceMapField) {
         MethodCreator methodCreator = classCreator.getMethodCreator("get__optapy_Id", OpaquePythonReference.class);
         ResultHandle valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
         methodCreator.returnValue(valueResultHandle);
@@ -549,8 +556,8 @@ public class PythonWrapperGenerator {
     // Create all methods in the class
     @SuppressWarnings("unchecked")
     private static void generateWrapperMethods(ClassCreator classCreator, Class<?> parentClass, FieldDescriptor valueField,
-                                               FieldDescriptor referenceMapField,
-                                               List<List<Object>> optaplannerMethodAnnotations) {
+            FieldDescriptor referenceMapField,
+            List<List<Object>> optaplannerMethodAnnotations) {
         if (parentClass == null) {
             generateAsPointer(classCreator, valueField, referenceMapField);
         }
@@ -570,12 +577,13 @@ public class PythonWrapperGenerator {
             List<Map<String, Object>> annotations = (List<Map<String, Object>>) optaplannerMethodAnnotation.get(3);
             fieldDescriptorList
                     .add(generateWrapperMethod(classCreator, valueField, methodName, returnType, signature, annotations,
-                                               returnTypeList));
+                            returnTypeList));
         }
         createConstructor(classCreator, valueField, referenceMapField, parentClass, fieldDescriptorList, returnTypeList);
 
         if (parentClass == null) {
             createToString(classCreator, valueField);
+            createEqualsAndHashcode(classCreator, valueField);
         }
     }
 
@@ -588,27 +596,53 @@ public class PythonWrapperGenerator {
                 methodCreator.readInstanceField(valueField, methodCreator.getThis())));
     }
 
+    private static void createEqualsAndHashcode(ClassCreator classCreator, FieldDescriptor valueField) {
+        // equals
+        MethodCreator methodCreator =
+                classCreator.getMethodCreator(
+                        MethodDescriptor.ofMethod(classCreator.getClassName(), "equals", boolean.class, Object.class));
+        ResultHandle parameter = methodCreator.getMethodParam(0);
+        ResultHandle isInstance = methodCreator.instanceOf(parameter, classCreator.getClassName());
+        BranchResult branchResult = methodCreator.ifTrue(isInstance);
+        BytecodeCreator bytecodeCreator = branchResult.trueBranch();
+        bytecodeCreator.returnValue(bytecodeCreator.invokeStaticMethod(
+                MethodDescriptor.ofMethod(PythonComparable.class, "isPythonObjectEqualToOther", boolean.class,
+                        OpaquePythonReference.class, OpaquePythonReference.class),
+                bytecodeCreator.readInstanceField(valueField, methodCreator.getThis()),
+                bytecodeCreator.readInstanceField(valueField, parameter)));
+        bytecodeCreator = branchResult.falseBranch();
+        bytecodeCreator.returnValue(bytecodeCreator.load(false));
+
+        // hashCode
+        methodCreator =
+                classCreator.getMethodCreator(MethodDescriptor.ofMethod(classCreator.getClassName(), "hashCode", int.class));
+        methodCreator.returnValue(methodCreator.invokeStaticMethod(
+                MethodDescriptor.ofMethod(PythonComparable.class, "getPythonObjectHash", int.class,
+                        OpaquePythonReference.class),
+                methodCreator.readInstanceField(valueField, methodCreator.getThis())));
+    }
+
     private static void createConstructor(ClassCreator classCreator, FieldDescriptor valueField,
-                                          FieldDescriptor referenceMapField, Class<?> parentClass,
-                                          List<FieldDescriptor> fieldDescriptorList, List<Object> returnTypeList) {
+            FieldDescriptor referenceMapField, Class<?> parentClass,
+            List<FieldDescriptor> fieldDescriptorList, List<Object> returnTypeList) {
         MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(),
                 OpaquePythonReference.class, Number.class, Map.class));
         methodCreator.setModifiers(Modifier.PUBLIC);
 
         ResultHandle value = methodCreator.getMethodParam(0);
         if (parentClass != null) {
-            methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, OpaquePythonReference.class, Number.class, Map.class),
-                                              methodCreator.getThis(), value, methodCreator.getMethodParam(1),
-                                              methodCreator.getMethodParam(2));
+            methodCreator.invokeSpecialMethod(
+                    MethodDescriptor.ofConstructor(parentClass, OpaquePythonReference.class, Number.class, Map.class),
+                    methodCreator.getThis(), value, methodCreator.getMethodParam(1),
+                    methodCreator.getMethodParam(2));
         } else {
             methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), methodCreator.getThis());
             methodCreator.invokeInterfaceMethod(
                     MethodDescriptor.ofMethod(Map.class, "put", Object.class, Object.class, Object.class),
                     methodCreator.getMethodParam(2), methodCreator.getMethodParam(1), methodCreator.getThis());
             methodCreator.writeInstanceField(valueField, methodCreator.getThis(), value);
-            methodCreator.writeInstanceField(referenceMapField, methodCreator.getThis(),  methodCreator.getMethodParam(2));
+            methodCreator.writeInstanceField(referenceMapField, methodCreator.getThis(), methodCreator.getMethodParam(2));
         }
-
 
         for (int i = 0; i < fieldDescriptorList.size(); i++) {
             FieldDescriptor fieldDescriptor = fieldDescriptorList.get(i);
@@ -622,15 +656,16 @@ public class PythonWrapperGenerator {
 
             if (returnType instanceof Class) {
                 Class<?> returnTypeClass = (Class<?>) returnType;
-                if (Comparable.class.isAssignableFrom(returnTypeClass) || Number.class.isAssignableFrom(returnTypeClass)) {
+                if (Comparable.class.isAssignableFrom(returnTypeClass) || Number.class.isAssignableFrom(returnTypeClass)
+                        || OpaquePythonReference.class.isAssignableFrom(returnTypeClass)) {
                     // It is a number/String, so it already translated to the corresponding Java type
                     if (Integer.class.equals(returnTypeClass)) {
                         ResultHandle isLong = methodCreator.instanceOf(outResultHandle, Long.class);
                         BranchResult ifLongBranchResult = methodCreator.ifTrue(isLong);
                         BytecodeCreator bytecodeCreator = ifLongBranchResult.trueBranch();
                         bytecodeCreator.writeInstanceField(fieldDescriptor, bytecodeCreator.getThis(),
-                                                           bytecodeCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Long.class, "intValue",
-                                                                                           int.class), outResultHandle));
+                                bytecodeCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(Long.class, "intValue",
+                                        int.class), outResultHandle));
                         bytecodeCreator = ifLongBranchResult.falseBranch();
                         bytecodeCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
                     } else {
@@ -645,21 +680,23 @@ public class PythonWrapperGenerator {
                     } else if (Collection.class.isAssignableFrom(returnTypeClass)) {
                         actualClass = methodCreator.loadClass(PythonList.class);
                     } else {
-                        actualClass = methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getJavaClass", Class.class, OpaquePythonReference.class),
-                                                                                outResultHandle);
+                        actualClass = methodCreator.invokeStaticMethod(
+                                MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getJavaClass", Class.class,
+                                        OpaquePythonReference.class),
+                                outResultHandle);
                     }
                     methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
                             methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
                                     "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
-                                         actualClass, outResultHandle, methodCreator.getMethodParam(2)));
+                                    actualClass, outResultHandle, methodCreator.getMethodParam(2)));
                 }
             } else {
                 // It a reference to the current class; need to be wrapped
                 ResultHandle actualClass = methodCreator.loadClass(classCreator.getClassName());
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
-                                                 methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                                                                                                            "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
-                                                                                  actualClass, outResultHandle, methodCreator.getMethodParam(2)));
+                        methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
+                                "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
+                                actualClass, outResultHandle, methodCreator.getMethodParam(2)));
             }
         }
         methodCreator.returnValue(methodCreator.getThis());
@@ -686,7 +723,8 @@ public class PythonWrapperGenerator {
             }
         }
         returnTypeList.add(actualReturnType);
-        FieldDescriptor fieldDescriptor = classCreator.getFieldCreator(methodName + "$field", actualReturnType).getFieldDescriptor();
+        FieldDescriptor fieldDescriptor =
+                classCreator.getFieldCreator(methodName + "$field", actualReturnType).getFieldDescriptor();
         MethodCreator methodCreator = classCreator.getMethodCreator(methodName, actualReturnType);
         if (signature != null) {
             methodCreator.setSignature("()" + signature);

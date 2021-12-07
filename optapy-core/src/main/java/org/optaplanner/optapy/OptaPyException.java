@@ -6,4 +6,8 @@ public class OptaPyException extends RuntimeException {
         super(message);
     }
 
+    public OptaPyException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }
