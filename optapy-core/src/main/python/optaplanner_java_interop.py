@@ -335,6 +335,25 @@ def _slice_python_list(the_list: List, start: int, end: int):
     return the_list[start:end]
 
 
+def _compare_python_objects(a, b):
+    from jpype import JInt
+    if a < b:
+        return JInt(-1)
+    elif a > b:
+        return JInt(1)
+    else:
+        return JInt(0)
+
+
+def _equals_python_objects(a, b):
+    return a == b
+
+
+def _hash_python_object(obj):
+    from jpype import JInt
+    return JInt(hash(obj))
+
+
 def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, log_level='INFO'):
     """Start the JVM. Throws a RuntimeError if it is already started.
 
@@ -361,7 +380,7 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
     import java.util.function.Function
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
-    from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner, PythonList  # noqa
+    from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner, PythonList, PythonComparable  # noqa
     PythonWrapperGenerator.setPythonObjectToId(JObject(PythonFunction(_get_python_object_id),
                                                        java.util.function.Function))
     PythonWrapperGenerator.setPythonObjectToString(JObject(PythonFunction(_get_python_object_str),
@@ -398,6 +417,13 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
                                                     java.util.function.BiFunction))
     PythonList.setSlicePythonList(JObject(PythonTriFunction(_slice_python_list),
                                           org.optaplanner.core.api.function.TriFunction))
+
+    PythonComparable.setPythonObjectCompareTo(JObject(PythonBiFunction(_compare_python_objects),
+                                                      java.util.function.BiFunction))
+    PythonComparable.setPythonObjectEquals(JObject(PythonBiFunction(_equals_python_objects),
+                                                   java.util.function.BiFunction))
+    PythonComparable.setPythonObjectHash(JObject(PythonFunction(_hash_python_object),
+                                                 java.util.function.Function))
 
 
 def ensure_init():
@@ -496,6 +522,15 @@ def solve(solver_config: 'SolverConfig', problem: Solution_) -> Solution_:
     from org.optaplanner.optapy import PythonSolver, OptaPyException  # noqa
     from jpype import JException
     import org.optaplanner.optapy.OpaquePythonReference
+
+    if problem is None:
+        raise ValueError(f'A problem was not passed to solve (parameter problem was ({problem})). Maybe '
+                         f'pass an instance of a class annotated with @planning_solution to solve?')
+
+    if not hasattr(type(problem), '__optapy_is_planning_solution'):
+        raise ValueError(f'The problem ({problem}) is not an instance of a @planning_solution class. Maybe '
+                         f'decorate the problem class ({type(problem)}) with @planning_solution?')
+
     solver_run_id = max(solver_run_id_to_refs.keys(), default=0) + 1
     solver_run_ref_set = set()
     solver_run_ref_set.add(problem)
@@ -519,11 +554,27 @@ def solve(solver_config: 'SolverConfig', problem: Solution_) -> Solution_:
             raise RuntimeError(e.getMessage())
         else:
             raise original
-    ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
-    for ref in solver_run_ref_set:
-        if len(ref_id_to_solver_run_id[id(ref)]) == 0:
-            del ref_id_to_solver_run_id[id(ref)]
-    del solver_run_id_to_refs[solver_run_id]
+    except TypeError as e:
+        error_message = f'A Java incompatible value was encountered when evaluating a function.' \
+                        f'The issue is either in your domain classes ' \
+                        f'(@problem_fact, @planning_entity, @planning_solution) or in your constraints ' \
+                        f'(@constraint_provider). Java compatible types are: number, bool, str, list, dict, and ' \
+                        f'classes decorated with either @problem_fact or @planning_entity. ' \
+                        f'In general: a @planning_variable(variable_type) function must return an instance ' \
+                        f'of variable_type or None, ' \
+                        f'@planning_id must return a str or int; ' \
+                        f'@problem_fact_collection_property(fact_type) can only contain instances of fact_type or ' \
+                        f'None; filtering functions must return either True or False; ' \
+                        f'functions passed to rewardBy/penalizeBy must return an int. ' \
+                        f'Maybe use optapy.types.PythonReference in your domain annotations if the domain ' \
+                        f'annotations reference third-party classes (ex: datetime.date)?'
+        raise TypeError(error_message) from e
+    finally:
+        ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
+        for ref in solver_run_ref_set:
+            if len(ref_id_to_solver_run_id[id(ref)]) == 0:
+                del ref_id_to_solver_run_id[id(ref)]
+        del solver_run_id_to_refs[solver_run_id]
     return solution
 
 

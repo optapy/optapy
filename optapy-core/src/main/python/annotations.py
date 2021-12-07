@@ -166,6 +166,7 @@ def inverse_relation_shadow_variable(source_variable_name: str, source_type: Typ
     :param is_singleton: True if and only if the shadow variable has a 1-to-{0,1} relationship
                          (i.e. if at most one planning variable can take this value). Defaults to False.
     """
+
     def inverse_relation_shadow_variable_function_mapper(inverse_relation_getter_function):
         ensure_init()
         from org.optaplanner.optapy import PythonWrapperGenerator, SelfType
@@ -286,20 +287,35 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
     return planning_entity_collection_property_function_mapper
 
 
-def value_range_provider(range_id: str) -> Callable[[Callable[[], Union[List, 'ValueRange']]],
-                                                    Callable[[], Union[List, 'ValueRange']]]:
+def value_range_provider(range_id: str, value_range_type: type = None) -> Callable[
+    [Callable[[], Union[List, 'ValueRange']]], Callable[[], Union[List, 'ValueRange']]]:
     """Provides the planning values that can be used for a PlanningVariable.
 
     This is specified on a getter which returns a list or ValueRange. A list is implicitly converted to a ValueRange.
+
+    :param range_id: The id of the value range. Referenced by @planning_variable's value_range_provider_refs
+                     parameter. Required.
+
+    :param value_range_type: The type of the value range. Only required if the function is not also
+                             decorated with @problem_fact_collection_property. Should either be
+                             list or a Java class that implements ValueRangeProvider.
     """
 
     def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, 'ValueRange']]):
         ensure_init()
         from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+        from optapy.types import PythonReference # noqa
+
         getter_function.__optaplannerValueRangeProvider = {
             'annotationType': JavaValueRangeProvider,
             'id': range_id
         }
+        if value_range_type is not None:
+            if value_range_type == list:
+                getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(PythonReference)
+            else:
+                getter_function.__optapy_return = get_class(value_range_type)
         return getter_function
 
     return value_range_provider_function_wrapper
@@ -435,6 +451,7 @@ def planning_solution(planning_solution_class: Type) -> Type:
     ensure_init()
     out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(planning_solution_class)
     out.__optapy_java_class = _generate_planning_solution_class(planning_solution_class)
+    out.__optapy_is_planning_solution = True
     out.__optapy_is_planning_clone = True
     _add_shallow_copy_to_class(out)
     return out

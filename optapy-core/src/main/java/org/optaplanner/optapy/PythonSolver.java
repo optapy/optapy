@@ -16,8 +16,18 @@ public class PythonSolver {
         solverConfig.setClassLoader(PythonWrapperGenerator.gizmoClassLoader);
         Solver<Object> solver = SolverFactory.create(solverConfig).buildSolver();
 
-        // Wrap the problem into a PythonObject then solve it
-        // TODO: Maybe use a weak reference map?
-        return solver.solve(PythonWrapperGenerator.wrap(solverConfig.getSolutionClass(), problem, new HashMap<>()));
+        Object wrappedProblem;
+        try {
+            // Wrap the problem into a PythonObject
+            // TODO: Maybe use a weak reference map?
+            wrappedProblem = PythonWrapperGenerator.wrap(solverConfig.getSolutionClass(), problem, new HashMap<>());
+        } catch (Throwable t) {
+            throw new OptaPyException("A problem occurred when wrapping the python problem (" +
+                    PythonWrapperGenerator.getPythonObjectString(problem) +
+                    "). Maybe an annotation was passed an incorrect type " +
+                    "(for example, @problem_fact_collection_property(str) " +
+                    " on a function that return a list of int).", t);
+        }
+        return solver.solve(wrappedProblem);
     }
 }
