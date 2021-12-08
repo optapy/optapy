@@ -687,16 +687,23 @@ unique_class_id = 0
 """A unique identifier; used to guarantee the generated class java name is unique"""
 
 
+def _does_class_define_eq_or_hashcode(python_class):
+    return '__eq__' in python_class.__dict__ or '__hash__' in python_class.__dict__
+
+
 def _generate_problem_fact_class(python_class):
     global unique_class_id
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     parent_class = None
+    has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
     if len(python_class.__bases__) == 1 and hasattr(python_class.__bases__[0], '__optapy_java_class'):
         parent_class = get_class(python_class.__bases__[0])
+
     out = PythonWrapperGenerator.defineProblemFactClass(python_class.__name__ + str(unique_class_id),
                                                         parent_class,
+                                                        has_eq_and_hashcode,
                                                         optaplanner_annotations)
     unique_class_id = unique_class_id + 1
     return out
@@ -708,10 +715,12 @@ def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[st
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     parent_class = None
+    has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
     if len(python_class.__bases__) == 1 and hasattr(python_class.__bases__[0], '__optapy_java_class'):
         parent_class = get_class(python_class.__bases__[0])
     out = PythonWrapperGenerator.definePlanningEntityClass(python_class.__name__ + str(unique_class_id),
                                                            parent_class,
+                                                           has_eq_and_hashcode,
                                                            optaplanner_annotations,
                                                            _to_java_map(annotation_data))
     unique_class_id = unique_class_id + 1
@@ -723,7 +732,9 @@ def _generate_planning_solution_class(python_class: Type) -> JClass:
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
+    has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
     out = PythonWrapperGenerator.definePlanningSolutionClass(python_class.__name__ + str(unique_class_id),
+                                                             has_eq_and_hashcode,
                                                              optaplanner_annotations)
     unique_class_id = unique_class_id + 1
     return out

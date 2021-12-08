@@ -278,14 +278,14 @@ public class PythonWrapperGenerator {
      * 
     
     <pre>
-     * class JavaWrapper implements NaryFunction<A0,A1,A2,...,AN> {
-     *     public static NaryFunction<A0,A1,A2,...,AN> delegate;
-     *
-     *     &#64;Override
-     *     public AN defineConstraints(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
-     *         return delegate.apply(arg0,arg1,...,finalArg);
-     *     }
-     * }
+       * class JavaWrapper implements NaryFunction<A0,A1,A2,...,AN> {
+       *     public static NaryFunction<A0,A1,A2,...,AN> delegate;
+       *
+       *     &#64;Override
+       *     public AN defineConstraints(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
+       *         return delegate.apply(arg0,arg1,...,finalArg);
+       *     }
+       * }
      * </pre>
      *
      * }
@@ -417,6 +417,7 @@ public class PythonWrapperGenerator {
      */
     @SuppressWarnings("unused")
     public static Class<?> definePlanningEntityClass(String className, Class<?> parentClass,
+            boolean defineEqualsAndHashcode,
             List<List<Object>> optaplannerMethodAnnotations,
             Map<String, Object> planningEntityAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
@@ -453,7 +454,8 @@ public class PythonWrapperGenerator {
             }
             FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, parentClass, valueField, referenceMapField, optaplannerMethodAnnotations);
+            generateWrapperMethods(classCreator, parentClass, defineEqualsAndHashcode, valueField, referenceMapField,
+                    optaplannerMethodAnnotations);
         }
         classNameToBytecode.put(className, classBytecodeHolder.get());
         try {
@@ -466,6 +468,7 @@ public class PythonWrapperGenerator {
 
     @SuppressWarnings("unused")
     public static Class<?> defineProblemFactClass(String className, Class<?> parentClass,
+            boolean defineEqualsAndHashcode,
             List<List<Object>> optaplannerMethodAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
@@ -488,7 +491,8 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, parentClass, valueField, referenceMapField, optaplannerMethodAnnotations);
+            generateWrapperMethods(classCreator, parentClass, defineEqualsAndHashcode, valueField, referenceMapField,
+                    optaplannerMethodAnnotations);
         }
         classNameToBytecode.put(className, classBytecodeHolder.get());
         try {
@@ -500,7 +504,9 @@ public class PythonWrapperGenerator {
     }
 
     @SuppressWarnings("unused")
-    public static Class<?> definePlanningSolutionClass(String className, List<List<Object>> optaplannerMethodAnnotations) {
+    public static Class<?> definePlanningSolutionClass(String className,
+            boolean defineEqualsAndHashcode,
+            List<List<Object>> optaplannerMethodAnnotations) {
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
@@ -523,7 +529,8 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, null, valueField, referenceMapField, optaplannerMethodAnnotations);
+            generateWrapperMethods(classCreator, null, defineEqualsAndHashcode, valueField, referenceMapField,
+                    optaplannerMethodAnnotations);
         }
         classNameToBytecode.put(className, classBytecodeHolder.get());
         try {
@@ -555,7 +562,8 @@ public class PythonWrapperGenerator {
 
     // Create all methods in the class
     @SuppressWarnings("unchecked")
-    private static void generateWrapperMethods(ClassCreator classCreator, Class<?> parentClass, FieldDescriptor valueField,
+    private static void generateWrapperMethods(ClassCreator classCreator, Class<?> parentClass,
+            boolean defineEqualsAndHashcode, FieldDescriptor valueField,
             FieldDescriptor referenceMapField,
             List<List<Object>> optaplannerMethodAnnotations) {
         if (parentClass == null) {
@@ -583,6 +591,9 @@ public class PythonWrapperGenerator {
 
         if (parentClass == null) {
             createToString(classCreator, valueField);
+        }
+
+        if (defineEqualsAndHashcode) {
             createEqualsAndHashcode(classCreator, valueField);
         }
     }
