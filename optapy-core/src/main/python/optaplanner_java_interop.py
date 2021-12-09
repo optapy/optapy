@@ -604,11 +604,10 @@ def solve(solver_config: 'SolverConfig', problem: Solution_) -> Solution_:
         else:
             raise original
     except TypeError as e:
-        error_message = f'A Java incompatible value was encountered when evaluating a function.' \
+        error_message = f'An incompatible return value was encountered when evaluating a function.' \
                         f'The issue is either in your domain classes ' \
                         f'(@problem_fact, @planning_entity, @planning_solution) or in your constraints ' \
-                        f'(@constraint_provider). Java compatible types are: number, bool, str, list, dict, and ' \
-                        f'classes decorated with either @problem_fact or @planning_entity. ' \
+                        f'(@constraint_provider). ' \
                         f'In general: a @planning_variable(variable_type) function must return an instance ' \
                         f'of variable_type or None, ' \
                         f'@planning_id must return a str or int; ' \
