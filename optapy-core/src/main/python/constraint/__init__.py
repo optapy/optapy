@@ -1,5 +1,4 @@
-from ..optaplanner_java_interop import ensure_init, has_java_class
-from jpype import JProxy
+from ..optaplanner_java_interop import ensure_init, _convert_to_java_compatible_object
 import jpype.imports  # noqa
 import inspect
 from typing import TYPE_CHECKING
@@ -7,7 +6,6 @@ from typing import TYPE_CHECKING
 ensure_init()
 
 Joiners = None
-from org.optaplanner.optapy import PythonComparable as _PythonComparable
 from org.optaplanner.core.api.score.stream import Joiners as JavaJoiners, ConstraintCollectors, Constraint, ConstraintFactory  # noqa
 if TYPE_CHECKING:
     Joiners = JavaJoiners
@@ -72,38 +70,18 @@ class _PythonPentaPredicate:
         return self.delegate(argument1, argument2, argument3, argument4, argument5)
 
 
-def _proxy(value):
-    from org.optaplanner.optapy import OpaquePythonReference
-    return JProxy(OpaquePythonReference, inst=value, convert=True)
-
-
-# Cannot use weakref.WeakKeyDict for this
-_comparable_cache = dict()
-
-
-def _compute_comparable_if_absent(item):
-    if has_java_class(item):
-        return item
-    if item in _comparable_cache:
-        return _comparable_cache[item]
-    else:
-        comparable = _PythonComparable(_proxy(item))
-        _comparable_cache[item] = comparable
-        return comparable
-
-
 def _cast(function):
     arg_count = len(inspect.signature(function).parameters)
     if arg_count == 1:
-        return _PythonFunction(lambda a: _compute_comparable_if_absent(function(a)))
+        return _PythonFunction(lambda a: _convert_to_java_compatible_object(function(a)))
     elif arg_count == 2:
-        return _PythonBiFunction(lambda a, b: _compute_comparable_if_absent(function(a, b)))
+        return _PythonBiFunction(lambda a, b: _convert_to_java_compatible_object(function(a, b)))
     elif arg_count == 3:
-        return _PythonTriFunction(lambda a, b, c: _compute_comparable_if_absent(function(a, b, c)))
+        return _PythonTriFunction(lambda a, b, c: _convert_to_java_compatible_object(function(a, b, c)))
     elif arg_count == 4:
-        return _PythonQuadFunction(lambda a, b, c, d: _compute_comparable_if_absent(function(a, b, c, d)))
+        return _PythonQuadFunction(lambda a, b, c, d: _convert_to_java_compatible_object(function(a, b, c, d)))
     elif arg_count == 5:
-        return _PythonPentaFunction(lambda a, b, c, d, e: _compute_comparable_if_absent(function(a, b, c, d, e)))
+        return _PythonPentaFunction(lambda a, b, c, d, e: _convert_to_java_compatible_object(function(a, b, c, d, e)))
 
 
 def _filtering_cast(predicate):
