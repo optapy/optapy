@@ -77,6 +77,6 @@ def test_bad_return_type():
         .withTerminationSpentLimit(optapy.types.Duration.ofSeconds(1))
 
     problem = Solution([Entity()], ['1', '2', '3'])
-    with pytest.raises(TypeError, match=r'A Java incompatible value was encountered when evaluating a function\..*'
+    with pytest.raises(TypeError, match=r'An incompatible return value was encountered when evaluating a function\..*'
     ):
         optapy.solve(solver_config, problem)
