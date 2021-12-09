@@ -107,6 +107,9 @@ def test_python_object():
                       [optapy.constraint.Joiners.lessThanOrEqual(lambda entity: entity.value,
                                                                  lambda value: value.code)])
                 .reward('Same as value', optapy.score.SimpleScore.ONE),
+            constraint_factory.forEach(optapy.get_class(Entity))
+                .groupBy(lambda entity: entity.value, optapy.constraint.ConstraintCollectors.count())
+                .reward('Entity have same value', optapy.score.SimpleScore.ONE, lambda value, count: count * count),
         ]
 
     @optapy.planning_solution
@@ -138,12 +141,12 @@ def test_python_object():
 
     solver_config = optapy.config.solver.SolverConfig()
     termination_config = optapy.config.solver.termination.TerminationConfig()
-    termination_config.setBestScoreLimit('1')
+    termination_config.setBestScoreLimit('2')
     solver_config.withSolutionClass(optapy.get_class(Solution)) \
         .withEntityClasses(optapy.get_class(Entity)) \
         .withConstraintProviderClass(optapy.get_class(my_constraints)) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution(Entity('A'), Value(date1), [date1, date2, date3])
     solution = optapy.solve(solver_config, problem)
-    assert solution.get_score().getScore() == 1
+    assert solution.get_score().getScore() == 2
     assert solution.entity.value == date1
