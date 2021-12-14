@@ -2,7 +2,6 @@ import optapy
 import optapy.score
 import optapy.config
 import optapy.constraint
-from optapy.types import PythonReference
 
 
 def test_single_property():
@@ -87,7 +86,7 @@ def test_python_object():
             self.code = code
             self.value = value
 
-        @optapy.planning_variable(PythonReference, value_range_provider_refs=['value_range'])
+        @optapy.planning_variable(datetime.date, value_range_provider_refs=['value_range'])
         def get_value(self):
             return self.value
 

@@ -304,8 +304,7 @@ def value_range_provider(range_id: str, value_range_type: type = None) -> Callab
     def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, 'ValueRange']]):
         ensure_init()
         from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
-        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-        from optapy.types import PythonReference # noqa
+        from org.optaplanner.optapy import PythonWrapperGenerator, OpaquePythonReference  # noqa
 
         getter_function.__optaplannerValueRangeProvider = {
             'annotationType': JavaValueRangeProvider,
@@ -313,7 +312,7 @@ def value_range_provider(range_id: str, value_range_type: type = None) -> Callab
         }
         if value_range_type is not None:
             if value_range_type == list:
-                getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(PythonReference)
+                getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(OpaquePythonReference)
             else:
                 getter_function.__optapy_return = get_class(value_range_type)
         return getter_function
