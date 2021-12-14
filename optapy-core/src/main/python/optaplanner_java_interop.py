@@ -6,7 +6,7 @@ from jpype.types import *
 from jpype import JProxy, JImplements, JOverride, JImplementationFor, JConversion
 import importlib.metadata
 from inspect import signature, Parameter
-from typing import cast, List, Tuple, Type, TypeVar, Callable, Dict, Any, Union, TYPE_CHECKING
+from typing import cast, List, Tuple, Type, TypeVar, Generic, Callable, Dict, Any, Union, TYPE_CHECKING
 from types import FunctionType
 import copy
 
@@ -14,9 +14,11 @@ if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
     from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
     from org.optaplanner.core.config.solver import SolverConfig
+    from org.optaplanner.core.api.solver import SolverManager, SolverJob, SolverStatus
     from org.optaplanner.core.api.solver.event import BestSolutionChangedEvent
 
 Solution_ = TypeVar('Solution_')
+ProblemId_ = TypeVar('ProblemId_')
 
 
 def extract_optaplanner_jars() -> list[str]:
@@ -561,6 +563,134 @@ def _add_shallow_copy_to_class(the_class: Type):
     the_class.__copy__ = class_shallow_copy
 
 
+@JImplements('org.optaplanner.core.api.solver.SolverManager', deferred=True)
+class _PythonSolverManager(Generic[Solution_, ProblemId_]):
+    def __init__(self, solver_config: 'SolverConfig'):
+        from org.optaplanner.optapy import PythonSolver
+        from org.optaplanner.core.api.solver import SolverManager
+        self.solver_config = PythonSolver.updateSolverConfig(solver_config)
+        self.delegate = SolverManager.create(self.solver_config)
+        self.problem_id_to_solver_run_ref_set = dict()
+
+    def _optapy_debug_get_solver_runs_dicts(self):
+        """
+        Internal method used for testing; do not use
+        """
+        return {
+            'solver_run_id_to_refs': solver_run_id_to_refs,
+            'ref_id_to_solver_run_id': ref_id_to_solver_run_id,
+        }
+
+    def _get_problem_getter_and_cleanup(self, problem_id, the_problem):
+        from org.optaplanner.optapy import OpaquePythonReference, PythonSolver
+
+        problem_list = []
+        problem_function = the_problem
+        if not callable(problem_function):
+            def the_problem_function(the_problem_id):
+                return the_problem
+            problem_function = the_problem_function
+
+        def problem_getter(the_problem_id):
+            problem = problem_function(the_problem_id)
+            problem_list.append(problem)
+            solver_run_id = (id(self), the_problem_id)
+            self.problem_id_to_solver_run_ref_set[the_problem_id] = set()
+            self.problem_id_to_solver_run_ref_set[the_problem_id].add(problem)
+            solver_run_id_to_refs[solver_run_id] = self.problem_id_to_solver_run_ref_set[the_problem_id]
+            if id(problem) in ref_id_to_solver_run_id:
+                ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
+            else:
+                ref_id_to_solver_run_id[id(problem)] = set()
+                ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
+            wrapped_problem = PythonSolver.wrapProblem(self.solver_config, problem)
+            return wrapped_problem
+
+        def cleanup():
+            if len(problem_list) == 0:
+                return
+            problem = problem_list[0]
+            solver_run_ref_set = self.problem_id_to_solver_run_ref_set[problem_id]
+            solver_run_id = (id(self), problem_id)
+            ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
+            for ref in solver_run_ref_set:
+                if len(ref_id_to_solver_run_id[id(ref)]) == 0:
+                    del ref_id_to_solver_run_id[id(ref)]
+            del solver_run_id_to_refs[solver_run_id]
+            del self.problem_id_to_solver_run_ref_set[problem_id]
+
+        return PythonFunction(problem_getter), cleanup
+
+    def _wrap_final_best_solution_and_exception_handler(self, cleanup, final_best_solution_consumer, exception_handler):
+        def wrapped_final_best_solution_consumer(best_solution):
+            if final_best_solution_consumer is not None:
+                final_best_solution_consumer(_unwrap_java_object(best_solution))
+            cleanup()
+
+        def wrapped_exception_handler(problem_id, exception):
+            if exception_handler is not None:
+                exception_handler(problem_id, exception)
+            cleanup()
+        return wrapped_final_best_solution_consumer, wrapped_exception_handler
+
+    @JOverride
+    def solve(self, problem_id: ProblemId_, problem: Union[Solution_, Callable[[ProblemId_], Solution_]],
+              final_best_solution_consumer: Callable[[Solution_], None] = None,
+              exception_handler: Callable[[ProblemId_, JException], None] = None) -> 'SolverJob[Solution_, ProblemId_]':
+        problem_getter, cleanup = self._get_problem_getter_and_cleanup(problem_id, problem)
+        wrapped_final_best_solution_consumer, wrapped_exception_handler = \
+            self._wrap_final_best_solution_and_exception_handler(cleanup, final_best_solution_consumer,
+                                                                 exception_handler)
+
+        return self.delegate.solve(problem_id, problem_getter, wrapped_final_best_solution_consumer,
+                                   wrapped_exception_handler)
+
+    @JOverride
+    def solveAndListen(self, problem_id: ProblemId_, problem: Union[Solution_, Callable[[ProblemId_], Solution_]],
+                       best_solution_consumer: Callable[[Solution_], None],
+                       final_best_solution_consumer: Callable[[Solution_], None] = None,
+                       exception_handler: Callable[[ProblemId_, JException], None] = None) -> \
+            'SolverJob[Solution_, ProblemId_]':
+        problem_getter, cleanup = self._get_problem_getter_and_cleanup(problem_id, problem)
+        wrapped_final_best_solution_consumer, wrapped_exception_handler = \
+            self._wrap_final_best_solution_and_exception_handler(cleanup, final_best_solution_consumer,
+                                                                 exception_handler)
+
+        def wrapped_best_solution_consumer(best_solution):
+            best_solution_consumer(_unwrap_java_object(best_solution))
+
+        return self.delegate.solveAndListen(problem_id, problem_getter, wrapped_best_solution_consumer,
+                                            wrapped_final_best_solution_consumer,
+                                            wrapped_exception_handler)
+
+    @JOverride
+    def getSolverStatus(self, problem_id: ProblemId_) -> 'SolverStatus':
+        return self.delegate.getSolverStatus(problem_id)
+
+    @JOverride
+    def terminateEarly(self, problem_id: ProblemId_):
+        return self.delegate.terminateEarly(problem_id)
+
+    @JOverride
+    def close(self):
+        return self.delegate.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+
+def create_solver_manager(problem_type: Type[Solution_],
+                          id_type: Type[ProblemId_],
+                          solver_config: 'SolverConfig') -> 'SolverManager[Solution_, ProblemId_]':
+    if not hasattr(problem_type, '__optapy_is_planning_solution'):
+        raise ValueError(f'The type ({problem_type}) is not a @planning_solution class. Maybe '
+                         f'decorate the class ({problem_type}) with @planning_solution?')
+    return _PythonSolverManager(solver_config)
+
+
 def solve(solver_config: 'SolverConfig', problem: Solution_,
           best_solution_change_listener: Callable[['BestSolutionChangedEvent[Solution_]'], None] = None) -> Solution_:
     """Waits for solving to terminate and return the best solution found for the given problem using the solver_config.
@@ -584,7 +714,7 @@ def solve(solver_config: 'SolverConfig', problem: Solution_,
         raise ValueError(f'The problem ({problem}) is not an instance of a @planning_solution class. Maybe '
                          f'decorate the problem class ({type(problem)}) with @planning_solution?')
 
-    solver_run_id = max(solver_run_id_to_refs.keys(), default=0) + 1
+    solver_run_id = max(filter(lambda run_id: isinstance(run_id, int), solver_run_id_to_refs.keys()), default=0) + 1
     solver_run_ref_set = set()
     solver_run_ref_set.add(problem)
     solver_run_id_to_refs[solver_run_id] = solver_run_ref_set
