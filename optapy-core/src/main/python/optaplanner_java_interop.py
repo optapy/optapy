@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
     from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
     from org.optaplanner.core.config.solver import SolverConfig
+    from org.optaplanner.core.api.solver.event import BestSolutionChangedEvent
 
 Solution_ = TypeVar('Solution_')
 
@@ -560,12 +561,15 @@ def _add_shallow_copy_to_class(the_class: Type):
     the_class.__copy__ = class_shallow_copy
 
 
-def solve(solver_config: 'SolverConfig', problem: Solution_) -> Solution_:
+def solve(solver_config: 'SolverConfig', problem: Solution_,
+          best_solution_change_listener: Callable[['BestSolutionChangedEvent[Solution_]'], None] = None) -> Solution_:
     """Waits for solving to terminate and return the best solution found for the given problem using the solver_config.
 
     Calling multiple time starts a different solver.
+
     :param solver_config: The Java SolverConfig. See OptaPlanner docs for details.
     :param problem: The (potentially uninitialized) Python Planning Solution object.
+    :param best_solution_change_listener: An optional function that is called whenever the best solution changes
     :return: The best solution found.
     """
     from org.optaplanner.optapy import PythonSolver, OptaPyException  # noqa
@@ -592,7 +596,8 @@ def solve(solver_config: 'SolverConfig', problem: Solution_) -> Solution_:
     try:
         solution = _unwrap_java_object(PythonSolver.solve(solver_config,
                                                           JProxy(org.optaplanner.optapy.OpaquePythonReference,
-                                                                 inst=problem, convert=True)))
+                                                                 inst=problem, convert=True),
+                                                          best_solution_change_listener))
     except JException as e:
         original = e
         cause = e

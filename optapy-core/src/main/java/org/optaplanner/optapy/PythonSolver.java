@@ -4,11 +4,12 @@ import java.util.HashMap;
 
 import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
+import org.optaplanner.core.api.solver.event.SolverEventListener;
 import org.optaplanner.core.config.solver.SolverConfig;
 
 @SuppressWarnings("unused")
 public class PythonSolver {
-    public static Object solve(SolverConfig solverConfig, OpaquePythonReference problem) {
+    public static Object solve(SolverConfig solverConfig, OpaquePythonReference problem, SolverEventListener<Object> listener) {
         // Create a copy of the SolverConfig
         solverConfig = new SolverConfig().inherit(solverConfig);
 
@@ -27,6 +28,9 @@ public class PythonSolver {
                     "). Maybe an annotation was passed an incorrect type " +
                     "(for example, @problem_fact_collection_property(str) " +
                     " on a function that return a list of int).", t);
+        }
+        if (listener != null) {
+            solver.addEventListener(listener);
         }
         return solver.solve(wrappedProblem);
     }
