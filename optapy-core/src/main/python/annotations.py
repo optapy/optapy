@@ -155,6 +155,9 @@ def inverse_relation_shadow_variable(source_type: Type, source_variable_name: st
     variable.
 
     It is specified on a getter of a java bean property (or a field) of a @planning_entity class.
+
+    :param source_type: The planning entity that contains the planning variable that reference this entity.
+
     :param source_variable_name: In a bidirectional relationship, the shadow side (= the follower side) uses this
            property (and nothing else) to declare for which @planning_variable (= the leader side) it is a shadow.
 
@@ -162,8 +165,6 @@ def inverse_relation_shadow_variable(source_type: Type, source_variable_name: st
 
            When the Solver changes a genuine variable, it adjusts the shadow variable accordingly.
            In practice, the Solver ignores shadow variables (except for consistency housekeeping).
-
-    :param source_type: The planning entity that contains the planning variable that reference this entity.
 
     :param is_singleton: True if and only if the shadow variable has a 1-to-{0,1} relationship
                          (i.e. if at most one planning variable can take this value). Defaults to False.
