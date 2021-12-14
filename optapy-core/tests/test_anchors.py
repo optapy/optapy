@@ -32,7 +32,7 @@ class ChainedEntity(ChainedObject):
     def set_value(self, value):
         self.value = value
 
-    @optapy.anchor_shadow_variable('value')
+    @optapy.anchor_shadow_variable(ChainedAnchor, source_variable_name='value')
     def get_anchor(self):
         return self.anchor
 

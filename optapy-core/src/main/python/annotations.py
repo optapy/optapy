@@ -113,13 +113,15 @@ def planning_variable(variable_type: Type, value_range_provider_refs: List[str],
     return planning_variable_function_wrapper
 
 
-def anchor_shadow_variable(source_variable_name: str) -> Callable[[Callable[[], Any]],
-                                                                  Callable[[], Any]]:
+def anchor_shadow_variable(anchor_type: Type, source_variable_name: str) -> Callable[[Callable[[], Any]],
+                                                                                      Callable[[], Any]]:
     """
     Specifies that a bean property (or a field) is the anchor of a chained @planning_variable, which implies it's
     a shadow variable.
 
     It is specified on a getter of a java bean property (or a field) of a @planning_entity class.
+
+    :param anchor_type: The type of the anchor class.
     :param source_variable_name: The source planning variable is a chained planning variable that leads to the anchor.
            Both the genuine variable and the shadow variable should be consistent:
            if A chains to B, then A must have the same anchor as B (unless B is the anchor).
@@ -138,12 +140,13 @@ def anchor_shadow_variable(source_variable_name: str) -> Callable[[Callable[[], 
             'annotationType': JavaAnchorShadowVariable,
             'sourceVariableName': planning_variable_name,
         }
+        anchor_getter_function.__optapy_return = get_class(anchor_type)
         return anchor_getter_function
 
     return anchor_shadow_variable_function_mapper
 
 
-def inverse_relation_shadow_variable(source_variable_name: str, source_type: Type = None,
+def inverse_relation_shadow_variable(source_type: Type, source_variable_name: str,
                                      is_singleton: bool = False) -> Callable[
     [Callable[[], Any]],
     Callable[[], Any]]:
@@ -161,7 +164,6 @@ def inverse_relation_shadow_variable(source_variable_name: str, source_type: Typ
            In practice, the Solver ignores shadow variables (except for consistency housekeeping).
 
     :param source_type: The planning entity that contains the planning variable that reference this entity.
-                        Must be specified if the planning variable is not on this entity.
 
     :param is_singleton: True if and only if the shadow variable has a 1-to-{0,1} relationship
                          (i.e. if at most one planning variable can take this value). Defaults to False.

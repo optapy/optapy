@@ -346,8 +346,9 @@ def test_clone_chained_solution():
 
 @optapy.planning_entity
 class ExampleShadowingChainedObject(ABC):
+    # TODO: Find out how to refer to self
     @abstractmethod
-    @optapy.inverse_relation_shadow_variable('chained_object', is_singleton=True)
+    @optapy.inverse_relation_shadow_variable(None, source_variable_name='chained_object', is_singleton=True)
     def get_next_entity(self):
         pass
 
@@ -402,7 +403,7 @@ class ExampleShadowingChainedEntity(ExampleShadowingChainedObject):
     def set_next_entity(self, next_entity):
         self.next_entity = next_entity
 
-    @optapy.anchor_shadow_variable('chained_object')
+    @optapy.anchor_shadow_variable(ExampleShadowingChainedAnchor, source_variable_name='chained_object')
     def get_anchor(self):
         return self.anchor
 

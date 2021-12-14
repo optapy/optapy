@@ -27,7 +27,7 @@ class InverseRelationValue:
         else:
             self.entities = entities
 
-    @optapy.inverse_relation_shadow_variable(source_variable_name='value', source_type=InverseRelationEntity)
+    @optapy.inverse_relation_shadow_variable(InverseRelationEntity, source_variable_name='value')
     def get_entities(self):
         return self.entities
 
