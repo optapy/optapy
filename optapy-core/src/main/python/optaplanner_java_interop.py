@@ -766,6 +766,7 @@ def _get_optaplanner_annotations(python_class: Type) -> List[Tuple[str, JClass, 
 
 def get_class(python_class: Union[Type, Callable]) -> JClass:
     """Return the Java Class for the given Python Class"""
+    from java.lang import Object
     if isinstance(python_class, jpype.JClass):
         return cast(JClass, python_class)
     if hasattr(python_class, '__optapy_java_class'):
@@ -779,11 +780,7 @@ def get_class(python_class: Union[Type, Callable]) -> JClass:
     if python_class == bool:
         from java.lang import Boolean
         return cast(JClass, Boolean)
-    raise ValueError((
-        f"python_class {python_class} is not annotated with @planning_entity, @problem_fact or "
-        f"@planning_solution, is not a Java class, and is not int or str. Maybe annotate {python_class} "
-        f"with @planning_entity, @problem_fact or @planning_solution?"
-    ))
+    return cast(JClass, Object)
 
 
 def _has_java_class(item):

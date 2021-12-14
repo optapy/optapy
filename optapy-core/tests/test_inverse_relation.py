@@ -2,7 +2,6 @@ import optapy
 import optapy.score
 import optapy.config
 import optapy.constraint
-from java.lang import Object
 
 
 @optapy.planning_entity
@@ -11,7 +10,7 @@ class InverseRelationEntity:
         self.code = code
         self.value = value
 
-    @optapy.planning_variable(Object, ['value_range'])
+    @optapy.planning_variable(object, ['value_range'])
     def get_value(self):
         return self.value
 
