@@ -682,9 +682,18 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
         self.close()
 
 
-def create_solver_manager(problem_type: Type[Solution_],
+def create_solver_manager(problem_type: Union[Type[Solution_], type],
                           id_type: Type[ProblemId_],
                           solver_config: 'SolverConfig') -> 'SolverManager[Solution_, ProblemId_]':
+    """
+    Creates a new SolverManager, which can be used to solve problems asynchronously (ex: Web requests).
+
+    :param problem_type: The type of problems handled by the SolverManager (must be a @planning_solution class)
+    :param id_type: The type of id used to identifier problems (ex: int, str)
+    :param solver_config: The solver configuration used in the SolverManager
+    :return: A SolverManager that can be used to solve problems asynchronously.
+    :rtype: SolverManager[Solution_, ProblemId_]
+    """
     if not hasattr(problem_type, '__optapy_is_planning_solution'):
         raise ValueError(f'The type ({problem_type}) is not a @planning_solution class. Maybe '
                          f'decorate the class ({problem_type}) with @planning_solution?')
@@ -701,6 +710,7 @@ def solve(solver_config: 'SolverConfig', problem: Solution_,
     :param problem: The (potentially uninitialized) Python Planning Solution object.
     :param best_solution_change_listener: An optional function that is called whenever the best solution changes
     :return: The best solution found.
+    :rtype: Solution_
     """
     from org.optaplanner.optapy import PythonSolver, OptaPyException  # noqa
     from jpype import JException
