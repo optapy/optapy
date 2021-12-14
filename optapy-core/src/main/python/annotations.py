@@ -66,6 +66,8 @@ def planning_pin(getter_function: Callable[[], bool]) -> Callable[[], bool]:
 
        This is syntactic sugar for @planning_entity(pinning_filter=is_pinned_function),
        which is a more flexible and verbose way to pin a planning entity.
+
+       :type getter_function: Callable[[], bool]
     """
     ensure_init()
     from org.optaplanner.core.api.domain.entity import PlanningPin as JavaPlanningPin
@@ -333,6 +335,7 @@ def planning_score(score_type: Type['Score'],
     This property is modified by the Solver, every time when the Score of this PlanningSolution has been calculated.
 
     :param score_type: The type of the score. Should be imported from optapy.types.
+    :type score_type: Type[Score]
     :param bendable_hard_levels_size: Required for bendable scores.
                                       For example with 3 hard levels, hard level 0 always outweighs hard level 1 which
                                       always outweighs hard level 2, which outweighs all the soft levels.
@@ -486,6 +489,9 @@ def constraint_provider(constraint_provider_function: Callable[['ConstraintFacto
     The function takes a single parameter, the ConstraintFactory, and
     must return a list of Constraints.
     To create a Constraint, start with ConstraintFactory.from(get_class(PythonClass)).
+
+    :type constraint_provider_function: Callable[[ConstraintFactory], List[Constraint]]
+    :rtype: Callable[[ConstraintFactory], List[Constraint]]
     """
     ensure_init()
     constraint_provider_function.__optapy_java_class = _generate_constraint_provider_class(constraint_provider_function)
