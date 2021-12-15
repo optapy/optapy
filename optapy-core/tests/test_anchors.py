@@ -85,7 +85,8 @@ def test_chained():
         .withEntityClasses(optapy.get_class(ChainedEntity)) \
         .withConstraintProviderClass(optapy.get_class(chained_constraints)) \
         .withTerminationConfig(termination)
-    solution = optapy.solve(solver_config, ChainedSolution(
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(ChainedSolution(
         [
             ChainedAnchor('A'),
             ChainedAnchor('B'),

@@ -69,7 +69,8 @@ def test_single_property():
         .withConstraintProviderClass(optapy.get_class(my_constraints)) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution(Entity('A'), Value('1'), ['1', '2', '3'])
-    solution = optapy.solve(solver_config, problem)
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
     assert solution.get_score().getScore() == 1
     assert solution.entity.value == '1'
 
@@ -146,6 +147,7 @@ def test_python_object():
         .withConstraintProviderClass(optapy.get_class(my_constraints)) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution(Entity('A'), Value(date1), [date1, date2, date3])
-    solution = optapy.solve(solver_config, problem)
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
     assert solution.get_score().getScore() == 2
     assert solution.entity.value == date1

@@ -19,9 +19,9 @@ public class PythonSolver {
         return solverConfig;
     }
 
-    public static Object wrapProblem(SolverConfig solverConfig, OpaquePythonReference problem) {
+    public static Object wrapProblem(Class<?> solutionClass, OpaquePythonReference problem) {
         try {
-            return PythonWrapperGenerator.wrap(solverConfig.getSolutionClass(), problem, new HashMap<>());
+            return PythonWrapperGenerator.wrap(solutionClass, problem, new HashMap<>());
         } catch (Throwable t) {
             throw new OptaPyException("A problem occurred when wrapping the python problem (" +
                                               PythonWrapperGenerator.getPythonObjectString(problem) +

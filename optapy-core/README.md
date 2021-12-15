@@ -165,7 +165,7 @@ for more details on Constraint Streams, see https://www.optaplanner.org/docs/opt
 ### Solve
 
 ```python
-from optapy import get_class, solve
+from optapy import get_class, solver_factory_create
 from optapy.types import SolverConfig, Duration
 from constraints import define_constraints
 from domain import TimeTable, Lesson, generate_problem
@@ -175,7 +175,8 @@ solver_config = SolverConfig().withEntityClasses(get_class(Lesson))
     .withConstraintProviderClass(get_class(define_constraints))
     .withTerminationSpentLimit(Duration.ofSeconds(30))
 
-solution = solve(solver_config, generate_problem())
+solver = solver_factory_create(solver_config).buildSolver()
+solution = solver.solve(generate_problem())
 ```
 
 `solution` will be a `TimeTable` instance with planning

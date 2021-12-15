@@ -9,5 +9,5 @@ use init before decorators and any optapy.types imports.
 """
 
 from .annotations import *
-from .optaplanner_java_interop import *
+from .optaplanner_api_wrappers import *
 from .optaplanner_java_interop import _planning_clone
