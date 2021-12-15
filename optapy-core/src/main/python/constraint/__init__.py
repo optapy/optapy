@@ -1,4 +1,5 @@
-from ..optaplanner_java_interop import ensure_init, _convert_to_java_compatible_object
+from ..optaplanner_java_interop import ensure_init
+from ..jpype_type_conversions import _convert_to_java_compatible_object
 import jpype.imports  # noqa
 import inspect
 from typing import TYPE_CHECKING
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 # TODO: Remove EVERYTHING below when https://github.com/jpype-project/jpype/issues/1016 is resolved
 #       and a new version of JPype is released
 from jpype import JImplements, JOverride # noqa
-from ..optaplanner_java_interop import PythonFunction as _PythonFunction, PythonBiFunction as _PythonBiFunction, \
+from ..jpype_type_conversions import PythonFunction as _PythonFunction, PythonBiFunction as _PythonBiFunction, \
     PythonTriFunction as _PythonTriFunction, PythonQuadFunction as _PythonQuadFunction,\
     PythonPentaFunction as _PythonPentaFunction # noqa
 

@@ -3,19 +3,16 @@ import inspect
 import jpype
 import jpype.imports
 from jpype.types import *
-from jpype import JProxy, JImplements, JOverride, JImplementationFor, JConversion
+from jpype import JProxy, JImplementationFor
 import importlib.metadata
 from inspect import signature, Parameter
-from typing import cast, List, Tuple, Type, TypeVar, Generic, Callable, Dict, Any, Union, TYPE_CHECKING
-from types import FunctionType
+from typing import cast, List, Tuple, Type, TypeVar, Callable, Dict, Any, Union, TYPE_CHECKING
 import copy
+from .jpype_type_conversions import PythonFunction, PythonBiFunction, PythonTriFunction, ConstraintProviderFunction
 
 if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
     from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
-    from org.optaplanner.core.config.solver import SolverConfig
-    from org.optaplanner.core.api.solver import SolverManager, SolverJob, SolverStatus
-    from org.optaplanner.core.api.solver.event import BestSolutionChangedEvent
 
 Solution_ = TypeVar('Solution_')
 ProblemId_ = TypeVar('ProblemId_')
@@ -32,122 +29,6 @@ def extract_optaplanner_jars() -> list[str]:
     :return: None
     """
     return [str(p.locate()) for p in importlib.metadata.files('optapy') if p.name.endswith('.jar')]
-
-
-# ***********************************************************
-# Python Wrapper for Java Interfaces
-# ***********************************************************
-
-
-@JImplements('org.optaplanner.core.api.score.stream.ConstraintProvider', deferred=True)
-class ConstraintProviderFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def defineConstraints(self, constraint_factory):
-        return self.delegate(constraint_factory)
-
-
-@JImplements('java.util.function.Function', deferred=True)
-class PythonFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def apply(self, argument):
-        return self.delegate(argument)
-
-
-@JImplements('java.util.function.BiFunction', deferred=True)
-class PythonBiFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def apply(self, argument1, argument2):
-        return self.delegate(argument1, argument2)
-
-
-@JImplements('org.optaplanner.core.api.function.TriFunction', deferred=True)
-class PythonTriFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def apply(self, argument1, argument2, argument3):
-        return self.delegate(argument1, argument2, argument3)
-
-
-@JImplements('org.optaplanner.core.api.function.QuadFunction', deferred=True)
-class PythonQuadFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def apply(self, argument1, argument2, argument3, argument4):
-        return self.delegate(argument1, argument2, argument3, argument4)
-
-
-@JImplements('org.optaplanner.core.api.function.PentaFunction', deferred=True)
-class PythonPentaFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def apply(self, argument1, argument2, argument3, argument4, argument5):
-        return self.delegate(argument1, argument2, argument3, argument4, argument5)
-
-
-@JImplements('java.util.function.ToIntFunction', deferred=True)
-class PythonToIntFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def applyAsInt(self, argument):
-        return self.delegate(argument)
-
-
-@JImplements('java.util.function.ToIntBiFunction', deferred=True)
-class PythonToIntBiFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def applyAsInt(self, argument1, argument2):
-        return self.delegate(argument1, argument2)
-
-
-@JImplements('org.optaplanner.core.api.function.ToIntTriFunction', deferred=True)
-class PythonToIntTriFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def applyAsInt(self, argument1, argument2, argument3):
-        return self.delegate(argument1, argument2, argument3)
-
-
-@JImplements('org.optaplanner.core.api.function.ToIntQuadFunction', deferred=True)
-class PythonToIntQuadFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def applyAsInt(self, argument1, argument2, argument3, argument4):
-        return self.delegate(argument1, argument2, argument3, argument4)
-
-
-@JImplements('org.optaplanner.core.api.function.ToIntPentaFunction', deferred=True)
-class PythonToIntPentaFunction:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def applyAsInt(self, argument1, argument2, argument3, argument4, argument5):
-        return self.delegate(argument1, argument2, argument3, argument4, argument5)
-# ****************************************************************************
 
 
 # ****************************************************************************
@@ -563,169 +444,7 @@ def _add_shallow_copy_to_class(the_class: Type):
     the_class.__copy__ = class_shallow_copy
 
 
-@JImplements('org.optaplanner.core.api.solver.SolverManager', deferred=True)
-class _PythonSolverManager(Generic[Solution_, ProblemId_]):
-    def __init__(self, solver_config: 'SolverConfig'):
-        from org.optaplanner.optapy import PythonSolver
-        from org.optaplanner.core.api.solver import SolverManager
-        self.solver_config = PythonSolver.updateSolverConfig(solver_config)
-        self.delegate = SolverManager.create(self.solver_config)
-        self.problem_id_to_solver_run_ref_set = dict()
-
-    def _optapy_debug_get_solver_runs_dicts(self):
-        """
-        Internal method used for testing; do not use
-        """
-        return {
-            'solver_run_id_to_refs': solver_run_id_to_refs,
-            'ref_id_to_solver_run_id': ref_id_to_solver_run_id,
-        }
-
-    def _get_problem_getter_and_cleanup(self, problem_id, the_problem):
-        from org.optaplanner.optapy import OpaquePythonReference, PythonSolver
-
-        problem_list = []
-        problem_function = the_problem
-        if not callable(problem_function):
-            def the_problem_function(the_problem_id):
-                return the_problem
-            problem_function = the_problem_function
-
-        def problem_getter(the_problem_id):
-            problem = problem_function(the_problem_id)
-            problem_list.append(problem)
-            solver_run_id = (id(self), the_problem_id)
-            self.problem_id_to_solver_run_ref_set[the_problem_id] = set()
-            self.problem_id_to_solver_run_ref_set[the_problem_id].add(problem)
-            solver_run_id_to_refs[solver_run_id] = self.problem_id_to_solver_run_ref_set[the_problem_id]
-            if id(problem) in ref_id_to_solver_run_id:
-                ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
-            else:
-                ref_id_to_solver_run_id[id(problem)] = set()
-                ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
-            wrapped_problem = PythonSolver.wrapProblem(self.solver_config, problem)
-            return wrapped_problem
-
-        def cleanup():
-            if len(problem_list) == 0:
-                return
-            problem = problem_list[0]
-            solver_run_ref_set = self.problem_id_to_solver_run_ref_set[problem_id]
-            solver_run_id = (id(self), problem_id)
-            ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
-            for ref in solver_run_ref_set:
-                if len(ref_id_to_solver_run_id[id(ref)]) == 0:
-                    del ref_id_to_solver_run_id[id(ref)]
-            del solver_run_id_to_refs[solver_run_id]
-            del self.problem_id_to_solver_run_ref_set[problem_id]
-
-        return PythonFunction(problem_getter), cleanup
-
-    def _wrap_final_best_solution_and_exception_handler(self, cleanup, final_best_solution_consumer, exception_handler):
-        def wrapped_final_best_solution_consumer(best_solution):
-            if final_best_solution_consumer is not None:
-                final_best_solution_consumer(_unwrap_java_object(best_solution))
-            cleanup()
-
-        def wrapped_exception_handler(problem_id, exception):
-            if exception_handler is not None:
-                exception_handler(problem_id, exception)
-            cleanup()
-        return wrapped_final_best_solution_consumer, wrapped_exception_handler
-
-    @JOverride
-    def solve(self, problem_id: ProblemId_, problem: Union[Solution_, Callable[[ProblemId_], Solution_]],
-              final_best_solution_consumer: Callable[[Solution_], None] = None,
-              exception_handler: Callable[[ProblemId_, JException], None] = None) -> 'SolverJob[Solution_, ProblemId_]':
-        problem_getter, cleanup = self._get_problem_getter_and_cleanup(problem_id, problem)
-        wrapped_final_best_solution_consumer, wrapped_exception_handler = \
-            self._wrap_final_best_solution_and_exception_handler(cleanup, final_best_solution_consumer,
-                                                                 exception_handler)
-
-        return self.delegate.solve(problem_id, problem_getter, wrapped_final_best_solution_consumer,
-                                   wrapped_exception_handler)
-
-    @JOverride
-    def solveAndListen(self, problem_id: ProblemId_, problem: Union[Solution_, Callable[[ProblemId_], Solution_]],
-                       best_solution_consumer: Callable[[Solution_], None],
-                       final_best_solution_consumer: Callable[[Solution_], None] = None,
-                       exception_handler: Callable[[ProblemId_, JException], None] = None) -> \
-            'SolverJob[Solution_, ProblemId_]':
-        problem_getter, cleanup = self._get_problem_getter_and_cleanup(problem_id, problem)
-        wrapped_final_best_solution_consumer, wrapped_exception_handler = \
-            self._wrap_final_best_solution_and_exception_handler(cleanup, final_best_solution_consumer,
-                                                                 exception_handler)
-
-        def wrapped_best_solution_consumer(best_solution):
-            best_solution_consumer(_unwrap_java_object(best_solution))
-
-        return self.delegate.solveAndListen(problem_id, problem_getter, wrapped_best_solution_consumer,
-                                            wrapped_final_best_solution_consumer,
-                                            wrapped_exception_handler)
-
-    @JOverride
-    def getSolverStatus(self, problem_id: ProblemId_) -> 'SolverStatus':
-        return self.delegate.getSolverStatus(problem_id)
-
-    @JOverride
-    def terminateEarly(self, problem_id: ProblemId_):
-        return self.delegate.terminateEarly(problem_id)
-
-    @JOverride
-    def close(self):
-        return self.delegate.close()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
-
-def create_solver_manager(problem_type: Union[Type[Solution_], type],
-                          id_type: Type[ProblemId_],
-                          solver_config: 'SolverConfig') -> 'SolverManager[Solution_, ProblemId_]':
-    """
-    Creates a new SolverManager, which can be used to solve problems asynchronously (ex: Web requests).
-
-    :param problem_type: The type of problems handled by the SolverManager (must be a @planning_solution class)
-    :param id_type: The type of id used to identifier problems (ex: int, str)
-    :param solver_config: The solver configuration used in the SolverManager
-    :return: A SolverManager that can be used to solve problems asynchronously.
-    :rtype: SolverManager[Solution_, ProblemId_]
-    """
-    if not hasattr(problem_type, '__optapy_is_planning_solution'):
-        raise ValueError(f'The type ({problem_type}) is not a @planning_solution class. Maybe '
-                         f'decorate the class ({problem_type}) with @planning_solution?')
-    return _PythonSolverManager(solver_config)
-
-
-def solve(solver_config: 'SolverConfig', problem: Solution_,
-          best_solution_change_listener: Callable[['BestSolutionChangedEvent[Solution_]'], None] = None) -> Solution_:
-    """Waits for solving to terminate and return the best solution found for the given problem using the solver_config.
-
-    Calling multiple time starts a different solver.
-
-    :param solver_config: The Java SolverConfig. See OptaPlanner docs for details.
-    :param problem: The (potentially uninitialized) Python Planning Solution object.
-    :param best_solution_change_listener: An optional function that is called whenever the best solution changes
-    :return: The best solution found.
-    :rtype: Solution_
-    """
-    from org.optaplanner.optapy import PythonSolver, OptaPyException  # noqa
-    from jpype import JException
-    import org.optaplanner.optapy.OpaquePythonReference
-
-    if problem is None:
-        raise ValueError(f'A problem was not passed to solve (parameter problem was ({problem})). Maybe '
-                         f'pass an instance of a class annotated with @planning_solution to solve?')
-
-    if not hasattr(type(problem), '__optapy_is_planning_solution'):
-        raise ValueError(f'The problem ({problem}) is not an instance of a @planning_solution class. Maybe '
-                         f'decorate the problem class ({type(problem)}) with @planning_solution?')
-
-    solver_run_id = max(filter(lambda run_id: isinstance(run_id, int), solver_run_id_to_refs.keys()), default=0) + 1
-    solver_run_ref_set = set()
+def _setup_solver_run(solver_run_id, problem, solver_run_ref_set):
     solver_run_ref_set.add(problem)
     solver_run_id_to_refs[solver_run_id] = solver_run_ref_set
     if id(problem) in ref_id_to_solver_run_id:
@@ -733,130 +452,14 @@ def solve(solver_config: 'SolverConfig', problem: Solution_,
     else:
         ref_id_to_solver_run_id[id(problem)] = set()
         ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
-    try:
-        solution = _unwrap_java_object(PythonSolver.solve(solver_config,
-                                                          JProxy(org.optaplanner.optapy.OpaquePythonReference,
-                                                                 inst=problem, convert=True),
-                                                          best_solution_change_listener))
-    except JException as e:
-        original = e
-        cause = e
-        while cause is not None:
-            e = cause
-            cause = e.__cause__
-        if isinstance(e, OptaPyException):
-            raise RuntimeError(e.getMessage())
-        else:
-            raise original
-    except TypeError as e:
-        error_message = f'An incompatible return value was encountered when evaluating a function.' \
-                        f'The issue is either in your domain classes ' \
-                        f'(@problem_fact, @planning_entity, @planning_solution) or in your constraints ' \
-                        f'(@constraint_provider). ' \
-                        f'In general: a @planning_variable(variable_type) function must return an instance ' \
-                        f'of variable_type or None, ' \
-                        f'@planning_id must return a str or int; ' \
-                        f'@problem_fact_collection_property(fact_type) can only contain instances of fact_type or ' \
-                        f'None; filtering functions must return either True or False; ' \
-                        f'functions passed to rewardBy/penalizeBy must return an int. ' \
-                        f'Maybe use optapy.types.PythonReference in your domain annotations if the domain ' \
-                        f'annotations reference third-party classes (ex: datetime.date)?'
-        raise TypeError(error_message) from e
-    finally:
-        ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
-        for ref in solver_run_ref_set:
-            if len(ref_id_to_solver_run_id[id(ref)]) == 0:
-                del ref_id_to_solver_run_id[id(ref)]
-        del solver_run_id_to_refs[solver_run_id]
-    return solution
 
 
-# Jpype convert int to primitive, but not to their wrappers, so add implicit conversion to wrappers
-@JConversion('java.lang.Integer', exact=int)
-def _convert_to_integer(jcls, obj):
-    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    return PythonWrapperGenerator.wrapInt(obj)
-
-
-@JConversion('java.lang.Long', exact=int)
-def _convert_to_long(jcls, obj):
-    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    return PythonWrapperGenerator.wrapLong(obj)
-
-
-@JConversion('java.lang.Short', exact=int)
-def _convert_to_short(jcls, obj):
-    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    return PythonWrapperGenerator.wrapShort(obj)
-
-
-@JConversion('java.lang.Byte', exact=int)
-def _convert_to_byte(jcls, obj):
-    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    return PythonWrapperGenerator.wrapByte(obj)
-
-
-# Function convertors
-def _proxy(value):
-    from org.optaplanner.optapy import OpaquePythonReference
-    return JProxy(OpaquePythonReference, inst=value, convert=True)
-
-
-def _convert_to_java_compatible_object(item):
-    from org.optaplanner.optapy import PythonComparable
-    if _has_java_class(item):
-        return item
-    return PythonComparable(_proxy(item))
-
-
-@JConversion('java.util.function.Function', exact=FunctionType)
-def _convert_to_function(jcls, obj):
-    return PythonFunction(lambda a: _convert_to_java_compatible_object(obj(a)))
-
-
-@JConversion('java.util.function.BiFunction', exact=FunctionType)
-def _convert_to_bi_function(jcls, obj):
-    return PythonBiFunction(lambda a, b: _convert_to_java_compatible_object(obj(a, b)))
-
-
-@JConversion('org.optaplanner.core.api.function.TriFunction', exact=FunctionType)
-def _convert_to_tri_function(jcls, obj):
-    return PythonTriFunction(lambda a, b, c: _convert_to_java_compatible_object(obj(a, b, c)))
-
-
-@JConversion('org.optaplanner.core.api.function.QuadFunction', exact=FunctionType)
-def _convert_to_quad_function(jcls, obj):
-    return PythonQuadFunction(lambda a, b, c, d: _convert_to_java_compatible_object(obj(a, b, c, d)))
-
-
-@JConversion('org.optaplanner.core.api.function.PentaFunction', exact=FunctionType)
-def _convert_to_quad_function(jcls, obj):
-    return PythonPentaFunction(lambda a, b, c, d, e: _convert_to_java_compatible_object(obj(a, b, c, d, e)))
-
-
-@JConversion('java.util.function.ToIntFunction', exact=FunctionType)
-def _convert_to_int_function(jcls, obj):
-    return PythonToIntFunction(lambda a: JInt(obj(a)))
-
-
-@JConversion('java.util.function.ToIntBiFunction', exact=FunctionType)
-def _convert_to_int_bi_function(jcls, obj):
-    return PythonToIntBiFunction(lambda a, b: JInt(obj(a, b)))
-
-
-@JConversion('org.optaplanner.core.api.function.ToIntTriFunction', exact=FunctionType)
-def _convert_to_int_tri_function(jcls, obj):
-    return PythonToIntTriFunction(lambda a, b, c: JInt(obj(a, b, c)))
-
-
-@JConversion('org.optaplanner.core.api.function.ToIntQuadFunction', exact=FunctionType)
-def _convert_to_int_quad_function(jcls, obj):
-    return PythonToIntQuadFunction(lambda a, b, c, d: JInt(obj(a, b, c, d)))
-
-
-@JConversion('org.optaplanner.core.api.function.ToIntPentaFunction', exact=FunctionType)
-def _convert_to_int_quad_function(jcls, obj):
-    return PythonToIntPentaFunction(lambda a, b, c, d, e: JInt(obj(a, b, c, d, e)))
+def _cleanup_solver_run(solver_run_id, problem, solver_run_ref_set):
+    ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
+    for ref in solver_run_ref_set:
+        if len(ref_id_to_solver_run_id[id(ref)]) == 0:
+            del ref_id_to_solver_run_id[id(ref)]
+    del solver_run_id_to_refs[solver_run_id]
 
 
 def _unwrap_java_object(java_object):
@@ -926,14 +529,6 @@ def get_class(python_class: Union[Type, Callable]) -> JClass:
         from java.lang import Boolean
         return cast(JClass, Boolean)
     return cast(JClass, Object)
-
-
-def _has_java_class(item):
-    if isinstance(item, (jpype.JObject, int, str, bool)):
-        return True
-    if hasattr(type(item), '__optapy_java_class'):
-        return True
-    return False
 
 
 unique_class_id = 0

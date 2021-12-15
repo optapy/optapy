@@ -90,7 +90,7 @@ def test_solve():
         assert len(solver_run_dicts['solver_run_id_to_refs']) == 0
         assert len(solver_run_dicts['ref_id_to_solver_run_id']) == 0
 
-    with optapy.create_solver_manager(Solution, int, solver_config) as solver_manager:
+    with optapy.solver_manager_create(solver_config) as solver_manager:
         lock.acquire()
         solver_job = solver_manager.solve(1, problem)
         assert_solver_run(solver_manager, solver_job)

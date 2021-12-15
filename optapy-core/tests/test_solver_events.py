@@ -65,7 +65,9 @@ def test_solver_events():
         solution_list.append(event.getNewBestSolution())
         score_list.append(event.getNewBestScore())
 
-    solution = optapy.solve(solver_config, problem, on_best_solution_changed)
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solver.addEventListener(on_best_solution_changed)
+    solution = solver.solve(problem)
 
 
     assert solution.get_score().getScore() == 6
@@ -77,4 +79,3 @@ def test_solver_events():
     assert solution_list[0].get_score().getScore() == 6
     assert solution_list[0].entity[0].value == 3
     assert solution_list[0].entity[1].value == 3
-

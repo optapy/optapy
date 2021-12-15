@@ -66,7 +66,8 @@ def test_pinning_filter():
                                      Point(1),
                                      Point(2, is_pinned=True)
                                  ])
-    solution = optapy.solve(solver_config, problem)
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
     assert solution.get_score().getScore() == -2
 
 def test_planning_pin():
@@ -130,5 +131,6 @@ def test_planning_pin():
                                      Point(1),
                                      Point(2, is_pinned=True)
                                  ])
-    solution = optapy.solve(solver_config, problem)
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
     assert solution.get_score().getScore() == -2

@@ -73,7 +73,8 @@ def test_inverse_relation():
         .withEntityClasses(optapy.get_class(InverseRelationEntity), optapy.get_class(InverseRelationValue)) \
         .withConstraintProviderClass(optapy.get_class(inverse_relation_constraints)) \
         .withTerminationConfig(termination)
-    solution = optapy.solve(solver_config, InverseRelationSolution(
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(InverseRelationSolution(
         [
             InverseRelationValue('A'),
             InverseRelationValue('B'),

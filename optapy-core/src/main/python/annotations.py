@@ -174,7 +174,7 @@ def inverse_relation_shadow_variable(source_type: Type, source_variable_name: st
 
     def inverse_relation_shadow_variable_function_mapper(inverse_relation_getter_function):
         ensure_init()
-        from org.optaplanner.optapy import PythonWrapperGenerator, SelfType
+        from org.optaplanner.optapy import PythonWrapperGenerator, SelfType  # noqa
         from org.optaplanner.core.api.domain.variable import InverseRelationShadowVariable as \
             JavaInverseRelationShadowVariable
         from java.util import Collection
