@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
     from org.optaplanner.core.config.solver import SolverConfig
     from org.optaplanner.core.api.solver import SolverFactory, SolverManager, SolverJob, SolverStatus
+    from org.optaplanner.core.api.score import ScoreManager
 
 Solution_ = TypeVar('Solution_')
 ProblemId_ = TypeVar('ProblemId_')
@@ -121,6 +122,52 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
         self.close()
 
 
+@JImplementationFor('org.optaplanner.core.api.score.ScoreExplanation')
+class _PythonScoreExplanation:
+    @JOverride(sticky=True, rename='_java_getSolution')
+    def getSolution(self):
+        return _unwrap_java_object(self._java_getSolution())
+
+
+@JImplementationFor('org.optaplanner.core.api.score.ScoreManager')
+class _PythonScoreManager:
+    def _wrap_call(self, function, problem):
+        from org.optaplanner.optapy import PythonSolver  # noqa
+        solver_run_id = (id(self), id(problem))
+        solver_run_ref_set = set()
+        wrapped_problem = PythonSolver.wrapProblem(get_class(type(problem)), problem)
+        _setup_solver_run(solver_run_id, problem, solver_run_ref_set)
+        try:
+            return function(wrapped_problem)
+        except JException as e:
+            error_message = f'An error occurred when getting the score. This can occur when functions take the ' \
+                            f'wrong number of parameters (ex: a setter that does not take exactly one parameter) or ' \
+                            f'by a function returning an incompatible return type (ex: returning a str in a filter, ' \
+                            f'which expects a bool). This can also occur when an exception is raised when evaluating ' \
+                            f'constraints/getters/setters.'
+            raise RuntimeError(error_message) from e
+        finally:
+            _cleanup_solver_run(solver_run_id, problem, solver_run_ref_set)
+
+    @JOverride(sticky=True, rename='_java_updateScore')
+    def updateScore(self, solution):
+        score = self._wrap_call(lambda wrapped_solution: self._java_updateScore(wrapped_solution), solution)
+        for attr in dir(solution):
+            if hasattr(getattr(solution, attr), '__optaplannerPlanningScore'):
+                setter = f'set{attr[3:]}'
+                getattr(solution, setter)(score)
+                break
+        return score
+
+    @JOverride(sticky=True, rename='_java_getSummary')
+    def getSummary(self, solution):
+        return self._wrap_call(lambda wrapped_solution: self._java_getSummary(wrapped_solution), solution)
+
+    @JOverride(sticky=True, rename='_java_explainScore')
+    def explainScore(self, solution):
+        return self._wrap_call(lambda wrapped_solution: self._java_explainScore(wrapped_solution), solution)
+
+
 def solver_manager_create(solver_config: 'SolverConfig') -> 'SolverManager':
     """Creates a new SolverManager, which can be used to solve problems asynchronously (ex: Web requests).
 
@@ -129,6 +176,20 @@ def solver_manager_create(solver_config: 'SolverConfig') -> 'SolverManager':
     :rtype: SolverManager
     """
     return _PythonSolverManager(solver_config)
+
+
+def score_manager_create(solver_builder: Union['SolverFactory', 'SolverManager']) -> 'ScoreManager':
+    """Creates a new SolverManager, which can be used to solve problems asynchronously (ex: Web requests).
+
+    :param solver_builder: A SolverFactory or SolverManager which will be used to create the ScoreManager
+    :return: A ScoreManager that can be used to update, explain, or get the score of a solution.
+    :rtype: ScoreManager
+    """
+    from org.optaplanner.core.api.score import ScoreManager
+    if isinstance(solver_builder, _PythonSolverManager):
+        #  ScoreManager.create(SolverManager) uses an implementation specific method and expects a DefaultSolverManager
+        return ScoreManager.create(solver_builder.delegate)
+    return ScoreManager.create(solver_builder)
 
 
 def solver_factory_create(solver_config: 'SolverConfig') -> 'SolverFactory':
@@ -140,6 +201,21 @@ def solver_factory_create(solver_config: 'SolverConfig') -> 'SolverFactory':
     """
     from org.optaplanner.core.api.solver import SolverFactory
     return SolverFactory.create(solver_config)
+
+
+def compose_constraint_id(solution_type_or_package: Union[type, str], constraint_name: str) -> str:
+    """Returns the constraint id with the given constraint package and the given name
+
+    :param solution_type_or_package: The constraint package, or a class decorated with @planning_solution
+        (for when the constraint is in the default package)
+    :param constraint_name: The name of the constraint
+    :return: The constraint id with the given name in the default package.
+    :rtype: str
+    """
+    package = solution_type_or_package
+    if not isinstance(solution_type_or_package, str):
+        package = get_class(solution_type_or_package).getPackage().getName()
+    return f'{package}/{constraint_name}'
 
 
 @JImplementationFor('org.optaplanner.core.api.solver.Solver')
@@ -159,7 +235,7 @@ class _PythonSolver:
 
     @JOverride(sticky=True, rename='_java_solve')
     def solve(self, problem):
-        from org.optaplanner.optapy import PythonSolver, OptaPyException  # noqa
+        from org.optaplanner.optapy import PythonSolver  # noqa
         from jpype import JException
 
         if problem is None:
