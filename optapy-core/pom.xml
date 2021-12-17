@@ -15,7 +15,7 @@
     <maven.compiler.release>11</maven.compiler.release>
     <java.module.name>org.optaplanner.optapy</java.module.name>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <version.logback>1.2.3</version.logback>
+    <version.ch.qos.logback>1.2.9</version.ch.qos.logback>
 
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>2.22.2</version.surefire.plugin>

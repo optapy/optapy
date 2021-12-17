@@ -278,14 +278,14 @@ public class PythonWrapperGenerator {
      * 
     
     <pre>
-        * class JavaWrapper implements NaryFunction<A0,A1,A2,...,AN> {
-        *     public static NaryFunction<A0,A1,A2,...,AN> delegate;
-        *
-        *     &#64;Override
-        *     public AN defineConstraints(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
-        *         return delegate.apply(arg0,arg1,...,finalArg);
-        *     }
-        * }
+         * class JavaWrapper implements NaryFunction<A0,A1,A2,...,AN> {
+         *     public static NaryFunction<A0,A1,A2,...,AN> delegate;
+         *
+         *     &#64;Override
+         *     public AN defineConstraints(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
+         *         return delegate.apply(arg0,arg1,...,finalArg);
+         *     }
+         * }
      * </pre>
      *
      * }
