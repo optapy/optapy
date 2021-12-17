@@ -24,10 +24,10 @@ public class PythonSolver {
             return PythonWrapperGenerator.wrap(solutionClass, problem, new HashMap<>());
         } catch (Throwable t) {
             throw new OptaPyException("A problem occurred when wrapping the python problem (" +
-                                              PythonWrapperGenerator.getPythonObjectString(problem) +
-                                              "). Maybe an annotation was passed an incorrect type " +
-                                              "(for example, @problem_fact_collection_property(str) " +
-                                              " on a function that return a list of int).", t);
+                    PythonWrapperGenerator.getPythonObjectString(problem) +
+                    "). Maybe an annotation was passed an incorrect type " +
+                    "(for example, @problem_fact_collection_property(str) " +
+                    " on a function that return a list of int).", t);
         }
     }
 
