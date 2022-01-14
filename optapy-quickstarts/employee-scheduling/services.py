@@ -83,7 +83,7 @@ def generate_shifts_for_day(date: datetime.date, random: Random):
     afternoon_end_time = datetime.datetime.combine(date, datetime.time(hour=22))
 
     night_start_time = datetime.datetime.combine(date, datetime.time(hour=22))
-    night_end_time = datetime.datetime.combine(date, datetime.time(hour=6))
+    night_end_time = datetime.datetime.combine(date + datetime.timedelta(days=1), datetime.time(hour=6))
 
     generate_shift_for_timeslot(morning_start_time, morning_end_time, random)
     generate_shift_for_timeslot(day_start_time, day_end_time, random)

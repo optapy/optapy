@@ -3,10 +3,18 @@ from optapy.score import HardSoftScore
 from optapy.constraint import Joiners, ConstraintFactory
 
 from domain import Shift, Availability, AvailabilityType
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 shift_class = get_class(Shift)
 availability_class = get_class(Availability)
+
+
+def get_start_of_availability(availability: Availability):
+    return datetime.combine(availability.date, datetime.min.time())
+
+
+def get_end_of_availability(availability: Availability):
+    return datetime.combine(availability.date, datetime.max.time())
 
 
 def get_minute_overlap(shift1: Shift, shift2: Shift):
@@ -51,8 +59,12 @@ def one_shift_per_day(constraint_factory: ConstraintFactory):
 
 def unavailable_employee(constraint_factory: ConstraintFactory):
     return constraint_factory.forEach(shift_class) \
-        .join(availability_class, [Joiners.equal(lambda shift: shift.start.date(),
-                                                 lambda availability: availability.date)]) \
+        .join(availability_class, [Joiners.equal(lambda shift: shift.employee,
+                                                 lambda availability: availability.employee),
+                                   Joiners.overlapping(lambda shift: shift.start,
+                                                       lambda shift: shift.end,
+                                                       get_start_of_availability,
+                                                       get_end_of_availability)]) \
         .filter(lambda shift, availability: availability.availability_type == AvailabilityType.UNAVAILABLE) \
         .penalize('Unavailable employee', HardSoftScore.ONE_HARD,
                   lambda shift, availability: get_shift_duration_in_minutes(shift))
@@ -60,8 +72,12 @@ def unavailable_employee(constraint_factory: ConstraintFactory):
 
 def desired_day_for_employee(constraint_factory: ConstraintFactory):
     return constraint_factory.forEach(shift_class) \
-        .join(availability_class, [Joiners.equal(lambda shift: shift.start.date(),
-                                                 lambda availability: availability.date)]) \
+        .join(availability_class, [Joiners.equal(lambda shift: shift.employee,
+                                                 lambda availability: availability.employee),
+                                   Joiners.overlapping(lambda shift: shift.start,
+                                                       lambda shift: shift.end,
+                                                       get_start_of_availability,
+                                                       get_end_of_availability)]) \
         .filter(lambda shift, availability: availability.availability_type == AvailabilityType.DESIRED) \
         .penalize('Desired day for employee', HardSoftScore.ONE_SOFT,
                   lambda shift, availability: get_shift_duration_in_minutes(shift))
@@ -69,8 +85,12 @@ def desired_day_for_employee(constraint_factory: ConstraintFactory):
 
 def undesired_day_for_employee(constraint_factory: ConstraintFactory):
     return constraint_factory.forEach(shift_class) \
-        .join(availability_class, [Joiners.equal(lambda shift: shift.start.date(),
-                                                 lambda availability: availability.date)]) \
+        .join(availability_class, [Joiners.equal(lambda shift: shift.employee,
+                                                 lambda availability: availability.employee),
+                                   Joiners.overlapping(lambda shift: shift.start,
+                                                       lambda shift: shift.end,
+                                                       get_start_of_availability,
+                                                       get_end_of_availability)]) \
         .filter(lambda shift, availability: availability.availability_type == AvailabilityType.UNDESIRED) \
         .penalize('Undesired day for employee', HardSoftScore.ONE_SOFT,
                   lambda shift, availability: get_shift_duration_in_minutes(shift))
