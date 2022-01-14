@@ -23,7 +23,7 @@ class AvailabilityType(enum.Enum):
 
     @staticmethod
     def list():
-        return list(map(lambda at: at.value, AvailabilityType))
+        return list(map(lambda at: at, AvailabilityType))
 
 
 @optapy.problem_fact

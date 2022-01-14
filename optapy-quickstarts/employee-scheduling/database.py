@@ -52,7 +52,7 @@ def entity(entity_class: type):
         if column_type == datetime.datetime:
             return column_value.isoformat()
         if issubclass(column_type, enum.Enum):
-            return column_value
+            return column_value.value
         if column_type == list:
             return repr(column_value)
         raise TypeError(f'Unknown Type: {column_type}')
@@ -71,7 +71,7 @@ def entity(entity_class: type):
         if column_type == datetime.datetime:
             return datetime.datetime.fromisoformat(column_value)
         if issubclass(column_type, enum.Enum):
-            return column_value
+            return column_type(column_value)
         if column_type == list:
             return eval(column_value)
         raise TypeError(f'Unknown Type: {column_type}')
@@ -193,8 +193,10 @@ def entity(entity_class: type):
                     out[column_name] = None
             elif isinstance(value, datetime.date) or isinstance(value, datetime.datetime):
                 out[column_name] = value.isoformat()
+            elif isinstance(value, enum.Enum):
+                out[column_name] = value.value
             else:
-                out[column_name] = getattr(self, column_name)
+                out[column_name] = value
         if hasattr(self, 'id'):
             out['id'] = self.id
         return out
