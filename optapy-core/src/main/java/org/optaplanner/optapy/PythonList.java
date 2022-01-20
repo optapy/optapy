@@ -229,7 +229,17 @@ public class PythonList<T> implements PythonObject, List<T> {
 
     @Override
     public T get(int i) {
-        return (T) getItemAtIndexInPythonList.apply(pythonListOpaqueReference, i);
+        T out = (T) getItemAtIndexInPythonList.apply(pythonListOpaqueReference, i);
+        // Different proxies of the same object are different objects according to IdentityHashMap,
+        // So check if the object we fetched is in the id map, and if so, return that proxy instead
+        Number id = PythonWrapperGenerator.pythonObjectToId.apply((OpaquePythonReference) out);
+        if (idMap.containsKey(id)) {
+            return (T) idMap.get(id);
+        } else {
+            // Put object into id map
+            idMap.put(id, out);
+        }
+        return out;
     }
 
     @Override

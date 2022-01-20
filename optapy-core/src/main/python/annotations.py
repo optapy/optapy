@@ -121,6 +121,83 @@ def planning_variable(variable_type: Type, value_range_provider_refs: List[str],
     return planning_variable_function_wrapper
 
 
+def planning_list_variable(variable_type: Type, value_range_provider_refs: List[str]) -> \
+        Callable[[Callable[[], Any]], Callable[[], Any]]:
+    """Specifies that a bean property of a list type should be optimized by the optimization
+    algorithms. Unlike @planning_variable, the @planning_list_variable tells solver to change elements
+    inside the list variable instead of changing the list reference.
+
+    It is specified on a getter of a java bean property (or directly on a field) of a @planning_entity class.
+    The getter MUST be named get<X> (ex: get_room_list) and has
+    a corresponding setter set<X> (ex: set_room_list).
+
+    The type of the @planning_list_variable annotated bean property must be a List.
+    Furthermore, the current implementation works under the assumption that the list variables of all entity instances
+    are "disjoint lists":
+
+    - List means that the order of elements inside a list planning variable is significant.
+    - Disjoint means that any given pair of entities have no common elements in their list variables.
+
+    In other words, each element from the list variable's value range appears in exactly one entity's list variable.
+
+    Therefore, we refer to such a planning variable as a list variable.
+
+    This makes sense for common use cases, for example the Vehicle Routing Problem or Task Assigning. In both cases
+    the order in which customers are visited and tasks are being worked on matters. Also, each customer
+    must be visited once and each task must be completed by exactly one employee.
+
+    :param variable_type: The type of values in the list
+    :param value_range_provider_refs: The value range providers refs that this
+                                      planning list variable takes values from.
+    """
+
+    def planning_list_variable_function_wrapper(variable_getter_function: Callable[[], Any]):
+        ensure_init()
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+        from org.optaplanner.core.api.domain.variable import PlanningListVariable as JavaPlanningListVariable
+        from java.util import List
+        variable_getter_function.__optaplannerPlanningVariable = {
+            'annotationType': JavaPlanningListVariable,
+            'valueRangeProviderRefs': value_range_provider_refs,
+        }
+        variable_getter_function.__optapy_is_planning_clone = True
+        variable_getter_function.__optapy_return = List
+        variable_getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
+            List, get_class(variable_type))
+        return variable_getter_function
+
+    return planning_list_variable_function_wrapper
+
+
+def index_shadow_variable(anchor_type: Type, source_variable_name: str) -> Callable[[Callable[[], Any]],
+                                                                                     Callable[[], Any]]:
+    """Specifies that a bean property (or a field) is an index of this planning value in another entity's
+    a shadow variable.
+
+    It is specified on a getter of a java bean property (or a field) of a @planning_entity class.
+
+    :param source_variable_name: The source variable must be a list variable.
+
+           When the Solver changes a genuine variable, it adjusts the shadow variable accordingly.
+           In practice, the Solver ignores shadow variables (except for consistency housekeeping).
+    """
+
+    def index_shadow_variable_function_mapper(index_getter_function: Callable[[], Any]):
+        ensure_init()
+        from org.optaplanner.core.api.domain.variable import IndexShadowVariable as JavaIndexShadowVariable
+        planning_variable_name = source_variable_name
+        if is_snake_case(index_getter_function):
+            planning_variable_name = f'_{planning_variable_name}'
+        index_getter_function.__optaplannerPlanningVariable = {
+            'annotationType': JavaIndexShadowVariable,
+            'sourceVariableName': planning_variable_name,
+        }
+        index_getter_function.__optapy_return = get_class(anchor_type)
+        return index_getter_function
+
+    return index_shadow_variable_function_mapper
+
+
 def anchor_shadow_variable(anchor_type: Type, source_variable_name: str) -> Callable[[Callable[[], Any]],
                                                                                      Callable[[], Any]]:
     """
@@ -199,7 +276,7 @@ def inverse_relation_shadow_variable(source_type: Type, source_variable_name: st
         else:
             inverse_relation_getter_function.__optapy_return = Collection
             inverse_relation_getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
-                get_class(the_source_type))
+                Collection, get_class(the_source_type))
         return inverse_relation_getter_function
 
     return inverse_relation_shadow_variable_function_mapper  # noqa
