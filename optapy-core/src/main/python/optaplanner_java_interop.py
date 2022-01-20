@@ -220,9 +220,6 @@ def _planning_clone(item, memo):
 # ****************************************************************************
 # PythonList Python helper functions
 # ****************************************************************************
-"""
-    private static TriFunction<OpaquePythonReference, Integer, Integer, OpaquePythonReference> slicePythonList;
-"""
 
 
 def _clear_python_list(the_list: List):
@@ -230,7 +227,7 @@ def _clear_python_list(the_list: List):
 
 
 def _python_list_length(the_list: List):
-    return len(the_list)
+    return JInt(len(the_list))
 
 
 def _get_item_at_index_in_python_list(the_list: List, index: int):

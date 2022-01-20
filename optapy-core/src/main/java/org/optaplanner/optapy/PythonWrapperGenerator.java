@@ -181,9 +181,9 @@ public class PythonWrapperGenerator {
     }
 
     @SuppressWarnings("unused")
-    public static <T> String getCollectionSignature(Class<T> elementClass) {
+    public static <T> String getCollectionSignature(Class<?> collectionClass, Class<T> elementClass) {
         StringBuilder out = new StringBuilder();
-        out.append('L').append(Type.getInternalName(Collection.class)); // Return is of class Collection
+        out.append('L').append(Type.getInternalName(collectionClass)); // Return is of class Collection
         out.append("<"); // Collection is of generic type...
         out.append('L').append(Type.getInternalName(elementClass)); // The collection type
         out.append(";>;"); // end of signature
