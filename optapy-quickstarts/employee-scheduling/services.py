@@ -6,6 +6,7 @@ import optapy.config
 from optapy.types import Duration
 from optapy.score import HardSoftScore
 from constraints import employee_scheduling_constraints
+from typing import Optional
 from flask import Flask, jsonify
 
 app = Flask(__name__)
@@ -18,47 +19,60 @@ def next_weekday(d, weekday):
     return d + datetime.timedelta(days_ahead)
 
 
+FIRST_NAMES = ["Amy", "Beth", "Chad", "Dan", "Elsa", "Flo", "Gus", "Hugo", "Ivy", "Jay"]
+LAST_NAMES = ["Cole", "Fox", "Green", "Jones", "King", "Li", "Poe", "Rye", "Smith", "Watt"]
 REQUIRED_SKILLS = ["Doctor", "Nurse"]
-OPTIONAL_SKILLS = ["Anaesthetics", "Cardiology"]
+OPTIONAL_SKILLS = ["Anaesthetics"]
+LOCATIONS = ["Ambulatory care", "Critical care", "Pediatric care"]
+SHIFT_LENGTH = datetime.timedelta(hours=8)
+MORNING_SHIFT_START_TIME = datetime.time(hour=6)
+DAY_SHIFT_START_TIME = datetime.time(hour=9)
+AFTERNOON_SHIFT_START_TIME = datetime.time(hour=14)
+NIGHT_SHIFT_START_TIME = datetime.time(hour=22)
 
+SHIFT_START_TIME_COMBOS = (
+    (MORNING_SHIFT_START_TIME, AFTERNOON_SHIFT_START_TIME),
+    (MORNING_SHIFT_START_TIME, AFTERNOON_SHIFT_START_TIME, NIGHT_SHIFT_START_TIME),
+    (MORNING_SHIFT_START_TIME, DAY_SHIFT_START_TIME, AFTERNOON_SHIFT_START_TIME, NIGHT_SHIFT_START_TIME)
+)
 
-def reset_application_data():
-    ScheduleState.delete_all()
-    Employee.delete_all()
-    Availability.delete_all()
-    Shift.delete_all()
+location_to_shift_start_time_list_dict = dict()
+id_generator = 0
+schedule: Optional[EmployeeSchedule] = None
 
 
 def generate_demo_data():
+    global schedule
     INITIAL_ROSTER_LENGTH_IN_DAYS = 14
     START_DATE = next_weekday(datetime.date.today(), 0)  # next Monday
-
-    reset_application_data()
 
     schedule_state = ScheduleState()
     schedule_state.first_draft_date = START_DATE
     schedule_state.draft_length = INITIAL_ROSTER_LENGTH_IN_DAYS
     schedule_state.publish_length = 7
     schedule_state.last_historic_date = START_DATE
-    schedule_state.save()
-
-    FIRST_NAMES = ["Amy", "Beth", "Chad", "Dan", "Elsa", "Flo", "Gus", "Hugo", "Ivy", "Jay"]
-    LAST_NAMES = ["Cole", "Fox", "Green", "Jones", "King", "Li", "Poe", "Rye", "Smith", "Watt"]
 
     random = Random(0)
+
+    shift_template_index = 0
+    for location in LOCATIONS:
+        location_to_shift_start_time_list_dict[location] = SHIFT_START_TIME_COMBOS[shift_template_index]
+        shift_template_index = (shift_template_index + 1) % len(SHIFT_START_TIME_COMBOS)
+
     name_permutations = join_all_combinations(FIRST_NAMES, LAST_NAMES)
     random.shuffle(name_permutations)
 
     employee_list = []
-    for i in range(15):
-        skills = pick_subset(OPTIONAL_SKILLS, random, 3, 1)
+    for i in range(16):
+        skills = pick_subset(OPTIONAL_SKILLS, random, 1, 3)
         skills.append(pick_random(REQUIRED_SKILLS, random))
         employee = Employee()
         employee.name = name_permutations[i]
         employee.skill_set = skills
-        employee.save()
         employee_list.append(employee)
 
+    shift_list = []
+    availability_list = []
     for i in range(INITIAL_ROSTER_LENGTH_IN_DAYS):
         employees_with_availabilities_on_day = pick_subset(employee_list, random, 4, 3, 2, 1)
         date = START_DATE + datetime.timedelta(days=i)
@@ -68,31 +82,31 @@ def generate_demo_data():
             availability.date = date
             availability.employee = employee
             availability.availability_type = availability_type
-            availability.save()
-        generate_shifts_for_day(date, random)
+            availability_list.append(availability)
+        shift_list.extend(generate_shifts_for_day(date, random))
+    schedule = EmployeeSchedule(
+        schedule_state,
+        availability_list,
+        employee_list,
+        shift_list,
+        None
+    )
 
 
 def generate_shifts_for_day(date: datetime.date, random: Random):
-    morning_start_time = datetime.datetime.combine(date, datetime.time(hour=6))
-    morning_end_time = datetime.datetime.combine(date, datetime.time(hour=14))
-
-    day_start_time = datetime.datetime.combine(date, datetime.time(hour=9))
-    day_end_time = datetime.datetime.combine(date, datetime.time(hour=17))
-
-    afternoon_start_time = datetime.datetime.combine(date, datetime.time(hour=14))
-    afternoon_end_time = datetime.datetime.combine(date, datetime.time(hour=22))
-
-    night_start_time = datetime.datetime.combine(date, datetime.time(hour=22))
-    night_end_time = datetime.datetime.combine(date + datetime.timedelta(days=1), datetime.time(hour=6))
-
-    generate_shift_for_timeslot(morning_start_time, morning_end_time, random)
-    generate_shift_for_timeslot(day_start_time, day_end_time, random)
-    generate_shift_for_timeslot(afternoon_start_time, afternoon_end_time, random)
-    generate_shift_for_timeslot(night_start_time, night_end_time, random)
+    out = []
+    for location in LOCATIONS:
+        shift_start_time_list = location_to_shift_start_time_list_dict[location]
+        for shift_start_time in shift_start_time_list:
+            shift_start_date_time = datetime.datetime.combine(date, shift_start_time)
+            shift_end_date_time = shift_start_date_time + SHIFT_LENGTH
+            out.append(generate_shift_for_timeslot(shift_start_date_time, shift_end_date_time, location, random))
+    return out
 
 
-def generate_shift_for_timeslot(timeslot_start: datetime.datetime, timeslot_end: datetime.datetime, random: Random):
-    LOCATIONS = ["Ambulatory care", "Critical care", "Pediatric care"]
+def generate_shift_for_timeslot(timeslot_start: datetime.datetime, timeslot_end: datetime.datetime,
+                                location: str, random: Random):
+    global id_generator
     shift_count = random.choices([1, 2], [0.8, 0.2])[0]
 
     for i in range(shift_count):
@@ -103,14 +117,15 @@ def generate_shift_for_timeslot(timeslot_start: datetime.datetime, timeslot_end:
         else:
             required_skill = pick_random(OPTIONAL_SKILLS, random)
 
-        location = pick_random(LOCATIONS, random)
         shift = Shift()
+        shift.id = id_generator
         shift.start = timeslot_start
         shift.end = timeslot_end
         shift.required_skill = required_skill
         shift.location = location
         shift.employee = None
-        shift.save()
+        id_generator += 1
+        return shift
 
 
 def pick_random(source: list, random: Random):
@@ -140,7 +155,7 @@ solver_config\
     .withSolutionClass(get_class(EmployeeSchedule))\
     .withEntityClasses(get_class(Shift))\
     .withConstraintProviderClass(get_class(employee_scheduling_constraints))\
-    .withTerminationSpentLimit(Duration.ofSeconds(30))
+    .withTerminationSpentLimit(Duration.ofSeconds(60))
 
 solver_manager = solver_manager_create(solver_config)
 score_manager = score_manager_create(solver_manager)
@@ -149,14 +164,9 @@ last_score = HardSoftScore.ZERO
 
 @app.route('/schedule')
 def get_schedule():
+    global schedule
     solver_status = get_solver_status()
-    solution = EmployeeSchedule(
-        ScheduleState.find_all()[0],
-        list(Availability.find_all()),
-        list(Employee.find_all()),
-        list(Shift.find_all()),
-        None
-    )
+    solution = schedule
     score = score_manager.updateScore(solution)
     solution.solver_status = solver_status
     solution.score = score
@@ -185,18 +195,12 @@ def stop_solving():
 
 
 def find_by_id(schedule_id):
+    global schedule
     if schedule_id != SINGLETON_ID:
         raise ValueError(f'There is no schedule with id ({schedule_id})')
-    schedule = EmployeeSchedule(
-        ScheduleState.find_all()[0],
-        Availability.find_all(),
-        Employee.find_all(),
-        Shift.find_all(),
-        None
-    )
     return schedule
 
 
 def save(solution):
-    for shift in solution.shift_list:
-        shift.update()
+    global schedule
+    schedule = solution

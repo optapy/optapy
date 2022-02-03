@@ -61,10 +61,9 @@ def unavailable_employee(constraint_factory: ConstraintFactory):
     return constraint_factory.forEach(shift_class) \
         .join(availability_class, [Joiners.equal(lambda shift: shift.employee,
                                                  lambda availability: availability.employee),
-                                   Joiners.overlapping(lambda shift: shift.start,
-                                                       lambda shift: shift.end,
-                                                       get_start_of_availability,
-                                                       get_end_of_availability)]) \
+                                   Joiners.equal(lambda shift: shift.start.date(),
+                                                 lambda availability: availability.date)
+                                   ]) \
         .filter(lambda shift, availability: availability.availability_type == AvailabilityType.UNAVAILABLE) \
         .penalize('Unavailable employee', HardSoftScore.ONE_HARD,
                   lambda shift, availability: get_shift_duration_in_minutes(shift))
@@ -74,10 +73,9 @@ def desired_day_for_employee(constraint_factory: ConstraintFactory):
     return constraint_factory.forEach(shift_class) \
         .join(availability_class, [Joiners.equal(lambda shift: shift.employee,
                                                  lambda availability: availability.employee),
-                                   Joiners.overlapping(lambda shift: shift.start,
-                                                       lambda shift: shift.end,
-                                                       get_start_of_availability,
-                                                       get_end_of_availability)]) \
+                                   Joiners.equal(lambda shift: shift.start.date(),
+                                                 lambda availability: availability.date)
+                                   ]) \
         .filter(lambda shift, availability: availability.availability_type == AvailabilityType.DESIRED) \
         .penalize('Desired day for employee', HardSoftScore.ONE_SOFT,
                   lambda shift, availability: get_shift_duration_in_minutes(shift))
@@ -87,10 +85,9 @@ def undesired_day_for_employee(constraint_factory: ConstraintFactory):
     return constraint_factory.forEach(shift_class) \
         .join(availability_class, [Joiners.equal(lambda shift: shift.employee,
                                                  lambda availability: availability.employee),
-                                   Joiners.overlapping(lambda shift: shift.start,
-                                                       lambda shift: shift.end,
-                                                       get_start_of_availability,
-                                                       get_end_of_availability)]) \
+                                   Joiners.equal(lambda shift: shift.start.date(),
+                                                 lambda availability: availability.date)
+                                   ]) \
         .filter(lambda shift, availability: availability.availability_type == AvailabilityType.UNDESIRED) \
         .penalize('Undesired day for employee', HardSoftScore.ONE_SOFT,
                   lambda shift, availability: get_shift_duration_in_minutes(shift))
