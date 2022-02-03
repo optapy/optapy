@@ -2,11 +2,9 @@ import optapy
 import optapy.score
 import datetime
 import enum
-import database
 
 
 @optapy.problem_fact
-@database.entity
 class Employee:
     def __init__(self, name: str = None, skill_set: list = None):
         self.name = name
@@ -14,6 +12,12 @@ class Employee:
 
     def __str__(self):
         return f'Employee(name={self.name})'
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'skill_set': self.skill_set
+        }
 
 
 class AvailabilityType(enum.Enum):
@@ -27,7 +31,6 @@ class AvailabilityType(enum.Enum):
 
 
 @optapy.problem_fact
-@database.entity
 class Availability:
     def __init__(self, employee: Employee = None, date: datetime.date = None,
                  availability_type: AvailabilityType = None):
@@ -38,8 +41,14 @@ class Availability:
     def __str__(self):
         return f'Availability(employee={self.employee}, date={self.date}, availability_type={self.availability_type})'
 
+    def to_dict(self):
+        return {
+            'employee': self.employee.to_dict(),
+            'date': self.date.isoformat(),
+            'availability_type': self.availability_type.value
+        }
 
-@database.entity
+
 class ScheduleState:
     def __init__(self, publish_length: int = None, draft_length: int = None, first_draft_date: datetime.date = None,
                  last_historic_date: datetime.date = None):
@@ -51,13 +60,20 @@ class ScheduleState:
     def is_draft(self, shift):
         return shift.start >= datetime.datetime.combine(self.first_draft_date, datetime.time.min)
 
+    def to_dict(self):
+        return {
+            'publish_length': self.publish_length,
+            'draft_length': self.draft_length,
+            'first_draft_date': self.first_draft_date.isoformat(),
+            'last_historic_date': self.last_historic_date.isoformat()
+        }
+
 
 def shift_pinning_filter(solution, shift):
     return not solution.schedule_state.is_draft(shift)
 
 
 @optapy.planning_entity(pinning_filter=shift_pinning_filter)
-@database.entity
 class Shift:
     def __init__(self, start: datetime.datetime = None, end: datetime.datetime = None,
                  location: str = None, required_skill: str = None, employee: Employee = None):
@@ -81,6 +97,15 @@ class Shift:
     def __str__(self):
         return f'Shift(start={self.start}, end={self.end}, location={self.location}, ' \
                f'required_skill={self.required_skill}, employee={self.employee})'
+
+    def to_dict(self):
+        return {
+            'start': self.start.isoformat(),
+            'end': self.end.isoformat(),
+            'location': self.location,
+            'required_skill': self.required_skill,
+            'employee': self.employee.to_dict() if self.employee is not None else None
+        }
 
 
 @optapy.planning_solution
