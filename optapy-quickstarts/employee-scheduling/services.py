@@ -5,6 +5,7 @@ from optapy import solver_manager_create, score_manager_create, get_class
 import optapy.config
 from optapy.types import Duration
 from optapy.score import HardSoftScore
+from org.optaplanner.core.api.solver import SolverStatus
 from constraints import employee_scheduling_constraints
 from typing import Optional
 from flask import Flask, jsonify
@@ -128,6 +129,22 @@ def generate_shift_for_timeslot(timeslot_start: datetime.datetime, timeslot_end:
         return shift
 
 
+def generate_draft_shifts():
+    global schedule
+    random = Random(0)
+    for i in range(schedule.schedule_state.publish_length):
+        employees_with_availabilities_on_day = pick_subset(schedule.employee_list, random, 4, 3, 2, 1)
+        date = schedule.schedule_state.first_draft_date + datetime.timedelta(days=(schedule.schedule_state.publish_length + i))
+        for employee in employees_with_availabilities_on_day:
+            availability_type = pick_random(AvailabilityType.list(), random)
+            availability = Availability()
+            availability.date = date
+            availability.employee = employee
+            availability.availability_type = availability_type
+            schedule.availability_list.append(availability)
+        schedule.shift_list.extend(generate_shifts_for_day(date, random))
+
+
 def pick_random(source: list, random: Random):
     return random.choice(source)
 
@@ -185,6 +202,22 @@ def error_handler(problem_id, exception):
 @app.route('/solve', methods=['POST'])
 def solve():
     solver_manager.solveAndListen(SINGLETON_ID, find_by_id, save, error_handler)
+    return dict()
+
+
+@app.route('/publish', methods=['POST'])
+def publish():
+    global schedule
+    if get_solver_status() != SolverStatus.NOT_SOLVING:
+        raise RuntimeError('Cannot publish a schedule while solving in progress.')
+    schedule_state = schedule.schedule_state
+    new_historic_date = schedule_state.first_draft_date
+    new_draft_date = schedule_state.first_draft_date + datetime.timedelta(days=schedule_state.publish_length)
+
+    schedule_state.last_historic_date = new_historic_date
+    schedule_state.first_draft_date = new_draft_date
+
+    generate_draft_shifts()
     return dict()
 
 
