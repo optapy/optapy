@@ -3,7 +3,7 @@ import inspect
 import jpype
 import jpype.imports
 from jpype.types import *
-from jpype import JProxy, JImplementationFor
+from jpype import JProxy, JImplementationFor, JOverride, JImplements
 import importlib.metadata
 from inspect import signature, Parameter
 from typing import cast, List, Tuple, Type, TypeVar, Callable, Dict, Any, Union, TYPE_CHECKING
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 Solution_ = TypeVar('Solution_')
 ProblemId_ = TypeVar('ProblemId_')
+Score_ = TypeVar('Score_')
 
 
 def extract_optaplanner_jars() -> list[str]:
@@ -608,5 +609,27 @@ def _generate_constraint_provider_class(constraint_provider: Callable[['_Constra
         constraint_provider.__name__ + str(unique_class_id),
         JObject(ConstraintProviderFunction(lambda cf: _to_constraint_java_array(constraint_provider(cf))),
                 ConstraintProvider))
+    unique_class_id = unique_class_id + 1
+    return out
+
+
+def _generate_easy_score_calculator_class(easy_score_calculator: Callable[[Solution_], Score_]) -> JClass:
+    global unique_class_id
+    ensure_init()
+    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+    from org.optaplanner.core.api.score.calculator import EasyScoreCalculator
+
+    @JImplements(EasyScoreCalculator)
+    class EasyScoreCalculatorClass:
+        def __init__(self, easy_score_calculator_impl):
+            self.easy_score_calculator_impl = easy_score_calculator_impl
+
+        @JOverride
+        def calculateScore(self, solution):
+            return self.easy_score_calculator_impl(solution)
+
+    out = PythonWrapperGenerator.defineEasyScoreCalculatorClass(
+        easy_score_calculator.__name__ + str(unique_class_id),
+        EasyScoreCalculatorClass(easy_score_calculator))
     unique_class_id = unique_class_id + 1
     return out

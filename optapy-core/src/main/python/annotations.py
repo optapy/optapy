@@ -1,7 +1,8 @@
 from .optaplanner_java_interop import ensure_init, _add_shallow_copy_to_class, _generate_planning_entity_class, \
-    _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, get_class
+    _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, \
+    _generate_easy_score_calculator_class, get_class
 from jpype import JImplements, JOverride
-from typing import Union, List, Callable, Type, Any, TYPE_CHECKING
+from typing import Union, List, Callable, Type, Any, TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
     from org.optaplanner.core.api.score.stream import Constraint as _Constraint, ConstraintFactory as _ConstraintFactory
@@ -24,6 +25,7 @@ For classes, JImplements('org.optaplanner.optapy.OpaquePythonReference')(the_cla
 is called and used (which allows __getattr__ to work w/o casting to a Java Proxy).
 """
 
+Solution_ = TypeVar('Solution_')
 
 def is_snake_case(the_function: Callable):
     """
@@ -496,3 +498,20 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
     ensure_init()
     constraint_provider_function.__optapy_java_class = _generate_constraint_provider_class(constraint_provider_function)
     return constraint_provider_function
+
+
+def easy_score_calculator(easy_score_calculator_function: Callable[[Solution_], '_Score']) -> \
+        Callable[[Solution_], '_Score']:
+    """Used for easy python Score calculation. This is non-incremental calculation, which is slow.
+
+    The function takes a single parameter, the Solution, and
+    must return a Score compatible with the Solution Score Type.
+    An implementation must be stateless.
+
+    :type easy_score_calculator_function: Callable[[Solution_], '_Score']
+    :rtype: Callable[[Solution_], '_Score']
+    """
+    ensure_init()
+    easy_score_calculator_function.__optapy_java_class = \
+        _generate_easy_score_calculator_class(easy_score_calculator_function)
+    return easy_score_calculator_function

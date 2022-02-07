@@ -22,6 +22,7 @@ import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
 import org.optaplanner.core.api.function.TriFunction;
+import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 
 import io.quarkus.gizmo.AnnotationCreator;
@@ -272,22 +273,13 @@ public class PythonWrapperGenerator {
     /**
      * Creates a class that looks like this:
      *
-     * {@code
+     * class JavaWrapper implements NaryFunction<A0,A1,A2,...,AN> {
+     * public static NaryFunction<A0,A1,A2,...,AN> delegate;
      *
-     *
-     * 
-    
-    <pre>
-         * class JavaWrapper implements NaryFunction<A0,A1,A2,...,AN> {
-         *     public static NaryFunction<A0,A1,A2,...,AN> delegate;
-         *
-         *     &#64;Override
-         *     public AN defineConstraints(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
-         *         return delegate.apply(arg0,arg1,...,finalArg);
-         *     }
-         * }
-     * </pre>
-     *
+     * #64;Override
+     * public AN defineConstraints(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
+     * return delegate.apply(arg0,arg1,...,finalArg);
+     * }
      * }
      *
      * @param className The simple name of the generated class
@@ -353,24 +345,15 @@ public class PythonWrapperGenerator {
     /**
      * Creates a class that looks like this:
      *
-     * {@code 
-     * 
-     *
-     * 
-    
-    <pre>
      * class PythonConstraintProvider implements ConstraintProvider {
-     *     public static Function<ConstraintFactory, Constraint[]> defineConstraintsImpl;
+     * public static Function<ConstraintFactory, Constraint[]> defineConstraintsImpl;
      *
-     *     &#64;Override
-     *     public Constraint[] defineConstraints(ConstraintFactory constraintFactory) {
-     *         return defineConstraintsImpl.apply(constraintFactory);
-     *     }
+     * &#64;Override
+     * public Constraint[] defineConstraints(ConstraintFactory constraintFactory) {
+     * return defineConstraintsImpl.apply(constraintFactory);
      * }
-     * </pre>
-     * 
      * }
-     * 
+     *
      * @param className The simple name of the generated class
      * @param defineConstraintsImpl The Python function that return the list of constraints
      * @return never null
@@ -379,6 +362,28 @@ public class PythonWrapperGenerator {
     public static Class<?> defineConstraintProviderClass(String className,
             ConstraintProvider defineConstraintsImpl) {
         return defineWrapperFunction(className, ConstraintProvider.class, defineConstraintsImpl);
+    }
+
+    /**
+     * Creates a class that looks like this:
+     *
+     * class PythonEasyScoreCalculator implements EasyScoreCalculator {
+     * public static EasyScoreCalculator easyScoreCalculatorImpl;
+     *
+     * &#64;Override
+     * public Score calculateScore(Solution solution) {
+     * return easyScoreCalculatorImpl.calculateScore(solution);
+     * }
+     * }
+     *
+     * @param className The simple name of the generated class
+     * @param easyScoreCalculatorImpl The Python function that return the score for the solution
+     * @return never null
+     */
+    @SuppressWarnings("unused")
+    public static Class<?> defineEasyScoreCalculatorClass(String className,
+            EasyScoreCalculator easyScoreCalculatorImpl) {
+        return defineWrapperFunction(className, EasyScoreCalculator.class, easyScoreCalculatorImpl);
     }
 
     /*
