@@ -12,7 +12,7 @@ from .jpype_type_conversions import PythonFunction, PythonBiFunction, PythonTriF
 
 if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
-    from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
+    from org.optaplanner.core.api.score.stream import Constraint as _Constraint, ConstraintFactory as _ConstraintFactory
 
 Solution_ = TypeVar('Solution_')
 ProblemId_ = TypeVar('ProblemId_')
@@ -192,7 +192,8 @@ def _planning_clone(item, memo):
     planning_clone_type = type(planning_clone)
     for planning_clone_attribute_name in dir(planning_clone_type):
         planning_clone_attribute = getattr(planning_clone_type, planning_clone_attribute_name)
-        if inspect.isfunction(planning_clone_attribute) and hasattr(planning_clone_attribute, '__optapy_is_planning_clone'):
+        if inspect.isfunction(planning_clone_attribute) and \
+                hasattr(planning_clone_attribute, '__optapy_is_planning_clone'):
             setter = f'set{planning_clone_attribute_name[3:]}'
             try:
                 attribute_value = getattr(planning_clone, planning_clone_attribute_name)()
@@ -588,7 +589,7 @@ def _generate_planning_solution_class(python_class: Type) -> JClass:
     return out
 
 
-def _to_constraint_java_array(python_list: List['Constraint']) -> JArray:
+def _to_constraint_java_array(python_list: List['_Constraint']) -> JArray:
     # reimport since the one in global scope is only for type checking
     import org.optaplanner.core.api.score.stream.Constraint as ActualConstraintClass
     out = jpype.JArray(ActualConstraintClass)(len(python_list))
@@ -597,7 +598,7 @@ def _to_constraint_java_array(python_list: List['Constraint']) -> JArray:
     return out
 
 
-def _generate_constraint_provider_class(constraint_provider: Callable[['ConstraintFactory'], List['Constraint']]) -> \
+def _generate_constraint_provider_class(constraint_provider: Callable[['_ConstraintFactory'], List['_Constraint']]) -> \
         JClass:
     global unique_class_id
     ensure_init()
