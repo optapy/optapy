@@ -10,7 +10,7 @@ from ..score import *
 from ..constraint import *
 
 from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType
-
+from org.optaplanner.core.api.solver import SolverStatus
 
 SolverConfig = solver.SolverConfig
 TerminationConfig = solver.termination.TerminationConfig

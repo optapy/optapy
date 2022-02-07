@@ -1,14 +1,16 @@
 from jpype.types import *
 from jpype import JImplements, JImplementationFor, JOverride
 from typing import TypeVar, Generic, Callable, Union, TYPE_CHECKING
+from uuid import uuid1 as _uuid1
 from .optaplanner_java_interop import _setup_solver_run, _cleanup_solver_run, _unwrap_java_object, \
     solver_run_id_to_refs as _solver_run_id_to_refs, ref_id_to_solver_run_id as _ref_id_to_solver_run_id, get_class
 
 if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
-    from org.optaplanner.core.config.solver import SolverConfig
-    from org.optaplanner.core.api.solver import SolverFactory, SolverManager, SolverJob, SolverStatus
-    from org.optaplanner.core.api.score import ScoreManager
+    from org.optaplanner.core.config.solver import SolverConfig as _SolverConfig
+    from org.optaplanner.core.api.solver import SolverFactory as _SolverFactory, SolverManager as _SolverManager,\
+        SolverJob as _SolverJob, SolverStatus as _SolverStatus
+    from org.optaplanner.core.api.score import ScoreManager as _ScoreManager
 
 Solution_ = TypeVar('Solution_')
 ProblemId_ = TypeVar('ProblemId_')
@@ -16,7 +18,7 @@ ProblemId_ = TypeVar('ProblemId_')
 
 @JImplements('org.optaplanner.core.api.solver.SolverManager', deferred=True)
 class _PythonSolverManager(Generic[Solution_, ProblemId_]):
-    def __init__(self, solver_config: 'SolverConfig'):
+    def __init__(self, solver_config: '_SolverConfig'):
         from org.optaplanner.optapy import PythonSolver  # noqa
         from org.optaplanner.core.api.solver import SolverManager
         self.delegate = SolverManager.create(solver_config)
@@ -76,7 +78,8 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
     @JOverride
     def solve(self, problem_id: ProblemId_, problem: Union[Solution_, Callable[[ProblemId_], Solution_]],
               final_best_solution_consumer: Callable[[Solution_], None] = None,
-              exception_handler: Callable[[ProblemId_, JException], None] = None) -> 'SolverJob[Solution_, ProblemId_]':
+              exception_handler: Callable[[ProblemId_, JException], None] = None) -> \
+            '_SolverJob[Solution_, ProblemId_]':
         problem_getter, cleanup = self._get_problem_getter_and_cleanup(problem_id, problem)
         wrapped_final_best_solution_consumer, wrapped_exception_handler = \
             self._wrap_final_best_solution_and_exception_handler(cleanup, final_best_solution_consumer,
@@ -90,7 +93,7 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
                        best_solution_consumer: Callable[[Solution_], None],
                        final_best_solution_consumer: Callable[[Solution_], None] = None,
                        exception_handler: Callable[[ProblemId_, JException], None] = None) -> \
-            'SolverJob[Solution_, ProblemId_]':
+            '_SolverJob[Solution_, ProblemId_]':
         problem_getter, cleanup = self._get_problem_getter_and_cleanup(problem_id, problem)
         wrapped_final_best_solution_consumer, wrapped_exception_handler = \
             self._wrap_final_best_solution_and_exception_handler(cleanup, final_best_solution_consumer,
@@ -104,7 +107,7 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
                                             wrapped_exception_handler)
 
     @JOverride
-    def getSolverStatus(self, problem_id: ProblemId_) -> 'SolverStatus':
+    def getSolverStatus(self, problem_id: ProblemId_) -> '_SolverStatus':
         return self.delegate.getSolverStatus(problem_id)
 
     @JOverride
@@ -133,7 +136,7 @@ class _PythonScoreExplanation:
 class _PythonScoreManager:
     def _wrap_call(self, function, problem):
         from org.optaplanner.optapy import PythonSolver  # noqa
-        solver_run_id = (id(self), id(problem))
+        solver_run_id = (id(self), id(problem), _uuid1())
         solver_run_ref_set = set()
         wrapped_problem = PythonSolver.wrapProblem(get_class(type(problem)), problem)
         _setup_solver_run(solver_run_id, problem, solver_run_ref_set)
@@ -168,7 +171,7 @@ class _PythonScoreManager:
         return self._wrap_call(lambda wrapped_solution: self._java_explainScore(wrapped_solution), solution)
 
 
-def solver_manager_create(solver_config: 'SolverConfig') -> 'SolverManager':
+def solver_manager_create(solver_config: '_SolverConfig') -> '_SolverManager':
     """Creates a new SolverManager, which can be used to solve problems asynchronously (ex: Web requests).
 
     :param solver_config: The solver configuration used in the SolverManager
@@ -178,7 +181,7 @@ def solver_manager_create(solver_config: 'SolverConfig') -> 'SolverManager':
     return _PythonSolverManager(solver_config)
 
 
-def score_manager_create(solver_builder: Union['SolverFactory', 'SolverManager']) -> 'ScoreManager':
+def score_manager_create(solver_builder: Union['_SolverFactory', '_SolverManager']) -> '_ScoreManager':
     """Creates a new SolverManager, which can be used to solve problems asynchronously (ex: Web requests).
 
     :param solver_builder: A SolverFactory or SolverManager which will be used to create the ScoreManager
@@ -192,7 +195,7 @@ def score_manager_create(solver_builder: Union['SolverFactory', 'SolverManager']
     return ScoreManager.create(solver_builder)
 
 
-def solver_factory_create(solver_config: 'SolverConfig') -> 'SolverFactory':
+def solver_factory_create(solver_config: '_SolverConfig') -> '_SolverFactory':
     """Creates a new SolverFactory, which can be used to create Solvers.
 
     :param solver_config: The solver configuration used in the SolverFactory
@@ -246,7 +249,7 @@ class _PythonSolver:
             raise ValueError(f'The problem ({problem}) is not an instance of a @planning_solution class. Maybe '
                              f'decorate the problem class ({type(problem)}) with @planning_solution?')
 
-        solver_run_id = (id(self), id(problem))
+        solver_run_id = (id(self), id(problem), _uuid1())
         solver_run_ref_set = set()
         wrapped_problem = PythonSolver.wrapProblem(get_class(type(problem)), problem)
         _setup_solver_run(solver_run_id, problem, solver_run_ref_set)

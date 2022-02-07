@@ -4,10 +4,10 @@ from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
-    from org.optaplanner.core.api.score import Score
-    from org.optaplanner.core.api.domain.valuerange import ValueRange
-    from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType
+    from org.optaplanner.core.api.score.stream import Constraint as _Constraint, ConstraintFactory as _ConstraintFactory
+    from org.optaplanner.core.api.score import Score as _Score
+    from org.optaplanner.core.api.domain.valuerange import ValueRange as _ValueRange
+    from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType as _PlanningVariableGraphType
 
 """
 All OptaPlanner Python annotations work like this:
@@ -79,7 +79,7 @@ def planning_pin(getter_function: Callable[[], bool]) -> Callable[[], bool]:
 
 
 def planning_variable(variable_type: Type, value_range_provider_refs: List[str], nullable: bool = False,
-                      graph_type: 'PlanningVariableGraphType' = None, strength_comparator_class=None,
+                      graph_type: '_PlanningVariableGraphType' = None, strength_comparator_class=None,
                       strength_weight_factory_class=None) -> Callable[[Callable[[], Any]], Callable[[], Any]]:
     """Specifies that a bean property can be changed and should be optimized by the optimization algorithms.
 
@@ -293,7 +293,7 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
 
 
 def value_range_provider(range_id: str, value_range_type: type = None) -> Callable[
-    [Callable[[], Union[List, 'ValueRange']]], Callable[[], Union[List, 'ValueRange']]]:
+    [Callable[[], Union[List, '_ValueRange']]], Callable[[], Union[List, '_ValueRange']]]:
     """Provides the planning values that can be used for a PlanningVariable.
 
     This is specified on a getter which returns a list or ValueRange. A list is implicitly converted to a ValueRange.
@@ -306,7 +306,7 @@ def value_range_provider(range_id: str, value_range_type: type = None) -> Callab
                              list or a Java class that implements ValueRangeProvider.
     """
 
-    def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, 'ValueRange']]):
+    def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, '_ValueRange']]):
         ensure_init()
         from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
         from org.optaplanner.optapy import PythonWrapperGenerator, OpaquePythonReference  # noqa
@@ -325,7 +325,7 @@ def value_range_provider(range_id: str, value_range_type: type = None) -> Callab
     return value_range_provider_function_wrapper
 
 
-def planning_score(score_type: Type['Score'],
+def planning_score(score_type: Type['_Score'],
                    bendable_hard_levels_size: int = None,
                    bendable_soft_levels_size: int = None,
                    score_definition_class: Type = None):
@@ -482,8 +482,8 @@ def deep_planning_clone(planning_clone_object: Union[Type, Callable]):
     return planning_clone_object
 
 
-def constraint_provider(constraint_provider_function: Callable[['ConstraintFactory'], List['Constraint']]) -> \
-        Callable[['ConstraintFactory'], List['Constraint']]:
+def constraint_provider(constraint_provider_function: Callable[['_ConstraintFactory'], List['_Constraint']]) -> \
+        Callable[['_ConstraintFactory'], List['_Constraint']]:
     """Marks a function as a ConstraintProvider.
 
     The function takes a single parameter, the ConstraintFactory, and
