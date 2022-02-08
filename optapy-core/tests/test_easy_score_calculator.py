@@ -4,7 +4,7 @@ import optapy.config
 import optapy.constraint
 
 
-def test_single_property():
+def test_easy_score_calculator():
     @optapy.planning_entity
     class Entity:
         def __init__(self, code, value=None):
