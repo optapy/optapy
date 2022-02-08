@@ -1,12 +1,15 @@
+import jpype
+
 from .optaplanner_java_interop import ensure_init, _add_shallow_copy_to_class, _generate_planning_entity_class, \
     _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, \
-    _generate_easy_score_calculator_class, get_class
+    _generate_easy_score_calculator_class, _generate_incremental_score_calculator_class, get_class
 from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
     from org.optaplanner.core.api.score.stream import Constraint as _Constraint, ConstraintFactory as _ConstraintFactory
     from org.optaplanner.core.api.score import Score as _Score
+    from org.optaplanner.core.api.score.calculator import IncrementalScoreCalculator as _IncrementalScoreCalculator
     from org.optaplanner.core.api.domain.valuerange import ValueRange as _ValueRange
     from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType as _PlanningVariableGraphType
 
@@ -26,6 +29,7 @@ is called and used (which allows __getattr__ to work w/o casting to a Java Proxy
 """
 
 Solution_ = TypeVar('Solution_')
+
 
 def is_snake_case(the_function: Callable):
     """
@@ -118,7 +122,7 @@ def planning_variable(variable_type: Type, value_range_provider_refs: List[str],
 
 
 def anchor_shadow_variable(anchor_type: Type, source_variable_name: str) -> Callable[[Callable[[], Any]],
-                                                                                      Callable[[], Any]]:
+                                                                                     Callable[[], Any]]:
     """
     Specifies that a bean property (or a field) is the anchor of a chained @planning_variable, which implies it's
     a shadow variable.
@@ -515,3 +519,74 @@ def easy_score_calculator(easy_score_calculator_function: Callable[[Solution_], 
     easy_score_calculator_function.__optapy_java_class = \
         _generate_easy_score_calculator_class(easy_score_calculator_function)
     return easy_score_calculator_function
+
+
+def incremental_score_calculator(incremental_score_calculator: Type['_IncrementalScoreCalculator']) -> \
+        Type['_IncrementalScoreCalculator']:
+    """Used for incremental python Score calculation. This is much faster than EasyScoreCalculator
+    but requires much more code to implement too.
+
+    Any implementation is naturally stateful.
+
+    The following methods must exist:
+
+    def resetWorkingSolution(self, workingSolution: Solution_);
+
+    def beforeEntityAdded(self, entity: any);
+
+    def afterEntityAdded(self, entity: any);
+
+    def beforeVariableChanged(self, entity: any, variableName: str);
+
+    def afterVariableChanged(self, entity: any, variableName: str);
+
+    def beforeEntityRemoved(self, entity: any);
+
+    def afterEntityRemoved(self, entity: any);
+
+    def calculateScore(self) -> Score;
+
+    If you also want to support Constraint Matches, the following methods need to be added:
+
+    def getConstraintMatchTotals(self)
+
+    def getIndictmentMap(self)
+
+    def resetWorkingSolution(self, workingSolution: Solution_, constraintMatchEnabled=False);
+    (A default value must be specified in resetWorkingSolution for constraintMatchEnabled)
+
+    :type incremental_score_calculator: '_IncrementalScoreCalculator'
+    :rtype: Type
+    """
+    ensure_init()
+    from org.optaplanner.core.api.score.calculator import IncrementalScoreCalculator, \
+        ConstraintMatchAwareIncrementalScoreCalculator
+    constraint_match_aware = callable(getattr(incremental_score_calculator, 'getConstraintMatchTotals', None)) and \
+        callable(getattr(incremental_score_calculator, 'getIndictmentMap', None))
+    methods = ['resetWorkingSolution',
+               'beforeEntityAdded',
+               'afterEntityAdded',
+               'beforeVariableChanged',
+               'afterVariableChanged',
+               'beforeEntityRemoved',
+               'afterEntityRemoved',
+               'calculateScore']
+    base_interface = IncrementalScoreCalculator
+    if constraint_match_aware:
+        methods.extend(['getIndictmentMap', 'getConstraintMatchTotals'])
+        base_interface = ConstraintMatchAwareIncrementalScoreCalculator
+
+    missing_method_list = []
+    for method in methods:
+        if not callable(getattr(incremental_score_calculator, method, None)):
+            missing_method_list.append(method)
+    if len(missing_method_list) != 0:
+        raise ValueError(f'The following required methods are missing from @incremental_score_calculator class '
+                         f'{incremental_score_calculator}: {missing_method_list}')
+    for method in methods:
+        method_on_class = getattr(incremental_score_calculator, method, None)
+        setattr(incremental_score_calculator, method, JOverride()(method_on_class))
+
+    out = jpype.JImplements(base_interface)(incremental_score_calculator)
+    out.__optapy_java_class = _generate_incremental_score_calculator_class(out, constraint_match_aware)
+    return out

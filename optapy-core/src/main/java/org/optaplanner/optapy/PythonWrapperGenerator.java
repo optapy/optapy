@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.objectweb.asm.Type;
 import org.optaplanner.core.api.domain.entity.PinningFilter;
@@ -22,7 +23,9 @@ import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
 import org.optaplanner.core.api.function.TriFunction;
+import org.optaplanner.core.api.score.calculator.ConstraintMatchAwareIncrementalScoreCalculator;
 import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
+import org.optaplanner.core.api.score.calculator.IncrementalScoreCalculator;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 
 import io.quarkus.gizmo.AnnotationCreator;
@@ -277,7 +280,7 @@ public class PythonWrapperGenerator {
      * public static NaryFunction<A0,A1,A2,...,AN> delegate;
      *
      * #64;Override
-     * public AN defineConstraints(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
+     * public AN apply(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
      * return delegate.apply(arg0,arg1,...,finalArg);
      * }
      * }
@@ -306,19 +309,19 @@ public class PythonWrapperGenerator {
         AtomicReference<byte[]> classBytecodeHolder = new AtomicReference<>();
         ClassOutput classOutput = getClassOutput(classBytecodeHolder);
 
-        // holds the "defineConstraints" implementation function
-        FieldDescriptor valueField;
+        // holds the delegate (static; same one is reused; should be stateless)
+        FieldDescriptor delegateField;
         try (ClassCreator classCreator = ClassCreator.builder()
                 .className(className)
                 .interfaces(baseInterface)
                 .classOutput(classOutput)
                 .build()) {
-            valueField = classCreator.getFieldCreator("delegate", baseInterface)
+            delegateField = classCreator.getFieldCreator("delegate", baseInterface)
                     .setModifiers(Modifier.STATIC | Modifier.PUBLIC)
                     .getFieldDescriptor();
             MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofMethod(interfaceMethods[0]));
 
-            ResultHandle pythonProxy = methodCreator.readStaticField(valueField);
+            ResultHandle pythonProxy = methodCreator.readStaticField(delegateField);
             ResultHandle[] args = new ResultHandle[interfaceMethods[0].getParameterCount()];
             for (int i = 0; i < args.length; i++) {
                 args[i] = methodCreator.getMethodParam(i);
@@ -332,9 +335,104 @@ public class PythonWrapperGenerator {
         }
         classNameToBytecode.put(className, classBytecodeHolder.get());
         try {
-            // Now that the class created, we need to set it static field to the definedConstraints function
+            // Now that the class created, we need to set it static field to the delegate function
             Class<? extends A> out = (Class<? extends A>) gizmoClassLoader.loadClass(className);
-            out.getField(valueField.getName()).set(null, delegate);
+            out.getField(delegateField.getName()).set(null, delegate);
+            return out;
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Impossible State: the class (" + className + ") should exists since it was just created");
+        }
+    }
+
+    /**
+     * Creates a class that looks like this:
+     *
+     * class JavaWrapper implements SomeInterface {
+     * public static Supplier&lt;SomeInterface&gt; supplier;
+     *
+     * private SomeInterface delegate;
+     *
+     * public JavaWrapper() {
+     *     delegate = supplier.get();
+     * }
+     *
+     * #64;Override
+     * public Result interfaceMethod1(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
+     * return delegate.interfaceMethod1(arg0,arg1,...,finalArg);
+     * }
+     *
+     * #64;Override
+     * public Result interfaceMethod2(A0 arg0, A1 arg1, ..., A(N-1) finalArg) {
+     * return delegate.interfaceMethod2(arg0,arg1,...,finalArg);
+     * }
+     * }
+     *
+     * @param className The simple name of the generated class
+     * @param baseInterface the base interface
+     * @param delegateSupplier The Python class to delegate to
+     * @return never null
+     */
+    @SuppressWarnings({ "unused", "unchecked" })
+    public static <A> Class<? extends A> defineWrapperClass(String className, Class<? extends A> baseInterface,
+                                                            Supplier<? extends A> delegateSupplier) {
+        Method[] interfaceMethods = baseInterface.getMethods();
+        className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
+        if (classNameToBytecode.containsKey(className)) {
+            try {
+                return (Class<? extends A>) gizmoClassLoader.loadClass(className);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException(
+                        "Impossible State: the class (" + className + ") should exists since it was created");
+            }
+        }
+        AtomicReference<byte[]> classBytecodeHolder = new AtomicReference<>();
+        ClassOutput classOutput = getClassOutput(classBytecodeHolder);
+
+        // holds the supplier of the delegate (static)
+        FieldDescriptor supplierField;
+
+        // holds the delegate (instance; new one created for each instance)
+        FieldDescriptor delegateField;
+        try (ClassCreator classCreator = ClassCreator.builder()
+                .className(className)
+                .interfaces(baseInterface)
+                .classOutput(classOutput)
+                .build()) {
+            supplierField = classCreator.getFieldCreator("delegateSupplier", Supplier.class)
+                    .setModifiers(Modifier.STATIC | Modifier.PUBLIC)
+                    .getFieldDescriptor();
+            delegateField = classCreator.getFieldCreator("delegate", baseInterface)
+                    .setModifiers(Modifier.PUBLIC | Modifier.FINAL)
+                    .getFieldDescriptor();
+
+            MethodCreator constructorCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName()));
+            constructorCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), constructorCreator.getThis());
+            constructorCreator.writeInstanceField(delegateField, constructorCreator.getThis(),
+                                                  constructorCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Supplier.class, "get", Object.class),
+                                                                                           constructorCreator.readStaticField(supplierField)));
+            constructorCreator.returnValue(constructorCreator.getThis());
+
+            for (Method method : interfaceMethods) {
+                MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofMethod(method));
+                ResultHandle pythonProxy = methodCreator.readInstanceField(delegateField, methodCreator.getThis());
+                ResultHandle[] args = new ResultHandle[method.getParameterCount()];
+                for (int i = 0; i < args.length; i++) {
+                    args[i] = methodCreator.getMethodParam(i);
+                }
+                ResultHandle result = methodCreator.invokeInterfaceMethod(
+                        MethodDescriptor.ofMethod(method),
+                        pythonProxy, args);
+                methodCreator.returnValue(result);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        classNameToBytecode.put(className, classBytecodeHolder.get());
+        try {
+            // Now that the class created, we need to set it static field to the supplier of the delegate
+            Class<? extends A> out = (Class<? extends A>) gizmoClassLoader.loadClass(className);
+            out.getField(supplierField.getName()).set(null, delegateSupplier);
             return out;
         } catch (Exception e) {
             throw new IllegalStateException(
@@ -384,6 +482,40 @@ public class PythonWrapperGenerator {
     public static Class<?> defineEasyScoreCalculatorClass(String className,
             EasyScoreCalculator easyScoreCalculatorImpl) {
         return defineWrapperFunction(className, EasyScoreCalculator.class, easyScoreCalculatorImpl);
+    }
+
+    /**
+     * Creates a class that looks like this:
+     *
+     * class PythonIncrementalScoreCalculator implements IncrementalScoreCalculator {
+     * public static Supplier&lt;IncrementalScoreCalculator&gt; supplier;
+     * public final IncrementalScoreCalculator delegate;
+     *
+     * public PythonIncrementalScoreCalculator() {
+     *     delegate = supplier.get();
+     * }
+     *
+     * &#64;Override
+     * public Score calculateScore(Solution solution) {
+     * return delegate.calculateScore(solution);
+     * }
+     *
+     * ...
+     * }
+     *
+     * @param className The simple name of the generated class
+     * @param incrementalScoreCalculatorSupplier A supplier that returns a new instance of the incremental score calculator on each call
+     * @return never null
+     */
+    @SuppressWarnings("unused")
+    public static Class<?> defineIncrementalScoreCalculatorClass(String className,
+                                                                 Supplier<? extends IncrementalScoreCalculator> incrementalScoreCalculatorSupplier,
+                                                                 boolean constraintMatchAware) {
+        if (constraintMatchAware) {
+            return defineWrapperClass(className, ConstraintMatchAwareIncrementalScoreCalculator.class,
+                                      (Supplier<ConstraintMatchAwareIncrementalScoreCalculator>) incrementalScoreCalculatorSupplier);
+        }
+        return defineWrapperClass(className, IncrementalScoreCalculator.class, incrementalScoreCalculatorSupplier);
     }
 
     /*

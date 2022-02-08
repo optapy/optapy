@@ -8,11 +8,13 @@ import importlib.metadata
 from inspect import signature, Parameter
 from typing import cast, List, Tuple, Type, TypeVar, Callable, Dict, Any, Union, TYPE_CHECKING
 import copy
-from .jpype_type_conversions import PythonFunction, PythonBiFunction, PythonTriFunction, ConstraintProviderFunction
+from .jpype_type_conversions import PythonSupplier, PythonFunction, PythonBiFunction, PythonTriFunction, \
+    ConstraintProviderFunction
 
 if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
     from org.optaplanner.core.api.score.stream import Constraint as _Constraint, ConstraintFactory as _ConstraintFactory
+    from org.optaplanner.core.api.score.calculator import IncrementalScoreCalculator as _IncrementalScoreCalculator
 
 Solution_ = TypeVar('Solution_')
 ProblemId_ = TypeVar('ProblemId_')
@@ -315,7 +317,8 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
     import java.util.function.Function
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
-    from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner, PythonList, PythonComparable  # noqa
+    from org.optaplanner.optapy import PythonWrapperGenerator, PythonPlanningSolutionCloner, PythonList, \
+        PythonComparable  # noqa
     PythonWrapperGenerator.setPythonObjectToId(JObject(PythonFunction(_get_python_object_id),
                                                        java.util.function.Function))
     PythonWrapperGenerator.setPythonObjectToString(JObject(PythonFunction(_get_python_object_str),
@@ -631,5 +634,22 @@ def _generate_easy_score_calculator_class(easy_score_calculator: Callable[[Solut
     out = PythonWrapperGenerator.defineEasyScoreCalculatorClass(
         easy_score_calculator.__name__ + str(unique_class_id),
         EasyScoreCalculatorClass(easy_score_calculator))
+    unique_class_id = unique_class_id + 1
+    return out
+
+
+def _generate_incremental_score_calculator_class(incremental_score_calculator: Type['_IncrementalScoreCalculator'],
+                                                 constraint_match_aware: bool) -> \
+        JClass:
+    global unique_class_id
+    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+    from org.optaplanner.core.api.score.calculator import IncrementalScoreCalculator
+    from java.util.function import Supplier
+    ensure_init()
+
+    out = PythonWrapperGenerator.defineIncrementalScoreCalculatorClass(
+        incremental_score_calculator.__name__ + str(unique_class_id),
+        JObject(PythonSupplier(lambda: incremental_score_calculator()),
+                Supplier), constraint_match_aware)
     unique_class_id = unique_class_id + 1
     return out
