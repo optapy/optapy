@@ -2,6 +2,8 @@ import optapy
 import optapy.score
 import optapy.config
 import optapy.constraint
+import pytest
+import re
 
 
 @optapy.planning_entity
@@ -325,3 +327,24 @@ def test_constraint_match_enabled_incremental_score_calculator():
     assert indictment_map.get(bad_solution.queen_list[1]).getConstraintMatchCount() == 3
     assert indictment_map.get(bad_solution.queen_list[2]).getConstraintMatchCount() == 3
     assert indictment_map.get(bad_solution.queen_list[3]).getConstraintMatchCount() == 2
+
+
+def test_error_message_for_missing_methods():
+    with pytest.raises(ValueError, match=(
+            f"The following required methods are missing from @incremental_score_calculator class "
+            f".*IncrementalScoreCalculatorMissingMethods.*: "
+            f"\\['resetWorkingSolution', 'beforeEntityRemoved', 'afterEntityRemoved', 'calculateScore'\\]"
+    )):
+        @optapy.incremental_score_calculator
+        class IncrementalScoreCalculatorMissingMethods:
+            def beforeEntityAdded(self, entity: any):
+                pass
+
+            def afterEntityAdded(self, entity: any):
+                pass
+
+            def beforeVariableChanged(self, entity: any, variableName: str):
+                pass
+
+            def afterVariableChanged(self, entity: any, variableName: str):
+                pass
