@@ -3,9 +3,8 @@ import datetime
 from random import Random
 from optapy import solver_manager_create, score_manager_create, get_class
 import optapy.config
-from optapy.types import Duration
+from optapy.types import Duration, SolverStatus
 from optapy.score import HardSoftScore
-from org.optaplanner.core.api.solver import SolverStatus
 from constraints import employee_scheduling_constraints
 from typing import Optional
 from flask import Flask, jsonify
