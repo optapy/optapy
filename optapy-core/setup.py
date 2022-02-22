@@ -17,9 +17,9 @@ class FetchDependencies(build_py):
     add them as files within a python package
     """
     def create_stubs(self, project_root, command):
-        subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies', '-Dstubs'],
+        subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies'],
                        cwd=project_root, check=True)
-        subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies', '-Dstubs',
+        subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies',
                         '-Dclassifier=javadoc'], cwd=project_root, check=True)
         subprocess.run([sys.executable, str((project_root / 'create-stubs.py').absolute())], cwd=project_root,
                        check=True)
@@ -98,7 +98,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='optapy',
-    version='8.16.1a0',
+    version='8.17.0a0',
     license='Apache License Version 2.0',
     license_file='LICENSE',
     description='An AI constraint solver that optimizes planning and scheduling problems',

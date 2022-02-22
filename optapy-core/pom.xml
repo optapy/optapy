@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optaplanner-build-parent</artifactId>
-    <version>8.16.1.Final</version>
+    <version>8.17.0.Final</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>optapy</artifactId>
@@ -70,23 +70,6 @@
       </plugin>
     </plugins>
   </build>
-
-  <profiles>
-    <profile>
-      <id>stubs</id>
-      <activation>
-        <property>
-          <name>stubs</name>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.kie.kogito</groupId>
-          <artifactId>kogito-legacy-api</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-  </profiles>
 
   <repositories>
     <repository>

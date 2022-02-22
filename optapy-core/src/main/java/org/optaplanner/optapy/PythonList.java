@@ -232,7 +232,15 @@ public class PythonList<T> implements PythonObject, List<T> {
         T out = (T) getItemAtIndexInPythonList.apply(pythonListOpaqueReference, i);
         // Different proxies of the same object are different objects according to IdentityHashMap,
         // So check if the object we fetched is in the id map, and if so, return that proxy instead
-        Number id = PythonWrapperGenerator.pythonObjectToId.apply((OpaquePythonReference) out);
+
+        Number id;
+        if (out instanceof Number) { // Numbers cannot be cast to OpaquePythonReference, but can be used as their own id
+            // defensive, in case the same number has multiple different instances
+            id = (Number) out;
+        } else {
+            id = PythonWrapperGenerator.pythonObjectToId.apply((OpaquePythonReference) out);
+        }
+
         if (idMap.containsKey(id)) {
             return (T) idMap.get(id);
         } else {
