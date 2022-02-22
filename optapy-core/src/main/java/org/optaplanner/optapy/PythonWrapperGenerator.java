@@ -354,7 +354,7 @@ public class PythonWrapperGenerator {
      * private SomeInterface delegate;
      *
      * public JavaWrapper() {
-     *     delegate = supplier.get();
+     * delegate = supplier.get();
      * }
      *
      * #64;Override
@@ -375,7 +375,7 @@ public class PythonWrapperGenerator {
      */
     @SuppressWarnings({ "unused", "unchecked" })
     public static <A> Class<? extends A> defineWrapperClass(String className, Class<? extends A> baseInterface,
-                                                            Supplier<? extends A> delegateSupplier) {
+            Supplier<? extends A> delegateSupplier) {
         Method[] interfaceMethods = baseInterface.getMethods();
         className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
@@ -406,11 +406,12 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC | Modifier.FINAL)
                     .getFieldDescriptor();
 
-            MethodCreator constructorCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName()));
+            MethodCreator constructorCreator =
+                    classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName()));
             constructorCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), constructorCreator.getThis());
             constructorCreator.writeInstanceField(delegateField, constructorCreator.getThis(),
-                                                  constructorCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Supplier.class, "get", Object.class),
-                                                                                           constructorCreator.readStaticField(supplierField)));
+                    constructorCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Supplier.class, "get", Object.class),
+                            constructorCreator.readStaticField(supplierField)));
             constructorCreator.returnValue(constructorCreator.getThis());
 
             for (Method method : interfaceMethods) {
@@ -492,7 +493,7 @@ public class PythonWrapperGenerator {
      * public final IncrementalScoreCalculator delegate;
      *
      * public PythonIncrementalScoreCalculator() {
-     *     delegate = supplier.get();
+     * delegate = supplier.get();
      * }
      *
      * &#64;Override
@@ -504,16 +505,17 @@ public class PythonWrapperGenerator {
      * }
      *
      * @param className The simple name of the generated class
-     * @param incrementalScoreCalculatorSupplier A supplier that returns a new instance of the incremental score calculator on each call
+     * @param incrementalScoreCalculatorSupplier A supplier that returns a new instance of the incremental score calculator on
+     *        each call
      * @return never null
      */
     @SuppressWarnings("unused")
     public static Class<?> defineIncrementalScoreCalculatorClass(String className,
-                                                                 Supplier<? extends IncrementalScoreCalculator> incrementalScoreCalculatorSupplier,
-                                                                 boolean constraintMatchAware) {
+            Supplier<? extends IncrementalScoreCalculator> incrementalScoreCalculatorSupplier,
+            boolean constraintMatchAware) {
         if (constraintMatchAware) {
             return defineWrapperClass(className, ConstraintMatchAwareIncrementalScoreCalculator.class,
-                                      (Supplier<ConstraintMatchAwareIncrementalScoreCalculator>) incrementalScoreCalculatorSupplier);
+                    (Supplier<ConstraintMatchAwareIncrementalScoreCalculator>) incrementalScoreCalculatorSupplier);
         }
         return defineWrapperClass(className, IncrementalScoreCalculator.class, incrementalScoreCalculatorSupplier);
     }

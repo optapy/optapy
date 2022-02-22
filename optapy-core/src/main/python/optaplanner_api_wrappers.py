@@ -76,6 +76,10 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
         return wrapped_final_best_solution_consumer, wrapped_exception_handler
 
     @JOverride
+    def addProblemChange(self, problem_id, problem_change):
+        self.delegate.addProblemChange(problem_id, problem_change)
+
+    @JOverride
     def solve(self, problem_id: ProblemId_, problem: Union[Solution_, Callable[[ProblemId_], Solution_]],
               final_best_solution_consumer: Callable[[Solution_], None] = None,
               exception_handler: Callable[[ProblemId_, JException], None] = None) -> \

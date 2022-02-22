@@ -6,6 +6,7 @@ import optapy.constraint
 
 def test_solve():
     from threading import Lock
+    import time
     from org.optaplanner.core.api.solver import SolverStatus
     lock = Lock()
 
@@ -86,6 +87,7 @@ def test_solve():
         assert 2 in value_list
         assert 3 in value_list
         assert solver_manager.getSolverStatus(1) == SolverStatus.NOT_SOLVING
+        time.sleep(0.1)  # Sleep so cleanup is guaranteed to be executed
         solver_run_dicts = solver_manager._optapy_debug_get_solver_runs_dicts()
         assert len(solver_run_dicts['solver_run_id_to_refs']) == 0
         assert len(solver_run_dicts['ref_id_to_solver_run_id']) == 0
@@ -125,3 +127,5 @@ def test_solve():
         solver_job = solver_manager.solveAndListen(1, get_problem, on_best_solution_changed, on_best_solution_changed)
         assert_solver_run(solver_manager, solver_job)
         assert len(solution_list) == 2
+    time.sleep(0.1)  # ensure the thread factory close
+
