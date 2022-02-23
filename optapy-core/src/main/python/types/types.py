@@ -11,6 +11,7 @@ from ..constraint import *
 
 from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType
 from org.optaplanner.core.api.solver import SolverStatus
+from org.optaplanner.core.api.solver.change import ProblemChangeDirector
 
 SolverConfig = solver.SolverConfig
 TerminationConfig = solver.termination.TerminationConfig

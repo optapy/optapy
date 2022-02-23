@@ -7,6 +7,7 @@ from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
+    from org.optaplanner.core.api.solver.change import ProblemChange as _ProblemChange
     from org.optaplanner.core.api.score.stream import Constraint as _Constraint, ConstraintFactory as _ConstraintFactory
     from org.optaplanner.core.api.score import Score as _Score
     from org.optaplanner.core.api.score.calculator import IncrementalScoreCalculator as _IncrementalScoreCalculator
@@ -153,17 +154,17 @@ def planning_list_variable(variable_type: Type, value_range_provider_refs: List[
 
     def planning_list_variable_function_wrapper(variable_getter_function: Callable[[], Any]):
         ensure_init()
+        from java.util import List as JavaList
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.variable import PlanningListVariable as JavaPlanningListVariable
-        from java.util import List
         variable_getter_function.__optaplannerPlanningVariable = {
             'annotationType': JavaPlanningListVariable,
             'valueRangeProviderRefs': value_range_provider_refs,
         }
         variable_getter_function.__optapy_is_planning_clone = True
-        variable_getter_function.__optapy_return = List
+        variable_getter_function.__optapy_return = JavaList
         variable_getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
-            List, get_class(variable_type))
+            JavaList, get_class(variable_type))
         return variable_getter_function
 
     return planning_list_variable_function_wrapper
@@ -319,10 +320,13 @@ def problem_fact_collection_property(fact_type: Type) -> Callable[[Callable[[], 
 
     def problem_fact_collection_property_function_mapper(getter_function: Callable[[], List]):
         ensure_init()
+        from java.util import List as JavaList
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.solution import \
             ProblemFactCollectionProperty as JavaProblemFactCollectionProperty
-        getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(get_class(fact_type))
+        getter_function.__optapy_return = JavaList
+        getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
+            JavaList, get_class(fact_type))
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaProblemFactCollectionProperty
         }
@@ -363,13 +367,16 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
 
     def planning_entity_collection_property_function_mapper(getter_function: Callable[[], List]):
         ensure_init()
+        from java.util import List as JavaList
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.solution import \
             PlanningEntityCollectionProperty as JavaPlanningEntityCollectionProperty
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaPlanningEntityCollectionProperty
         }
-        getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(get_class(entity_type))
+        getter_function.__optapy_return = JavaList
+        getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
+            JavaList, get_class(entity_type))
         return getter_function
 
     return planning_entity_collection_property_function_mapper
@@ -391,6 +398,7 @@ def value_range_provider(range_id: str, value_range_type: type = None) -> Callab
 
     def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, '_ValueRange']]):
         ensure_init()
+        from java.util import List as JavaList
         from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
         from org.optaplanner.optapy import PythonWrapperGenerator, OpaquePythonReference  # noqa
 
@@ -666,4 +674,38 @@ def incremental_score_calculator(incremental_score_calculator: Type['_Incrementa
 
     out = jpype.JImplements(base_interface)(incremental_score_calculator)
     out.__optapy_java_class = _generate_incremental_score_calculator_class(out, constraint_match_aware)
+    return out
+
+
+def problem_change(problem_change_class: Type['_ProblemChange']) -> \
+        Type['_ProblemChange']:
+    """A ProblemChange represents a change in 1 or more planning entities or problem facts of a PlanningSolution.
+    Problem facts used by a Solver must not be changed while it is solving,
+    but by scheduling this command to the Solver, you can change them when the time is right.
+
+    Note that the Solver clones a PlanningSolution at will. Any change must be done on the problem facts and planning
+    entities referenced by the PlanningSolution of the ProblemChangeDirector.
+
+    The following methods must exist:
+
+    def doChange(self, workingSolution: Solution_, problemChangeDirector: ProblemChangeDirector)
+
+    :type problem_change_class: '_ProblemChange'
+    :rtype: Type
+    """
+    ensure_init()
+    from org.optaplanner.core.api.solver.change import ProblemChange
+    if not callable(getattr(problem_change_class, 'doChange', None)):
+        raise ValueError(f'@problem_change annotated class ({problem_change_class}) does not have required method '
+                         f'doChange(self, solution, problem_change_director).')
+
+    class_doChange = getattr(problem_change_class, 'doChange', None)
+    def wrapper_doChange(self, solution, problem_change_director):
+        run_id = id(problem_change_director)
+        problem_change_director._set_instance_map(run_id, solution.get__optapy_reference_map())
+        class_doChange(self, solution, problem_change_director)
+        problem_change_director._unset_instance_map(run_id)
+
+    setattr(problem_change_class, 'doChange', JOverride()(wrapper_doChange))
+    out = jpype.JImplements(ProblemChange)(problem_change_class)
     return out

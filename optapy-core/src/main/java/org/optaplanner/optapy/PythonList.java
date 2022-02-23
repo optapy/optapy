@@ -229,25 +229,23 @@ public class PythonList<T> implements PythonObject, List<T> {
 
     @Override
     public T get(int i) {
-        T out = (T) getItemAtIndexInPythonList.apply(pythonListOpaqueReference, i);
+        Object out = getItemAtIndexInPythonList.apply(pythonListOpaqueReference, i);
         // Different proxies of the same object are different objects according to IdentityHashMap,
         // So check if the object we fetched is in the id map, and if so, return that proxy instead
-
-        Number id;
-        if (out instanceof Number) { // Numbers cannot be cast to OpaquePythonReference, but can be used as their own id
-            // defensive, in case the same number has multiple different instances
-            id = (Number) out;
-        } else {
-            id = PythonWrapperGenerator.pythonObjectToId.apply((OpaquePythonReference) out);
+        if (out instanceof Number) {
+            if (out instanceof Long) {
+                return (T) (Integer) (int) (long) out; // How to cast Long to Integer in java
+            }
+            return (T) out;
         }
 
-        if (idMap.containsKey(id)) {
-            return (T) idMap.get(id);
-        } else {
-            // Put object into id map
-            idMap.put(id, out);
+        if (out instanceof String || out instanceof Boolean || out instanceof PythonObject) {
+            return (T) out;
         }
-        return out;
+
+        T wrapped_out = (T) PythonWrapperGenerator.wrap(PythonWrapperGenerator.getJavaClass((OpaquePythonReference) out),
+                (OpaquePythonReference) out, idMap);
+        return wrapped_out;
     }
 
     @Override
