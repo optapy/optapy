@@ -175,6 +175,81 @@ class _PythonScoreManager:
         return self._wrap_call(lambda wrapped_solution: self._java_explainScore(wrapped_solution), solution)
 
 
+def _wrap_object(object_to_wrap, instance_map):
+    from org.optaplanner.optapy import PythonSolver, PythonWrapperGenerator  # noqa
+    maybe_object = instance_map.get(id(object_to_wrap))
+    if maybe_object is not None:
+        return maybe_object
+    if isinstance(object_to_wrap, int):
+        return PythonWrapperGenerator.wrapInt(object_to_wrap)
+    elif isinstance(object_to_wrap, bool):
+        return PythonWrapperGenerator.wrapBoolean(object_to_wrap)
+    object_class = get_class(type(object_to_wrap))
+    return PythonWrapperGenerator.wrap(object_class, object_to_wrap, instance_map)
+
+
+_problem_change_director_to_instance_dict = dict()
+
+
+@JImplementationFor('org.optaplanner.core.api.solver.change.ProblemChangeDirector')
+class _PythonProblemChangeDirector:
+    def _set_instance_map(self, run_id, instance_map):
+        global _problem_change_director_to_instance_dict
+        _problem_change_director_to_instance_dict[run_id] = instance_map
+
+    def _unset_instance_map(self, run_id):
+        global _problem_change_director_to_instance_dict
+        del _problem_change_director_to_instance_dict[run_id]
+
+    @JOverride(sticky=True, rename='_java_addEntity')
+    def addEntity(self, entity, entityConsumer):
+        global _problem_change_director_to_instance_dict
+        instance_map = _problem_change_director_to_instance_dict[id(self)]
+        self._java_addEntity(_wrap_object(entity, instance_map), entityConsumer)
+
+    @JOverride(sticky=True, rename='_java_addProblemFact')
+    def addProblemFact(self, problemFact, problemFactConsumer):
+        global _problem_change_director_to_instance_dict
+        instance_map = _problem_change_director_to_instance_dict[id(self)]
+        self._java_addProblemFact(_wrap_object(problemFact, instance_map), problemFactConsumer)
+
+    @JOverride(sticky=True, rename='_java_changeProblemProperty')
+    def changeProblemProperty(self, problemFactOrEntity, problemFactOrEntityConsumer):
+        global _problem_change_director_to_instance_dict
+        instance_map = _problem_change_director_to_instance_dict[id(self)]
+        self._java_changeProblemProperty(_wrap_object(problemFactOrEntity, instance_map), problemFactOrEntityConsumer)
+
+    @JOverride(sticky=True, rename='_java_changeVariable')
+    def changeVariable(self, entity, variableName, entityConsumer):
+        global _problem_change_director_to_instance_dict
+        instance_map = _problem_change_director_to_instance_dict[id(self)]
+        self._java_changeVariable(_wrap_object(entity, instance_map), variableName, entityConsumer)
+
+    @JOverride(sticky=True, rename='_java_lookUpWorkingObject')
+    def lookUpWorkingObject(self, externalObject):
+        global _problem_change_director_to_instance_dict
+        instance_map = _problem_change_director_to_instance_dict[id(self)]
+        return self._java_lookUpWorkingObject(_wrap_object(externalObject, instance_map))
+
+    @JOverride(sticky=True, rename='_java_lookUpWorkingObjectOrFail')
+    def lookUpWorkingObjectOrFail(self, externalObject):
+        global _problem_change_director_to_instance_dict
+        instance_map = _problem_change_director_to_instance_dict[id(self)]
+        return self._java_lookUpWorkingObjectOrFail(_wrap_object(externalObject, instance_map))
+
+    @JOverride(sticky=True, rename='_java_removeEntity')
+    def removeEntity(self, entity, entityConsumer):
+        global _problem_change_director_to_instance_dict
+        instance_map = _problem_change_director_to_instance_dict[id(self)]
+        self._java_removeEntity(_wrap_object(entity, instance_map), entityConsumer)
+
+    @JOverride(sticky=True, rename='_java_removeProblemFact')
+    def removeProblemFact(self, problemFact, problemFactConsumer):
+        global _problem_change_director_to_instance_dict
+        instance_map = _problem_change_director_to_instance_dict[id(self)]
+        self._java_removeProblemFact(_wrap_object(problemFact, instance_map), problemFactConsumer)
+
+
 def solver_manager_create(solver_config: '_SolverConfig') -> '_SolverManager':
     """Creates a new SolverManager, which can be used to solve problems asynchronously (ex: Web requests).
 
@@ -255,7 +330,8 @@ class _PythonSolver:
 
         solver_run_id = (id(self), id(problem), _uuid1())
         solver_run_ref_set = set()
-        wrapped_problem = PythonSolver.wrapProblem(get_class(type(problem)), problem)
+        object_class = get_class(type(problem))
+        wrapped_problem = PythonSolver.wrapProblem(object_class, problem)
         _setup_solver_run(solver_run_id, problem, solver_run_ref_set)
         try:
             return _unwrap_java_object(self._java_solve(wrapped_problem))

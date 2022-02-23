@@ -22,6 +22,7 @@ import org.optaplanner.core.api.domain.lookup.PlanningId;
 import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty;
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
+import org.optaplanner.core.api.domain.valuerange.ValueRangeProvider;
 import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.core.api.score.calculator.ConstraintMatchAwareIncrementalScoreCalculator;
 import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
@@ -153,6 +154,11 @@ public class PythonWrapperGenerator {
     }
 
     @SuppressWarnings("unused")
+    public static Boolean wrapBoolean(boolean value) {
+        return value;
+    }
+
+    @SuppressWarnings("unused")
     public static Byte wrapByte(byte value) {
         return value;
     }
@@ -231,7 +237,7 @@ public class PythonWrapperGenerator {
         return (T) out;
     }
 
-    public static <T> T wrapCollection(Class<T> javaClass, OpaquePythonReference object, Number id, Map<Number, Object> map) {
+    public static <T> T wrapCollection(OpaquePythonReference object, Number id, Map<Number, Object> map) {
         PythonList out = new PythonList(object, id, map);
         map.put(id, out);
         return (T) out;
@@ -253,7 +259,7 @@ public class PythonWrapperGenerator {
             if (javaClass.isArray()) {
                 return wrapArray(javaClass, object, id, map);
             } else if (javaClass.isAssignableFrom(PythonList.class)) {
-                return wrapCollection(javaClass, object, id, map);
+                return wrapCollection(object, id, map);
             } else if (javaClass.isAssignableFrom(OpaquePythonReference.class)) {
                 // Don't wrap OpaquePythonReference if it is a pointer to an OpaquePythonReference
                 return (T) object;
@@ -864,10 +870,11 @@ public class PythonWrapperGenerator {
                 // A PlanningId MUST be comparable
                 actualReturnType = Comparable.class;
             } else if ((ProblemFactCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
-                    || PlanningEntityCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType")))
+                    || PlanningEntityCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
+                    || ValueRangeProvider.class.isAssignableFrom((Class<?>) annotation.get("annotationType")))
                     && !(Collection.class.isAssignableFrom(returnType) || returnType.isArray())) {
                 // A ProblemFactCollection/PlanningEntityCollection MUST be a collection or array
-                actualReturnType = Object[].class;
+                actualReturnType = List.class;
             } else if (SelfType.class.equals(returnType)) {
                 actualReturnType = classCreator.getClassName();
             }
