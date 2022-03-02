@@ -4,7 +4,7 @@ from optapy import problem_fact, planning_entity, planning_list_variable, planni
     planning_entity_collection_property, problem_fact_collection_property, value_range_provider
 from optapy.score import HardSoftScore
 
-
+@problem_fact
 class Location:
     def __init__(self, _id, latitude, longitude, distance_map=None):
         self.id = _id

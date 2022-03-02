@@ -283,6 +283,16 @@ def inverse_relation_shadow_variable(source_type: Type, source_variable_name: st
     return inverse_relation_shadow_variable_function_mapper  # noqa
 
 
+def __verify_is_problem_fact(type, problem_fact_type):
+    if type == str or type == int or type == bool:
+        # These built-in python types have direct java equivalents
+        # and thus can be used in Lists without an illegal item on the stack
+        return
+    if not hasattr(type, '__optapy_java_class'):
+        raise ValueError(f'{type} is not a @{problem_fact_type}. Maybe decorate {type} with '
+                         f'@{problem_fact_type}?')
+
+
 def problem_fact_property(fact_type: Type) -> Callable[[Callable[[], List]],
                                                        Callable[[], List]]:
     """Specifies that a property on a @planning_solution class is a problem fact.
@@ -299,6 +309,7 @@ def problem_fact_property(fact_type: Type) -> Callable[[Callable[[], List]],
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.solution import \
             ProblemFactProperty as JavaProblemFactProperty
+        __verify_is_problem_fact(fact_type, 'problem_fact')
         getter_function.__optapy_return = get_class(fact_type)
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaProblemFactProperty
@@ -324,6 +335,7 @@ def problem_fact_collection_property(fact_type: Type) -> Callable[[Callable[[], 
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.solution import \
             ProblemFactCollectionProperty as JavaProblemFactCollectionProperty
+        __verify_is_problem_fact(fact_type, 'problem_fact')
         getter_function.__optapy_return = JavaList
         getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
             JavaList, get_class(fact_type))
@@ -348,6 +360,7 @@ def planning_entity_property(entity_type: Type) -> Callable[[Callable[[], List]]
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.solution import \
             PlanningEntityProperty as JavaPlanningEntityProperty
+        __verify_is_problem_fact(entity_type, 'planning_entity')
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaPlanningEntityProperty
         }
@@ -371,6 +384,7 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.solution import \
             PlanningEntityCollectionProperty as JavaPlanningEntityCollectionProperty
+        __verify_is_problem_fact(entity_type, 'planning_entity')
         getter_function.__optaplannerPlanningEntityCollectionProperty = {
             'annotationType': JavaPlanningEntityCollectionProperty
         }
@@ -398,7 +412,6 @@ def value_range_provider(range_id: str, value_range_type: type = None) -> Callab
 
     def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, '_ValueRange']]):
         ensure_init()
-        from java.util import List as JavaList
         from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
         from org.optaplanner.optapy import PythonWrapperGenerator, OpaquePythonReference  # noqa
 
