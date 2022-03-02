@@ -230,8 +230,6 @@ public class PythonList<T> implements PythonObject, List<T> {
     @Override
     public T get(int i) {
         Object out = getItemAtIndexInPythonList.apply(pythonListOpaqueReference, i);
-        // Different proxies of the same object are different objects according to IdentityHashMap,
-        // So check if the object we fetched is in the id map, and if so, return that proxy instead
         if (out instanceof Number) {
             if (out instanceof Long) {
                 return (T) (Integer) (int) (long) out; // How to cast Long to Integer in java
@@ -243,6 +241,8 @@ public class PythonList<T> implements PythonObject, List<T> {
             return (T) out;
         }
 
+        // Different proxies of the same object are different objects according to IdentityHashMap,
+        // so wrap it (which will return the same Proxy if it was already created)
         T wrapped_out = (T) PythonWrapperGenerator.wrap(PythonWrapperGenerator.getJavaClass((OpaquePythonReference) out),
                 (OpaquePythonReference) out, idMap);
         return wrapped_out;

@@ -61,8 +61,22 @@ def test_non_planning_solution_being_passed_to_solve():
             f'A problem was not passed to solve (parameter problem was ({None})). Maybe '
             f'pass an instance of a class annotated with @planning_solution to solve?'
     )):
-
         solver.solve(None)
+
+
+def test_non_problem_fact_being_passed_to_problem_fact_collection():
+    with pytest.raises(ValueError, match=f"<class '.*MyClass'> is not a @problem_fact. Maybe decorate "
+                                         f"<class '.*MyClass'> with @problem_fact?"):
+        class MyClass:
+            pass
+
+        class MySolution:
+            def __init__(self, my_class_list):
+                self.my_class_list = my_class_list
+
+            @optapy.problem_fact_collection_property(MyClass)
+            def get_my_class_list(self):
+                return self.my_class_list
 
 
 def test_none_passed_to_solve():
