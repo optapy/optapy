@@ -1,19 +1,8 @@
-import pytest
 import optapy
 import optapy.types
 import optapy.score
 import optapy.config
 import optapy.constraint
-
-
-@pytest.fixture(scope='session', autouse=True)
-def setup_jvm():
-    # Will be executed before the first test
-    yield None
-    # Will be executed after the last test
-    import jpype
-    jpype.shutdownJVM()
-
 
 
 def test_solve():
@@ -217,4 +206,3 @@ def test_solve():
         assert_problem_change_solver_run(solver_manager, solver_job)
         assert len(solution_list) == 3
     time.sleep(1)  # ensure the thread factory close
-
