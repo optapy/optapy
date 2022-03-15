@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.objectweb.asm.ClassWriter;
@@ -20,6 +19,13 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.optapy.PythonLikeObject;
+import org.optaplanner.optapy.translator.types.PythonBoolean;
+import org.optaplanner.optapy.translator.types.PythonFloat;
+import org.optaplanner.optapy.translator.types.PythonInteger;
+import org.optaplanner.optapy.translator.types.PythonLikeFunction;
+import org.optaplanner.optapy.translator.types.PythonLikeList;
+import org.optaplanner.optapy.translator.types.PythonNumber;
 
 public class PythonBytecodeToJavaBytecodeTranslator {
     /**
@@ -177,14 +183,12 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         public LocalVariableHelper(Parameter[] parameters, PythonCompiledFunction compiledFunction) {
             this.parameters = parameters;
             int slotsUsedByParameters = 1;
-            boolean isAnyPrimitive = false;
             for (Parameter parameter : parameters) {
                 if (parameter.getType().equals(long.class) || parameter.getType().equals(double.class)) {
                     slotsUsedByParameters += 2;
                 } else {
                     slotsUsedByParameters += 1;
                 }
-                isAnyPrimitive |= parameter.getType().isPrimitive();
             }
             parameterSlotsEnd = slotsUsedByParameters;
             pythonLocalVariablesSlotEnd = parameterSlotsEnd + compiledFunction.co_varnames.size();
@@ -230,86 +234,88 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
         if (constant instanceof Number || constant instanceof String) {
             methodVisitor.visitLdcInsn(constant);
+            if (constant instanceof Byte || constant instanceof Short || constant instanceof Integer || constant instanceof Long) {
+                methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonInteger.class));
+                methodVisitor.visitInsn(Opcodes.DUP);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonInteger.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.LONG_TYPE), false);
+            } else if (constant instanceof Float || constant instanceof Double) {
+                methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonFloat.class));
+                methodVisitor.visitInsn(Opcodes.DUP);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonFloat.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.DOUBLE_TYPE), false);
+            }
             return;
         }
 
         if (constant instanceof Boolean) {
             if (Boolean.TRUE.equals(constant)) {
-                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(Boolean.class),
-                        "TRUE", Type.getDescriptor(Boolean.class));
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class),
+                        "TRUE", Type.getDescriptor(PythonBoolean.class));
             } else {
-                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(Boolean.class),
-                        "FALSE", Type.getDescriptor(Boolean.class));
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class),
+                        "FALSE", Type.getDescriptor(PythonBoolean.class));
             }
             return;
         }
         throw new UnsupportedOperationException("Cannot load constant (" + constant + ").");
     }
 
+    private static void binaryOperator(MethodVisitor methodVisitor, PythonBinaryOperators operator) {
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitLdcInsn(operator.getDunderMethod());
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                      "__getattribute__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                                                                   Type.getType(String.class)),
+                                      true);
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonLikeList.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitLdcInsn(2);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonLikeList.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE), false);
+        methodVisitor.visitInsn(Opcodes.DUP_X1);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeList.class),
+                                      "reverseAdd",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
+                                      false);
+        methodVisitor.visitInsn(Opcodes.DUP_X1);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeList.class),
+                                      "reverseAdd",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
+                                      false);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                                      "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                                                                Type.getType(List.class),
+                                                                                Type.getType(Map.class)),
+                                      true);
+    }
+
     private static void compareValues(MethodVisitor methodVisitor, CompareOp op) {
         switch (op) {
-            case EQUALS:
-            case NOT_EQUALS:
-                methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Objects.class),
-                        "equals", Type.getMethodDescriptor(Type.getType(boolean.class),
-                                Type.getType(Object.class),
-                                Type.getType(Object.class)),
-                        false);
-                break;
-            default:
-                methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Comparable.class),
-                        "compareTo", Type.getMethodDescriptor(Type.getType(int.class),
-                                Type.getType(Object.class)),
-                        true);
-                break;
-        }
-
-        if (op.equals(CompareOp.EQUALS) || op.equals(CompareOp.NOT_EQUALS)) {
-            if (op.equals(CompareOp.NOT_EQUALS)) {
-                methodVisitor.visitInsn(Opcodes.ICONST_1);
-                methodVisitor.visitInsn(Opcodes.IXOR);
-            }
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Boolean.class),
-                    "valueOf", Type.getMethodDescriptor(Type.getType(Boolean.class),
-                            Type.getType(boolean.class)),
-                    false);
-            return;
-        }
-
-        int compareToOpcode;
-        methodVisitor.visitInsn(Opcodes.ICONST_0);
-
-        switch (op) {
             case LESS_THAN:
-                compareToOpcode = Opcodes.IF_ICMPLT;
+                binaryOperator(methodVisitor, PythonBinaryOperators.LESS_THAN);
                 break;
             case LESS_THAN_OR_EQUALS:
-                compareToOpcode = Opcodes.IF_ICMPLE;
+                binaryOperator(methodVisitor, PythonBinaryOperators.LESS_THAN_OR_EQUAL);
+                break;
+            case EQUALS:
+                binaryOperator(methodVisitor, PythonBinaryOperators.EQUAL);
+                break;
+            case NOT_EQUALS:
+                binaryOperator(methodVisitor, PythonBinaryOperators.NOT_EQUAL);
                 break;
             case GREATER_THAN:
-                compareToOpcode = Opcodes.IF_ICMPGT;
+                binaryOperator(methodVisitor, PythonBinaryOperators.GREATER_THAN);
                 break;
             case GREATER_THAN_OR_EQUALS:
-                compareToOpcode = Opcodes.IF_ICMPGE;
+                binaryOperator(methodVisitor, PythonBinaryOperators.GREATER_THAN_OR_EQUAL);
                 break;
-
             default:
-                throw new IllegalStateException("Impossible State: unmatched case for (" + op + ").");
+                throw new IllegalStateException("Unhandled branch: " + op);
         }
-
-        Label ifTrue = new Label();
-        Label afterEnd = new Label();
-
-        methodVisitor.visitJumpInsn(compareToOpcode, ifTrue);
-        methodVisitor.visitInsn(Opcodes.ICONST_0);
-        methodVisitor.visitJumpInsn(Opcodes.GOTO, afterEnd);
-        methodVisitor.visitLabel(ifTrue);
-        methodVisitor.visitInsn(Opcodes.ICONST_1);
-        methodVisitor.visitLabel(afterEnd);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Boolean.class),
-                "valueOf", Type.getMethodDescriptor(Type.getType(Boolean.class),
-                        Type.getType(boolean.class)),
-                false);
     }
 
     private static void buildCollection(Class<? extends Collection> collectionType, MethodVisitor methodVisitor,
@@ -357,16 +363,29 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         String methodDescriptor;
         int returnOpcode;
 
+        if (byte.class.isAssignableFrom(returnType) ||
+            short.class.isAssignableFrom(returnType) ||
+            int.class.isAssignableFrom(returnType) ||
+            long.class.isAssignableFrom(returnType) ||
+            float.class.isAssignableFrom(returnType) ||
+            double.class.isAssignableFrom(returnType)) {
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonNumber.class));
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+                                          Type.getInternalName(PythonNumber.class),
+                                          "getValue",
+                                          Type.getMethodDescriptor(Type.getType(Number.class)),
+                                          true);
+        }
+
         if (boolean.class.equals(returnType)) {
-            wrapperClassName = Type.getInternalName(Boolean.class);
-            methodName = "booleanValue";
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonBoolean.class));
+            wrapperClassName = Type.getInternalName(PythonBoolean.class);
+            methodName = "getValue";
             methodDescriptor = Type.getMethodDescriptor(Type.BOOLEAN_TYPE);
             returnOpcode = Opcodes.IRETURN;
         } else if (char.class.equals(returnType)) {
-            wrapperClassName = Type.getInternalName(Number.class);
-            methodName = "charValue";
-            methodDescriptor = Type.getMethodDescriptor(Type.CHAR_TYPE);
-            returnOpcode = Opcodes.IRETURN;
+            throw new IllegalStateException("Unhandled case for primitive type (" + returnType + ").");
+            // returnOpcode = Opcodes.IRETURN;
         } else if (byte.class.equals(returnType)) {
             wrapperClassName = Type.getInternalName(Number.class);
             methodName = "byteValue";
@@ -410,43 +429,42 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     private static void copyParameter(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper,
             int parameterIndex) {
         Class<?> parameterClass = localVariableHelper.parameters[parameterIndex].getType();
-        if (parameterClass.isPrimitive()) {
+        if (parameterClass.isPrimitive() || Number.class.isAssignableFrom(parameterClass)) {
             int loadOpcode;
             String valueOfOwner;
             String valueOfDescriptor;
 
             if (boolean.class.equals(parameterClass)) {
                 loadOpcode = Opcodes.ILOAD;
-                valueOfOwner = Type.getInternalName(Integer.class);
-                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(Boolean.class), Type.getType(boolean.class));
+                valueOfOwner = Type.getInternalName(PythonBoolean.class);
+                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(PythonBoolean.class), Type.getType(boolean.class));
             } else if (char.class.equals(parameterClass)) {
                 loadOpcode = Opcodes.ILOAD;
-                valueOfOwner = Type.getInternalName(Character.class);
-                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(Character.class), Type.getType(char.class));
+                throw new IllegalStateException("Unhandled case for primitive type (" + parameterClass + ").");
             } else if (byte.class.equals(parameterClass)) {
                 loadOpcode = Opcodes.ILOAD;
-                valueOfOwner = Type.getInternalName(Byte.class);
-                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(Byte.class), Type.getType(byte.class));
+                valueOfOwner = Type.getInternalName(PythonInteger.class);
+                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(PythonInteger.class), Type.getType(byte.class));
             } else if (short.class.equals(parameterClass)) {
                 loadOpcode = Opcodes.ILOAD;
-                valueOfOwner = Type.getInternalName(Short.class);
-                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(Short.class), Type.getType(short.class));
+                valueOfOwner = Type.getInternalName(PythonInteger.class);
+                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(PythonInteger.class), Type.getType(short.class));
             } else if (int.class.equals(parameterClass)) {
                 loadOpcode = Opcodes.ILOAD;
-                valueOfOwner = Type.getInternalName(Integer.class);
-                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(Integer.class), Type.getType(int.class));
+                valueOfOwner = Type.getInternalName(PythonInteger.class);
+                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(PythonInteger.class), Type.getType(int.class));
             } else if (float.class.equals(parameterClass)) {
                 loadOpcode = Opcodes.FLOAD;
-                valueOfOwner = Type.getInternalName(Float.class);
-                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(Float.class), Type.getType(float.class));
+                valueOfOwner = Type.getInternalName(PythonFloat.class);
+                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(PythonFloat.class), Type.getType(float.class));
             } else if (long.class.equals(parameterClass)) {
                 loadOpcode = Opcodes.LLOAD;
-                valueOfOwner = Type.getInternalName(Long.class);
-                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(Long.class), Type.getType(long.class));
+                valueOfOwner = Type.getInternalName(PythonInteger.class);
+                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(PythonInteger.class), Type.getType(long.class));
             } else if (double.class.equals(parameterClass)) {
                 loadOpcode = Opcodes.DLOAD;
-                valueOfOwner = Type.getInternalName(Double.class);
-                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(Double.class), Type.getType(double.class));
+                valueOfOwner = Type.getInternalName(PythonFloat.class);
+                valueOfDescriptor = Type.getMethodDescriptor(Type.getType(PythonFloat.class), Type.getType(double.class));
             } else {
                 throw new IllegalStateException("Unhandled case for primitive type (" + parameterClass + ").");
             }
@@ -457,6 +475,53 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
         } else {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
+
+            // Need to convert numeric types to wrappers
+            Label integerWrap = new Label();
+            Label floatWrap = new Label();
+            Label storeResult = new Label();
+
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Byte.class));
+            methodVisitor.visitJumpInsn(Opcodes.IFNE, integerWrap);
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Short.class));
+            methodVisitor.visitJumpInsn(Opcodes.IFNE, integerWrap);
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Integer.class));
+            methodVisitor.visitJumpInsn(Opcodes.IFNE, integerWrap);
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Long.class));
+            methodVisitor.visitJumpInsn(Opcodes.IFNE, integerWrap);
+
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Float.class));
+            methodVisitor.visitJumpInsn(Opcodes.IFNE, floatWrap);
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Double.class));
+            methodVisitor.visitJumpInsn(Opcodes.IFNE, floatWrap);
+
+            methodVisitor.visitJumpInsn(Opcodes.GOTO, storeResult);
+
+            methodVisitor.visitLabel(integerWrap);
+            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonInteger.class));
+            methodVisitor.visitInsn(Opcodes.DUP_X1);
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Number.class));
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Number.class), "longValue", Type.getMethodDescriptor(Type.LONG_TYPE), false);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonInteger.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.LONG_TYPE), false);
+            methodVisitor.visitJumpInsn(Opcodes.GOTO, storeResult);
+
+            methodVisitor.visitLabel(floatWrap);
+            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonFloat.class));
+            methodVisitor.visitInsn(Opcodes.DUP_X1);
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Number.class));
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Number.class), "doubleValue", Type.getMethodDescriptor(Type.DOUBLE_TYPE), false);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonFloat.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.DOUBLE_TYPE), false);
+            methodVisitor.visitJumpInsn(Opcodes.GOTO, storeResult);
+
+            methodVisitor.visitLabel(storeResult);
             methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
         }
     }
@@ -491,19 +556,15 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case ROT_FOUR: {
                 int secondFromStack = localVariableHelper.newLocal();
                 int thirdFromStack = localVariableHelper.newLocal();
-                Label localsStart = new Label();
-                Label localsEnd = new Label();
 
                 methodVisitor.visitInsn(Opcodes.DUP_X2);
                 methodVisitor.visitInsn(Opcodes.POP);
 
-                methodVisitor.visitLabel(localsStart);
                 methodVisitor.visitVarInsn(Opcodes.ASTORE, secondFromStack);
                 methodVisitor.visitVarInsn(Opcodes.ASTORE, thirdFromStack);
                 methodVisitor.visitInsn(Opcodes.SWAP);
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, thirdFromStack);
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, secondFromStack);
-                methodVisitor.visitLabel(localsEnd);
 
                 localVariableHelper.freeLocal();
                 localVariableHelper.freeLocal();
@@ -531,60 +592,114 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             case GET_YIELD_FROM_ITER:
                 break;
-            case BINARY_POWER:
+            case BINARY_POWER: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.POWER);
                 break;
-            case BINARY_MULTIPLY:
+            }
+            case BINARY_MULTIPLY: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.MULTIPLY);
                 break;
-            case BINARY_MATRIX_MULTIPLY:
+            }
+            case BINARY_MATRIX_MULTIPLY: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.MATRIX_MULTIPLY);
                 break;
-            case BINARY_FLOOR_DIVIDE:
+            }
+            case BINARY_FLOOR_DIVIDE: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.FLOOR_DIVIDE);
                 break;
-            case BINARY_TRUE_DIVIDE:
+            }
+            case BINARY_TRUE_DIVIDE: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.TRUE_DIVIDE);
                 break;
-            case BINARY_MODULO:
+            }
+            case BINARY_MODULO: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.MODULO);
                 break;
-            case BINARY_ADD:
+            }
+            case BINARY_ADD: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.ADD);
                 break;
-            case BINARY_SUBTRACT:
+            }
+            case BINARY_SUBTRACT: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.SUBTRACT);
                 break;
-            case BINARY_SUBSCR:
+            }
+            case BINARY_SUBSCR: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.GET_ITEM);
                 break;
-            case BINARY_LSHIFT:
+            }
+            case BINARY_LSHIFT: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.LSHIFT);
                 break;
-            case BINARY_RSHIFT:
+            }
+            case BINARY_RSHIFT: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.RSHIFT);
                 break;
-            case BINARY_AND:
+            }
+            case BINARY_AND: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.AND);
                 break;
-            case BINARY_XOR:
+            }
+            case BINARY_XOR: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.XOR);
                 break;
-            case BINARY_OR:
+            }
+            case BINARY_OR: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.OR);
                 break;
-            case INPLACE_POWER:
+            }
+            case INPLACE_POWER: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_POWER);
                 break;
-            case INPLACE_MULTIPLY:
+            }
+            case INPLACE_MULTIPLY: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_MULTIPLY);
                 break;
-            case INPLACE_MATRIX_MULTIPLY:
+            }
+            case INPLACE_MATRIX_MULTIPLY: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_MATRIX_MULTIPLY);
                 break;
-            case INPLACE_FLOOR_DIVIDE:
+            }
+            case INPLACE_FLOOR_DIVIDE: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_FLOOR_DIVIDE);
                 break;
-            case INPLACE_TRUE_DIVIDE:
+            }
+            case INPLACE_TRUE_DIVIDE: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_TRUE_DIVIDE);
                 break;
-            case INPLACE_MODULO:
+            }
+            case INPLACE_MODULO: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_MODULO);
                 break;
-            case INPLACE_ADD:
+            }
+            case INPLACE_ADD: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_ADD);
                 break;
-            case INPLACE_SUBTRACT:
+            }
+            case INPLACE_SUBTRACT: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_SUBTRACT);
                 break;
-            case INPLACE_LSHIFT:
+            }
+            case INPLACE_LSHIFT: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_LSHIFT);
                 break;
-            case INPLACE_RSHIFT:
+            }
+            case INPLACE_RSHIFT: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_RSHIFT);
                 break;
-            case INPLACE_AND:
+            }
+            case INPLACE_AND: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_AND);
                 break;
-            case INPLACE_XOR:
+            }
+            case INPLACE_XOR: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_XOR);
                 break;
-            case INPLACE_OR:
+            }
+            case INPLACE_OR: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_OR);
                 break;
+            }
             case STORE_SUBSCR:
                 break;
             case DEL_SUBSCR:

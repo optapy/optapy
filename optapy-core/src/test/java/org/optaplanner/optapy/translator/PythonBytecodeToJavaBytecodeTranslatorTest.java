@@ -219,6 +219,34 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.test(1, 1)).isEqualTo(false);
     }
 
+    private BiFunction getMathFunction(OpCode opCode) {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a", "b")
+                .loadParameter("a")
+                .loadParameter("b")
+                .op(opCode)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        BiFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
+        return javaFunction;
+    }
+
+    @Test
+    public void testMathOp() {
+        BiFunction javaFunction = getMathFunction(OpCode.BINARY_ADD);
+
+        assertThat(javaFunction.apply(1L, 2L)).isEqualTo(3L);
+
+        javaFunction = getMathFunction(OpCode.BINARY_SUBTRACT);
+        assertThat(javaFunction.apply(3L, 2L)).isEqualTo(1L);
+
+        javaFunction = getMathFunction(OpCode.BINARY_TRUE_DIVIDE);
+        assertThat(javaFunction.apply(3L, 2L)).isEqualTo(1.5d);
+
+        javaFunction = getMathFunction(OpCode.BINARY_FLOOR_DIVIDE);
+        assertThat(javaFunction.apply(3L, 2L)).isEqualTo(1L);
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
