@@ -1,0 +1,19 @@
+site:
+  title: Documentation
+  url: https://www.optapy.org/docs
+  start_page: optapy::optapy-introduction/optapy-introduction.adoc
+  robots: allow
+  #keys:
+  #  google_analytics: 'UA-39485370-1'
+content:
+  edit_url: '{web_url}/edit/main/{path}'
+  sources:
+    - url: ..
+      branches: [HEAD]
+      start_path: optapy-docs/src
+ui:
+  bundle:
+    url: ./ui-bundle/ui-bundle.zip
+  supplemental_files: ./supplemental-ui
+runtime:
+  fetch: true

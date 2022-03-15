@@ -1,17 +1,14 @@
-__pycache__
+/dist
+/*.egg-info
 /target
-/build
-/local
-venv
-graalvenv
+/*-stubs
 
 # Eclipse, Netbeans and IntelliJ files
 /.*
 !.gitignore
 !.dockerignore
 !.mvn
-!.github
 /nbproject
-*.ipr
-*.iws
-*.iml
+/*.ipr
+/*.iws
+/*.iml
