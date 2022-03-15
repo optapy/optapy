@@ -1,0 +1,51 @@
+name: Publish to GitHub Pages
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-docs-to-pages.yml
+      - optapy-docs/**
+jobs:
+  publish-docs-to-pages:
+    if: github.repository_owner == 'optapy'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./optapy-docs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: add-antora-docs
+      - name: Set up Maven
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Build with Maven
+        run: mvn --batch-mode --update-snapshots package
+      - name: Update antora.yml
+        run: sh update_antora_yml.sh
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      - name: Install Antora
+        run: npm i antora @antora/lunr-extension
+      - name: Generate Site
+        run: npx antora antora-playbook.yml
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          cname: www.optapy.org
+          external_repository: optapy/optapy.github.io
+          publish_branch: main
+          publish_dir: optapy-docs/build/site
