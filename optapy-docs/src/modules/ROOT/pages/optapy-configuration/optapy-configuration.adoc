@@ -782,7 +782,47 @@ For example in bin packing: small container < medium container < big container.
 _None of the current planning variable state in any of the planning entities should be used to compare planning values._ During construction heuristics, those variables are likely to be ``None``.
 For example, none of the `row` variables of any `Queen` may be used to determine the strength of a ``Row``.
 ////
+[[planningListVariables]]
+==== Planning List Variable
 
+In some use cases, such as Vehicle Routing and Task Assignment, it is more convenient to model the planning variables as a list.
+For example, the list of customers a vehicle visits, or the list of tasks a person does.
+In OptaPy, this is accomplished by using planning list variables.
+
+For a planning list variable with value range "value_range":
+
+- The order of elements inside the list is significant
+- All values in "value_range" appear in exactly one planning
+  entity's planning list variable
+
+To declare a planning list variable, use the `@planning_list_variable` decorator:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity, planning_list_variable
+
+@planning_entity
+class Vehicle:
+    def __init__(self, _id, capacity, depot, customer_list=None):
+        self.id = _id
+        self.capacity = capacity
+        self.depot = depot
+        if customer_list is None:
+            self.customer_list = []
+        else:
+            self.customer_list = customer_list
+
+    @planning_list_variable(Customer, ['customer_range'])
+    def get_customer_list(self):
+        return self.customer_list
+
+    ...
+----
+
+[IMPORTANT]
+====
+The getter for `@planning_list_variable` can never return None.
+====
 
 [[chainedPlanningVariable]]
 ==== Chained planning variable (TSP, VRP, ...)
@@ -794,7 +834,7 @@ By modeling the problem as a set of chains (instead of a set of trees/loops), th
 
 [NOTE]
 ====
-<<listVariables,List variables>> can also be used for these use cases
+<<planningListVariables,Planning list variables>> can also be used for these use cases
 ====
 
 A planning variable that is chained either:
