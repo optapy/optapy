@@ -1,4 +1,6 @@
 import pathlib
+import pytest
+import re
 import optapy
 import optapy.score
 import optapy.config
@@ -88,3 +90,12 @@ def test_reload_from_solver_config_file():
 
     assert solver_config_1.getSolutionClass() == optapy.get_class(RedefinedSolution1)
     assert solver_config_2.getSolutionClass() == optapy.get_class(RedefinedSolution2)
+
+
+def test_cannot_find_solver_config_file():
+    from java.lang import Thread
+    current_thread = Thread.currentThread()
+    thread_class_loader = current_thread.getContextClassLoader()
+    with pytest.raises(FileNotFoundError, match=re.escape("Unable to find SolverConfig file (does-not-exist.xml).")):
+        optapy.solver_config_create_from_xml_file(pathlib.Path('does-not-exist.xml'))
+    assert current_thread.getContextClassLoader() == thread_class_loader

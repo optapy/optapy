@@ -253,21 +253,25 @@ class _PythonProblemChangeDirector:
         self._java_removeProblemFact(_wrap_object(problemFact, instance_map), problemFactConsumer)
 
 
-def solver_config_create_from_xml_file(path: pathlib.Path) -> '_SolverConfig':
+def solver_config_create_from_xml_file(solver_config_path: pathlib.Path) -> '_SolverConfig':
     """Loads a SolverConfig from the given file.
 
-    :param path: The path to the file
+    :param solver_config_path: The path to the file
     :return: A new SolverConfig generated from the file at path
     """
-    from java.lang import Thread
+    from java.lang import Thread, IllegalArgumentException
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     from org.optaplanner.core.config.solver import SolverConfig
     class_loader = PythonWrapperGenerator.getClassLoaderForAliasMap(_class_identifier_to_java_class_map)
     current_thread = Thread.currentThread()
     thread_class_loader = current_thread.getContextClassLoader()
-    current_thread.setContextClassLoader(class_loader)
-    solver_config = SolverConfig.createFromXmlFile(path)
-    current_thread.setContextClassLoader(thread_class_loader)
+    try:
+        current_thread.setContextClassLoader(class_loader)
+        solver_config = SolverConfig.createFromXmlFile(solver_config_path)
+    except IllegalArgumentException as e:
+        raise FileNotFoundError(f'Unable to find SolverConfig file ({solver_config_path}).') from e
+    finally:
+        current_thread.setContextClassLoader(thread_class_loader)
     return solver_config
 
 
