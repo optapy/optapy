@@ -1,2 +1,3 @@
 * xref:optapy-introduction/optapy-introduction.adoc[leveloffset=+1]
 * xref:quickstart/quickstart.adoc[leveloffset=+1]
+* xref:optapy-configuration/optapy-configuration.adoc[leveloffset=+1]

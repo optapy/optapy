@@ -19,3 +19,5 @@ image::shared/optaPyLogo.png[align="center"]
 endif::[]
 
 include::optapy-introduction/optapy-introduction.adoc[leveloffset=+1]
+include::quickstart/quickstart.adoc[leveloffset=+1]
+include::optapy-configuration/optapy-configuration.adoc[leveloffset=+1]

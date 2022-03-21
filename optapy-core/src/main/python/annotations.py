@@ -396,7 +396,7 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
     return planning_entity_collection_property_function_mapper
 
 
-def value_range_provider(range_id: str, value_range_type: type = None) -> Callable[
+def value_range_provider(range_id: str, value_range_type: type = list) -> Callable[
     [Callable[[], Union[List, '_ValueRange']]], Callable[[], Union[List, '_ValueRange']]]:
     """Provides the planning values that can be used for a PlanningVariable.
 
@@ -405,8 +405,7 @@ def value_range_provider(range_id: str, value_range_type: type = None) -> Callab
     :param range_id: The id of the value range. Referenced by @planning_variable's value_range_provider_refs
                      parameter. Required.
 
-    :param value_range_type: The type of the value range. Only required if the function is not also
-                             decorated with @problem_fact_collection_property. Should either be
+    :param value_range_type: The type of the value range. Should either be
                              list or a Java class that implements ValueRangeProvider.
     """
 
@@ -419,7 +418,7 @@ def value_range_provider(range_id: str, value_range_type: type = None) -> Callab
             'annotationType': JavaValueRangeProvider,
             'id': range_id
         }
-        if value_range_type is not None:
+        if not hasattr(getter_function, '__optapy_return'):
             if value_range_type == list:
                 getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(OpaquePythonReference)
             else:

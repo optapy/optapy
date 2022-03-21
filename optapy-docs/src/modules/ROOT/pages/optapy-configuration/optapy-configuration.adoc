@@ -1,0 +1,1611 @@
+[[optapyConfiguration]]
+= OptaPy configuration
+:doctype: book
+:sectnums:
+:icons: font
+
+
+[[optapyConfigurationOverview]]
+== Overview
+
+Solving a planning problem with OptaPy consists of the following steps:
+
+. *Model your planning problem* as a class annotated with the `@planning_solution` decorator, for example the `NQueens` class.
+. **Configure a `*Solver*`**, for example a First Fit and Tabu Search solver for any `NQueens` instance.
+. *Load a problem data set* from your data layer, for example a Four Queens instance. That is the planning problem.
+. *Solve it* with `Solver.solve(problem)` which returns the best solution found.
+
+// TODO: Create OptaPy version of image
+// image::optapy-configuration/inputOutputOverview.png[align="center"]
+
+[[solverConfiguration]]
+== Solver configuration
+
+[[solverConfigurationByXML]]
+=== Solver configuration by XML
+
+
+Build a `Solver` instance with the `SolverFactory`.
+Create a `SolverFactory` by passing a `SolverConfig` to
+`solver_factory_create`.
+A `SolverConfig` can be created from a XML file, like so:
+
+[source,python,options="nowrap"]
+----
+from optapy import get_class
+import optapy.config
+import pathlib
+
+solver_config = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
+    .withSolutionClass(get_class(TimeTable)) \
+    .withEntityClasses(get_class(Lesson)) \
+    .withConstraintProviderClass(get_class(define_constraints))
+
+solver_factory = solver_factory_create(solver_config)
+
+solver_factory.buildSolver().solve(generate_problem())
+----
+
+Note that unlike OptaPlanner, *domain classes and the score
+director are defined via the Python API*.
+
+A solver configuration XML file looks like this:
+
+[source,xml,options="nowrap"]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+  <!-- Configure when the solver terminates -->
+  <termination>
+    ...
+  </termination>
+  <!-- Configure how the initial solution is built -->
+  <constructionHeuristic>
+    ...
+  </constructionHeuristic>
+  <!-- Configure how local search is done -->
+  <localSearch>
+    ...
+  </localSearch>
+</solver>
+----
+
+These various parts of a configuration are explained further in this manual.
+
+*OptaPy makes it relatively easy to switch optimization algorithm(s) just by changing the configuration.*
+
+
+[[solverConfigurationByPythonAPI]]
+=== Solver configuration by Python API
+
+A solver configuration can also be configured with the `SolverConfig` API.
+This is especially useful to change some values dynamically at runtime.
+For example, to change the running time based on an environment variable, before building the ``Solver``:
+
+[source,python,options="nowrap"]
+----
+import os
+import optapy
+import optapy.config
+import pathlib
+
+SOLVE_TIME_IN_MINUTES = os.environ['SOLVE_TIME_IN_MINUTES']
+termination_config = optapy.config.solver.TerminationConfig() \
+    .withMinutesSpentLimit(SOLVE_TIME_IN_MINUTES)
+
+solver_config = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
+    .withSolutionClass(get_class(TimeTable)) \
+    .withEntityClasses(get_class(Lesson)) \
+    .withConstraintProviderClass(get_class(define_constraints)) \
+    .withTerminationConfig(termination_config)
+
+solver_factory = solver_factory_create(solver_config)
+
+solver_factory.buildSolver().solve(generate_problem())
+----
+
+Every element in the solver configuration XML is available as a `$$*$$Config` class
+or a property on a `$$*$$Config` class in the package ``optapy.config``.
+These `$$*$$Config` classes are the Python representation of the XML format.
+They build the runtime components and assemble them into an efficient ``Solver``.
+
+
+[NOTE]
+====
+To configure a `SolverFactory` dynamically for each user request,
+build a template `SolverConfig` during initialization
+and copy it with the copy constructor for each user request:
+
+[source,python,options="nowrap"]
+----
+termination_config = optapy.config.solver.TerminationConfig()
+template = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
+    .withSolutionClass(get_class(TimeTable)) \
+    .withEntityClasses(get_class(Lesson)) \
+    .withConstraintProviderClass(get_class(define_constraints)) \
+    .withTerminationConfig(termination_config)
+
+# Called concurrently from different threads
+def user_request(..., user_input):
+    solver_config = optapy.config.solver.SolverConfig(template) # Copy it
+    solver_config.getTerminationConfig().setMinutesSpentLimit(user_input)
+    solver_factory = solver_factory_create(solver_config)
+    solver = solver_factory.buildSolver();
+    ...
+
+----
+====
+
+[[modelAPlanningProblem]]
+== Model a planning problem
+
+
+[[isThisClassAProblemFactOrPlanningEntity]]
+=== Is this class a problem fact or planning entity?
+
+Look at a dataset of your planning problem.
+You will recognize domain classes in there, each of which can be categorized as one of the following:
+
+* An unrelated class: not used by any of the score constraints.
+From a planning standpoint, this data is obsolete.
+* A *problem fact* class: used by the score constraints, but does NOT change during planning (as long as the problem stays the same).
+For example: ``Bed``, ``Room``, ``Shift``, ``Employee``, ``Topic``, ``Period``, ... All the properties of a problem fact class are problem properties.
+* A *planning entity* class: used by the score constraints and changes during planning.
+For example: ``BedDesignation``, ``ShiftAssignment``, ``Exam``, ... The properties that change during planning are planning variables.
+The other properties are problem properties.
+
+Ask yourself: __What class changes during planning?__ __Which class has variables that I want the ``__Solver__`` to change for me?__ That class is a planning entity.
+Most use cases have only one planning entity class.
+Most use cases also have only one planning variable per planning entity class.
+
+// TODO: Uncomment when page is written
+//[NOTE]
+//====
+// In xref:repeated-planning/repeated-planning.adoc#realTimePlanning[real-time planning], even though the problem itself changes, problem facts do not really change during planning, instead they change between planning (because the Solver temporarily stops to apply the problem fact changes).
+//====
+// To create a good domain model, read the
+// TODO: Uncomment when page is written
+//xref:design-patterns/design-patterns.adoc#domainModelingGuide[domain modeling guide].
+
+*In OptaPlanner, all problem facts and planning entities are plain old Python Objects.* Load them from a database, an XML file, a data repository, a REST service, a noSQL cloud; it doesn't matter.
+
+[[problemFact]]
+=== Problem fact
+
+A problem fact is any Python Object with getters that does not change during planning.
+For example in n queens, the columns and rows are problem facts:
+
+[source,python,options="nowrap"]
+----
+from optapy import problem_fact
+
+@problem_fact
+class Column:
+    def __init__(self, index):
+        self.index = index
+    ...
+----
+
+[source,python,options="nowrap"]
+----
+from optapy import problem_fact
+
+@problem_fact
+class Row:
+    def __init__(self, index):
+        self.index = index
+    ...
+----
+
+A problem fact can reference other problem facts of course:
+
+[source,python,options="nowrap"]
+----
+from optapy import problem_fact
+
+@problem_fact
+class Teacher:
+    ...
+
+@problem_fact
+class Curriculum:
+    ...
+
+@problem_fact
+class Course:
+    code: str
+    teacher: Teacher # Other problem fact
+    lecture_size: int
+    min_working_day_size: int
+    curriculum_list: list[Curriculum] # Other problem facts
+    student_size: int
+    ...
+----
+
+Unlike OptaPlanner, a problem fact class *must* be decorated with `@problem_fact` to be used in constraints.
+
+
+[NOTE]
+====
+Generally, better designed domain classes lead to simpler and more efficient score constraints.
+Therefore, when dealing with a messy (denormalized) legacy system, it can sometimes be worthwhile to convert the messy domain model into a OptaPy specific model first.
+For example: if your domain model has two `Teacher` instances for the same teacher that teaches at two different departments, it is harder to write a correct score constraint that constrains a teacher's spare time on the original model than on an adjusted model.
+// TODO: Uncomment when added
+//Alternatively, you can sometimes also introduce <<cachedProblemFact,_a cached problem fact_>> to enrich the domain model for planning only.
+====
+
+
+
+[[planningEntity]]
+=== Planning entity
+
+
+[[planningEntityDecorator]]
+==== Planning entity decorator
+
+
+A planning entity is a Python Object that changes during solving, for example a `Queen` that changes to another row.
+A planning problem has multiple planning entities, for example for a single n queens problem, each `Queen` is a planning entity.
+But there is usually only one planning entity class, for example the `Queen` class.
+
+A planning entity class needs to be decorated with the `@planning_entity` decorator.
+
+Each planning entity class has one or more _planning variables_ (which can be <<planningVariable,genuine>> or xref:shadow-variable/shadow-variable.adoc#shadowVariable[shadows]).
+It should also have one or more _defining_ properties.
+For example in n queens, a `Queen` is defined by its `Column` and has a planning variable ``Row``.
+This means that a Queen's column never changes during solving, while its row does change.
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity
+
+@planning_entity
+class Queen:
+    column: Column
+
+    # Planning variables: changes during planning, between score calculations.
+    row: Row
+    # ... getters and setters
+----
+
+A planning entity class can have multiple planning variables.
+For example, a `Lecture` is defined by its `Course` and its index in that course (because one course has multiple lectures).
+Each `Lecture` needs to be scheduled into a `Period` and a `Room` so it has two planning variables (period and room).
+For example: the course Mathematics has eight lectures per week, of which the first lecture is Monday morning at 08:00 in room 212.
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity
+
+@planning_entity
+class Lecture:
+    course: Course
+    lectureIndexInCourse: int
+
+    # Planning variables: changes during planning, between score calculations.
+    period: Period
+    room: Room
+    ...
+----
+
+The solver configuration needs to declare each planning entity class:
+
+[source,python,options="nowrap"]
+----
+from optapy import get_class
+import optapy.config
+import pathlib
+
+solver_config = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
+    # ...
+    .withEntityClasses(get_class(Queen)) \
+    # ...
+----
+
+Some uses cases have multiple planning entity classes.
+For example: route freight and trains into railway network arcs, where each freight can use multiple trains over its journey and each train can carry multiple freights per arc.
+Having multiple planning entity classes directly raises the implementation complexity of your use case.
+
+[NOTE]
+====
+_Do not create unnecessary planning entity classes._ This leads to difficult `Move` implementations and slower score calculation.
+
+For example, do not create a planning entity class to hold the total free time of a teacher, which needs to be kept up to date as the `Lecture` planning entities change.
+Instead, calculate the free time in the score constraints (or as a xref:shadow-variable/shadow-variable.adoc#shadowVariable[shadow variable]) and put the result per teacher into a logically inserted score object.
+
+If historic data needs to be considered too, then create problem fact to hold the total of the historic assignments up to, but __not including__, the planning window (so that it does not change when a planning entity changes) and let the score constraints take it into account.
+====
+
+[NOTE]
+====
+Planning entity `\\__hash__(self)` implementations must remain constant. Therefore entity `\\__hash__(self)` must not depend on any planning variables. Pay special attention when using data structures with auto-generated `\\__hash__(self)` as entities, such as Python `@dataclass`.
+====
+
+[[planningEntityDifficulty]]
+==== Planning entity difficulty
+
+Planning entity difficulty is not yet supported, but will be in a future version.
+
+// TODO: Uncomment me when supported
+////
+Some optimization algorithms work more efficiently if they have an estimation of which planning entities are more difficult to plan.
+For example: in bin packing bigger items are harder to fit, in course scheduling lectures with more students are more difficult to schedule, and in n queens the middle queens are more difficult to fit on the board.
+
+[NOTE]
+====
+*Do not try to use planning entity difficulty to implement a business
+constraint.* It will not affect the score function: if we have infinite solving time, the returned solution will be the same.
+
+To attain a schedule in which certain entities are scheduled earlier in the schedule, xref:score-calculation/score-calculation.adoc#formalizeTheBusinessConstraints[add a score constraint] to change the score function so it prefers such solutions.
+Only consider adding planning entity difficulty too if it can make the solver more efficient.
+====
+
+To allow the heuristics to take advantage of that domain specific information, set a `difficulty_comparator_class` to the `@planning_entity` decorator:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity
+
+@planning_entity(difficulty_comparator_class = cloud_process_difficulty_comparator)
+class CloudProcess:
+    ...
+----
+
+[source,python,options="nowrap"]
+----
+from optapy import comparator
+
+@comparator
+def cloud_process_difficulty_comparator(a: CloudProcess, b: CloudProcess):
+    if a.required_multiplicand < b.required_multiplicand:
+        return -1
+    elif b.required_multiplicand < a.required_multiplicand:
+        return 1
+    elif a.process_id < b.process_id:
+        return -1
+    elif b.process_id < a.process_id:
+        return 1
+    else:
+        return 0
+----
+
+Alternatively, you can also set a `difficulty_weight_comparator_class` to the `@planning_entity` annotation,
+so that you have access to the rest of the problem facts from the solution too:
+
+[source,java,options="nowrap"]
+----
+@planning_entity(difficulty_weight_comparator_class = queen_difficulty_weight_factory)
+class Queen:
+    ...
+----
+
+See xref:move-and-neighborhood-selection/move-and-neighborhood-selection.adoc#sortedSelection[sorted selection] for more information.
+
+[IMPORTANT]
+====
+Difficulty should be implemented ascending: easy entities are lower, difficult entities are higher.
+For example, in bin packing: small item < medium item < big item.
+
+Although most algorithms start with the more difficult entities first, they just reverse the ordering.
+====
+
+_None of the current planning variable states should be used to compare planning entity difficulty._ During Construction Heuristics, those variables are likely to be `null` anyway.
+For example, a ``Queen``'s `row` variable should not be used.
+////
+
+
+[[planningVariable]]
+=== Planning variable (genuine)
+
+
+[[planningVariableDecorator]]
+==== Planning variable decorator
+
+A planning variable is a Python property (so a getter and setter) on a planning entity.
+It points to a planning value, which changes during planning.
+For example, a ``Queen``'s `row` property is a genuine planning variable.
+Note that even though a ``Queen``'s `row` property changes to another `Row` during planning, no `Row` instance itself is changed.
+Normally planning variables are genuine, but advanced cases can also have xref:shadow-variable/shadow-variable.adoc#shadowVariable[shadows].
+
+A genuine planning variable getter needs to be annotated with the `@planning_variable` annotation, which needs a non-empty `variable_type` and `value_range_provider_refs` property.
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity, planning_variable
+
+@planning_entity
+class Queen:
+    # ...
+    row: Row
+
+    # Alternatively, @planning_variable(Row, ["row_range"])
+    @planning_variable(variable_type = Row, value_range_provider_refs = ["row_range"])
+    def get_row(self):
+        return self.row
+
+    def set_row(self, row):
+        self.row = row
+----
+
+The `variable_type` property define the type of planning values this planning variable takes. The `variable_type` does not need to be decorated with `@problem_fact`; it can be any Python type.
+The `value_range_provider_refs` property defines what are the possible planning values for this planning variable.
+It references one or more ``@ValueRangeProvider`` ``id``'s.
+
+
+
+[[nullablePlanningVariable]]
+==== Nullable planning variable
+
+By default, an initialized planning variable cannot be ``None``, so an initialized solution will never use `None` for any of its planning variables.
+In an over-constrained use case, this can be counterproductive.
+For example: in task assignment with too many tasks for the workforce, we would rather leave low priority tasks unassigned instead of assigning them to an overloaded worker.
+
+To allow an initialized planning variable to be ``None``, set `nullable` to ``True``:
+
+[source,python,options="nowrap"]
+----
+    @planning_variable(..., nullable = True)
+    def get_worker(self):
+        return self.worker
+----
+
+[NOTE]
+====
+Constraint Streams filter out planning entities with a `None` planning variable by default.
+Use xref:constraint-streams/constraint-streams.adoc#constraintStreamsForEach[forEachIncludingNullVars()] to avoid such unwanted behaviour.
+====
+
+OptaPy will automatically add the value `None` to the value range.
+There is no need to add `None` in a collection provided by a ``@value_range_provider``.
+
+[NOTE]
+====
+Using a nullable planning variable implies that your score calculation is responsible for punishing (or even rewarding) variables with a `None` value.
+====
+
+[WARNING]
+====
+Currently <<chainedPlanningVariable, chained>> planning variables are not compatible with `nullable`.
+====
+
+xref:repeated-planning/repeated-planning.adoc#repeatedPlanning[Repeated planning] (especially xref:repeated-planning/repeated-planning.adoc#realTimePlanning[real-time planning]) does not mix well with a nullable planning variable.
+Every time the Solver starts or a problem fact change is made, the xref:construction-heuristics/construction-heuristics.adoc#constructionHeuristics[Construction Heuristics]
+will try to initialize all the `None` variables again, which can be a huge waste of time.
+One way to deal with this is to filter the entity selector of the placer in the construction heuristic.
+
+[source,xml,options="nowrap"]
+----
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+  ...
+  <constructionHeuristic>
+    <queuedEntityPlacer>
+      <entitySelector id="entitySelector1">
+        <filterClass>...</filterClass>
+      </entitySelector>
+    </queuedEntityPlacer>
+    ...
+    <changeMoveSelector>
+      <entitySelector mimicSelectorRef="entitySelector1" />
+    </changeMoveSelector>
+    ...
+  </constructionHeuristic>
+ ...
+</solver>
+----
+
+
+[[whenIsAPlanningVariableInitialized]]
+==== When is a planning variable considered initialized?
+
+A planning variable is considered initialized if its value is not `None` or if the variable is ``nullable``.
+So a nullable variable is always considered initialized.
+
+A planning entity is initialized if all of its planning variables are initialized.
+
+A solution is initialized if all of its planning entities are initialized.
+
+
+[[planningValue]]
+==== Planning value
+
+A planning value is a possible value for a genuine planning variable.
+Usually, a planning value is a problem fact, but it can also be any object, for example an ``int``.
+It can even be another planning entity or even an interface implemented by both a planning entity and a problem fact.
+
+A planning value range is the set of possible planning values for a planning variable.
+This set can be a countable (for example row ``1``, ``2``, `3` or ``4``) or uncountable (for example any `float` between `0.0` and ``1.0``).
+
+
+
+
+[[planningValueRangeProvider]]
+==== Planning value range provider
+
+
+[[planningValueRangeProviderOverview]]
+===== Overview
+
+The value range of a planning variable is defined with the `@value_range_provider` decorator.
+A `@value_range_provider` decorator always has a property ``range_id``, which is referenced by the ``@planning_variable``'s property ``value_range_provider_refs``.
+
+This annotation can be located on two types of methods:
+
+* On the Solution: All planning entities share the same value range.
+* On the planning entity: The value range differs per planning entity. This is less common.
+
+
+
+[NOTE]
+====
+A @value_range_provider annotation needs to be on a member in a class with a `@planning_solution` or a `@planning_entity` annotation.
+It is ignored on parent classes or subclasses without those annotations.
+====
+
+The return type of that method can be two types:
+
+* ``List``: The value range is defined by a list of its possible values.
+* ``ValueRange``: The value range is defined by its bounds. This is less common.
+
+
+
+
+[[valueRangeProviderOnSolution]]
+===== `ValueRangeProvider` on the solution
+
+All instances of the same planning entity class share the same set of possible planning values for that planning variable.
+This is the most common way to configure a value range.
+
+The `@planning_solution` implementation has method that returns a `list` (or a ``ValueRange``).
+Any value from that `list` is a possible planning value for this planning variable.
+
+[source,python,options="nowrap"]
+----
+    @planning_variable(Row, value_range_provider_refs = {"row_range"})
+    def get_row(self):
+        return self.row
+----
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_solution, value_range_provider, problem_fact_collection_property
+
+@planning_solution
+class NQueens:
+    # ...
+    @value_range_provider(range_id = "row_range")
+    def get_row_list(self):
+        return self.row_list
+----
+
+
+[IMPORTANT]
+====
+That `list` (or ``ValueRange``) must not contain the value ``null``, not even for a <<nullablePlanningVariable,nullable planning variable>>.
+====
+
+
+[[valueRangeProviderOnPlanningEntity]]
+===== `ValueRangeProvider` on the Planning Entity
+
+Each planning entity has its own value range (a set of possible planning values) for the planning variable.
+For example, if a teacher can *never* teach in a room that does not belong to his department, lectures of that teacher can limit their room value range to the rooms of his department.
+
+[source,python,options="nowrap"]
+----
+    @planning_variable(value_range_provider_refs = ["department_room_range"])
+    def get_room(self):
+        return self.room
+
+    @value_range_provider(range_id = "department_room_range")
+    def get_possible_room_list(self):
+        return self.course.teacher.department.room_list
+----
+
+Never use this to enforce a soft constraint (or even a hard constraint when the problem might not have a feasible solution). For example: __Unless there is no other way__, a teacher cannot teach in a room that does not belong to his department.
+In this case, the teacher should _not_ be limited in his room value range (because sometimes there is no other way).
+
+[NOTE]
+====
+By limiting the value range specifically of one planning entity, you are effectively creating a __built-in hard constraint__.
+This can have the benefit of severely lowering the number of possible solutions; however, it can also take away the freedom of the optimization algorithms to temporarily break that constraint in order to escape from a local optimum.
+====
+
+A planning entity should _not_ use other planning entities to determine its value range.
+That would only try to make the planning entity solve the planning problem itself and interfere with the optimization algorithms.
+
+Every entity has its own `list` instance, unless multiple entities have the same value range.
+For example, if teacher A and B belong to the same department, they use the same `list` instance.
+Furthermore, each `list` contains a subset of the same set of planning value instances.
+For example, if department A and B can both use room X, then their `list` instances contain the same `Room` instance.
+
+[NOTE]
+====
+A `@value_range_provider` on the planning entity consumes more memory than `@value_range_provider` on the Solution and disables certain automatic performance optimizations.
+====
+
+
+[WARNING]
+====
+A `@value_range_provider` on the planning entity is not currently compatible with a <<chainedPlanningVariable,chained>> variable.
+====
+
+
+[[valueRangeFactory]]
+===== `ValueRangeFactory`
+
+Instead of a ``Collection``, you can also return a `ValueRange` or ``CountableValueRange``, built by the ``ValueRangeFactory``:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_solution, value_range_provider
+from optapy.types import CountableValueRange, ValueRangeFactory
+
+    @value_range_provider(range_id = "delay_range", value_range_type = CountableValueRange)
+    def get_delay_range(self):
+        return ValueRangeFactory.createIntValueRange(0, 5000)
+
+----
+
+A `ValueRange` uses far less memory, because it only holds the bounds.
+In the example above, a `list` would need to hold all `5000` ints, instead of just the two bounds.
+
+Furthermore, an `incrementUnit` can be specified, for example if you have to buy stocks in units of 200 pieces:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_solution, value_range_provider
+from optapy.types import CountableValueRange, ValueRangeFactory
+
+    @value_range_provider(range_id = "stock_amount_range", value_range_type = CountableValueRange)
+    def getStockAmountRange(self) {
+        # Range: 0, 200, 400, 600, ..., 9999600, 9999800, 10000000
+        return ValueRangeFactory.createIntValueRange(0, 10000000, 200);
+    }
+----
+
+[NOTE]
+====
+Return `CountableValueRange` instead of `ValueRange` whenever possible (so OptaPy knows that it's countable).
+====
+
+
+The `ValueRangeFactory` has creation methods for several value class types:
+
+* ``boolean``: A boolean range.
+* ``int``: A 32bit integer range.
+* ``long``: A 64bit integer range.
+* ``double``: A 64bit floating point range which only supports random selection (because it does not implement ``CountableValueRange``).
+* ``BigInteger``: An arbitrary-precision integer range.
+* ``BigDecimal``: A decimal point range. By default, the increment unit is the lowest non-zero value in the scale of the bounds.
+* `Temporal` (such as ``LocalDate``, ``LocalDateTime``, ...): A time range.
+
+
+[[combineValueRangeProviders]]
+===== Combine `ValueRangeProviders`
+
+Value range providers can be combined, for example:
+
+[source,python,options="nowrap"]
+----
+    @planning_variable(value_range_provider_refs = ["company_car_range", "personal_car_range"])
+    def get_car(self):
+        return self.car
+    }
+----
+
+[source,python,options="nowrap"]
+----
+    @value_range_provider(id = "company_car_range")
+    def get_company_car_list(self):
+        return self.company_car_list
+
+    @value_range_provider(id = "personal_car_range")
+    def get_personal_car_list(self):
+        return self.personal_car_list
+----
+
+[[planningValueStrength]]
+==== Planning value strength
+
+Planning value difficulty is not yet supported, but will be in a future version.
+// TODO: Uncomment me when supported
+////
+Some optimization algorithms work a bit more efficiently if they have an estimation of which planning values are stronger, which means they are more likely to satisfy a planning entity.
+For example: in bin packing bigger containers are more likely to fit an item and in course scheduling bigger rooms are less likely to break the student capacity constraint.
+Usually, the efficiency gain of planning value strength is far less than that of <<planningEntityDifficulty,planning entity difficulty>>.
+
+[NOTE]
+====
+*Do not try to use planning value strength to implement a business
+constraint.* It will not affect the score function: if we have infinite solving time, the returned solution will be the same.
+
+To affect the score function, xref:score-calculation/score-calculation.adoc#formalizeTheBusinessConstraints[add a score constraint].
+Only consider adding planning value strength too if it can make the solver more efficient.
+====
+
+To allow the heuristics to take advantage of that domain specific information, set a `strength_comparator_class` to the `@planning_variable` decorator:
+
+[source,python,options="nowrap"]
+----
+    @planning_variable(..., strength_comparator_class = cloud_computer_strength_comparator)
+    public CloudComputer getComputer() {
+        return computer;
+    }
+----
+
+[source,python,options="nowrap"]
+----
+from optapy import comparator
+
+@comparator
+def cloud_computer_strength_comparator(a: CloudComputer, b: CloudComputer):
+    if a.required_multiplicand < b.required_multiplicand:
+        return -1
+    elif b.required_multiplicand < a.required_multiplicand:
+        return 1
+    elif a.cost < b.cost:
+        return -1
+    elif b.cost < a.cost:
+        return 1
+    elif a.process_id < b.process_id:
+        return -1
+    elif b.process_id < a.process_id:
+        return 1
+    else:
+        return 0
+----
+
+[NOTE]
+====
+If you have multiple planning value classes in the _same_ value range, the `strengthComparatorClass` needs to be able to handle comparing instances of those different classes.
+====
+
+Alternatively, you can also set a `strength_weight_factory_class` to the `@planning_variable` decorator, so you have access to the rest of the problem facts from the solution too:
+
+[source,python,options="nowrap"]
+----
+    @planning_variable(..., strength_weight_factory_class = row_strength_weight_factory)
+    def get_row(self):
+        return self.row
+----
+
+See xref:move-and-neighborhood-selection/move-and-neighborhood-selection.adoc#sortedSelection[sorted selection] for more information.
+
+[IMPORTANT]
+====
+Strength should be implemented ascending: weaker values are lower, stronger values are higher.
+For example in bin packing: small container < medium container < big container.
+====
+
+_None of the current planning variable state in any of the planning entities should be used to compare planning values._ During construction heuristics, those variables are likely to be ``None``.
+For example, none of the `row` variables of any `Queen` may be used to determine the strength of a ``Row``.
+////
+
+
+[[chainedPlanningVariable]]
+==== Chained planning variable (TSP, VRP, ...)
+
+
+Some use cases, such as TSP and Vehicle Routing, require __chaining__.
+This means the planning entities point to each other and form a chain.
+By modeling the problem as a set of chains (instead of a set of trees/loops), the search space is heavily reduced.
+
+[NOTE]
+====
+<<listVariables,List variables>> can also be used for these use cases
+====
+
+A planning variable that is chained either:
+
+* Directly points to a problem fact (or planning entity), which is called an __anchor__.
+* Points to another planning entity with the same planning variable, which recursively points to an anchor.
+
+Here are some examples of valid and invalid chains:
+
+image::optapy-configuration/chainPrinciples.png[align="center"]
+
+*Every initialized planning entity is part of an open-ended chain that begins from an anchor.* A valid model means that:
+
+* A chain is never a loop. The tail is always open.
+* Every chain always has exactly one anchor. The anchor is never an instance of the planning entity class that contains the chained planning variable.
+* A chain is never a tree, it is always a line. Every anchor or planning entity has at most one trailing planning entity.
+* Every initialized planning entity is part of a chain.
+* An anchor with no planning entities pointing to it, is also considered a chain.
+
+
+[WARNING]
+====
+A planning problem instance given to the `Solver` must be valid.
+====
+
+[NOTE]
+====
+If your constraints dictate a closed chain, model it as an open-ended chain (which is easier to persist in a database) and implement a score constraint for the last entity back to the anchor.
+====
+
+The optimization algorithms and built-in ``Move``s do chain correction to guarantee that the model stays valid:
+
+image::optapy-configuration/chainCorrection.png[align="center"]
+
+
+[WARNING]
+====
+A custom `Move` implementation must leave the model in a valid state.
+====
+
+For example, in TSP the anchor is a `Domicile` (in vehicle routing it is ``Vehicle``):
+
+[source,python,options="nowrap"]
+----
+from optapy import problem_fact, planning_entity, planning_variable
+from optapy.types import PlanningVariableGraphType
+
+@problem_fact
+class Standstill:
+    def get_city(self):
+        raise NotImplementedError()
+
+
+@problem_fact
+class Domicile(Standstill):
+    # ...
+    def get_city(self):
+        return self.city
+
+
+@planning_entity
+class Visit(Standstill):
+    # ...
+    @planning_variable(Standstill, value_range_provider_refs=['domicile_range', 'visit_range'],
+                              graph_type=PlanningVariableGraphType.CHAINED)
+    def get_previous_standstill(self):
+        return self.previous_standstill
+
+    def set_previous_standstill(self, previous_standstill):
+        self.previous_standstill = previous_standstill
+
+----
+
+Notice how two value range providers are usually combined:
+
+* The value range provider that holds the anchors, for example ``domicile_list``.
+* The value range provider that holds the initialized planning entities, for example ``visit_list``.
+
+
+[[planningProblemAndPlanningSolution]]
+=== Planning problem and planning solution
+
+
+[[planningProblemInstance]]
+==== Planning problem instance
+
+A dataset for a planning problem needs to be wrapped in a class for the `Solver` to solve.
+That solution class represents both the planning problem and (if solved) a solution.
+It is decorated with a `@planning_solution` decorator.
+For example in n queens, the solution class is the `NQueens` class, which contains a `Column` list, a `Row` list, and a `Queen` list.
+
+A planning problem is actually an unsolved planning solution or - stated differently - an uninitialized solution.
+For example in n queens, that `NQueens` class has the `@planning_solution` annotation, yet every `Queen` in an unsolved `NQueens` class is not yet assigned to a `Row` (their `row` property is ``null``). That's not a feasible solution.
+It's not even a possible solution.
+It's an uninitialized solution.
+
+
+[[solutionClass]]
+==== Solution class
+
+A solution class holds all problem facts, planning entities and a score.
+It is annotated with a `@PlanningSolution` annotation.
+For example, an `NQueens` instance holds a list of all columns, all rows and all `Queen` instances:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_solution
+from optapy.score import SimpleScore
+
+@planning_solution
+class NQueens:
+    # Problem facts
+    n: int
+    column_list: list[Column]
+    row_list: list[Row]
+
+    # Planning entities
+    queen_list: list[Queen]
+
+    score: SimpleScore
+    ...
+----
+
+The solver configuration needs to declare the planning solution class:
+
+[source,python,options="nowrap"]
+----
+import optapy
+import optapy.config
+import pathlib
+
+solver_config = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
+    .withSolutionClass(get_class(NQueens)) \
+    # ...
+----
+
+
+[[planningEntitiesOfASolution]]
+==== Planning entities of a solution (`@planning_entity_collection_property`)
+
+OptaPy needs to extract the entity instances from the solution instance.
+It gets those collection(s) by calling every getter that is annotated with ``@planning_entity_collection_property``:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_solution, planning_entity_collection_property
+
+@planning_solution
+class NQueens :
+    # ...
+    queen_list: list[Queen]
+
+    @planning_entity_collection_property(Queen)
+    def get_queen_list(self):
+        return self.queen_list
+----
+
+There can be multiple `@planning_entity_collection_property` decorated getters.
+Those can even return a list with the same entity class type.
+
+[NOTE]
+====
+A `@planning_entity_collection_property` annotation needs to be on a getter in a class with a `@planning_solution` decorator.
+It is ignored on parent classes or subclasses without that decorator.
+====
+
+In rare cases, a planning entity might be a singleton: use `planning_entity_property` on its getter instead.
+
+
+[[scoreOfASolution]]
+==== `Score` of a Solution (`@PlanningScore`)
+
+A `@planning_solution` class requires a score property (or field), which is annotated with a `@planning_score` annotation.
+The score property is `None` if the score hasn't been calculated yet.
+The `score` property is typed to the specific `Score` implementation of your use case.
+For example, `NQueens` uses a xref:score-calculation/score-calculation.adoc#simpleScore[SimpleScore]:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_solution, planning_score
+from optapy.score import SimpleScore
+
+@planning_solution
+class NQueens:
+    # ...
+    score: SimpleScore
+
+    @planning_score(SimpleScore)
+    def get_score(self):
+        return self.score
+
+    def set_score(self, score):
+        self.score = score
+----
+
+Most use cases use a xref:score-calculation/score-calculation.adoc#hardSoftScore[HardSoftScore] instead:
+
+[source,python,options="nowrap"]
+----
+@planning_solution
+class CloudBalance:
+    # ...
+    score: HardSoftScore
+
+    @planning_score(HardSoftScore)
+    def get_score(self):
+        return self.score
+
+    def set_score(self, score):
+        self.score = score
+----
+
+Some use cases use xref:score-calculation/score-calculation.adoc#scoreType[other score types].
+
+
+[[problemFacts]]
+==== Problem facts of a solution (`@problem_fact_collection_property`)
+
+For xref:constraint-streams/constraint-streams.adoc#constraintStreams[Constraint Streams score calculation],
+OptaPlanner needs to extract the problem fact instances from the solution instance.
+It gets those collection(s) by calling every method (or field) that is annotated with ``@problem_fact_collection_property``.
+All objects returned by those methods are available to use by Constraint Streams.
+For example in `NQueens` all `Column` and `Row` instances are problem facts.
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_solution, problem_fact_collection_property
+
+@planning_solution
+class NQueens:
+    # ...
+
+    column_list: list[Column]
+    row_list: list[Row]
+
+    @problem_fact_collection_property(Column)
+    def get_column_list(self):
+        return self.column_list
+
+    @problem_fact_collection_property(Row)
+    def get_row_list(self):
+        return self.row_list
+----
+
+All planning entities are automatically inserted into the working memory.
+Do not add `@problem_fact_collection_property` on their properties.
+
+
+[NOTE]
+====
+The problem facts methods are not called often: at most only once per solver phase per solver thread.
+====
+
+There can be multiple `@problem_fact_collection_property` annotated members.
+Those can even return a `list` with the same class type, but they shouldn't return the same instance twice.
+
+[NOTE]
+====
+A `@problem_fact_collection_property`  annotation needs to be on a member in a class with a `@planning_solution` annotation.
+It is ignored on parent classes or subclasses without that annotation.
+====
+
+In rare cases, a problem fact might be a singleton: use `@problem_fact_property` on its method instead.
+
+
+[[cachedProblemFact]]
+===== Cached problem fact
+
+A cached problem fact is a problem fact that does not exist in the real domain model, but is calculated before the `Solver` really starts solving.
+The problem facts methods have the opportunity to enrich the domain model with such cached problem facts, which can lead to simpler and faster score constraints.
+
+For example in examination, a cached problem fact `TopicConflict` is created for every two ``Topic``s which share at least one ``Student``.
+
+[source,python,options="nowrap"]
+----
+    @problem_fact_collection_property(TopicConflict)
+    def calculate_topic_conflict_list(self): list[TopicConflict]:
+        topic_conflict_list = []
+        for left_topic in self.topic_list:
+            for right_topic in self.topic_list:
+                if left_topic.topic_id < right_topic.topic_id:
+                    student_size = 0;
+                    for student in left_topic.student_list:
+                        if student in right_topic.student_list:
+                            student_size += 1
+                    if student_size > 0:
+                        topic_conflict_list.append(TopicConflict(left_topic, right_topic, student_size))
+        return topic_conflict_list;
+----
+
+Where a score constraint needs to check that no two exams with a topic that shares a student are scheduled close together (depending on the constraint: at the same time, in a row, or in the same day), the `TopicConflict` instance can be used as a problem fact, rather than having to combine every two `Student` instances.
+
+
+[[cloningASolution]]
+==== Cloning a solution
+
+Most (if not all) optimization algorithms clone the solution each time they encounter a new best solution (so they can recall it later) or to work with multiple solutions in parallel.
+
+[NOTE]
+====
+There are many ways to clone, such as a shallow clone, deep clone, ... This context focuses on __a planning clone__.
+====
+
+A planning clone of a solution must fulfill these requirements:
+
+* The clone must represent the same planning problem. Usually it reuses the same instances of the problem facts and problem fact collections as the original.
+* The clone must use different, cloned instances of the entities and entity collections.
+Changes to an original solution entity's variables must not affect its clone.
+
+image::optapy-configuration/solutionCloning.png[align="center"]
+
+*Implementing a planning clone method is hard, therefore you do not need to implement it.*
+
+
+[[fieldAccessingSolutionCloner]]
+===== `FieldAccessingSolutionCloner`
+
+This `SolutionCloner` is used by default.
+It works well for most use cases.
+
+[WARNING]
+====
+When the `FieldAccessingSolutionCloner` clones one of your collections or maps,
+it may not recognize the implementation and replace it with `list`, `set` or `map` (whichever is more applicable).
+====
+
+The `FieldAccessingSolutionCloner` does not clone problem facts by default.
+If any of your problem facts needs to be deep cloned for a planning clone,
+for example if the problem fact references a planning entity or the planning solution,
+mark its class with a `@deep_planning_clone` decorator:
+
+[source,python,options="nowrap"]
+----
+from optapy import problem_fact, deep_planning_clone
+
+@problem_fact
+@deep_planning_clone
+class SeatDesignationDependency:
+    left_seat_designation: SeatDesignation # planning entity
+    right_seat_designation: SeatDesignation # planning entity
+    ...
+----
+
+In the example above, because `SeatDesignationDependency` references the planning entity `SeatDesignation`
+(which is deep planning cloned automatically), it should also be deep planning cloned.
+
+Alternatively, the `@deep_planning_clone` decorator also works on a getter method to planning clone it.
+If that property is a `list` or a `map`, it will shallow clone it and deep planning clone
+any element thereof that is an instance of a class that has a `@deep_planning_clone` decorator.
+
+
+[[createAnUninitializedSolution]]
+==== Create an uninitialized solution
+
+Create a `@planning_solution` class instance to represent your planning problem's dataset, so it can be set on the `Solver` as the planning problem to solve.
+For example in n queens, an `NQueens` instance is created with the required `Column` and `Row` instances and every `Queen` set to a different `column` and every `row` set to ``null``.
+
+[source,python,options="nowrap"]
+----
+    def create_n_queens(n: int) -> NQueens:
+        n_queens = NQueens()
+        n_queens.n = n
+        n_queens.column_list = create_column_list(n_queens)
+        n_queens.row_list = create_row_list(n_queens)
+        n_queens.queen_list = create_queen_list(n_queens)
+        return n_queens
+
+    def create_queen_list(n_queens: NQueens) -> list[Queen]:
+        n = n_queens.n
+        queen_list = []
+        queen_id = 0
+        for column in n_queens.column_list:
+            queen = Queen()
+            queen.queen_id = id
+            queen_id += 1
+            queen.column = column;
+            # Notice that we leave the PlanningVariable properties as None
+            queen_list.append(queen);
+        return queen_list;
+----
+
+.Uninitialized Solution for the Four Queens Puzzle
+image::optapy-configuration/uninitializedNQueens04.png[align="left"]
+
+Usually, most of this data comes from your data layer, and your solution implementation just aggregates that data and creates the uninitialized planning entity instances to plan:
+
+[source,python,options="nowrap"]
+----
+def create_lecture_list(schedule: CourseSchedule):
+    course_list = schedule.course_list
+    lecture_list = []
+    lecture_id = 0
+    for course in course_list:
+        for i in range(course.lecture_size):
+            lecture = Lecture()
+            lecture.lecture_id = lecture_id
+            lecture_id += 1
+            lecture.course = course
+            lecture.lecture_index_in_course = i
+            # Notice that we leave the PlanningVariable properties (period and room) as None
+            lecture_list.append(lecture)
+    schedule.lecture_list = lecture_list
+----
+
+
+[[useTheSolver]]
+== Use the `Solver`
+
+
+[[theSolverInterface]]
+=== The `Solver` interface
+
+A `Solver` solves your planning problem.
+
+A `Solver` can only solve one planning problem instance at a time.
+It is built with a ``SolverFactory``, there is no need to implement it yourself.
+
+A `Solver` should only be accessed from a single thread, except for the methods that are specifically documented in javadoc as being thread-safe.
+The `solve()` method hogs the current thread.
+This can cause HTTP timeouts for REST services and it requires extra code to solve multiple datasets in parallel.
+To avoid such issues, use a <<solverManager, `SolverManager`>> instead.
+
+
+[[solvingAProblem]]
+=== Solving a problem
+
+Solving a problem is quite easy once you have:
+
+* A `Solver` built from a solver configuration
+* A `@planning_solution` that represents the planning problem instance
+
+Just provide the planning problem as argument to the `solve()` method and it will return the best solution found:
+
+[source,python,options="nowrap"]
+----
+problem = ...
+best_solution = solver.solve(problem)
+----
+
+For example in n queens, the `solve()` method will return an `NQueens` instance with every `Queen` assigned to a ``Row``.
+
+.Best Solution for the Four Queens Puzzle in 8ms (Also an Optimal Solution)
+image::optapy-configuration/solvedNQueens04.png[align="left"]
+
+The `solve(Solution)` method can take a long time (depending on the problem size and the solver configuration). The `Solver` intelligently wades through xref:optimization-algorithms/optimization-algorithms.adoc#searchSpaceSize[the search space] of possible solutions and remembers the best solution it encounters during solving.
+Depending on a number of factors (including problem size, how much time the `Solver` has, the solver configuration, ...), xref:optimization-algorithms/optimization-algorithms.adoc#doesPlannerFindTheOptimalSolution[that best solution might or might not be an optimal solution].
+
+
+[NOTE]
+====
+The solution instance given to the method `solve(solution)` is changed by the ``Solver``,
+but do not mistake it for the best solution.
+
+The solution instance returned by the methods `solve(solution)` or `getBestSolution()` is most likely <<cloningASolution,a planning clone>> of the instance given to the method ``solve(solution)``, which implies it is a different instance.
+====
+
+[NOTE]
+====
+The solution instance given to the `solve(Solution)` method does not need to be uninitialized.
+It can be partially or fully initialized, which is often the case in xref:repeated-planning/repeated-planning.adoc#repeatedPlanning[repeated planning].
+====
+
+
+[[environmentMode]]
+=== Environment mode: are there bugs in my code?
+
+The environment mode allows you to detect common bugs in your implementation.
+It does not affect the <<logging,logging level>>.
+
+You can set the environment mode in the solver configuration XML file:
+
+[source,xml,options="nowrap"]
+----
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+  <environmentMode>FAST_ASSERT</environmentMode>
+  ...
+</solver>
+----
+
+
+A solver has a single `Random` instance.
+Some solver configurations use the `Random` instance a lot more than others.
+For example, Simulated Annealing depends highly on random numbers, while Tabu Search only depends on it to deal with score ties.
+The environment mode influences the seed of that `Random` instance.
+
+These are the environment modes:
+
+[[environmentModeFullAssert]]
+==== `FULL_ASSERT`
+
+The FULL_ASSERT mode turns on all assertions (such as assert that the incremental score calculation is uncorrupted for each move) to fail-fast on a bug in a Move implementation, a constraint, the engine itself, ...
+
+This mode is reproducible (see the reproducible mode). It is also intrusive because it calls the method `calculateScore()` more frequently than a non-assert mode.
+
+The FULL_ASSERT mode is horribly slow (because it does not rely on incremental score calculation).
+
+
+[[environmentModeNonIntrusiveFullAssert]]
+==== `NON_INTRUSIVE_FULL_ASSERT`
+
+The NON_INTRUSIVE_FULL_ASSERT turns on several assertions to fail-fast on a bug in a Move implementation, a constraint, the engine itself, ...
+
+This mode is reproducible (see the reproducible mode). It is non-intrusive because it does not call the method `calculateScore()` more frequently than a non assert mode.
+
+The NON_INTRUSIVE_FULL_ASSERT mode is horribly slow (because it does not rely on incremental score calculation).
+
+
+[[environmentModeFastAssert]]
+==== `FAST_ASSERT`
+
+The FAST_ASSERT mode turns on most assertions (such as assert that an undoMove's score is the same as before the Move) to fail-fast on a bug in a Move implementation, a constraint, the engine itself, ...
+
+This mode is reproducible (see the reproducible mode). It is also intrusive because it calls the method `calculateScore()` more frequently than a non assert mode.
+
+The FAST_ASSERT mode is slow.
+
+It is recommended to write a test case that does a short run of your planning problem with the FAST_ASSERT mode on.
+
+
+[[environmentModeReproducible]]
+==== `REPRODUCIBLE` (default)
+
+The reproducible mode is the default mode because it is recommended during development.
+In this mode, two runs in the same OptaPlanner version will execute the same code in the same order. **Those two
+runs will have the same result at every step**, except if the note below applies.
+This enables you to reproduce bugs consistently.
+It also allows you to benchmark certain refactorings (such as a score constraint performance optimization) fairly across runs.
+
+
+[NOTE]
+====
+Despite the reproducible mode, your application might still not be fully reproducible because of:
+
+* Use of `set` (or another `Collection` which has an inconsistent order between Python runs) for collections of planning entities or planning values (but not normal problem facts), especially in the solution implementation.
+* Combining a time gradient dependent algorithms (most notably Simulated Annealing) together with time spent termination. A sufficiently large difference in allocated CPU time will influence the time gradient values. Replace Simulated Annealing with Late Acceptance. Or instead, replace time spent termination with step count termination.
+====
+
+The reproducible mode can be slightly slower than the non-reproducible mode.
+If your production environment can benefit from reproducibility, use this mode in production.
+
+In practice, this mode uses the default, fixed <<randomNumberGenerator,random seed>> if no seed is specified, and it also disables certain concurrency optimizations (such as work stealing).
+
+
+[[environmentModeProduction]]
+==== `NON_REPRODUCIBLE`
+
+The non-reproducible mode can be slightly faster than the reproducible mode.
+Avoid using it during development as it makes debugging and bug fixing painful.
+If your production environment doesn't care about reproducibility, use this mode in production.
+
+In practice, this mode uses no fixed <<randomNumberGenerator,random seed>> if no seed is specified.
+
+
+
+[[logging]]
+=== Logging level: what is the `Solver` doing?
+
+The best way to illuminate the black box that is a ``Solver``, is to play with the logging level:
+
+* **error**: Log errors, except those that are thrown to the calling code as a ``RuntimeException``.
++
+[NOTE]
+====
+**If an error happens, OptaPy normally fails fast.**
+It does not log it as an error itself to avoid duplicate log messages.
+Meanwhile, the code is disrupted from doing further harm or obfuscating the error.
+====
+* **warn**: Log suspicious circumstances.
+* **info**: Log every phase and the solver itself. See xref:optimization-algorithms/optimization-algorithms.adoc#scopeOverview[scope overview].
+* **debug**: Log every step of every phase. See xref:optimization-algorithms/optimization-algorithms.adoc#scopeOverview[scope overview].
+* **trace**: Log every move of every step of every phase. See xref:optimization-algorithms/optimization-algorithms.adoc#scopeOverview[scope overview].
+
+
+[NOTE]
+====
+Turning on `trace` logging, will slow down performance considerably: it is often four times slower.
+However, it is invaluable during development to discover a bottleneck.
+
+Even `debug` logging can slow down performance considerably for fast stepping algorithms (such as Late Acceptance and Simulated Annealing),
+but not for slow stepping algorithms (such as Tabu Search).
+
+Both cause congestion in xref:optimization-algorithms/optimization-algorithms.adoc#multithreadedSolving[multithreaded solving] with most appenders, see below..
+====
+
+For example, set it to `debug` logging, to see when the phases end and how fast steps are taken:
+
+[source,options="nowrap"]
+----
+INFO  Solving started: time spent (3), best score (-4init/0), random (JDK with seed 0).
+DEBUG     CH step (0), time spent (5), score (-3init/0), selected move count (1), picked move (Queen-2 {null -> Row-0}).
+DEBUG     CH step (1), time spent (7), score (-2init/0), selected move count (3), picked move (Queen-1 {null -> Row-2}).
+DEBUG     CH step (2), time spent (10), score (-1init/0), selected move count (4), picked move (Queen-3 {null -> Row-3}).
+DEBUG     CH step (3), time spent (12), score (-1), selected move count (4), picked move (Queen-0 {null -> Row-1}).
+INFO  Construction Heuristic phase (0) ended: time spent (12), best score (-1), score calculation speed (9000/sec), step total (4).
+DEBUG     LS step (0), time spent (19), score (-1),     best score (-1), accepted/selected move count (12/12), picked move (Queen-1 {Row-2 -> Row-3}).
+DEBUG     LS step (1), time spent (24), score (0), new best score (0), accepted/selected move count (9/12), picked move (Queen-3 {Row-3 -> Row-2}).
+INFO  Local Search phase (1) ended: time spent (24), best score (0), score calculation speed (4000/sec), step total (2).
+INFO  Solving ended: time spent (24), best score (0), score calculation speed (7000/sec), phase total (2), environment mode (REPRODUCIBLE).
+----
+
+
+All time spent values are in milliseconds.
+
+Configure the logging level by explicitly calling `optapy.init`:
+
+[source,python,options="nowrap"]
+----
+from optapy import init as optapy_init
+
+optapy_init(log_level='TRACE')
+----
+
+[IMPORTANT]
+====
+The call to `optapy.init` must happen BEFORE any imports from
+`optapy.types`, `optapy.score`, `optapy.config`, `optapy.constraint`, and before any decorators from `optapy` are used.
+Importing from `optapy.types`, `optapy.score`, `optapy.config`, `optapy.constraint` or using a decorator automatically starts the JVM that OptaPlanner runs on. For example, this will not work:
+
+[source,python,options="nowrap"]
+----
+from optapy import init as optapy_init
+import optapy.config
+
+optapy_init(log_level='TRACE')
+----
+====
+
+
+[[monitoring]]
+=== Monitoring the solver
+
+OptaPy currently does not support metric export.
+
+
+[[randomNumberGenerator]]
+=== Random number generator
+
+Many heuristics and metaheuristics depend on a pseudorandom number generator for move selection, to resolve score ties, probability based move acceptance, ... During solving, the same `Random` instance is reused to improve reproducibility, performance and uniform distribution of random values.
+
+To change the random seed of that `Random` instance, specify a ``randomSeed``:
+
+[source,xml,options="nowrap"]
+----
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+  <randomSeed>0</randomSeed>
+  ...
+</solver>
+----
+
+To change the pseudorandom number generator implementation, specify a ``randomType``:
+
+[source,xml,options="nowrap"]
+----
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+  <randomType>MERSENNE_TWISTER</randomType>
+  ...
+</solver>
+----
+
+The following types are supported:
+
+* `JDK` (default): Standard implementation (``java.util.Random``).
+* ``MERSENNE_TWISTER``: Implementation by http://commons.apache.org/proper/commons-math/userguide/random.html[Commons Math].
+* ``WELL512A``, ``WELL1024A``, ``WELL19937A``, ``WELL19937C``, `WELL44497A` and ``WELL44497B``: Implementation by http://commons.apache.org/proper/commons-math/userguide/random.html[Commons Math].
+
+For most use cases, the randomType has no significant impact on the average quality of the best solution on multiple datasets.
+// TODO: Uncomment me when optapy has benchmarker support
+// If you want to confirm this on your use case, use the xref:benchmarking-and-tweaking/benchmarking-and-tweaking.adoc#benchmarker[benchmarker].
+
+
+[[solverManager]]
+== SolverManager
+
+A `SolverManager` is a facade for one or more `Solver` instances
+to simplify solving planning problems in REST and other enterprise services.
+Unlike the `Solver.solve(...)` method:
+
+* *`SolverManager.solve(...)` returns immediately*: it schedules a problem for asynchronous solving without blocking the calling thread.
+This avoids timeout issues of HTTP and other technologies.
+* *`SolverManager.solve(...)` solves multiple planning problems* of the same domain, in parallel.
+
+Internally a `SolverManager` manages a thread pool of solver threads, which call `Solver.solve(...)`,
+and a thread pool of consumer threads, which handle best solution changed events.
+
+Build a `SolverManager` instance with the `solver_manager_create(...)` method:
+
+[source,python,options="nowrap"]
+----
+from optapy import solver_manager_create
+from optapy.types import Duration
+import optapy.config
+
+solver_config = optapy.config.solver.SolverConfig()
+solver_config\
+    .withSolutionClass(get_class(EmployeeSchedule))\
+    .withEntityClasses(get_class(Shift))\
+    .withConstraintProviderClass(get_class(employee_scheduling_constraints))\
+    .withTerminationSpentLimit(Duration.ofSeconds(60))
+
+solver_manager = solver_manager_create(solver_config)
+----
+
+Each problem submitted to the `SolverManager.solve(...)` methods needs a unique problem ID.
+Later calls to `getSolverStatus(problemId)` or `terminateEarly(problemId)` use that problem ID
+to distinguish between the planning problems.
+The problem ID must be an immutable class, such as `int`, `str` or `uuid`.
+
+// TODO: Uncomment me when solver_manager_create accepts SolverManagerConfig as an optional second parameter
+////
+The `SolverManagerConfig` class has a `parallelSolverCount` property,
+that controls how many solvers are run in parallel.
+For example, if set to `4`, submitting five problems
+has four problems solving immediately, and the fifth one starts when another one ends.
+If those problems solve for 5 minutes each, the fifth problem takes 10 minutes to finish.
+By default, `parallelSolverCount` is set to `AUTO`, which resolves to half the CPU cores,
+regardless of the xref:optimization-algorithms/optimization-algorithms.adoc#multithreadedSolving[`moveThreadCount`] of the solvers.
+////
+
+To retrieve the best solution, after solving terminates normally, use `SolverJob.getFinalBestSolution()`:
+
+[source,python,options="nowrap"]
+----
+problem1 = ...;
+problemId = UUID.randomUUID();
+# Returns immediately
+solver_job = solver_manager.solve(problemId, problem1);
+...
+solution1 = solver_job.getFinalBestSolution();
+----
+
+However, there are better approaches, both for solving batch problems before an end-user needs the solution
+as well as for live solving while an end-user is actively waiting for the solution, as explained below.
+
+The current `SolverManager` implementation runs on a single computer node,
+but future work aims to distribute solver loads across a cloud.
+
+
+[[solverManagerSolveBatch]]
+=== Solve batch problems
+
+At night, batch solving is a great approach to deliver solid plans by breakfast, because:
+
+* There are typically few or no problem changes in the middle of the night.
+Some organizations even enforce a deadline, for example, _submit all day off requests before midnight_.
+* The solvers can run for much longer, often hours, because nobody's waiting for it and CPU resources are often cheaper.
+
+To solve a multiple datasets in parallel (limited by `parallelSolverCount`),
+call `solve(...)` for each dataset:
+
+[source,python,options="nowrap"]
+----
+solver_manager = ...
+
+class TimeTableService:
+    # Returns immediately, call it for every dataset
+    def solve_batch(self, time_table_id):
+        solver_manager.solve(time_table_id,
+                # Called once, when solving starts
+                lambda the_id: self.find_by_id(the_id),
+                # Called once, when solving ends
+                lambda solution: self.save(solution))
+
+    def find_by_id(self, time_table_id: int) -> TimeTable:
+        ...
+
+    def save(self, time_table: TimeTable) -> None:
+        ...
+----
+
+A solid plan delivered by breakfast is great,
+even if you need to react on problem changes during the day.
+
+
+[[solverManagerSolveAndListen]]
+=== Solve and listen to show progress to the end-user
+
+When a solver is running while an end-user is waiting for that solution,
+the user might need to wait for several minutes or hours before receiving a result.
+To assure the user that everything is going well,
+show progress by displaying the best solution and best score attained so far.
+
+To handle intermediate best solutions, use `solveAndListen(...)`:
+
+[source,python,options="nowrap"]
+----
+solver_manager = ...
+
+class TimeTableService:
+    # Returns immediately
+    def solve_live(self, time_table_id: int) -> None:
+        solver_manager.solveAndListen(time_table_id,
+                # Called once, when solving starts
+                lambda the_id: self.find_by_id(time_table_id),
+                # Called multiple times, for every best solution change
+                lambda solution: self.save(solution))
+
+    def find_by_id(self, time_table_id: int):
+        ...
+
+    def save(self, time_table: TimeTable) -> None:
+        ...
+
+    def stop_solving(self, time_table_id: int):
+        solver_manager.terminateEarly(time_table_id)
+----
+
+This implementation is using the database to communicate with the UI, which polls the database.
+More advanced implementations push the best solutions directly to the UI or a messaging queue.
+
+If the user is satisfied with the intermediate best solution
+and does not want to wait any longer for a better one, call `SolverManager.terminateEarly(problemId)`.

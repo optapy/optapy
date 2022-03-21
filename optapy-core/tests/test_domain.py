@@ -128,7 +128,7 @@ def test_python_object():
         def get_value(self):
             return self.value
 
-        @optapy.value_range_provider(range_id='value_range', value_range_type=list)
+        @optapy.value_range_provider(range_id='value_range')
         def get_value_range(self):
             return self.value_range
 
