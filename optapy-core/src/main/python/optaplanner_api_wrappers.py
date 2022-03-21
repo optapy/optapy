@@ -1,9 +1,12 @@
+import pathlib
+
 from jpype.types import *
 from jpype import JImplements, JImplementationFor, JOverride
 from typing import TypeVar, Generic, Callable, Union, TYPE_CHECKING
 from uuid import uuid1 as _uuid1
 from .optaplanner_java_interop import _setup_solver_run, _cleanup_solver_run, _unwrap_java_object, \
-    solver_run_id_to_refs as _solver_run_id_to_refs, ref_id_to_solver_run_id as _ref_id_to_solver_run_id, get_class
+    solver_run_id_to_refs as _solver_run_id_to_refs, ref_id_to_solver_run_id as _ref_id_to_solver_run_id, get_class, \
+    class_identifier_to_java_class_map as _class_identifier_to_java_class_map
 
 if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
@@ -248,6 +251,24 @@ class _PythonProblemChangeDirector:
         global _problem_change_director_to_instance_dict
         instance_map = _problem_change_director_to_instance_dict[id(self)]
         self._java_removeProblemFact(_wrap_object(problemFact, instance_map), problemFactConsumer)
+
+
+def solver_config_create_from_xml_file(path: pathlib.Path) -> '_SolverConfig':
+    """Loads a SolverConfig from the given file.
+
+    :param path: The path to the file
+    :return: A new SolverConfig generated from the file at path
+    """
+    from java.lang import Thread
+    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+    from org.optaplanner.core.config.solver import SolverConfig
+    class_loader = PythonWrapperGenerator.getClassLoaderForAliasMap(_class_identifier_to_java_class_map)
+    current_thread = Thread.currentThread()
+    thread_class_loader = current_thread.getContextClassLoader()
+    current_thread.setContextClassLoader(class_loader)
+    solver_config = SolverConfig.createFromXmlFile(path)
+    current_thread.setContextClassLoader(thread_class_loader)
+    return solver_config
 
 
 def solver_manager_create(solver_config: '_SolverConfig') -> '_SolverManager':

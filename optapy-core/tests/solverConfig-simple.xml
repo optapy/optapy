@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+  <solutionClass>tests.test_solver_config.Solution</solutionClass>
+  <entityClass>tests.test_solver_config.Entity</entityClass>
+
+  <scoreDirectorFactory>
+    <constraintProviderClass>tests.test_solver_config.my_constraints</constraintProviderClass>
+  </scoreDirectorFactory>
+
+  <termination>
+    <bestScoreLimit>0hard/0soft</bestScoreLimit>
+  </termination>
+  <constructionHeuristic>
+    <constructionHeuristicType>FIRST_FIT</constructionHeuristicType>
+  </constructionHeuristic>
+  <localSearch>
+    <changeMoveSelector>
+      <selectionOrder>ORIGINAL</selectionOrder>
+    </changeMoveSelector>
+    <acceptor>
+      <entityTabuSize>5</entityTabuSize>
+    </acceptor>
+    <forager>
+      <!-- Real world problems require use of <acceptedCountLimit> -->
+    </forager>
+  </localSearch>
+</solver>

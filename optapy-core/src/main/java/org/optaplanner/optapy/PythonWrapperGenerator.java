@@ -55,7 +55,7 @@ public class PythonWrapperGenerator {
     static ClassLoader gizmoClassLoader = new ClassLoader() {
         // getName() is an abstract method in Java 11 but not in Java 8
         public String getName() {
-            return "OptaPlanner Gizmo Python Wrapper ClassLoader";
+            return "OptaPy Generated Classes ClassLoader";
         }
 
         @Override
@@ -146,6 +146,27 @@ public class PythonWrapperGenerator {
     @SuppressWarnings("unused")
     public static OpaquePythonReference getPythonObject(PythonObject pythonObject) {
         return pythonObject.get__optapy_Id();
+    }
+
+    @SuppressWarnings("unused")
+    public static ClassLoader getClassLoaderForAliasMap(Map<String, Class<?>> aliasMap) {
+        return new ClassLoader() {
+            // getName() is an abstract method in Java 11 but not in Java 8
+            public String getName() {
+                return "OptaPy Alias Map ClassLoader";
+            }
+
+            @Override
+            public Class<?> findClass(String name) throws ClassNotFoundException {
+                if (aliasMap.containsKey(name)) {
+                    // Gizmo generated class
+                    return aliasMap.get(name);
+                } else {
+                    // Not a Gizmo generated class; load from parent class loader
+                    return gizmoClassLoader.loadClass(name);
+                }
+            }
+        };
     }
 
     @SuppressWarnings("unused")
