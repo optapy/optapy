@@ -11,7 +11,7 @@ from ..constraint import *
 
 from org.optaplanner.core.api.domain.valuerange import ValueRangeFactory, CountableValueRange, ValueRange
 from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType
-from org.optaplanner.core.api.solver import SolverStatus
+from org.optaplanner.core.api.solver import Solver, SolverManager, SolverFactory, SolverJob, SolverStatus
 from org.optaplanner.core.api.solver.change import ProblemChangeDirector
 
 SolverConfig = solver.SolverConfig

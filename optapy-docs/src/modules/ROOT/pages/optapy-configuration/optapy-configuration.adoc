@@ -32,22 +32,15 @@ A `SolverConfig` can be created from a XML file, like so:
 
 [source,python,options="nowrap"]
 ----
-from optapy import get_class
-import optapy.config
+from optapy import solver_config_create_from_xml_file
 import pathlib
 
-solver_config = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
-    .withSolutionClass(get_class(TimeTable)) \
-    .withEntityClasses(get_class(Lesson)) \
-    .withConstraintProviderClass(get_class(define_constraints))
+solver_config = solver_config_create_from_xml_file(pathlib.Path('solverConfig.xml'))
 
 solver_factory = solver_factory_create(solver_config)
 
 solver_factory.buildSolver().solve(generate_problem())
 ----
-
-Note that unlike OptaPlanner, *domain classes and the score
-director are defined via the Python API*.
 
 A solver configuration XML file looks like this:
 
@@ -56,20 +49,57 @@ A solver configuration XML file looks like this:
 <?xml version="1.0" encoding="UTF-8"?>
 <solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
-  <!-- Configure when the solver terminates -->
+  <!-- Define the model -->
+  <solutionClass>optapy.examples.domain.NQueens</solutionClass>
+  <entityClass>optapy.examples.domain.Queen</entityClass>
+
+  <!-- Define the score function -->
+  <scoreDirectorFactory>
+    <constraintProviderClass>optapy.examples.constraints.n_queens_constraints</constraintProviderClass>
+  </scoreDirectorFactory>
+
+  <!-- Configure the optimization algorithms (optional) -->
   <termination>
     ...
   </termination>
-  <!-- Configure how the initial solution is built -->
   <constructionHeuristic>
     ...
   </constructionHeuristic>
-  <!-- Configure how local search is done -->
   <localSearch>
     ...
   </localSearch>
 </solver>
 ----
+
+[NOTE]
+====
+For XML elements that end in "Class" (solutionClass, entityClass, constraintProviderClass, etc.), put "{module}.{name}", where
+{module} is the module the class/function was defined in, and
+name is the name of the class/function. If the module is
+"\\__main__", put "{name}" instead. For instance, if the below code was in the main module:
+
+[source,python,options="nowrap"]
+----
+from optapy import constraint_provider, planning_solution
+from my.domain import MyEntity
+
+@planning_solution
+class MySolution:
+    ...
+
+@constraint_provider
+def my_constraints(constraint_factory):
+    ...
+----
+
+Use "my.domain.MyEntity" to refer to "MyEntity", "MySolution" to refer to "MySolution", and "my_constraints" to refer to "my_constraints".
+====
+
+Notice the three parts in it:
+
+* Define the model.
+* Define the score function.
+* Optionally configure the optimization algorithm(s).
 
 These various parts of a configuration are explained further in this manual.
 
@@ -94,10 +124,7 @@ SOLVE_TIME_IN_MINUTES = os.environ['SOLVE_TIME_IN_MINUTES']
 termination_config = optapy.config.solver.TerminationConfig() \
     .withMinutesSpentLimit(SOLVE_TIME_IN_MINUTES)
 
-solver_config = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
-    .withSolutionClass(get_class(TimeTable)) \
-    .withEntityClasses(get_class(Lesson)) \
-    .withConstraintProviderClass(get_class(define_constraints)) \
+solver_config = solver_config_create_from_xml_file(pathlib.Path('solverConfig.xml')) \
     .withTerminationConfig(termination_config)
 
 solver_factory = solver_factory_create(solver_config)
@@ -120,10 +147,7 @@ and copy it with the copy constructor for each user request:
 [source,python,options="nowrap"]
 ----
 termination_config = optapy.config.solver.TerminationConfig()
-template = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
-    .withSolutionClass(get_class(TimeTable)) \
-    .withEntityClasses(get_class(Lesson)) \
-    .withConstraintProviderClass(get_class(define_constraints)) \
+template = solver_config_create_from_xml_file(pathlib.Path('solverConfig.xml')) \
     .withTerminationConfig(termination_config)
 
 # Called concurrently from different threads
@@ -168,7 +192,7 @@ Most use cases also have only one planning variable per planning entity class.
 // TODO: Uncomment when page is written
 //xref:design-patterns/design-patterns.adoc#domainModelingGuide[domain modeling guide].
 
-*In OptaPlanner, all problem facts and planning entities are plain old Python Objects.* Load them from a database, an XML file, a data repository, a REST service, a noSQL cloud; it doesn't matter.
+*In OptaPy, all problem facts and planning entities are plain old Python Objects.* Load them from a database, an XML file, a data repository, a REST service, a noSQL cloud; it doesn't matter.
 
 [[problemFact]]
 === Problem fact
@@ -291,17 +315,16 @@ class Lecture:
 
 The solver configuration needs to declare each planning entity class:
 
-[source,python,options="nowrap"]
+[source,xml,options="nowrap"]
 ----
-from optapy import get_class
-import optapy.config
-import pathlib
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+  ...
+  <entityClass>optapy.examples.domain.Queen</entityClass>
+  ...
+</solver>
+----
 
-solver_config = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
-    # ...
-    .withEntityClasses(get_class(Queen)) \
-    # ...
-----
 
 Some uses cases have multiple planning entity classes.
 For example: route freight and trains into railway network arcs, where each freight can use multiple trains over its journey and each train can carry multiple freights per arc.
@@ -659,7 +682,7 @@ from optapy import planning_solution, value_range_provider
 from optapy.types import CountableValueRange, ValueRangeFactory
 
     @value_range_provider(range_id = "stock_amount_range", value_range_type = CountableValueRange)
-    def getStockAmountRange(self) {
+    def get_stock_amount_range(self) {
         # Range: 0, 200, 400, 600, ..., 9999600, 9999800, 10000000
         return ValueRangeFactory.createIntValueRange(0, 10000000, 200);
     }
@@ -960,16 +983,17 @@ class NQueens:
 
 The solver configuration needs to declare the planning solution class:
 
-[source,python,options="nowrap"]
-----
-import optapy
-import optapy.config
-import pathlib
 
-solver_config = optapy.config.solver.SolverConfig.createFromXmlFile(pathlib.Path('solverConfig.xml')) \
-    .withSolutionClass(get_class(NQueens)) \
-    # ...
+[source,xml,options="nowrap"]
 ----
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+  ...
+  <solutionClass>optapy.examples.domain.NQueens</solutionClass>
+  ...
+</solver>
+----
+
 
 
 [[planningEntitiesOfASolution]]
@@ -1526,17 +1550,10 @@ Build a `SolverManager` instance with the `solver_manager_create(...)` method:
 
 [source,python,options="nowrap"]
 ----
-from optapy import solver_manager_create
+from optapy import solver_manager_create, solver_config_create_from_xml_file
 from optapy.types import Duration
-import optapy.config
 
-solver_config = optapy.config.solver.SolverConfig()
-solver_config\
-    .withSolutionClass(get_class(EmployeeSchedule))\
-    .withEntityClasses(get_class(Shift))\
-    .withConstraintProviderClass(get_class(employee_scheduling_constraints))\
-    .withTerminationSpentLimit(Duration.ofSeconds(60))
-
+solver_config = solver_config_create_from_xml_file("solverConfig.xml")
 solver_manager = solver_manager_create(solver_config)
 ----
 
@@ -1560,12 +1577,14 @@ To retrieve the best solution, after solving terminates normally, use `SolverJob
 
 [source,python,options="nowrap"]
 ----
-problem1 = ...;
-problemId = UUID.randomUUID();
+import uuid
+
+problem1 = ...
+problem_id = uuid.uuid4()
 # Returns immediately
-solver_job = solver_manager.solve(problemId, problem1);
+solver_job = solver_manager.solve(problem_id, problem1)
 ...
-solution1 = solver_job.getFinalBestSolution();
+solution1 = solver_job.getFinalBestSolution()
 ----
 
 However, there are better approaches, both for solving batch problems before an end-user needs the solution
@@ -1589,11 +1608,13 @@ call `solve(...)` for each dataset:
 
 [source,python,options="nowrap"]
 ----
-solver_manager = ...
+from optapy.types import SolverManager
 
 class TimeTableService:
+    solver_manager: SolverManager
+
     # Returns immediately, call it for every dataset
-    def solve_batch(self, time_table_id):
+    def solve_batch(self, time_table_id: int):
         solver_manager.solve(time_table_id,
                 # Called once, when solving starts
                 lambda the_id: self.find_by_id(the_id),
@@ -1623,9 +1644,11 @@ To handle intermediate best solutions, use `solveAndListen(...)`:
 
 [source,python,options="nowrap"]
 ----
-solver_manager = ...
+from optapy.types import SolverManager
 
 class TimeTableService:
+    solver_manager: SolverManager
+
     # Returns immediately
     def solve_live(self, time_table_id: int) -> None:
         solver_manager.solveAndListen(time_table_id,
