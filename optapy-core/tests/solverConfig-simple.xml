@@ -11,18 +11,4 @@
   <termination>
     <bestScoreLimit>0hard/0soft</bestScoreLimit>
   </termination>
-  <constructionHeuristic>
-    <constructionHeuristicType>FIRST_FIT</constructionHeuristicType>
-  </constructionHeuristic>
-  <localSearch>
-    <changeMoveSelector>
-      <selectionOrder>ORIGINAL</selectionOrder>
-    </changeMoveSelector>
-    <acceptor>
-      <entityTabuSize>5</entityTabuSize>
-    </acceptor>
-    <forager>
-      <!-- Real world problems require use of <acceptedCountLimit> -->
-    </forager>
-  </localSearch>
 </solver>
