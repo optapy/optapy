@@ -299,7 +299,7 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
                       Defaults to 'INFO'
     :return: None
     """
-    if jpype.isJVMStarted():
+    if jpype.isJVMStarted():  # noqa
         raise RuntimeError('JVM already started. Maybe call init before optapy.type imports?')
     if path is None:
         include_optaplanner_jars = True
@@ -307,10 +307,10 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
     if include_optaplanner_jars:
         path = path + extract_optaplanner_jars()
     if len(args) == 0:
-        args = (jpype.getDefaultJVMPath(), '-Dlogback.level.org.optaplanner={}'.format(log_level))
+        args = (jpype.getDefaultJVMPath(), '-Dlogback.level.org.optaplanner={}'.format(log_level))  # noqa
     else:
         args = args + ('-Dlogback.level.org.optaplanner={}'.format(log_level),)
-    jpype.startJVM(*args, classpath=path, convertStrings=True)
+    jpype.startJVM(*args, classpath=path, convertStrings=True)  # noqa
     import java.util.function.Function
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction
@@ -368,7 +368,7 @@ def ensure_init():
 
     :return: None
     """
-    if jpype.isJVMStarted():
+    if jpype.isJVMStarted(): # noqa
         return
     else:
         init()
@@ -547,12 +547,18 @@ def _get_class_identifier_for_object(python_object):
         return f'{module}.{python_object.__name__}'
 
 
+def _compose_unique_class_name(class_identifier: str):
+    global unique_class_id
+    unique_class_name = f'class{unique_class_id}.{class_identifier}'
+    unique_class_id += 1
+    return unique_class_name
+
+
 def _does_class_define_eq_or_hashcode(python_class):
     return '__eq__' in python_class.__dict__ or '__hash__' in python_class.__dict__
 
 
 def _generate_problem_fact_class(python_class):
-    global unique_class_id
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     class_identifier = _get_class_identifier_for_object(python_class)
@@ -562,17 +568,15 @@ def _generate_problem_fact_class(python_class):
     if len(python_class.__bases__) == 1 and hasattr(python_class.__bases__[0], '__optapy_java_class'):
         parent_class = get_class(python_class.__bases__[0])
 
-    out = PythonWrapperGenerator.defineProblemFactClass(f'{class_identifier}{unique_class_id}',
+    out = PythonWrapperGenerator.defineProblemFactClass(_compose_unique_class_name(class_identifier),
                                                         parent_class,
                                                         has_eq_and_hashcode,
                                                         optaplanner_annotations)
     class_identifier_to_java_class_map[class_identifier] = out
-    unique_class_id = unique_class_id + 1
     return out
 
 
 def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[str, Any]):
-    global unique_class_id
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     class_identifier = _get_class_identifier_for_object(python_class)
@@ -581,28 +585,25 @@ def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[st
     has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
     if len(python_class.__bases__) == 1 and hasattr(python_class.__bases__[0], '__optapy_java_class'):
         parent_class = get_class(python_class.__bases__[0])
-    out = PythonWrapperGenerator.definePlanningEntityClass(f'{class_identifier}{unique_class_id}',
+    out = PythonWrapperGenerator.definePlanningEntityClass(_compose_unique_class_name(class_identifier),
                                                            parent_class,
                                                            has_eq_and_hashcode,
                                                            optaplanner_annotations,
                                                            _to_java_map(annotation_data))
     class_identifier_to_java_class_map[class_identifier] = out
-    unique_class_id = unique_class_id + 1
     return out
 
 
 def _generate_planning_solution_class(python_class: Type) -> JClass:
-    global unique_class_id
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
-    out = PythonWrapperGenerator.definePlanningSolutionClass(f'{class_identifier}{unique_class_id}',
+    out = PythonWrapperGenerator.definePlanningSolutionClass(_compose_unique_class_name(class_identifier),
                                                              has_eq_and_hashcode,
                                                              optaplanner_annotations)
     class_identifier_to_java_class_map[class_identifier] = out
-    unique_class_id = unique_class_id + 1
     return out
 
 
@@ -617,22 +618,19 @@ def _to_constraint_java_array(python_list: List['_Constraint']) -> JArray:
 
 def _generate_constraint_provider_class(constraint_provider: Callable[['_ConstraintFactory'], List['_Constraint']]) -> \
         JClass:
-    global unique_class_id
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     from org.optaplanner.core.api.score.stream import ConstraintProvider
     class_identifier = _get_class_identifier_for_object(constraint_provider)
     out = PythonWrapperGenerator.defineConstraintProviderClass(
-        f'{class_identifier}{unique_class_id}',
+        _compose_unique_class_name(class_identifier),
         JObject(ConstraintProviderFunction(lambda cf: _to_constraint_java_array(constraint_provider(cf))),
                 ConstraintProvider))
     class_identifier_to_java_class_map[class_identifier] = out
-    unique_class_id = unique_class_id + 1
     return out
 
 
 def _generate_easy_score_calculator_class(easy_score_calculator: Callable[[Solution_], Score_]) -> JClass:
-    global unique_class_id
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     from org.optaplanner.core.api.score.calculator import EasyScoreCalculator
@@ -649,26 +647,22 @@ def _generate_easy_score_calculator_class(easy_score_calculator: Callable[[Solut
             return self.easy_score_calculator_impl(solution)
 
     out = PythonWrapperGenerator.defineEasyScoreCalculatorClass(
-        f'{class_identifier}{unique_class_id}',
+        _compose_unique_class_name(class_identifier),
         EasyScoreCalculatorClass(easy_score_calculator))
     class_identifier_to_java_class_map[class_identifier] = out
-    unique_class_id = unique_class_id + 1
     return out
 
 
 def _generate_incremental_score_calculator_class(incremental_score_calculator: Type['_IncrementalScoreCalculator'],
-                                                 constraint_match_aware: bool) -> \
-        JClass:
-    global unique_class_id
+                                                 constraint_match_aware: bool) -> JClass:
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     from java.util.function import Supplier
     ensure_init()
 
     class_identifier = _get_class_identifier_for_object(incremental_score_calculator)
     out = PythonWrapperGenerator.defineIncrementalScoreCalculatorClass(
-        f'{class_identifier}{unique_class_id}',
+        _compose_unique_class_name(class_identifier),
         JObject(PythonSupplier(lambda: incremental_score_calculator()),
                 Supplier), constraint_match_aware)
     class_identifier_to_java_class_map[class_identifier] = out
-    unique_class_id = unique_class_id + 1
     return out

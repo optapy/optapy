@@ -71,6 +71,7 @@ def test_load_from_solver_config_file():
     assert entity_class_list.get(0) == optapy.get_class(Entity)
     assert solver_config.getScoreDirectorFactoryConfig().getConstraintProviderClass() == \
            optapy.get_class(my_constraints)
+    assert solver_config.getTerminationConfig().getBestScoreLimit() == '0hard/0soft'
 
 
 def test_reload_from_solver_config_file():
