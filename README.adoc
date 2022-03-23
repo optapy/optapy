@@ -231,12 +231,7 @@ source my_project/venv/bin/activate
 pip install dist/optapy-*-py3-none-any.whl
 ----
 
-=== Run
-
-Running `run.sh` runs `optapy-quickstarts/school-timetabling/main.py`
-after building `optapy` and installing it to `optapy-quickstarts/school-timetabling/venv`.
-
 == More information
 
-For a complete example, see https://github.com/optapy/optapy/tree/main/optapy-quickstarts/school-timetabling[the school timetabling quickstart].
-For a full API spec, visit https://www.optaplanner.org/learn/documentation.html[OptaPlanner Documentation].
+For a complete example, see https://github.com/optapy/optapy-quickstarts/tree/stable/school-timetabling[the school timetabling quickstart].
+For a full API spec, visit https://www.optapy.org[the OptaPy Documentation].

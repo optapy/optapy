@@ -184,5 +184,5 @@ variables set to the final best solution found.
 
 ## More information
 
-For a complete example, see [the school timetabling quickstart](https://github.com/optapy/optapy/tree/main/optapy-quickstarts/school-timetabling).
-For a full API spec, visit [OptaPlanner Documentation](https://www.optaplanner.org/learn/documentation.html).
+For a complete example, see [the school timetabling quickstart](https://github.com/optapy/optapy-quickstarts/tree/stable/school-timetabling).
+For a full API spec, visit [the OptaPy Documentation](https://www.optapy.org).
