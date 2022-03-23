@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          ref: add-antora-docs
+          ref: main
       - name: Set up Maven
         uses: actions/setup-java@v2
         with:
