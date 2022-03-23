@@ -14,6 +14,11 @@ OptaPy wraps the https://www.optaplanner.org/[OptaPlanner] engine internally, so
 WARNING: OptaPy is an experimental technology.
 It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
 
+== Looking for Quickstarts?
+
+OptaPy's quickstarts have moved to the https://github.com/optapy/optapy-quickstarts[optapy-quickstarts repository].
+
+
 == Get started
 
 This quickstart uses OptaPy to optimize a school timetable for student and teachers.
