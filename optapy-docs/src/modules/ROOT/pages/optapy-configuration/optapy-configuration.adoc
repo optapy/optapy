@@ -15,8 +15,7 @@ Solving a planning problem with OptaPy consists of the following steps:
 . *Load a problem data set* from your data layer, for example a Four Queens instance. That is the planning problem.
 . *Solve it* with `Solver.solve(problem)` which returns the best solution found.
 
-// TODO: Create OptaPy version of image
-// image::optapy-configuration/inputOutputOverview.png[align="center"]
+image::optapy-configuration/inputOutputOverview.png[align="center"]
 
 [[solverConfiguration]]
 == Solver configuration
