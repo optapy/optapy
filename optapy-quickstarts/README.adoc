@@ -1,3 +1,0 @@
-= OptaPy Quickstarts
-
-Contains various quickstarts for OptaPy. To see Java OptaPlanner quickstarts, go to the https://github.com/kiegroup/optaplanner-quickstarts[OptaPlanner Quickstarts repo].
