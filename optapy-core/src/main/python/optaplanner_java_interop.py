@@ -8,6 +8,7 @@ import importlib.metadata
 from inspect import signature, Parameter
 from typing import cast, List, Tuple, Type, TypeVar, Callable, Dict, Any, Union, TYPE_CHECKING
 import copy
+from .optaplanner_python_logger import optapy_logger
 from .jpype_type_conversions import PythonSupplier, PythonFunction, PythonBiFunction, PythonTriFunction, \
     ConstraintProviderFunction
 
