@@ -1,7 +1,7 @@
 = OptaPy
 
 https://pypi.org/project/optapy/[image:https://img.shields.io/pypi/v/optapy[PyPI]]
-https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[image:https://mybinder.org/badge_logo.svg[Binder]]
+https://mybinder.org/v2/gh/optapy/optapy-quickstarts/stable?filepath=school-timetabling/school-timetabling-quickstart.ipynb[image:https://mybinder.org/badge_logo.svg[Binder]]
 
 OptaPy is *an AI constraint solver for Python* to optimize
 the Vehicle Routing Problem, Employee Rostering, Maintenance Scheduling, Task Assignment, School Timetabling,
@@ -25,7 +25,7 @@ This quickstart uses OptaPy to optimize a school timetable for student and teach
 
 === Jupyter notebook
 
-Instead of going through this tutorial, you can also https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[follow along in the OptaPy Jupyter notebook.]
+Instead of going through this tutorial, you can also https://mybinder.org/v2/gh/optapy/optapy-quickstarts/stable?filepath=school-timetabling/school-timetabling-quickstart.ipynb[follow along in the OptaPy Jupyter notebook.]
 
 === Prerequisites
 
@@ -233,5 +233,5 @@ pip install dist/optapy-*-py3-none-any.whl
 
 == More information
 
-For a complete example, see https://github.com/optapy/optapy-quickstarts/tree/stable/school-timetabling[the school timetabling quickstart].
+For quickstarts, visit the https://github.com/optapy/optapy-quickstarts[optapy quickstart repository].
 For a full API spec, visit https://www.optapy.org[the OptaPy Documentation].
