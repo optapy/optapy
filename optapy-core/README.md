@@ -1,6 +1,6 @@
 # OptaPy
 
-[![Binder](https://mybinder.org/badge_logo.svg "Launch on Binder")](https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg "Launch on Binder")](https://mybinder.org/v2/gh/optapy/optapy-quickstarts/stable?filepath=school-timetabling/school-timetabling-quickstart.ipynb)
 
 OptaPy is *an AI constraint solver for Python* to optimize
 the Vehicle Routing Problem, Employee Rostering, Maintenance Scheduling, Task Assignment, School Timetabling,
@@ -9,7 +9,7 @@ Cloud Optimization, Conference Scheduling, Job Shop Scheduling, Bin Packing and 
 OptaPy wraps the [OptaPlanner](https://www.optaplanner.org/) engine internally,
 but using OptaPy in Python is significantly slower than using OptaPlanner in Java or Kotlin.
 
-[Try the OptaPy Jupyter notebook.](https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb)
+[Try the OptaPy Jupyter notebook.](https://mybinder.org/v2/gh/optapy/optapy-quickstarts/stable?filepath=school-timetabling/school-timetabling-quickstart.ipynb)
 
 >**WARNING**: OptaPy is an experimental technology.
 >It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
@@ -184,5 +184,5 @@ variables set to the final best solution found.
 
 ## More information
 
-For a complete example, see [the school timetabling quickstart](https://github.com/optapy/optapy-quickstarts/tree/stable/school-timetabling).
+For quickstarts, visit the [optapy quickstart repository](https://github.com/optapy/optapy-quickstarts).
 For a full API spec, visit [the OptaPy Documentation](https://www.optapy.org).

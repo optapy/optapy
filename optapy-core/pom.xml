@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optaplanner-build-parent</artifactId>
-    <version>8.17.0.Final</version>
+    <version>8.19.0.Final</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>optapy</artifactId>
@@ -53,6 +53,10 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+          <ignoredUnusedDeclaredDependencies>org.optaplanner:optaplanner-core</ignoredUnusedDeclaredDependencies>
+          <ignoredUsedUndeclaredDependencies>org.optaplanner:optaplanner-core-impl</ignoredUsedUndeclaredDependencies>
+        </configuration>
         <executions>
           <execution>
             <id>copy-dependencies</id>
