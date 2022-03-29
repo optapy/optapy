@@ -1,0 +1,1217 @@
+[[scoreCalculation]]
+= Score calculation
+:doctype: book
+:sectnums:
+:icons: font
+
+
+[[scoreTerminology]]
+== Score terminology
+
+
+[[whatIsAScore]]
+=== What is a score?
+
+Every `@planning_solution` class has a score.
+The score is an objective way to compare two solutions.
+The solution with the higher score is better.
+The `Solver` aims to find the solution with the highest `Score` of all possible solutions.
+The _best solution_ is the solution with the highest `Score` that `Solver` has encountered during solving,
+which might be the __optimal solution__.
+
+OptaPy cannot automatically know which solution is best for your business,
+so you need to tell it how to calculate the score of a given `@planning_solution` instance according to your business needs.
+If you forget or are unable to implement an important business constraint, the solution is probably useless:
+
+image::score-calculation/optimalWithIncompleteConstraints.png[align="center"]
+
+
+[[formalizeTheBusinessConstraints]]
+=== Formalize the business constraints
+
+To implement a verbal business constraint, it needs to be formalized as a score constraint.
+Luckily, defining constraints in OptaPy is very flexible through the following score techniques:
+
+* **Score signum (positive or negative)**: maximize or minimize a constraint type
+* **Score weight**: put a cost/profit on a constraint type
+* **Score level (hard, soft, ...)**: prioritize a group of constraint types
+
+Take the time to acquaint yourself with the first three techniques.
+Once you understand them, formalizing most business constraints becomes straightforward.
+
+[NOTE]
+====
+Do not presume that your business knows all its score constraints in advance.
+Expect score constraints to be added, changed or removed after the first releases.
+====
+
+
+[[scoreConstraintSignum]]
+=== Score constraint signum (positive or negative)
+
+All score techniques are based on constraints.
+A constraint can be a simple pattern (such as __Maximize the apple harvest in the solution__) or a more complex pattern.
+A positive constraint is a constraint you want to maximize.
+A negative constraint is a constraint you want to minimize
+
+image::score-calculation/positiveAndNegativeConstraints.png[align="center"]
+
+The image above illustrates that **the optimal solution always has the highest score**,
+regardless if the constraints are positive or negative.
+
+Most planning problems have only negative constraints and therefore have a negative score.
+In that case, the score is the sum of the weight of the negative constraints being broken, with a perfect score of 0.
+For example in n queens, the score is the negative of the number of queen pairs which can attack each other.
+
+Negative and positive constraints can be combined, even in the same score level.
+
+When a constraint activates (because the negative constraint is broken or the positive constraint is fulfilled)
+on a certain planning entity set, it is called a __constraint match__.
+
+
+[[scoreConstraintWeight]]
+=== Score constraint weight
+
+Not all score constraints are equally important.
+If breaking one constraint is equally bad as breaking another constraint x times,
+then those two constraints have a different weight (but they are in the same score level).
+For example in vehicle routing, you can make one _unhappy driver_ constraint match count
+as much as two _fuel tank usage_ constraint matches:
+
+image::score-calculation/scoreWeighting.png[align="center"]
+
+Score weighting is easy in use cases where you can __put a price tag on everything__.
+In that case, the positive constraints maximize revenue and the negative constraints minimize expenses, so together they maximize profit.
+Alternatively, score weighting is also often used to create social <<fairnessScoreConstraints,fairness>>.
+For example, a nurse, who requests a free day, pays a higher weight on New Years eve than on a normal day.
+
+The weight of a constraint match can depend on the planning entities involved.
+For example in cloud balancing, the weight of the soft constraint match for an active `Computer`
+is the maintenance `cost` of that `Computer` (which differs per computer).
+
+Putting a good weight on a constraint is often a difficult analytical decision,
+because it is about making choices and trade-offs against other constraints.
+Different stakeholders have different priorities.
+*Don't waste time with constraint weight discussions at the start of an implementation,
+instead add a <<constraintConfiguration, constraint configuration>>
+and  allow users to change them through a UI.*
+A non-accurate weight is less damaging than mediocre algorithms:
+
+image::score-calculation/scoreTradeoffInPerspective.png[align="center"]
+
+Most use cases use a `Score` with `int` weights, such as <<hardSoftScore,HardSoftScore>>.
+
+
+[[scoreLevel]]
+=== Score constraint level (hard, soft, ...)
+
+Sometimes a score constraint outranks another score constraint, no matter how many times the latter is broken.
+In that case, those score constraints are in different levels.
+For example, a nurse cannot do two shifts at the same time (due to the constraints of physical reality),
+so this outranks all nurse happiness constraints.
+
+Most use cases have only two score levels, hard and soft.
+The levels of two scores are compared lexicographically.
+The first score level gets compared first.
+If those differ, the remaining score levels are ignored.
+For example, a score that breaks `0` hard constraints and `1000000` soft constraints is better
+than a score that breaks `1` hard constraint and `0` soft constraints.
+
+image::score-calculation/scoreLevels.png[align="center"]
+
+If there are two (or more) score levels, for example <<hardSoftScore,HardSoftScore>>,
+then a score is _feasible_ if no hard constraints are broken.
+
+////
+TODO: Uncomment when overconstrained planning section added
+[NOTE]
+====
+By default, OptaPy will always assign all planning variables a planning value.
+If there is no feasible solution, this means the best solution will be infeasible.
+To instead leave some of the planning entities unassigned, apply xref:repeated-planning/repeated-planning.adoc#overconstrainedPlanning[overconstrained planning].
+====
+////
+
+For each constraint, you need to pick a score level, a score weight and a score signum.
+For example: `-1soft` which has score level of ``soft``, a weight of `1` and a negative signum.
+Do not use a big constraint weight when your business actually wants different score levels.
+That hack, known as __score folding__, is broken:
+
+image::score-calculation/scoreFoldingIsBroken.png[align="center"]
+
+[NOTE]
+====
+Your business might tell you that your hard constraints all have the same weight, because they cannot be broken (so the weight does not matter). This is not true because if no feasible solution exists for a specific dataset, the least infeasible solution allows the business to estimate how many business resources they are lacking.
+For example in cloud balancing, how many new computers to buy.
+
+Furthermore, it will likely create a <<scoreTrap,score trap>>.
+For example in cloud balance if a `Computer` has seven CPU too little for its ``Process``es, then it must be weighted seven times as much as if it had only one CPU too little.
+====
+
+Three or more score levels are also supported.
+For example: a company might decide that profit outranks employee satisfaction (or vice versa),
+while both are outranked by the constraints of physical reality.
+
+[NOTE]
+====
+To model <<fairnessScoreConstraints,fairness or load balancing>>, there is no need to use lots of score levels
+(even though OptaPy can handle many score levels).
+====
+
+Most use cases use a `Score` with two or three weights,
+such as <<hardSoftScore,HardSoftScore>> and <<hardMediumSoftScore,HardMediumSoftScore>>.
+
+
+[[combiningScoreTechniques]]
+=== Combining score techniques
+
+All the score techniques mentioned above, can be combined seamlessly:
+
+image::score-calculation/scoreComposition.png[align="center"]
+
+
+[[scoreInterface]]
+=== `Score` interface
+
+A score is represented by the `Score` interface, which naturally extends ``Comparable``:
+
+[source,python,options="nowrap"]
+----
+class Score:
+    def compareTo(self, other):
+        ...
+    ...
+----
+
+The `Score` implementation to use depends on your use case.
+Your score might not efficiently fit in a single `long` value.
+OptaPy has several built-in `Score` implementations, but you can implement a custom `Score` too.
+Most use cases tend to use the built-in ``HardSoftScore``.
+
+image::score-calculation/scoreClassDiagram.png[align="center"]
+
+All Score implementations also have an `initScore` (which is an ``int``). It is mostly intended for internal use in OptaPy: it is the negative number of uninitialized planning variables.
+From a user's perspective this is ``0``, unless a Construction Heuristic is terminated before it could initialize all planning variables (in which case `Score.isSolutionInitialized()` returns ``false``).
+
+The `Score` implementation (for example ``HardSoftScore``) must be the same throughout a `Solver` runtime.
+The `Score` implementation is configured in the solution domain class:
+
+[source,python,options="nowrap"]
+----
+@planning_solution
+class CloudBalance:
+    ...
+    @planning_score(HardSoftScore)
+    def get_score(self):
+        return self.score
+
+    def set_score(self, score):
+        self.score = score
+----
+
+[[avoidFloatingPointNumbersInScoreCalculation]]
+=== Avoid floating point numbers in score calculation
+
+Avoid the use of `float` in score calculation.
+Use `BigDecimal` or scaled `long` instead.
+
+Floating point numbers cannot represent a decimal number correctly.
+For example: a `float` cannot hold the value `0.05` correctly.
+Instead, it holds the nearest representable value.
+Arithmetic (including addition and subtraction) with floating point numbers, especially for planning problems, leads to incorrect decisions:
+
+image::score-calculation/scoreWeightType.png[align="center"]
+
+Additionally, floating point number addition is not associative:
+
+[source,python,options="nowrap"]
+----
+# prints False
+print(f'{((0.01 + 0.02) + 0.03) == (0.01 + (0.02 + 0.03))}')
+----
+
+This leads to __score corruption__.
+
+Decimal numbers (``BigDecimal``) have none of these problems.
+
+[NOTE]
+====
+BigDecimal arithmetic is considerably slower than ``int``, `long` or `double` arithmetic.
+In experiments we have seen the score calculation take five times longer.
+
+Therefore, in many cases, it can be worthwhile to multiply _all_ numbers for a single score weight by a plural of ten, so the score weight fits in a scaled `int` or ``long``.
+For example, if we multiply all weights by ``1000``, a fuel_cost of `0.07` becomes a fuel_cost_millis of `70` and no longer uses a decimal score weight.
+====
+
+
+[[scoreType]]
+== Choose a score type
+
+Depending on the number of score levels and type of score weights you need, choose a `Score` type.
+Most use cases use a ``HardSoftScore``.
+All score types are available in the `optapy.score` package:
+
+[source,python,options="nowrap"]
+----
+from optapy.score import HardSoftScore
+----
+
+[[simpleScore]]
+=== `SimpleScore`
+
+A `SimpleScore` has a single `int` value, for example ``-123``.
+It has a single score level.
+
+[source,python,options="nowrap"]
+----
+    @planning_score(SimpleScore)
+    def get_score(self):
+        ...
+----
+
+
+[[hardSoftScore]]
+=== `HardSoftScore` (Recommended)
+
+A `HardSoftScore` has a hard `int` value and a soft `int` value, for example ``-123hard/-456soft``.
+It has two score levels (hard and soft).
+
+[source,python,options="nowrap"]
+----
+    @planning_score(HardSoftScore)
+    def get_score(self):
+        ...
+----
+
+
+[[hardMediumSoftScore]]
+=== `HardMediumSoftScore`
+
+A `HardMediumSoftScore` which has a hard `int` value, a medium `int` value and a soft `int` value, for example ``-123hard/-456medium/-789soft``.
+It has three score levels (hard, medium and soft).
+The hard level determines if the solution is feasible,
+and the medium level and soft level score values determine
+how well the solution meets business goals.
+Higher medium values take precedence over soft values irrespective of the soft value.
+
+[source,python,options="nowrap"]
+----
+    @planning_score(HardMediumSoftScore)
+    def get_score(self):
+        ...
+----
+
+
+[[bendableScore]]
+=== `BendableScore`
+
+A `BendableScore` has a configurable number of score levels.
+It has an array of hard `int` values and an array of soft `int` values,
+for example with two hard levels and three soft levels, the score can be ``[-123/-456]hard/[-789/-012/-345]soft``.
+In that case, it has five score levels.
+A solution is feasible if all hard levels are at least zero.
+
+A BendableScore with one hard level and one soft level is equivalent to a HardSoftScore,
+while a BendableScore with one hard level and two soft levels is equivalent to a HardMediumSoftScore.
+
+[source,python,options="nowrap"]
+----
+    @planning_score(BendableScore, bendable_hard_levels_size=2, bendable_soft_levels_size=3)
+    def get_score(self):
+        ...
+----
+
+The number of hard and soft score levels need to be set at compilation time.
+It is not flexible to change during solving.
+
+[NOTE]
+====
+Do not use a `BendableScore` with seven levels just because you have seven constraints.
+It is extremely rare to use a different score level for each constraint, because that means one constraint match on soft 0 outweighs even a million constraint matches of soft 1.
+
+Usually, multiple constraints share the same level and are weighted against each other.
+Use <<explainingTheScore,explaining the score>> to get the weight of individual constraints in the same level.
+====
+
+
+[[calculateTheScore]]
+== Calculate the `Score`
+
+
+[[scoreCalculationTypes]]
+=== Score calculation types
+
+There are several ways to calculate the `Score` of a solution:
+
+* **<<easyPythonScoreCalculation,Easy Python score calculation>>**: Implement all constraints together in a single function in Python. Does not scale.
+* **xref:constraint-streams/constraint-streams.adoc#constraintStreams[Constraint streams score calculation]**: Implement each constraint as a separate Constraint Stream in Python. Fast and scalable.
+* **<<incrementalJavaScoreCalculation,Incremental Python score calculation>>** (not recommended): Implement multiple low-level methods in Python. Fast and scalable. Very difficult to implement and maintain.
+
+Every score calculation type can work with any Score definition (such as ``HardSoftScore`` or ``HardMediumSoftScore``).
+All score calculation types are Object Oriented and can reuse existing Python code.
+
+[IMPORTANT]
+====
+The score calculation must be read-only.
+It must not change the planning entities or the problem facts in any way.
+For example, it must not call a setter method on a planning entity in the score calculation.
+
+OptaPy does not recalculate the score of a solution if it can predict it (unless an xref:planner-configuration/planner-configuration.adoc#environmentMode[environmentMode assertion] is enabled).
+For example, after a winning step is done, there is no need to calculate the score because that move was done and undone earlier.
+As a result, there is no guarantee that changes applied during score calculation actually happen.
+
+////
+TODO: Uncomment when shadow variables are implemented
+To update planning entities when the planning variable change, use xref:shadow-variable/shadow-variable.adoc#shadowVariable[shadow variables] instead.
+////
+====
+
+
+[[easyPythonScoreCalculation]]
+=== Easy Python score calculation
+
+An easy way to implement your score calculation in Python.
+
+* Advantages:
+** Plain old Python: no learning curve
+** Opportunity to delegate score calculation to an existing code base or legacy system
+* Disadvantages:
+** Slower
+** Does not scale because there is no <<incrementalScoreCalculation,incremental score calculation>>
+
+
+Create a function that takes a solution and return a score, and decorate it with `@easy_score_calculator`:
+
+[source,python,options="nowrap"]
+----
+from optapy import easy_score_calculator
+
+@easy_score_calculator
+def fun(solution: SolutionType) -> Score:
+    ...
+----
+
+For example in n queens:
+
+[source,python,options="nowrap"]
+----
+from optapy import easy_score_calculator
+from optapy.score import SimpleScore
+
+@easy_score_calculator
+def n_queens_easy_score_calculator(n_queens: NQueens) -> SimpleScore:
+    n = n_queens.get_n()
+    queen_list = n_queens.get_queen_list()
+
+    score = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            left_queen = queen_list[i]
+            right_queen = queen_list[j]
+            if left_queen.row is not None and right_queen.row is not None:
+                if left_queen.row_index == right_queen.row_index:
+                    score -= 1
+                if left_queen.get_ascending_diagonal_index() == right_queen.get_ascending_diagonal_index():
+                    score -= 1
+                if left_queen.get_descending_diagonal_index() == right_queen.get_descending_diagonal_index():
+                    score -= 1
+    return SimpleScore.valueOf(score)
+----
+
+Configure it in the solver configuration:
+
+[source,xml,options="nowrap"]
+----
+  <scoreDirectorFactory>
+    <easyScoreCalculatorClass>n_queens_easy_score_calculator</easyScoreCalculatorClass>
+  </scoreDirectorFactory>
+----
+
+
+[[incrementalPythonScoreCalculation]]
+=== Incremental Python score calculation
+
+A way to implement your score calculation incrementally in Java.
+
+* Advantages:
+** Very fast and scalable
+*** Currently the fastest if implemented correctly
+* Disadvantages:
+** Hard to write
+*** A scalable implementation heavily uses maps, indexes, ... (things Constraint Streams can do for you)
+*** You have to learn, design, write and improve all these performance optimizations yourself
+** Hard to read
+*** Regular score constraint changes can lead to a high maintenance cost
+
+Implement all the methods of the interface `IncrementalScoreCalculator`:
+
+[source,python,options="nowrap"]
+----
+class IncrementalScoreCalculator:
+    def resetWorkingSolution(self, working_solution: SolutionType) -> None:
+        ...
+
+    def beforeEntityAdded(self, entity) -> None:
+        ...
+
+    def afterEntityAdded(self, entity) -> None:
+        ...
+
+    def beforeVariableChanged(self, entity, variable_name: str) -> None:
+        ...
+
+    def afterVariableChanged(self, entity, variable_name: str) -> None:
+        ...
+
+    def beforeEntityRemoved(self, entity) -> None:
+        ...
+
+    def afterEntityRemoved(self, entity) -> None:
+        ...
+
+    def calculateScore(self) -> Score:
+        ...
+
+}
+----
+
+image::score-calculation/incrementalScoreCalculatorSequenceDiagram.png[align="center"]
+
+For example in n queens:
+
+[source,python,options="nowrap"]
+----
+from optapy import incremental_score_calculator
+from optapy.score import SimpleScore
+
+@incremental_score_calculator
+class NQueensIncrementalScoreCalculator:
+    score: int
+    row_index_map: dict
+    ascending_diagonal_index_map: dict
+    descending_diagonal_index_map: dict
+
+    def resetWorkingSolution(self, working_solution: Solution):
+        n = working_solution.n
+        self.row_index_map = dict()
+        self.ascending_diagonal_index_map = dict()
+        self.descending_diagonal_index_map = dict()
+        for i in range(n):
+            self.row_index_map[i] = list()
+            self.ascending_diagonal_index_map[i] = list()
+            self.descending_diagonal_index_map[i] = list()
+            if i != 0:
+                self.ascending_diagonal_index_map[n - 1 + i] = list()
+                self.descending_diagonal_index_map[-i] = list()
+        self.score = 0
+        for queen in working_solution.queen_list:
+            self.insert(queen)
+
+    def beforeEntityAdded(self, entity: any):
+        pass
+
+    def afterEntityAdded(self, entity: any):
+        self.insert(entity)
+
+    def beforeVariableChanged(self, entity: any, variable_name: str):
+        self.retract(entity)
+
+    def afterVariableChanged(self, entity: any, variable_name: str):
+        self.insert(entity)
+
+    def beforeEntityRemoved(self, entity: any):
+        self.retract(entity)
+
+    def afterEntityRemoved(self, entity: any):
+        pass
+
+    def insert(self, queen: Queen):
+        row = queen.row
+        if row is not None:
+            row_index = queen.row
+            row_index_list = self.row_index_map[row_index]
+            self.score -= len(row_index_list)
+            row_index_list.append(queen)
+            ascending_diagonal_index_list = self.ascending_diagonal_index_map[queen.getAscendingDiagonalIndex()]
+            self.score -= len(ascending_diagonal_index_list)
+            ascending_diagonal_index_list.append(queen)
+            descending_diagonal_index_list = self.descending_diagonal_index_map[queen.getDescendingDiagonalIndex()]
+            self.score -= len(descending_diagonal_index_list)
+            descending_diagonal_index_list.append(queen)
+
+    def retract(self, queen: Queen):
+        row = queen.row
+        if row is not None:
+            row_index = queen.row
+            row_index_list = self.row_index_map[row_index]
+            row_index_list.remove(queen)
+            self.score += len(row_index_list)
+            ascending_diagonal_index_list = self.ascending_diagonal_index_map[queen.getAscendingDiagonalIndex()]
+            ascending_diagonal_index_list.remove(queen)
+            self.score += len(ascending_diagonal_index_list)
+            descending_diagonal_index_list = self.descending_diagonal_index_map[queen.getDescendingDiagonalIndex()]
+            descending_diagonal_index_list.remove(queen)
+            self.score += len(descending_diagonal_index_list)
+
+    def calculateScore(self) -> SimpleScore:
+        return SimpleScore.of(self.score)
+----
+
+
+Configure it in the solver configuration:
+
+[source,xml,options="nowrap"]
+----
+  <scoreDirectorFactory>
+    <incrementalScoreCalculatorClass>NQueensIncrementalScoreCalculator</incrementalScoreCalculatorClass>
+  </scoreDirectorFactory>
+----
+
+[IMPORTANT]
+====
+A piece of incremental score calculator code can be difficult to write and to review.
+<<invalidScoreDetection,Assert its correctness>> by using an ``EasyScoreCalculator`` to fulfill
+the assertions triggered by the ``environmentMode``.
+====
+
+
+[[constraintMatchAwareIncrementalScoreCalculator]]
+==== `ConstraintMatchAwareIncrementalScoreCalculator`
+
+Optionally, also implement the `ConstraintMatchAwareIncrementalScoreCalculator` interface to:
+
+* Explain a score by splitting it up per score constraint with `ScoreExplanation.getConstraintMatchTotalMap()`.
+* Visualize or sort planning entities by how many constraints each one breaks with `ScoreExplanation.getIndictmentMap()`.
+* Receive a detailed analysis if the `IncrementalScoreCalculator` is corrupted in `FAST_ASSERT` or `FULL_ASSERT` `environmentMode`,
+
+[source,python,options="nowrap"]
+----
+from optapy.constraint import DefaultConstraintMatchTotal
+
+class ConstraintMatchAwareIncrementalScoreCalculator:
+
+    def resetWorkingSolution(self, working_solution: SolutionType, constraintMatchEnabled: bool) -> None:
+        ...
+
+    def getConstraintMatchTotals(self) -> list[DefaultConstraintMatchTotal]:
+        ...
+
+    def getIndictmentMap(self) -> dict | None:
+        return None # Calculate it non-incrementally from getConstraintMatchTotals()
+----
+
+For example in machine reassignment, create one `ConstraintMatchTotal` per constraint type and call `addConstraintMatch()` for each constraint match:
+
+
+[source,python,options="nowrap"]
+----
+from optapy import incremental_score_calculator
+from optapy.score import HardSoftScore
+from optapy.constraint import DefaultConstraintMatchTotal
+
+@incremental_score_calculator
+class MachineReassignmentIncrementalScoreCalculator:
+    ...
+    def resetWorkingSolution(self, working_solution: MachineReassignment, constraint_match_enabled: bool) {
+        # code to reset working solution
+        ...
+        # ignore constraintMatchEnabled, it is always presumed enabled
+
+    def getConstraintMatchTotals(self):
+        maximum_capacity_match_total = DefaultConstraintMatchTotal('MachineReassignment',
+            "maximumCapacity", HardSoftScore.ZERO)
+        ...
+        for (machine, machine_score_part) in self.machine_score_part_map.items():
+            for machine_capacity_score_part in machine_score_part.machine_capacity_score_part_list:
+                if (machine_capacity_score_part.maximum_available < 0) {
+                    maximum_capacity_match_total.addConstraintMatch(
+                            [machine_capacity_score_part.machine_capacity),
+                            HardSoftScore.valueOf(machine_capacity_score_part.maximum_available, 0))
+                }
+            }
+        }
+        ...
+        return [
+            maximum_capacity_match_total,
+            ...
+        ]
+
+    def get_indictment_map(self):
+        # Calculate it non-incrementally from getConstraintMatchTotals()
+        return None
+----
+
+That `getConstraintMatchTotals()` code often duplicates some of the logic of the normal `IncrementalScoreCalculator` methods.
+Constraint Streams don't have this disadvantage, because they are constraint match aware automatically when needed,
+without any extra domain-specific code.
+
+
+[[initializingScoreTrend]]
+=== `InitializingScoreTrend`
+
+The `InitializingScoreTrend` specifies how the Score will change as more and more variables are initialized (while the already initialized variables do not change). Some optimization algorithms (such Construction Heuristics and Exhaustive Search) run faster if they have such information.
+
+For the Score (or each <<scoreLevel,score level>> separately), specify a trend:
+
+* `ANY` (default): Initializing an extra variable can change the score positively or negatively. Gives no performance gain.
+* `ONLY_UP` (rare): Initializing an extra variable can only change the score positively. Implies that:
+** There are only positive constraints
+** And initializing the next variable cannot unmatch a positive constraint that was matched by a previous initialized variable.
+* ``ONLY_DOWN``: Initializing an extra variable can only change the score negatively. Implies that:
+** There are only negative constraints
+** And initializing the next variable cannot unmatch a negative constraint that was matched by a previous initialized variable.
+
+Most use cases only have negative constraints.
+Many of those have an `InitializingScoreTrend` that only goes down:
+
+[source,xml,options="nowrap"]
+----
+  <scoreDirectorFactory>
+    <constraintProviderClass>optapy.examples.cloudbalancing.score.CloudBalancingConstraintProvider</constraintProviderClass>
+    <initializingScoreTrend>ONLY_DOWN</initializingScoreTrend>
+  </scoreDirectorFactory>
+----
+
+Alternatively, you can also specify the trend for each score level separately:
+
+[source,xml,options="nowrap"]
+----
+  <scoreDirectorFactory>
+    <constraintProviderClass>optapy.examples.cloudbalancing.score.CloudBalancingConstraintProvider</constraintProviderClass>
+    <initializingScoreTrend>ONLY_DOWN/ONLY_DOWN</initializingScoreTrend>
+  </scoreDirectorFactory>
+----
+
+
+[[invalidScoreDetection]]
+=== Invalid score detection
+
+When you put the xref:optapy-configuration/optapy-configuration.adoc#environmentMode[`environmentMode`] in `FULL_ASSERT` (or ``FAST_ASSERT``),
+it will detect score corruption in the <<incrementalScoreCalculation,incremental score calculation>>.
+However, that will not verify that your score calculator actually implements your score constraints as your business desires.
+For example, one constraint might consistently match the wrong pattern.
+To verify the constraints against an independent implementation, configure a ``assertionScoreDirectorFactory``:
+
+[source,xml,options="nowrap"]
+----
+  <environmentMode>FAST_ASSERT</environmentMode>
+  ...
+  <scoreDirectorFactory>
+    <constraintProviderClass>optapy.examples.nqueens.score.n_queens_constraint_provider</constraintProviderClass>
+    <assertionScoreDirectorFactory>
+      <easyScoreCalculatorClass>optapy.examples.nqueens.score.n_queens_easy_score_calculator</easyScoreCalculatorClass>
+    </assertionScoreDirectorFactory>
+  </scoreDirectorFactory>
+----
+
+This way, the `n_queens_constraint_provider` implementation is validated by the ``EasyScoreCalculator``.
+
+////
+TODO: Uncomment when constraint verifier is added
+[NOTE]
+====
+This works well to isolate score corruption,
+but to verify that the constraint implement the real business needs,
+xref:constraint-streams/constraint-streams.adoc#constraintStreamsTesting[a unit test with a ConstraintVerifier] is usually better.
+====
+////
+
+
+[[scoreCalculationPerformanceTricks]]
+== Score calculation performance tricks
+
+
+[[scoreCalculationPerformanceTricksOverview]]
+=== Overview
+
+The `Solver` will normally spend most of its execution time running the score calculation
+(which is called in its deepest loops).
+Faster score calculation will return the same solution in less time with the same algorithm,
+which normally means a better solution in equal time.
+
+
+[[scoreCalculationSpeed]]
+=== Score calculation speed
+
+// TODO: Update speed when it is more performant
+After solving a problem, the `Solver` will log the __score calculation speed per second__.
+This is a good measurement of Score calculation performance,
+despite that it is affected by non score calculation execution time.
+It depends on the problem scale of the problem dataset.
+Normally, even for high scale problems, it is higher than ``1``, except if you are using an ``EasyScoreCalculator``.
+
+[IMPORTANT]
+====
+When improving your score calculation, focus on maximizing the score calculation speed, instead of maximizing the best score.
+A big improvement in score calculation can sometimes yield little or no best score improvement, for example when the algorithm is stuck in a local or global optima.
+If you are watching the calculation speed instead, score calculation improvements are far more visible.
+
+Furthermore, watching the calculation speed allows you to remove or add score constraints,
+and still compare it with the original's calculation speed.
+Comparing the best score with the original's best score is pointless: it's comparing apples and oranges.
+====
+
+
+[[incrementalScoreCalculation]]
+=== Incremental score calculation (with deltas)
+
+When a solution changes, incremental score calculation (AKA delta based score calculation)
+calculates the delta with the previous state to find the new ``Score``,
+instead of recalculating the entire score on every solution evaluation.
+
+For example, when a single queen A moves from row `1` to ``2``,
+it will not bother to check if queen B and C can attack each other, since neither of them changed:
+
+image::score-calculation/incrementalScoreCalculationNQueens04.png[align="center"]
+
+Similarly in employee rostering:
+
+image::score-calculation/incrementalScoreCalculationEmployeeRostering.png[align="center"]
+
+This is a huge performance and scalability gain.
+// TODO: Fix link when constraint-streams chapter
+*xref:constraint-streams/constraint-streams.adoc#constraintStreams[Constraint Streams] give you this huge scalability gain without forcing you to write a complicated incremental score calculation algorithm.*
+Just let the rule engine do the hard work.
+
+Notice that the speedup is relative to the size of your planning problem (your __n__), making incremental score calculation far more scalable.
+
+
+[[avoidCallingRemoteServicesDuringScoreCalculation]]
+=== Avoid calling remote services during score calculation
+
+Do not call remote services in your score calculation (except if you are bridging `EasyScoreCalculator` to a legacy system). The network latency will kill your score calculation performance.
+Cache the results of those remote services if possible.
+
+If some parts of a constraint can be calculated once, when the `Solver` starts, and never change during solving,
+then turn them into xref:optapy-configuration/optapy-configuration.adoc#cachedProblemFact[cached problem facts].
+
+
+[[pointlessConstraints]]
+=== Pointless constraints
+
+If you know a certain constraint can never be broken (or it is always broken), do not write a score constraint for it.
+For example in n queens, the score calculation does not check if multiple queens occupy the same column,
+because a ``Queen``'s `column` never changes and every solution starts with each `Queen` on a different ``column``.
+
+[NOTE]
+====
+Do not go overboard with this.
+If some datasets do not use a specific constraint but others do, just return out of the constraint as soon as you can.
+There is no need to dynamically change your score calculation based on the dataset.
+====
+
+
+[[buildInHardConstraint]]
+=== Built-in hard constraint
+
+
+Instead of implementing a hard constraint, it can sometimes be built in.
+For example, if `Lecture` A should never be assigned to `Room` X, but it uses `@value_range_provider` on Solution,
+so the `Solver` will often try to assign it to `Room` X too (only to find out that it breaks a hard constraint).
+Use xref:optapy-configuration/optapy-configuration.adoc#valueRangeProviderOnPlanningEntity[a ValueRangeProvider on the planning entity] to define that Course A should only be assigned a `Room` different than X.
+////
+TODO: Insert into above when docs are added
+or xref:move-and-neighborhood-selection/move-and-neighborhood-selection.adoc#filteredSelection[filtered selection]
+////
+This can give a good performance gain in some use cases, not just because the score calculation is faster,
+but mainly because most optimization algorithms will spend less time evaluating infeasible solutions.
+However, usually this is not a good idea because there is a real risk of trading short term benefits for long term harm:
+
+* Many optimization algorithms rely on the freedom to break hard constraints when changing planning entities,
+to get out of local optima.
+* Both implementation approaches have limitations (feature compatibility, disabling automatic performance optimizations),
+as explained in their documentation.
+
+
+[[otherScoreCalculationPerformanceTricks]]
+=== Other score calculation performance tricks
+
+* Verify that your score calculation happens in the correct `Number` type.
+If you are making the sum of `int` values, do not sum it in a `float` which takes longer.
+* For optimal performance, set the `JAVA_HOME` environment variable to the latest JDK.
+For example, in the past we have seen performance increases of 30% by switching from java 1.5 to 1.6.
+* Always remember that premature optimization is the root of all evil.
+Make sure your design is flexible enough to allow configuration based tweaking.
+
+
+[[scoreTrap]]
+=== Score trap
+
+Make sure that none of your score constraints cause a score trap.
+A trapped score constraint uses the same weight for different constraint matches, when it could just as easily use a different weight.
+It effectively lumps its constraint matches together, which creates a flatlined score function for that constraint.
+This can cause a solution state in which several moves need to be done to resolve or lower the weight of that single constraint.
+Some examples of score traps:
+
+* You need two doctors at each table, but you are only moving one doctor at a time. So the solver has no incentive to move a doctor to a table with no doctors. Punish a table with no doctors more than a table with only one doctor in that score constraint in the score function.
+
+* Two exams need to be conducted at the same time, but you are only moving one exam at a time. So the solver has to move one of those exams to another timeslot without moving the other in the same move. Add a coarse-grained move that moves both exams at the same time.
+
+For example, consider this score trap.
+If the blue item moves from an overloaded computer to an empty computer, the hard score should improve.
+The trapped score implementation fails to do that:
+
+image::score-calculation/scoreTrap.png[align="center"]
+
+The Solver should eventually get out of this trap, but it will take a lot of effort (especially if there are even more processes on the overloaded computer). Before they do that, they might actually start moving more processes into that overloaded computer, as there is no penalty for doing so.
+
+
+[NOTE]
+====
+Avoiding score traps does not mean that your score function should be smart enough to avoid local optima.
+Leave it to the optimization algorithms to deal with the local optima.
+
+Avoiding score traps means to avoid, for each score constraint individually, a flatlined score function.
+====
+
+[IMPORTANT]
+====
+Always specify the degree of infeasibility.
+The business will often say "if the solution is infeasible, it does not matter how infeasible it is." While that is true for the business, it is not true for score calculation as it benefits from knowing how infeasible it is.
+In practice, soft constraints usually do this naturally and it is just a matter of doing it for the hard constraints too.
+====
+
+There are several ways to deal with a score trap:
+
+* Improve the score constraint to make a distinction in the score weight. For example, penalize `-1hard` for every missing CPU, instead of just `-1hard` if any CPU is missing.
+* If changing the score constraint is not allowed from the business perspective, add a lower score level with a score constraint that makes such a distinction. For example, penalize `-1subsoft` for every missing CPU, on top of `-1hard` if any CPU is missing. The business ignores the subsoft score level.
+* Add coarse-grained moves and union select them with the existing fine-grained moves. A coarse-grained move effectively does multiple moves to directly get out of a score trap with a single move. For example, move multiple items from the same container to another container.
+
+////
+TODO: Uncomment when benchmark support is added
+[[stepLimitBenchmark]]
+=== `stepLimit` benchmark
+
+Not all score constraints have the same performance cost.
+Sometimes one score constraint can kill the score calculation performance outright.
+Use the xref:benchmarking-and-tweaking/benchmarking-and-tweaking.adoc#benchmarker[Benchmarker] to do a one minute run and check what happens to the score calculation speed if you comment out all but one of the score constraints.
+////
+
+
+[[fairnessScoreConstraints]]
+=== Fairness score constraints
+
+Some use cases have a business requirement to provide a fair schedule (usually as a soft score constraint), for example:
+
+* Fairly distribute the workload amongst the employees, to avoid envy.
+* Evenly distribute the workload amongst assets, to improve reliability.
+
+Implementing such a constraint can seem difficult (especially because there are different ways to formalize fairness), but usually the _squared workload_ implementation behaves most desirable.
+For each employee/asset, count the workload `w` and subtract `w²` from the score.
+
+image::score-calculation/fairnessScoreConstraint.png[align="center"]
+
+As shown above, the _squared workload_ implementation guarantees that if you select two employees from a given solution and make their distribution between those two employees fairer, then the resulting new solution will have a better overall score.
+Do not just use the difference from the average workload, as that can lead to unfairness, as demonstrated below.
+
+image::score-calculation/fairnessScoreConstraintPitfall.png[align="center"]
+
+[NOTE]
+====
+Instead of the _squared workload_, it is also possible to use the https://en.wikipedia.org/wiki/Variance[variance]
+(squared difference to the average) or the http://en.wikipedia.org/wiki/Standard_deviation[standard deviation]
+(square root of the variance).
+This has no effect on the score comparison, because the average will not change during planning.
+It is just more work to implement (because the average needs to be known) and trivially slower (because the calculation is a bit longer).
+====
+
+When the workload is perfectly balanced, the user often likes to see a `0` score, instead of the distracting `-34soft` in the image above (for the last solution which is almost perfectly balanced).
+To nullify this, either add the average multiplied by the number of entities to the score or instead show the variance or standard deviation in the UI.
+
+////
+TODO: Uncomment when constraint configuration support is added
+[[constraintConfiguration]]
+== Constraint configuration: adjust constraint weights dynamically
+
+Deciding the correct <<scoreConstraintWeight,weight>> and <<scoreLevel,level>> for each constraint is not easy.
+It often involves negotiating with different stakeholders and their priorities.
+Furthermore, quantifying the impact of soft constraints is often a new experience for business managers, so they'll need a number of iterations to get it right.
+
+Don't get stuck between a rock and a hard place.
+Provide a UI to adjust the constraint weights and visualize the resulting solution, so the business managers can tweak the constraint weights themselves:
+
+image::score-calculation/parameterizeTheScoreWeights.png[align="center"]
+
+[[createAConstraintConfiguration]]
+=== Create a constraint configuration
+
+First, create a new class to hold the constraint weights and other constraint parameters.
+Annotate it with `@ConstraintConfiguration`:
+
+[source,java,options="nowrap"]
+----
+@ConstraintConfiguration
+public class ConferenceConstraintConfiguration {
+    ...
+}
+----
+
+There will be exactly one instance of this class per planning solution.
+The planning solution and the constraint configuration have a one-to-one relationship,
+but they serve a different purpose, so they aren't merged into a single class.
+A `@ConstraintConfiguration` class can extend a parent `@ConstraintConfiguration` class,
+which can be useful in international use cases with many regional constraints.
+
+Add the constraint configuration on the planning solution
+and annotate that field or property with `@ConstraintConfigurationProvider`:
+
+[source,java,options="nowrap"]
+----
+@PlanningSolution
+public class ConferenceSolution {
+
+    @ConstraintConfigurationProvider
+    private ConferenceConstraintConfiguration constraintConfiguration;
+
+    ...
+}
+----
+
+The `@ConstraintConfigurationProvider` annotation automatically exposes the constraint configuration
+as a xref:planner-configuration/planner-configuration.adoc#problemFacts[problem fact], there is no need to add a `@ProblemFactProperty` annotation.
+
+The constraint configuration class holds the <<constraintWeight, constraint weights>>,
+but it can also hold constraint parameters.
+For example in conference scheduling, the minimum pause constraint has a constraint weight (like any other constraint),
+but it also has a constraint parameter that defines the length of the minimum pause between two talks of the same speaker.
+That pause length depends on the conference (= the planning problem):
+in some big conferences 20 minutes isn't enough to go from one room to the other.
+That pause length is a field in the constraint configuration without a `@ConstraintWeight` annotation.
+
+
+[[constraintWeight]]
+=== Add a constraint weight for each constraint
+
+In the constraint configuration class, add a `@ConstraintWeight` field or property for each constraint:
+
+[source,java,options="nowrap"]
+----
+@ConstraintConfiguration(constraintPackage = "...conferencescheduling.score")
+public class ConferenceConstraintConfiguration {
+
+    @ConstraintWeight("Speaker conflict")
+    private HardMediumSoftScore speakerConflict = HardMediumSoftScore.ofHard(10);
+
+    @ConstraintWeight("Theme track conflict")
+    private HardMediumSoftScore themeTrackConflict = HardMediumSoftScore.ofSoft(10);
+    @ConstraintWeight("Content conflict")
+    private HardMediumSoftScore contentConflict = HardMediumSoftScore.ofSoft(100);
+
+    ...
+}
+----
+
+The type of the constraint weights must be the same score class as xref:planner-configuration/planner-configuration.adoc#scoreOfASolution[the planning solution's score member].
+For example in conference scheduling, `ConferenceSolution.getScore()` and `ConferenceConstraintConfiguration.getSpeakerConflict()`
+both return a `HardMediumSoftScore`.
+
+A constraint weight cannot be null.
+Give each constraint weight a default value, but expose them in a UI so the business users can tweak them.
+The example above uses the `ofHard()`, `ofMedium()` and `ofSoft()` methods to do that.
+Notice how it defaults the _content conflict_ constraint as ten times more important than the _theme track conflict_ constraint.
+Normally, a constraint weight only uses one score level,
+but it's possible to use multiple score levels (at a small performance cost).
+
+Each constraint has a constraint package and a constraint name, together they form the constraint id.
+These connect the constraint weight with the constraint implementation.
+*For each constraint weight, there must be a constraint implementation with the same package and the same name.*
+
+* The `@ConstraintConfiguration` annotation has a `constraintPackage` property that defaults to the package of the constraint configuration class.
+Most cases with xref:drools-score-calculation/drools-score-calculation.adoc#droolsScoreCalculation[Drools score calculation], need to override that because the DRLs use another package.
+For example, the DRL below uses the package `...conferencescheduling.score`,
+so the constraint configuration above specifies a `constraintPackage`.
+Cases with xref:constraint-streams/constraint-streams.adoc#constraintStreams[Constraint streams], normally don't need to specify it.
+
+* The `@ConstraintWeight` annotation has a `value` which is the constraint name (for example "Speaker conflict").
+It inherits the constraint package from the `@ConstraintConfiguration`,
+but it can override that, for example `@ConstraintWeight(constraintPackage = "...region.france", ...)`
+to use a different constraint package than some of the other weights.
+
+So every constraint weight ends up with a constraint package and a constraint name.
+Each constraint weight links with a constraint implementation,
+for example in xref:drools-score-calculation/drools-score-calculation.adoc#droolsScoreCalculation[Drools score calculation]:
+
+[source,options="nowrap"]
+----
+package ...conferencescheduling.solver;
+
+rule "Speaker conflict"
+    when
+        ...
+    then
+        scoreHolder.penalize(kcontext);
+end
+
+rule "Theme track conflict"
+    when
+        ...
+    then
+        scoreHolder.penalize(kcontext, ...);
+end
+
+rule "Content conflict"
+    when
+        ...
+    then
+        scoreHolder.penalize(kcontext, ...);
+end
+----
+
+Each of the constraint weights defines the score level and score weight of their constraint.
+The constraint implementation calls `reward()` or `penalize()` and the constraint weight is automatically applied.
+
+If the constraint implementation provides a match weight, that *match weight is multiplied with the constraint weight*.
+For example, the _content conflict_ constraint weight defaults to `100soft`
+and the constraint implementation penalizes each match based on the number of shared content tags:
+
+[source,java,options="nowrap"]
+----
+    @ConstraintWeight("Content conflict")
+    private HardMediumSoftScore contentConflict = HardMediumSoftScore.ofSoft(100);
+----
+
+[source,options="nowrap"]
+----
+rule "Content conflict"
+    when
+        $talk1 : Talk(...)
+        $talk2 : Talk(...)
+    then
+        scoreHolder.penalize(kcontext,
+                $talk2.overlappingContentCount($talk1));
+end
+----
+
+So when 2 overlapping talks share only 1 content tag, the score is impacted by `-100soft`.
+But when 2 overlapping talks share 3 content tags, the match weight is `3`, so the score is impacted by `-300soft`.
+////
+
+
+[[explainingTheScore]]
+== Explaining the score: which constraints are broken?
+
+The easiest way to explain the score during development is to print the return value of `explainScore()`, but only use that method for diagnostic purposes:
+
+[source,python,options="nowrap"]
+----
+print(score_manager.explainScore(solution))
+----
+
+For example in conference scheduling, this prints that talk `S51` is responsible for breaking the hard constraint `Speaker required room tag`:
+
+----
+Explanation of score (-1hard/-806soft):
+    Constraint match totals:
+        -1hard: constraint (Speaker required room tag) has 1 matches:
+            -1hard: justifications ([S51])
+        -340soft: constraint (Theme track conflict) has 32 matches:
+            -20soft: justifications ([S68, S66])
+            -20soft: justifications ([S61, S44])
+            ...
+        ...
+    Indictments (top 5 of 72):
+        -1hard/-22soft: justification (S51) has 12 matches:
+            -1hard: constraint (Speaker required room tag)
+            -10soft: constraint (Theme track conflict)
+            ...
+        ...
+----
+
+[IMPORTANT]
+====
+Do not attempt to parse this string or use it in your UI or exposed services.
+Instead use the ConstraintMatch API below and do it properly.
+====
+
+[[usingScoreCalculationOutsideTheSolver]]
+=== Using score calculation outside the `Solver`
+
+If other parts of your application, for example your web UI, need to calculate the score of a solution, use the `ScoreManager` API:
+
+[source,python,options="nowrap"]
+----
+from optapy import score_manager_create
+
+score_manager = score_manager_create(solver_factory)
+score_explanation = score_manager.explain(cloud_balance)
+----
+
+Then use it when you need to calculate the `Score` of a solution:
+
+[source,python,options="nowrap"]
+----
+score = score_explanation.getScore();
+----
+
+Furthermore, the `ScoreExplanation` can help explain the score through constraint match totals and/or indictments:
+
+image::score-calculation/scoreVisualization.png[align="center"]
+
+[[constraintMatchTotal]]
+=== Constraint match total: break down the score by constraint
+
+To break down the score per constraint, get the ``ConstraintMatchTotal``s from the ``ScoreExplanation``:
+
+[source,python,options="nowrap"]
+----
+constraint_match_totals = score_explanation.getConstraintMatchTotalMap().values()
+for constraint_match_total in constraint_match_totals:
+    constraint_name = constraint_match_total.getConstraintName()
+    # The score impact of that constraint
+    total_score = constraint_match_total.getScore()
+
+    for constraint_match in constraint_match_total.getConstraintMatchSet():
+        justification_list = constraint_match.getJustificationList()
+        score = constraint_match.getScore()
+        ...
+----
+
+Each `ConstraintMatchTotal` represents one constraint and has a part of the overall score.
+The sum of all the `ConstraintMatchTotal.getScore()` equals the overall score.
+
+[NOTE]
+====
+xref:constraint-streams/constraint-streams.adoc#constraintStreams[Constraint streams] supports constraint matches automatically, but <<incrementalPythonScoreCalculation,incremental Python score calculation>> requires
+<<constraintMatchAwareIncrementalScoreCalculator,adding additional methods>>.
+====
+
+[[indictmentHeatMap]]
+=== Indictment heat map: visualize the hot planning entities
+
+To show a heat map in the UI that highlights the planning entities and problem facts have an impact on the ``Score``, get the `Indictment` map from the ``ScoreExplanation``:
+
+[source,python,options="nowrap"]
+----
+indictment_map = score_explanation.getIndictmentMap()
+for process in cloud_balance.process_list:
+    indictment = indictment_map.get(process);
+    if indictment is None:
+        continue
+    # The score impact of that planning entity
+    total_score = indictment.getScore()
+
+    for constraint_match in indictment.getConstraintMatchSet():
+        constraint_name = constraint_match.getConstraintName()
+        score = constraint_match.getScore()
+        ...
+----
+
+Each `Indictment` is the sum of all constraints where that justification object is involved with.
+The sum of all the `Indictment.getScoreTotal()` differs from the overall score, because multiple ``Indictment``s can share the same `ConstraintMatch`.
+
+[NOTE]
+====
+xref:constraint-streams/constraint-streams.adoc#constraintStreams[Constraint streams] supports indictments automatically, but <<incrementalPythonScoreCalculation,incremental Python score calculation>> requires
+<<constraintMatchAwareIncrementalScoreCalculator,adding additional methods>>.
+====
+
+////
+TODO: Uncomment when constraint verifier support is added
+[[testingScoreConstraints]]
+== Testing score constraints
+
+It's recommended to write a unit test for each score constraint individually to check that it behaves correctly.
+Different score calculation types come with different tools for testing.
+For more, see xref:constraint-streams/constraint-streams.adoc#constraintStreamsTesting[testing Constraint Streams] or
+xref:drools-score-calculation/drools-score-calculation.adoc#testingDroolsConstraints[testing Drools constraints].
+////
