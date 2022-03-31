@@ -213,7 +213,7 @@ This constraint stream penalizes each known and initialized instance of `Shift`.
 The `.forEach(T)` building block selects every `T` instance that
 is in a xref:optapy-configuration/optapy-configuration.adoc#problemFacts[problem fact collection]
 or a xref:optapy-configuration/optapy-configuration.adoc#planningEntitiesOfASolution[planning entity collection]
-and has no `null` genuine planning variables.
+and has no `None` genuine planning variables.
 
 To include instances with a `None` genuine planning variable,
 replace the `forEach()` building block by `forEachIncludingNullVars()`:
@@ -265,13 +265,13 @@ Here are some examples:
 - Simple penalty (`penalize("Constraint name", SimpleScore.ONE)`) makes the score worse by `1` per every match in the
 constraint stream.
 The score type must be the same type as used on the `@planning_score` decorated member on the planning solution.
-- Dynamic penalty (`penalize("Constraint name", SimpleScore.ONE, Shift::getHours)`) makes the score worse by the number
+- Dynamic penalty (`penalize("Constraint name", SimpleScore.ONE, lambda shift: shift.hours)`) makes the score worse by the number
 of hours in every matching `Shift` in the constraint stream.
 This is an example of using a constraint match weigher.
 // TODO: Uncomment when constraint configuration added
 //- Configurable penalty (`penalizeConfigurable("Constraint name")`) makes the score worse using constraint weights
 //defined in xref:score-calculation/score-calculation.adoc#constraintConfiguration[constraint configuration].
-//- Configurable dynamic penalty(`penalizeConfigurable("Constraint name", Shift::getHours)`) makes the score worse using
+//- Configurable dynamic penalty(`penalizeConfigurable("Constraint name", lambda shift: shift.hours)`) makes the score worse using
 //constraint weights defined in xref:score-calculation/score-calculation.adoc#constraintConfiguration[constraint configuration], multiplied by the number of hours in
 //every matching `Shift` in the constraint stream.
 

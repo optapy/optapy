@@ -1462,30 +1462,16 @@ INFO  Solving ended: time spent (24), best score (0), score calculation speed (7
 
 All time spent values are in milliseconds.
 
-Configure the logging level by explicitly calling `optapy.init`:
+Configure the logging level by explicitly calling `logging.getLogger('optapy').setLevel(logging.LEVEL)`:
 
 [source,python,options="nowrap"]
 ----
-from optapy import init as optapy_init
+import logging
 
-optapy_init(log_level='TRACE')
+logging.getLogger('optapy').setLevel(logging.DEBUG)
 ----
 
-[IMPORTANT]
-====
-The call to `optapy.init` must happen BEFORE any imports from
-`optapy.types`, `optapy.score`, `optapy.config`, `optapy.constraint`, and before any decorators from `optapy` are used.
-Importing from `optapy.types`, `optapy.score`, `optapy.config`, `optapy.constraint` or using a decorator automatically starts the JVM that OptaPlanner runs on. For example, this will not work:
-
-[source,python,options="nowrap"]
-----
-from optapy import init as optapy_init
-import optapy.config
-
-optapy_init(log_level='TRACE')
-----
-====
-
+By default, `INFO` logging is used.
 
 [[monitoring]]
 === Monitoring the solver
