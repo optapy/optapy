@@ -13,7 +13,7 @@ The API should feel familiar if you're familiar with SQL.
 [[constraintStreamsIntroduction]]
 == Introduction
 
-Using Python's iterable operations, we could implement an xref:score-calculation/score-calculation.adoc#easyJavaScoreCalculation[easy score calculator]
+Using Python's iterable operations, we could implement an xref:score-calculation/score-calculation.adoc#easyPythonScoreCalculation[easy score calculator]
 that uses a functional approach:
 
 [source,python,options="nowrap"]
