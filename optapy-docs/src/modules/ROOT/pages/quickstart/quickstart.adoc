@@ -6,7 +6,7 @@
 
 
 This guide walks you through the process of creating a simple Python application with OptaPy's constraint solving Artificial Intelligence (AI).
-*Feel free to follow along in the https://mybinder.org/v2/gh/optapy/optapy/main?filepath=index.ipynb[OptaPy Jupyter notebook].*
+*Feel free to follow along in the https://mybinder.org/v2/gh/optapy/optapy-quickstarts/stable?filepath=school-timetabling/school-timetabling-quickstart.ipynb[OptaPy Jupyter notebook].*
 
 == What you will build
 
