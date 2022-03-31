@@ -92,9 +92,10 @@ is the maintenance `cost` of that `Computer` (which differs per computer).
 Putting a good weight on a constraint is often a difficult analytical decision,
 because it is about making choices and trade-offs against other constraints.
 Different stakeholders have different priorities.
-*Don't waste time with constraint weight discussions at the start of an implementation,
-instead add a <<constraintConfiguration, constraint configuration>>
-and  allow users to change them through a UI.*
+// TODO: Uncomment when constraint configuration is added
+//*Don't waste time with constraint weight discussions at the start of an implementation,
+//instead add a <<constraintConfiguration, constraint configuration>>
+//and  allow users to change them through a UI.*
 A non-accurate weight is less damaging than mediocre algorithms:
 
 image::score-calculation/scoreTradeoffInPerspective.png[align="center"]
@@ -345,7 +346,7 @@ There are several ways to calculate the `Score` of a solution:
 
 * **<<easyPythonScoreCalculation,Easy Python score calculation>>**: Implement all constraints together in a single function in Python. Does not scale.
 * **xref:constraint-streams/constraint-streams.adoc#constraintStreams[Constraint streams score calculation]**: Implement each constraint as a separate Constraint Stream in Python. Fast and scalable.
-* **<<incrementalJavaScoreCalculation,Incremental Python score calculation>>** (not recommended): Implement multiple low-level methods in Python. Fast and scalable. Very difficult to implement and maintain.
+* **<<incrementalPythonScoreCalculation,Incremental Python score calculation>>** (not recommended): Implement multiple low-level methods in Python. Fast and scalable. Very difficult to implement and maintain.
 
 Every score calculation type can work with any Score definition (such as ``HardSoftScore`` or ``HardMediumSoftScore``).
 All score calculation types are Object Oriented and can reuse existing Python code.
