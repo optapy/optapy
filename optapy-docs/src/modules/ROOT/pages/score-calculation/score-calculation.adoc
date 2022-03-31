@@ -769,7 +769,6 @@ Similarly in employee rostering:
 image::score-calculation/incrementalScoreCalculationEmployeeRostering.png[align="center"]
 
 This is a huge performance and scalability gain.
-// TODO: Fix link when constraint-streams chapter
 *xref:constraint-streams/constraint-streams.adoc#constraintStreams[Constraint Streams] give you this huge scalability gain without forcing you to write a complicated incremental score calculation algorithm.*
 Just let the rule engine do the hard work.
 
