@@ -3,3 +3,4 @@
 * xref:optapy-configuration/optapy-configuration.adoc[leveloffset=+1]
 * xref:score-calculation/score-calculation.adoc[leveloffset=+1]
 * xref:constraint-streams/constraint-streams.adoc[leveloffset=+1]
+* xref:optimization-algorithms/optimization-algorithms.adoc[leveloffset=+1]
