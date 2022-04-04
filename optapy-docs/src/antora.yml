@@ -1,6 +1,6 @@
 # This file is a placeholder that is replaced by antora-template.yml during a release.
 # Please note that some AsciiDoc attributes might be missing if you build the docs from this branch.
-name: optapy
+name: docs
 title: OptaPy User Guide
 version: latest
 nav:

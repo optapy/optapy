@@ -4,7 +4,7 @@
 #
 # The goal is to have the antora.yml containing correct attributes available in the release branch before
 # the optapy-website is refreshed.
-name: optapy
+name: docs
 title: OptaPy User Guide ${version.optapy}
 version: latest
 asciidoc:
