@@ -893,7 +893,7 @@ class User:
         return self.user_name
 ----
 
-A `@PlanningId` property must be:
+A `@planning_id` property must be:
 
 * Unique for that specific class
 ** It does not need to be unique across different problem fact classes
@@ -913,7 +913,7 @@ A `@PlanningId` property must be:
 Python has a https://docs.python.org/3/c-api/init.html#thread-state-and-the-global-interpreter-lock[Global Interpreter Lock (GIL)], and as a result, only one thread can run at a time in Python.
 This prevents OptaPy from utilizing multiple cores on a machine, since only one of the cores can execute Python code at a time. Hence, utilizing multithreaded solving will probably degrade performance instead of improving it at this time.
 ====
-Enable multithreaded incremental solving by <<planningId,adding a @PlanningId annotation>>
+Enable multithreaded incremental solving by <<planningId,adding a @planning_id annotation>>
 on every planning entity class and planning value class.
 Then configure a `moveThreadCount`:
 
