@@ -15,7 +15,7 @@ Solving a planning problem with OptaPy consists of the following steps:
 . *Load a problem data set* from your data layer, for example a Four Queens instance. That is the planning problem.
 . *Solve it* with `Solver.solve(problem)` which returns the best solution found.
 
-image::optapy-configuration/inputOutputOverview.png[align="center"]
+image::planner-configuration/inputOutputOverview.png[align="center"]
 
 [[solverConfiguration]]
 == Solver configuration
@@ -866,7 +866,7 @@ A planning variable that is chained either:
 
 Here are some examples of valid and invalid chains:
 
-image::optapy-configuration/chainPrinciples.png[align="center"]
+image::planner-configuration/chainPrinciples.png[align="center"]
 
 *Every initialized planning entity is part of an open-ended chain that begins from an anchor.* A valid model means that:
 
@@ -889,7 +889,7 @@ If your constraints dictate a closed chain, model it as an open-ended chain (whi
 
 The optimization algorithms and built-in ``Move``s do chain correction to guarantee that the model stays valid:
 
-image::optapy-configuration/chainCorrection.png[align="center"]
+image::planner-configuration/chainCorrection.png[align="center"]
 
 
 [WARNING]
@@ -1167,7 +1167,7 @@ A planning clone of a solution must fulfill these requirements:
 * The clone must use different, cloned instances of the entities and entity collections.
 Changes to an original solution entity's variables must not affect its clone.
 
-image::optapy-configuration/solutionCloning.png[align="center"]
+image::planner-configuration/solutionCloning.png[align="center"]
 
 *Implementing a planning clone method is hard, therefore you do not need to implement it.*
 
@@ -1240,7 +1240,7 @@ For example in n queens, an `NQueens` instance is created with the required `Col
 ----
 
 .Uninitialized Solution for the Four Queens Puzzle
-image::optapy-configuration/uninitializedNQueens04.png[align="left"]
+image::planner-configuration/uninitializedNQueens04.png[align="left"]
 
 Usually, most of this data comes from your data layer, and your solution implementation just aggregates that data and creates the uninitialized planning entity instances to plan:
 
@@ -1300,7 +1300,7 @@ best_solution = solver.solve(problem)
 For example in n queens, the `solve()` method will return an `NQueens` instance with every `Queen` assigned to a ``Row``.
 
 .Best Solution for the Four Queens Puzzle in 8ms (Also an Optimal Solution)
-image::optapy-configuration/solvedNQueens04.png[align="left"]
+image::planner-configuration/solvedNQueens04.png[align="left"]
 
 The `solve(Solution)` method can take a long time (depending on the problem size and the solver configuration). The `Solver` intelligently wades through xref:optimization-algorithms/optimization-algorithms.adoc#searchSpaceSize[the search space] of possible solutions and remembers the best solution it encounters during solving.
 Depending on a number of factors (including problem size, how much time the `Solver` has, the solver configuration, ...), xref:optimization-algorithms/optimization-algorithms.adoc#doesPlannerFindTheOptimalSolution[that best solution might or might not be an optimal solution].

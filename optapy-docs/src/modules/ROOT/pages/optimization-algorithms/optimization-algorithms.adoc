@@ -143,7 +143,7 @@ However, this basic procedure provides a good starting configuration that will p
 . Start with a quick configuration that involves little or no configuration and optimization code:
 See xref:construction-heuristics/construction-heuristics.adoc#firstFit[First Fit].
 
-//. Next, implement xref:optapy-configuration/optapy-configuration.adoc#planningEntityDifficulty[planning entity difficulty] comparison and turn it into xref:construction-heuristics/construction-heuristics.adoc#firstFitDecreasing[First Fit Decreasing].
+//. Next, implement xref:planner-configuration/planner-configuration.adoc#planningEntityDifficulty[planning entity difficulty] comparison and turn it into xref:construction-heuristics/construction-heuristics.adoc#firstFitDecreasing[First Fit Decreasing].
 
 . Next, add Late Acceptance behind it:
 .. First Fit Decreasing.
@@ -269,7 +269,7 @@ These form four nested scopes:
 
 image::optimization-algorithms/scopeOverview.png[align="center"]
 
-Configure xref:optapy-configuration/optapy-configuration.adoc#logging[logging] to display the log messages of each scope.
+Configure xref:planner-configuration/planner-configuration.adoc#logging[logging] to display the log messages of each scope.
 
 
 [[termination]]
@@ -615,7 +615,7 @@ This is useful for benchmarking.
   </termination>
 ----
 
-Switching xref:optapy-configuration/optapy-configuration.adoc#environmentMode[EnvironmentMode] can heavily impact when this termination ends.
+Switching xref:planner-configuration/planner-configuration.adoc#environmentMode[EnvironmentMode] can heavily impact when this termination ends.
 
 
 [[combiningMultipleTerminations]]
@@ -850,7 +850,7 @@ image::optimization-algorithms/multiThreadingStrategies.png[align="center"]
 
 [NOTE]
 ====
-A xref:optapy-configuration/optapy-configuration.adoc#logging[logging level] of `debug` or `trace` might cause congestion multithreaded solving
+A xref:planner-configuration/planner-configuration.adoc#logging[logging level] of `debug` or `trace` might cause congestion multithreaded solving
 and slow down the xref:score-calculation/score-calculation.adoc#scoreCalculationSpeed[score calculation speed].
 ====
 
