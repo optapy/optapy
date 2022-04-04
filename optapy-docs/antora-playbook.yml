@@ -1,6 +1,6 @@
 site:
   title: Documentation
-  url: https://www.optapy.org/docs
+  url: https://www.optapy.org
   start_page: docs::planner-introduction/planner-introduction.adoc
   robots: allow
   #keys:
