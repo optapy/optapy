@@ -5,3 +5,4 @@
 * xref:constraint-streams/constraint-streams.adoc[leveloffset=+1]
 * xref:optimization-algorithms/optimization-algorithms.adoc[leveloffset=+1]
 * xref:exhaustive-search/exhaustive-search.adoc[leveloffset=+1]
+* xref:construction-heuristics/construction-heuristics.adoc[leveloffset=+1]
