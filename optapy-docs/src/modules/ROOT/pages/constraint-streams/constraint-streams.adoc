@@ -45,8 +45,8 @@ def do_not_assign_ann(factory : ConstraintFactory):
             .penalize("Don't assign Ann", HardSoftScore.ONE_SOFT)
 ----
 
-This constraint stream iterates over all instances of class `Shift` in the xref:optapy-configuration/optapy-configuration.adoc#problemFacts[problem facts] and
-xref:optapy-configuration/optapy-configuration.adoc#planningEntity[planning entities] in the <<planningProblemAndPlanningSolution,planning problem>>.
+This constraint stream iterates over all instances of class `Shift` in the xref:planner-configuration/planner-configuration.adoc#problemFacts[problem facts] and
+xref:planner-configuration/planner-configuration.adoc#planningEntity[planning entities] in the <<planningProblemAndPlanningSolution,planning problem>>.
 It finds every `Shift` which is assigned to employee "Ann" and for every such instance (also called a match), it adds a
 soft penalty of `1` to the overall xref:score-calculation/score-calculation.adoc#calculateTheScore[score].
 The following figure illustrates this process on a problem with 4 different shifts:
@@ -211,8 +211,8 @@ This constraint stream penalizes each known and initialized instance of `Shift`.
 === ForEach
 
 The `.forEach(T)` building block selects every `T` instance that
-is in a xref:optapy-configuration/optapy-configuration.adoc#problemFacts[problem fact collection]
-or a xref:optapy-configuration/optapy-configuration.adoc#planningEntitiesOfASolution[planning entity collection]
+is in a xref:planner-configuration/planner-configuration.adoc#problemFacts[problem fact collection]
+or a xref:planner-configuration/planner-configuration.adoc#planningEntitiesOfASolution[planning entity collection]
 and has no `None` genuine planning variables.
 
 To include instances with a `None` genuine planning variable,
@@ -230,7 +230,7 @@ def penalize_all_shifts(factory: ConstraintFactory):
 The `forEach()` building block has a legacy counterpart, `from_()`.
 This alternative approach included instances based on the initialization status of their genuine planning variables.
 As an unwanted consequence,
-`from_()` behaves unexpectedly for xref:optapy-configuration/optapy-configuration.adoc#nullablePlanningVariable[nullable variables].
+`from_()` behaves unexpectedly for xref:planner-configuration/planner-configuration.adoc#nullablePlanningVariable[nullable variables].
 These are considered initialized even when `None`,
 and therefore this legacy method could still return entities with `None` variables.
 `from_()`, `fromUnfiltered()` and `fromUniquePair()` are now deprecated and will be removed in a future major version of OptaPy.

@@ -28,7 +28,7 @@ https://www.optapy.org[OptaPy] is a wrapper of the https://www.optaplanner.org[O
 [[whatIsAPlanningProblem]]
 == What is a planning problem?
 
-image::optapy-introduction/whatIsAPlanningProblem.png[align="center"]
+image::planner-introduction/whatIsAPlanningProblem.png[align="center"]
 
 A planning problem has an optimal goal, based on limited resources and under specific constraints. Optimal goals can be any number of things, such as:
 

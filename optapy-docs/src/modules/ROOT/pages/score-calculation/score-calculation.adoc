@@ -687,7 +687,7 @@ Alternatively, you can also specify the trend for each score level separately:
 [[invalidScoreDetection]]
 === Invalid score detection
 
-When you put the xref:optapy-configuration/optapy-configuration.adoc#environmentMode[`environmentMode`] in `FULL_ASSERT` (or ``FAST_ASSERT``),
+When you put the xref:planner-configuration/planner-configuration.adoc#environmentMode[`environmentMode`] in `FULL_ASSERT` (or ``FAST_ASSERT``),
 it will detect score corruption in the <<incrementalScoreCalculation,incremental score calculation>>.
 However, that will not verify that your score calculator actually implements your score constraints as your business desires.
 For example, one constraint might consistently match the wrong pattern.
@@ -783,7 +783,7 @@ Do not call remote services in your score calculation (except if you are bridgin
 Cache the results of those remote services if possible.
 
 If some parts of a constraint can be calculated once, when the `Solver` starts, and never change during solving,
-then turn them into xref:optapy-configuration/optapy-configuration.adoc#cachedProblemFact[cached problem facts].
+then turn them into xref:planner-configuration/planner-configuration.adoc#cachedProblemFact[cached problem facts].
 
 
 [[pointlessConstraints]]
@@ -808,7 +808,7 @@ There is no need to dynamically change your score calculation based on the datas
 Instead of implementing a hard constraint, it can sometimes be built in.
 For example, if `Lecture` A should never be assigned to `Room` X, but it uses `@value_range_provider` on Solution,
 so the `Solver` will often try to assign it to `Room` X too (only to find out that it breaks a hard constraint).
-Use xref:optapy-configuration/optapy-configuration.adoc#valueRangeProviderOnPlanningEntity[a ValueRangeProvider on the planning entity] to define that Course A should only be assigned a `Room` different than X.
+Use xref:planner-configuration/planner-configuration.adoc#valueRangeProviderOnPlanningEntity[a ValueRangeProvider on the planning entity] to define that Course A should only be assigned a `Room` different than X.
 ////
 TODO: Insert into above when docs are added
 or xref:move-and-neighborhood-selection/move-and-neighborhood-selection.adoc#filteredSelection[filtered selection]
