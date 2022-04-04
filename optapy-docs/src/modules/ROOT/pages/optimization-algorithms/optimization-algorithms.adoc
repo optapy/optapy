@@ -655,7 +655,7 @@ Therefore the `Solver` interface has the following thread-safe methods:
 
 [source,python,options="nowrap"]
 ----
-class Solver[Solution_]:
+class Solver:
     ...
     def terminateEarly(self) -> bool:
         ...
@@ -685,7 +685,7 @@ class Solver:
     ...
     def addEventListener(self, event_listener: Callable[[SolverEvent], None]) -> None:
         ...
-    def removeEventListener(self. event_listener: Callable[[SolverEvent], None]) -> None:
+    def removeEventListener(self, event_listener: Callable[[SolverEvent], None]) -> None:
         ...
 ----
 
