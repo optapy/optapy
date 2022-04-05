@@ -1,0 +1,309 @@
+[[shadowVariable]]
+= Shadow variable
+:doctype: book
+:sectnums:
+:icons: font
+
+
+[[shadowVariableIntroduction]]
+== Introduction
+
+A shadow variable is a planning variable whose correct value can be deduced from the state of the xref:planner-configuration/planner-configuration.adoc#planningVariable[genuine planning variables].
+Even though such a variable violates the principle of normalization by definition, in some use cases it can be very practical to use a shadow variable, especially to express the constraints more naturally.
+For example in vehicle routing with time windows: the arrival time at a customer for a vehicle can be calculated based on the previously visited customers of that vehicle (and the known travel times between two locations).
+
+image::shadow-variable/planningVariableListener.png[align="center"]
+
+When the customers for a vehicle change, the arrival time for each customer is automatically adjusted.
+// TODO: Update when use cases are added?
+// For more information, see the xref:use-cases-and-examples/vehicle-routing/vehicle-routing.adoc#vehicleRoutingDomainModel[vehicle routing domain model].
+
+From a score calculation perspective, a shadow variable is like any other planning variable.
+From an optimization perspective, OptaPy effectively only optimizes the genuine variables (and mostly ignores the shadow variables): it just assures that when a genuine variable changes, any dependent shadow variables are changed accordingly.
+
+[IMPORTANT]
+====
+**Any class that has at least one shadow variable, is a planning entity class (even if it has no genuine planning variables).
+That class must be defined in the solver configuration and be decorated with `@planning_entity`.**
+
+A genuine planning entity class has at least one genuine planning variable, but can have shadow variables too.
+A shadow planning entity class has no genuine planning variables and at least one shadow planning variable.
+====
+
+There are several built-in shadow variables:
+
+
+[[bidirectionalVariable]]
+== Bi-directional variable (inverse relation shadow variable)
+
+Two variables are bi-directional if their instances always point to each other (unless one side points to `None` and the other side does not exist).
+So if A references B, then B references A.
+
+image::shadow-variable/bidirectionalVariable.png[align="center"]
+
+For a non-chained planning variable, the bi-directional relationship must be a many-to-one relationship.
+To map a bi-directional relationship between two planning variables, annotate the source side (which is the genuine side) as a normal planning variable:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity, planning_variable
+
+@planning_entity
+class CloudProcess:
+    @planning_variable(...)
+    def get_computer(self):
+        return self.computer
+
+    def set_computer(self, computer):
+        ...
+----
+
+And then annotate the other side (which is the shadow side) with a `@inverse_relation_shadow_variable` annotation on a `list` property:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity, inverse_relation_shadow_variable
+
+@planning_entity
+class CloudComputer:
+    # ...
+    @inverse_relation_shadow_variable(source_variable_name = "computer")
+    def get_process_list(self):
+        return self.process_list
+    ...
+----
+
+<<shadowVariableIntroduction,Register this class as a planning entity>>,
+otherwise OptaPy won't detect it and the shadow variable won't update.
+The `source_variable_name` parameter is the name of the genuine planning variable on the return type of the getter
+(so the name of the genuine planning variable on the _other_ side).
+
+[NOTE]
+====
+The shadow property, which is a list, can never be ``None``.
+If no genuine variable references that shadow entity, then it is an empty list.
+Furthermore it must be a mutable `list` because once OptaPy starts initializing or changing genuine planning variables,
+it will add and remove elements to the lists of those shadow variables accordingly.
+====
+
+For a chained planning variable, the bi-directional relationship is always a one-to-one relationship.
+In that case, the genuine side looks like this:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity, planning_variable
+from optapy.types import PlanningVariableGraphType
+
+@planning_entity
+class Customer:
+    @planning_variable(object, graph_type = PlanningVariableGraphType.CHAINED, ...)
+    def get_previous_standstill(self):
+        return self.previous_standstill
+
+    def set_previous_standstill(previous_standstill):
+        ...
+----
+
+[NOTE]
+====
+`object` was used as the `@planning_variable` type in `Customer` since we cannot use `Standstill` (defined below) as `Standstill` refer to `Customer`.
+====
+
+And the shadow side looks like this:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity, inverse_relation_shadow_variable
+
+@planning_entity
+class Standstill:
+    @inverse_relation_shadow_variable(Customer, source_variable_name = "previous_standstill")
+    def get_next_customer(self):
+        return self.next_customer
+
+    def set_next_customer(Customer nextCustomer):
+        ...
+----
+
+<<shadowVariableIntroduction,Register this class as a planning entity>>,
+otherwise OptaPy won't detect it and the shadow variable won't update.
+
+[WARNING]
+====
+The input planning problem of a `Solver` must not violate bi-directional relationships.
+If A points to B, then B must point to A.
+OptaPy will not violate that principle during planning, but the input must not violate it either.
+====
+
+
+[[anchorShadowVariable]]
+== Anchor shadow variable
+
+An anchor shadow variable is the anchor of xref:planner-configuration/planner-configuration.adoc#chainedPlanningVariable[a chained variable].
+
+Annotate the anchor property as a `@anchor_shadow_variable` annotation:
+
+[source,python,options="nowrap"]
+----
+from optapy import planning_entity, anchor_shadow_variable
+
+@planning_entity
+class Customer:
+    # ...
+    @anchor_shadow_variable(Vehicle, source_variable_name = "previous_standstill")
+    def get_vehicle(self):
+        ...
+    def set_vehicle(self, vehicle):
+        ...
+----
+
+<<shadowVariableIntroduction,This class should already be registered as a planning entity.>>
+The `source_variable_name` property is the name of the chained variable on the same entity class.
+
+
+[[customVariableListener]]
+== Custom `VariableListener`
+
+Custom variable listeners are not supported in OptaPy, but will be in a future version.
+////
+To update a shadow variable, OptaPy uses a ``VariableListener``.
+To define a custom shadow variable, write a custom ``VariableListener``:
+implement the interface and annotate it on the shadow variable that needs to change.
+
+[source,python,options="nowrap"]
+----
+    @planning_variable(...)
+    public Standstill getPreviousStandstill() {
+        return previousStandstill;
+    }
+
+    @custom_shadow_variable(variable_listener_class = VehicleUpdatingVariableListener,
+            sources = [planning_variable_reference(variable_name = "previous_standstill")])
+    def get_vehicle(self):
+        return self.vehicle
+----
+
+<<shadowVariableIntroduction,Register this class as a planning entity>> if it isn't already.
+Otherwise OptaPy won't detect it and the shadow variable won't update.
+
+The source's `variable_name` is the (genuine or shadow) variable that triggers changes to this shadow variable.
+If the source variable's class is different than the shadow variable's class,
+also specify the `entity_class` in the ``planning_variable_reference`` annotation
+and make sure the shadow variable's class is <<shadowVariableIntroduction,registered as a planning entity>>.
+
+Implement the `VariableListener` interface.
+For example, the `VehicleUpdatingVariableListener` assures that every `Customer` in a chain has the same ``Vehicle``, namely the chain's anchor.
+
+[source,python,options="nowrap"]
+----
+from optapy import variable_listener
+
+@variable_listener
+class VehicleUpdatingVariableListener:
+
+    def afterEntityAdded(self, score_director: ScoreDirector[VehicleRoutingSolution], customer: Customer):
+        self.update_vehicle(scoreDirector, customer)
+
+    def afterVariableChanged(self, score_director: ScoreDirector[VehicleRoutingSolution], customer: Customer)):
+        self.update_vehicle(scoreDirector, customer)
+
+    # ...
+
+    def update_vehicle(self, score_director: ScoreDirector[VehicleRoutingSolution], source_customer: Customer)):
+        previous_standstill = source_customer.previous_standstill
+        vehicle = None if previous_standstill is None else previous_standstill.vehicle
+        shadow_customer = source_customer
+        while (shadow_customer is not None and shadow_customer.vehicle is not vehicle):
+            scoreDirector.beforeVariableChanged(shadow_customer, "vehicle")
+            shadow_customer.vehicle = vehicle
+            scoreDirector.afterVariableChanged(shadow_customer, "vehicle")
+            shadow_customer = shadow_customer.next_customer
+----
+
+[WARNING]
+====
+A `VariableListener` can only change shadow variables.
+It must never change a genuine planning variable or a problem fact.
+====
+
+[WARNING]
+====
+Any change of a shadow variable must be told to the ``ScoreDirector`` with `before*()` and `after*()` methods.
+====
+
+If one `VariableListener` changes two shadow variables (because having two separate ``VariableListener``s would be inefficient), then annotate only the first shadow variable with the `variable_listener_class` and let the other shadow variable(s) reference the first shadow variable:
+
+[source,python,options="nowrap"]
+----
+    @planning_variable(...)
+    def get_previous_standstill(self):
+        return self.previous_standstill
+
+    @custom_shadow_variable(variable_listener_class = TransportTimeAndCapacityUpdatingVariableListener,
+            sources = [planning_variable_reference(variable_name = "previous_standstill")])
+    def get_transport_time(self):
+        return self.transport_time
+
+    @custom_shadow_variable(variable_listener_ref = planning_variable_reference(variable_name = "transport_time"))
+    def get_capacity(self):
+        return self.capacity
+----
+
+A shadow variable's value (just like a genuine variable's value)
+isn't xref:planner-configuration/planner-configuration.adoc#cloningASolution[planning cloned] by the default solution cloner,
+unless it can easily prove that it must be planning cloned (for example the property type is a planning entity class).
+Specifically shadow variables of type `list`, `set`, or `dict` usually need to be planning cloned
+to avoid corrupting the best solution when the working solution changes.
+To planning clone a shadow variable, add `@deep_planning_clone` annotation:
+
+[source,python,options="nowrap"]
+----
+    @deep_planning_clone
+    @custom_shadow_variable(...)
+    def get_used_man_hours_per_day_map(self):
+        ...
+----
+////
+
+[[variableListenerTriggeringOrder]]
+== VariableListener triggering order
+
+This section will be added when custom variable listeners are supported in OptaPy.
+////
+TODO: Uncomment when custom shadow variables are supported
+All shadow variables are triggered by a ``VariableListener``, regardless if it's a built-in or a custom shadow variable.
+The genuine and shadow variables form a graph, that determines the order in which the ``afterEntityAdded()``, `afterVariableChanged()` and `afterEntityRemoved()` methods are called:
+
+image::shadow-variable/shadowVariableOrder.png[align="center"]
+
+
+[NOTE]
+====
+In the example above, D could have also been ordered after E (or F) because there is no direct or indirect dependency between D and E (or F).
+====
+
+OptaPy guarantees that:
+
+* The first ``VariableListener``'s `after*()` methods trigger _after_ the last genuine variable has changed. Therefore the genuine variables (A and B in the example above) are guaranteed to be in a consistent state across all its instances (with values A1, A2 and B1 in the example above) because the entire `Move` has been applied.
+* The second ``VariableListener``'s `after*()` methods trigger _after_ the last first shadow variable has changed. Therefore the first shadow variable (C in the example above) are guaranteed to be in a consistent state across all its instances (with values C1 and C2 in the example above). And of course the genuine variables too.
+* And so forth.
+
+OptaPy does not guarantee the order in which the `after*()` methods are called for the _same_``VariableListener`` with different parameters (such as A1 and A2 in the example above), although they are likely to be in the order in which they were affected.
+
+By default, OptaPy does not guarantee that the events are unique.
+For example, if a shadow variable on an entity is changed twice in the same move (for example by two different genuine variables), then that will cause the same event twice on the ``VariableListener``s that are listening to that original shadow variable.
+
+To avoid dealing with that complexity, overwrite the method `requiresUniqueEntityEvents()` to receive unique events at the cost of a small performance penalty:
+
+[source,python,options="nowrap"]
+----
+from optapy import variable_listener
+
+@variable_listener
+class StartTimeUpdatingVariableListener:
+    def requiresUniqueEntityEvents():
+        return True
+
+    ...
+----
+////
