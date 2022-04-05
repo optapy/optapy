@@ -10,5 +10,6 @@
 * xref:construction-heuristics/construction-heuristics.adoc[leveloffset=+1]
 * xref:local-search/local-search.adoc[leveloffset=+1]
 * xref:evolutionary-algorithms/evolutionary-algorithms.adoc[leveloffset=+1]
+* xref:partitioned-search/partitioned-search.adoc[leveloffset=+1]
 * xref:repeated-planning/repeated-planning.adoc[leveloffset=+1]
 * xref:design-patterns/design-patterns.adoc[leveloffset=+1]
