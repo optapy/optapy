@@ -123,15 +123,12 @@ image::score-calculation/scoreLevels.png[align="center"]
 If there are two (or more) score levels, for example <<hardSoftScore,HardSoftScore>>,
 then a score is _feasible_ if no hard constraints are broken.
 
-////
-TODO: Uncomment when overconstrained planning section added
 [NOTE]
 ====
 By default, OptaPy will always assign all planning variables a planning value.
 If there is no feasible solution, this means the best solution will be infeasible.
 To instead leave some of the planning entities unassigned, apply xref:repeated-planning/repeated-planning.adoc#overconstrainedPlanning[overconstrained planning].
 ====
-////
 
 For each constraint, you need to pick a score level, a score weight and a score signum.
 For example: `-1soft` which has score level of ``soft``, a weight of `1` and a negative signum.
@@ -361,10 +358,7 @@ OptaPy does not recalculate the score of a solution if it can predict it (unless
 For example, after a winning step is done, there is no need to calculate the score because that move was done and undone earlier.
 As a result, there is no guarantee that changes applied during score calculation actually happen.
 
-////
-TODO: Uncomment when shadow variables are implemented
 To update planning entities when the planning variable change, use xref:shadow-variable/shadow-variable.adoc#shadowVariable[shadow variables] instead.
-////
 ====
 
 
@@ -808,11 +802,8 @@ There is no need to dynamically change your score calculation based on the datas
 Instead of implementing a hard constraint, it can sometimes be built in.
 For example, if `Lecture` A should never be assigned to `Room` X, but it uses `@value_range_provider` on Solution,
 so the `Solver` will often try to assign it to `Room` X too (only to find out that it breaks a hard constraint).
-Use xref:planner-configuration/planner-configuration.adoc#valueRangeProviderOnPlanningEntity[a ValueRangeProvider on the planning entity] to define that Course A should only be assigned a `Room` different than X.
-////
-TODO: Insert into above when docs are added
-or xref:move-and-neighborhood-selection/move-and-neighborhood-selection.adoc#filteredSelection[filtered selection]
-////
+Use xref:planner-configuration/planner-configuration.adoc#valueRangeProviderOnPlanningEntity[a ValueRangeProvider on the planning entity] or xref:move-and-neighborhood-selection/move-and-neighborhood-selection.adoc#filteredSelection[filtered selection] to define that Course A should only be assigned a `Room` different than X.
+
 This can give a good performance gain in some use cases, not just because the score calculation is faster,
 but mainly because most optimization algorithms will spend less time evaluating infeasible solutions.
 However, usually this is not a good idea because there is a real risk of trading short term benefits for long term harm:

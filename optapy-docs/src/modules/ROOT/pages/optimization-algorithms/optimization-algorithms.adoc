@@ -288,8 +288,7 @@ Finding the best solution in the available time is the most important outcome.
 [IMPORTANT]
 ====
 If no termination is configured (and a metaheuristic algorithm is used), the `Solver` will run forever, until <<asynchronousTermination,terminateEarly()>> is called from another thread.
-// TODO: uncomment when repeated planning page is created
-// This is especially common during xref:repeated-planning/repeated-planning.adoc#realTimePlanning[real-time planning].
+This is especially common during xref:repeated-planning/repeated-planning.adoc#realTimePlanning[real-time planning].
 ====
 
 For synchronous termination, configure a `Termination` on a `Solver` or a `Phase` when it needs to stop.
@@ -839,9 +838,8 @@ There are several ways of doing multithreaded solving:
 // TODO: Uncomment when benchmarker support is added
 //** Use the xref:benchmarking-and-tweaking/benchmarking-and-tweaking.adoc#benchmarker[Benchmarker] during development to determine the most appropriate algorithm, although that's only on average.
 ** Use multithreaded incremental solving instead.
-// TODO: Uncomment when partitioned search docs are added
-//* *Partitioned Search*: Split 1 dataset in multiple parts and solve them independently.
-// ** Configure a xref:partitioned-search/partitioned-search.adoc#partitionedSearch[Partitioned Search].
+* *Partitioned Search*: Split 1 dataset in multiple parts and solve them independently.
+ ** Configure a xref:partitioned-search/partitioned-search.adoc#partitionedSearch[Partitioned Search].
 * *Multithreaded incremental solving*: solve 1 dataset with multiple threads without sacrificing xref:score-calculation/score-calculation.adoc#incrementalScoreCalculation[incremental score calculation].
 ** Donate a portion of your CPU cores to OptaPy to scale up the score calculation speed and get the same results in fraction of the time.
 ** Configure <<multithreadedIncrementalSolving,multithreaded incremental solving>>.
