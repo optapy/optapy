@@ -4,7 +4,7 @@
 * xref:score-calculation/score-calculation.adoc[leveloffset=+1]
 * xref:constraint-streams/constraint-streams.adoc[leveloffset=+1]
 * xref:optimization-algorithms/optimization-algorithms.adoc[leveloffset=+1]
-* xref:move-and-neighboorhood-selection/move-and-neighborhood-selection.adoc[leveloffset=+1]
+* xref:move-and-neighborhood-selection/move-and-neighborhood-selection.adoc[leveloffset=+1]
 * xref:exhaustive-search/exhaustive-search.adoc[leveloffset=+1]
 * xref:construction-heuristics/construction-heuristics.adoc[leveloffset=+1]
 * xref:local-search/local-search.adoc[leveloffset=+1]
