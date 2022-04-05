@@ -1,60 +1,8 @@
 /*
-MIT License
-
-Copyright (c) 2018 Guillaume Grossetie
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Mozilla Public License Version 2.0
 */
 
-/* Taken from https://github.com/Mogztter/antora-lunr. */
-
-.navbar-brand .navbar-item + .navbar-item {
-  flex-grow: 1;
-  justify-content: flex-end;
-}
-
-@media screen and (min-width: 1024px) {
-  .navbar-brand {
-    flex-grow: 1;
-  }
-
-  .navbar-menu {
-    flex-grow: 0;
-  }
-}
-
-#search-input {
-  color: #333;
-  font-family: inherit;
-  font-size: 0.95rem;
-  width: 150px;
-  border: 1px solid #dbdbdb;
-  border-radius: 0.1em;
-  line-height: 1.5;
-  padding: 0 0.25em;
-}
-
-@media screen and (min-width: 769px) {
-  #search-input {
-    width: 200px;
-  }
-}
+/* Taken from https://gitlab.com/antora/antora-lunr-extension. */
 
 .search-result-dropdown-menu {
   position: absolute;
@@ -76,11 +24,6 @@ SOFTWARE.
 }
 
 @media screen and (max-width: 768px) {
-  .navbar-brand .navbar-item + .navbar-item {
-    padding-left: 0;
-    padding-right: 0;
-  }
-
   .search-result-dropdown-menu {
     min-width: calc(100vw - 3.75rem);
   }
@@ -92,30 +35,23 @@ SOFTWARE.
   background: #fff;
   border-radius: 4px;
   overflow: auto;
-  padding: 0 8px 8px;
+  padding: 0 8px;
   max-height: calc(100vh - 5.25rem);
-  color: #333;
-}
-
-.search-result-highlight {
-  color: #174d8c;
-  background: rgba(143, 187, 237, 0.1);
-  padding: .1em .05em;
+  line-height: 1.5;
 }
 
 .search-result-item {
   display: flex;
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
-  margin-top: 0.5rem;
+  margin: 0.5rem 0;
 }
 
 .search-result-document-title {
   width: 33%;
   border-right: 1px solid #ddd;
-  color: #a4a7ae;
+  color: #02060c;
+  font-weight: 500;
   font-size: 0.8rem;
-  padding: 0.25rem 0.5rem 0.25rem 0;
+  padding: 0.5rem 0.5rem 0.5rem 0;
   text-align: right;
   position: relative;
   word-wrap: break-word;
@@ -123,18 +59,23 @@ SOFTWARE.
 
 .search-result-document-hit {
   flex: 1;
-  font-size: 0.75em;
-  color: #02060c;
-  font-weight: 700;
+  font-size: 0.75rem;
+  color: #63676d;
 }
 
 .search-result-document-hit > a {
   color: inherit;
   display: block;
-  padding: 0.5rem 0 0.5rem 1rem;
-  margin-bottom: 0.25rem;
+  padding: 0.55rem 0.25rem 0.55rem 0.75rem;
 }
 
 .search-result-document-hit > a:hover {
   background-color: rgba(69, 142, 225, 0.05);
+}
+
+.search-result-highlight {
+  color: #174d8c;
+  background: rgba(143, 187, 237, 0.1);
+  padding: 0.1em 0.05em;
+  font-weight: 500;
 }
