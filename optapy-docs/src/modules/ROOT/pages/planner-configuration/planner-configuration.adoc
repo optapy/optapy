@@ -182,14 +182,12 @@ Ask yourself: __What class changes during planning?__ __Which class has variable
 Most use cases have only one planning entity class.
 Most use cases also have only one planning variable per planning entity class.
 
-// TODO: Uncomment when page is written
-//[NOTE]
-//====
-// In xref:repeated-planning/repeated-planning.adoc#realTimePlanning[real-time planning], even though the problem itself changes, problem facts do not really change during planning, instead they change between planning (because the Solver temporarily stops to apply the problem fact changes).
-//====
-// To create a good domain model, read the
-// TODO: Uncomment when page is written
-//xref:design-patterns/design-patterns.adoc#domainModelingGuide[domain modeling guide].
+[NOTE]
+====
+ In xref:repeated-planning/repeated-planning.adoc#realTimePlanning[real-time planning], even though the problem itself changes, problem facts do not really change during planning, instead they change between planning (because the Solver temporarily stops to apply the problem fact changes).
+====
+To create a good domain model, read the
+xref:design-patterns/design-patterns.adoc#domainModelingGuide[domain modeling guide].
 
 *In OptaPy, all problem facts and planning entities are plain old Python Objects.* Load them from a database, an XML file, a data repository, a REST service, a noSQL cloud; it doesn't matter.
 
@@ -254,8 +252,7 @@ Unlike OptaPlanner, a problem fact class *must* be decorated with `@problem_fact
 Generally, better designed domain classes lead to simpler and more efficient score constraints.
 Therefore, when dealing with a messy (denormalized) legacy system, it can sometimes be worthwhile to convert the messy domain model into a OptaPy specific model first.
 For example: if your domain model has two `Teacher` instances for the same teacher that teaches at two different departments, it is harder to write a correct score constraint that constrains a teacher's spare time on the original model than on an adjusted model.
-// TODO: Uncomment when added
-//Alternatively, you can sometimes also introduce <<cachedProblemFact,_a cached problem fact_>> to enrich the domain model for planning only.
+Alternatively, you can sometimes also introduce <<cachedProblemFact,_a cached problem fact_>> to enrich the domain model for planning only.
 ====
 
 
