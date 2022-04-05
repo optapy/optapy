@@ -1,8 +1,8 @@
-<script src="{{uiRootPath}}/js/site.js"></script>
-<script src="{{uiRootPath}}/js/vendor/lunr-2.3.9.min.js"></script>
-<script id="search-ui-script" src="{{uiRootPath}}/js/vendor/search-ui.js" id="search-script" data-base-path="{{or siteRootPath (or site.url siteRootUrl)}}" data-page-path="{{@root.page.url}}"></script>
-<script async src="{{uiRootPath}}/../search-index.js"></script>
-<script async src="{{uiRootPath}}/js/vendor/highlight.js"></script>
+<script src="{{{uiRootPath}}}/js/site.js"></script>
+<script async src="{{{uiRootPath}}}/js/vendor/highlight.js"></script>
+{{#if env.SITE_SEARCH_PROVIDER}}
+{{> search-scripts}}
+{{/if}}
 
 <!-- Adobe Analytics for Red Hat - DPAL (DTM Property Auto-Loader) - part 2/2 -->
 <script type="text/javascript">
