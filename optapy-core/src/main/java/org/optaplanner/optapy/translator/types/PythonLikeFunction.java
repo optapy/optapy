@@ -8,6 +8,8 @@ import org.optaplanner.optapy.PythonLikeObject;
 
 public interface PythonLikeFunction extends PythonLikeObject {
 
+    PythonLikeType FUNCTION_TYPE = new PythonLikeType("function");
+
     /**
      * Calls the function with positional arguments and named arguments.
      *
@@ -25,5 +27,10 @@ public interface PythonLikeFunction extends PythonLikeObject {
     @Override
     default void __setattribute__(String attributeName, PythonLikeObject value) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default PythonLikeType __type__() {
+        return FUNCTION_TYPE;
     }
 }

@@ -6,17 +6,17 @@ import java.util.Map;
 import org.optaplanner.optapy.PythonLikeObject;
 
 public class PythonFloat extends AbstractPythonLikeObject implements PythonNumber {
-    final static Map<String, PythonLikeObject> DEFAULT_DICT;
     final double value;
 
+    private final static PythonLikeType FLOAT_TYPE = new PythonLikeType("float");
+
     static {
-        DEFAULT_DICT = new HashMap<>();
-        PythonLikeComparable.setup(DEFAULT_DICT);
-        PythonNumericOperations.setup(DEFAULT_DICT);
+        PythonLikeComparable.setup(FLOAT_TYPE.__dir__);
+        PythonNumericOperations.setup(FLOAT_TYPE.__dir__);
     }
 
     public PythonFloat(double value) {
-        super(new CopyOnWriteMap<>(DEFAULT_DICT));
+        super(FLOAT_TYPE);
         this.value = value;
     }
 

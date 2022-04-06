@@ -4,6 +4,8 @@ import java.util.NoSuchElementException;
 
 import javax.naming.directory.NoSuchAttributeException;
 
+import org.optaplanner.optapy.translator.types.PythonLikeType;
+
 /**
  * Represents an Object that can be interacted with like a Python Object.
  * Unlike {@link PythonObject}, a PythonLikeObject can refer to a Java
@@ -27,4 +29,11 @@ public interface PythonLikeObject {
      * @param value Value to set the attribute to
      */
     void __setattribute__(String attributeName, PythonLikeObject value);
+
+    /**
+     * Returns the type describing the object
+     *
+     * @return the type describing the object
+     */
+    PythonLikeType __type__();
 }

@@ -6,17 +6,17 @@ import java.util.Map;
 import org.optaplanner.optapy.PythonLikeObject;
 
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
-    final static Map<String, PythonLikeObject> DEFAULT_DICT;
     final long value;
 
+    private final static PythonLikeType INT_TYPE = new PythonLikeType("int");
+
     static {
-        DEFAULT_DICT = new HashMap<>();
-        PythonLikeComparable.setup(DEFAULT_DICT);
-        PythonNumericOperations.setup(DEFAULT_DICT);
+        PythonLikeComparable.setup(INT_TYPE.__dir__);
+        PythonNumericOperations.setup(INT_TYPE.__dir__);
     }
 
     public PythonInteger(long value) {
-        super(new CopyOnWriteMap<>(DEFAULT_DICT));
+        super(INT_TYPE);
         this.value = value;
     }
 

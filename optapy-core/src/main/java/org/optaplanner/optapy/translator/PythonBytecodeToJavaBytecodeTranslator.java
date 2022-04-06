@@ -25,6 +25,7 @@ import org.optaplanner.optapy.translator.types.PythonFloat;
 import org.optaplanner.optapy.translator.types.PythonInteger;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeList;
+import org.optaplanner.optapy.translator.types.PythonLikeType;
 import org.optaplanner.optapy.translator.types.PythonNumber;
 
 public class PythonBytecodeToJavaBytecodeTranslator {
@@ -233,14 +234,20 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         }
 
         if (constant instanceof Number || constant instanceof String) {
-            methodVisitor.visitLdcInsn(constant);
+            if (constant instanceof Byte || constant instanceof Short || constant instanceof Integer) {
+                constant = ((Number) constant).longValue();
+            } else if (constant instanceof Float) {
+                constant = ((Number) constant).doubleValue();
+            }
             if (constant instanceof Byte || constant instanceof Short || constant instanceof Integer || constant instanceof Long) {
                 methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonInteger.class));
                 methodVisitor.visitInsn(Opcodes.DUP);
+                methodVisitor.visitLdcInsn(constant);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonInteger.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.LONG_TYPE), false);
             } else if (constant instanceof Float || constant instanceof Double) {
                 methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonFloat.class));
                 methodVisitor.visitInsn(Opcodes.DUP);
+                methodVisitor.visitLdcInsn(constant);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonFloat.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.DOUBLE_TYPE), false);
             }
             return;
@@ -259,8 +266,61 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         throw new UnsupportedOperationException("Cannot load constant (" + constant + ").");
     }
 
+    /**
+     * Generates code that look like this:
+     *
+     * BiFunction[List, Map, Result] operand_method = TOS0.__type__().__getattribute__(operator.getDunderMethod())
+     * List args = new ArrayList(1);
+     * args.set(0) = TOS0
+     *
+     * 'TOS0 = operand_method.apply(args, null)
+     */
+    private static void unaryOperator(MethodVisitor methodVisitor, PythonUnaryOperator operator) {
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                      "__type__", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                                      true);
+        methodVisitor.visitLdcInsn(operator.getDunderMethod());
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                      "__getattribute__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                                                                   Type.getType(String.class)),
+                                      true);
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonLikeList.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitLdcInsn(1);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonLikeList.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE), false);
+        methodVisitor.visitInsn(Opcodes.DUP_X1);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeList.class),
+                                      "reverseAdd",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
+                                      false);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                                      "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                                                           Type.getType(List.class),
+                                                                           Type.getType(Map.class)),
+                                      true);
+    }
+
+    /**
+     * Generates code that look like this:
+     *
+     * BiFunction[List, Map, Result] operand_method = TOS0.__type__().__getattribute__(operator.getDunderMethod())
+     * List args = new ArrayList(2);
+     * args.set(1) = TOS1
+     * args.set(0) = TOS0
+     *
+     * 'TOS0 = operand_method.apply(args, null)
+     */
     private static void binaryOperator(MethodVisitor methodVisitor, PythonBinaryOperators operator) {
         methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                      "__type__", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                                      true);
         methodVisitor.visitLdcInsn(operator.getDunderMethod());
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                                       "__getattribute__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
@@ -578,18 +638,29 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 methodVisitor.visitInsn(Opcodes.DUP2);
                 break;
             }
-            case UNARY_POSITIVE: {
+            case UNARY_POSITIVE:  {
+                unaryOperator(methodVisitor, PythonUnaryOperator.POSITIVE);
                 break;
             }
-            case UNARY_NEGATIVE: {
+            case UNARY_NEGATIVE:  {
+                unaryOperator(methodVisitor, PythonUnaryOperator.NEGATIVE);
                 break;
             }
-            case UNARY_NOT:
+            case UNARY_NOT: {
+                unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonBoolean.class),
+                                              "not", Type.getMethodDescriptor(Type.getType(PythonBoolean.class)),
+                                              false);
                 break;
-            case UNARY_INVERT:
+            }
+            case UNARY_INVERT: {
+                unaryOperator(methodVisitor, PythonUnaryOperator.INVERT);
                 break;
-            case GET_ITER:
+            }
+            case GET_ITER: {
+                unaryOperator(methodVisitor, PythonUnaryOperator.ITERATOR);
                 break;
+            }
             case GET_YIELD_FROM_ITER:
                 break;
             case BINARY_POWER: {
@@ -775,7 +846,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             }
             case BUILD_TUPLE: {
-                buildCollection(ArrayList.class, methodVisitor, instruction.arg);
+                // TODO: Create a PythonLikeTuple class
+                buildCollection(PythonLikeList.class, methodVisitor, instruction.arg);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class),
                         "unmodifiableList",
                         Type.getMethodDescriptor(Type.getType(List.class), Type.getType(List.class)),
@@ -783,7 +855,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             }
             case BUILD_LIST: {
-                buildCollection(ArrayList.class, methodVisitor, instruction.arg);
+                buildCollection(PythonLikeList.class, methodVisitor, instruction.arg);
                 break;
             }
             case BUILD_SET: {

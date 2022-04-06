@@ -7,13 +7,15 @@ import java.util.NoSuchElementException;
 import org.optaplanner.optapy.PythonLikeObject;
 
 public abstract class AbstractPythonLikeObject implements PythonLikeObject {
+    private final PythonLikeType __type__;
     private final Map<String, PythonLikeObject> __dir__;
 
-    public AbstractPythonLikeObject() {
-        this(new HashMap<>());
+    public AbstractPythonLikeObject(PythonLikeType __type__) {
+        this(__type__, new HashMap<>());
     }
 
-    public AbstractPythonLikeObject(Map<String, PythonLikeObject> __dir__) {
+    public AbstractPythonLikeObject(PythonLikeType __type__, Map<String, PythonLikeObject> __dir__) {
+        this.__type__ = __type__;
         this.__dir__ = __dir__;
     }
 
@@ -30,5 +32,10 @@ public abstract class AbstractPythonLikeObject implements PythonLikeObject {
     @Override
     public void __setattribute__(String attributeName, PythonLikeObject value) {
         __dir__.put(attributeName, value);
+    }
+
+    @Override
+    public PythonLikeType __type__() {
+        return __type__;
     }
 }

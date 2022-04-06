@@ -15,25 +15,24 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     final List<PythonLikeObject> delegate;
     private int remainderToAdd;
 
-    private final static Map<String, PythonLikeObject> DEFAULT_DICT;
+    private final static PythonLikeType LIST_TYPE = new PythonLikeType("list");
 
     static {
-        DEFAULT_DICT = new HashMap<>();
         try {
-            DEFAULT_DICT.put("append", new JavaMethodReference(List.class.getMethod("add", Object.class), Map.of("x", 1)));
-            DEFAULT_DICT.put("extend", new JavaMethodReference(List.class.getMethod("addAll", Collection.class),
+            LIST_TYPE.__dir__.put("append", new JavaMethodReference(List.class.getMethod("add", Object.class), Map.of("x", 1)));
+            LIST_TYPE.__dir__.put("extend", new JavaMethodReference(List.class.getMethod("addAll", Collection.class),
                                              Map.of("iterable", 1)));
-            DEFAULT_DICT.put("insert", new JavaMethodReference(List.class.getMethod("add", int.class, Object.class),
+            LIST_TYPE.__dir__.put("insert", new JavaMethodReference(List.class.getMethod("add", int.class, Object.class),
                                                                Map.of("i", 1, "x", 2)));
-            DEFAULT_DICT.put("remove", new JavaMethodReference(List.class.getMethod("remove", Object.class),
+            LIST_TYPE.__dir__.put("remove", new JavaMethodReference(List.class.getMethod("remove", Object.class),
                                                                Map.of("x", 1)));
-            DEFAULT_DICT.put("clear", new JavaMethodReference(List.class.getMethod("clear"), Map.of()));
-            DEFAULT_DICT.put("copy", new JavaMethodReference(PythonLikeList.class.getMethod("copy"), Map.of()));
-            DEFAULT_DICT.put("count", new JavaMethodReference(PythonLikeList.class.getMethod("count", PythonLikeObject.class),
+            LIST_TYPE.__dir__.put("clear", new JavaMethodReference(List.class.getMethod("clear"), Map.of()));
+            LIST_TYPE.__dir__.put("copy", new JavaMethodReference(PythonLikeList.class.getMethod("copy"), Map.of()));
+            LIST_TYPE.__dir__.put("count", new JavaMethodReference(PythonLikeList.class.getMethod("count", PythonLikeObject.class),
                                                               Map.of("x", 1)));
-            DEFAULT_DICT.put("__add__", new JavaMethodReference(PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class),
+            LIST_TYPE.__dir__.put("__add__", new JavaMethodReference(PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class),
                                                     Map.of()));
-            DEFAULT_DICT.put("__iadd__", new JavaMethodReference(PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class),
+            LIST_TYPE.__dir__.put("__iadd__", new JavaMethodReference(PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class),
                                                     Map.of()));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
@@ -41,13 +40,13 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     }
 
     public PythonLikeList() {
-        super(new CopyOnWriteMap<>(DEFAULT_DICT));
+        super(LIST_TYPE);
         delegate = new ArrayList<>();
         remainderToAdd = 0;
     }
 
     public PythonLikeList(int size) {
-        super(new CopyOnWriteMap<>(DEFAULT_DICT));
+        super(LIST_TYPE);
         delegate = new ArrayList<>(size);
         remainderToAdd = size;
         for (int i = 0; i < size; i++) {
@@ -202,5 +201,23 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     @Override
     public List<PythonLikeObject> subList(int i, int i1) {
         return delegate.subList(i, i1);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof List) {
+            List other = (List) o;
+            if (other.size() != this.size()) {
+                return false;
+            }
+            int itemCount = size();
+            for (int i = 0; i < itemCount; i++) {
+                if (!Objects.equals(get(i), other.get(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 }
