@@ -10,48 +10,37 @@ import java.util.Objects;
 
 import org.optaplanner.optapy.PythonLikeObject;
 
-public class PythonLikeList extends AbstractPythonLikeObject implements List<PythonLikeObject> {
+public class PythonLikeTuple extends AbstractPythonLikeObject implements List<PythonLikeObject> {
     final List<PythonLikeObject> delegate;
     private int remainderToAdd;
 
-    private final static PythonLikeType LIST_TYPE = new PythonLikeType("list");
+    private final static PythonLikeType TUPLE_TYPE = new PythonLikeType("tuple");
 
     static {
         try {
-            LIST_TYPE.__dir__.put("append", new JavaMethodReference(List.class.getMethod("add", Object.class), Map.of("x", 1)));
-            LIST_TYPE.__dir__.put("extend", new JavaMethodReference(List.class.getMethod("addAll", Collection.class),
-                                             Map.of("iterable", 1)));
-            LIST_TYPE.__dir__.put("insert", new JavaMethodReference(List.class.getMethod("add", int.class, Object.class),
-                                                               Map.of("i", 1, "x", 2)));
-            LIST_TYPE.__dir__.put("remove", new JavaMethodReference(List.class.getMethod("remove", Object.class),
-                                                               Map.of("x", 1)));
-            LIST_TYPE.__dir__.put("clear", new JavaMethodReference(List.class.getMethod("clear"), Map.of()));
-            LIST_TYPE.__dir__.put("copy", new JavaMethodReference(PythonLikeList.class.getMethod("copy"), Map.of()));
-            LIST_TYPE.__dir__.put("index", new JavaMethodReference(List.class.getMethod("indexOf", Object.class),
+            TUPLE_TYPE.__dir__.put("index", new JavaMethodReference(List.class.getMethod("indexOf", Object.class),
                                                                    Map.of("x", 1)));
-            LIST_TYPE.__dir__.put("count", new JavaMethodReference(PythonLikeList.class.getMethod("count", PythonLikeObject.class),
-                                                              Map.of("x", 1)));
-            LIST_TYPE.__dir__.put("__add__", new JavaMethodReference(PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class),
-                                                    Map.of()));
-            LIST_TYPE.__dir__.put("__iadd__", new JavaMethodReference(PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class),
-                                                    Map.of()));
-            LIST_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeList.class.getMethod("iterator"),
+            TUPLE_TYPE.__dir__.put("count", new JavaMethodReference(PythonLikeTuple.class.getMethod("count", PythonLikeObject.class),
+                                                                    Map.of("x", 1)));
+            TUPLE_TYPE.__dir__.put("__add__", new JavaMethodReference(PythonLikeTuple.class.getMethod("concatToNew", PythonLikeTuple.class),
                                                                       Map.of()));
-            LIST_TYPE.__dir__.put("__contains__", new JavaMethodReference(PythonLikeList.class.getMethod("contains", Object.class),
-                                                                          Map.of()));
+            TUPLE_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeTuple.class.getMethod("iterator"),
+                                                                       Map.of()));
+            TUPLE_TYPE.__dir__.put("__contains__", new JavaMethodReference(PythonLikeTuple.class.getMethod("contains", Object.class),
+                                                                           Map.of()));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }
     }
 
-    public PythonLikeList() {
-        super(LIST_TYPE);
+    public PythonLikeTuple() {
+        super(TUPLE_TYPE);
         delegate = new ArrayList<>();
         remainderToAdd = 0;
     }
 
-    public PythonLikeList(int size) {
-        super(LIST_TYPE);
+    public PythonLikeTuple(int size) {
+        super(TUPLE_TYPE);
         delegate = new ArrayList<>(size);
         remainderToAdd = size;
         for (int i = 0; i < size; i++) {
@@ -59,22 +48,11 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
         }
     }
 
-    public PythonLikeList copy() {
-        PythonLikeList copy = new PythonLikeList();
-        copy.addAll(delegate);
-        return copy;
-    }
-
-    public PythonLikeList concatToNew(PythonLikeList other) {
-        PythonLikeList result = new PythonLikeList();
+    public PythonLikeTuple concatToNew(PythonLikeTuple other) {
+        PythonLikeTuple result = new PythonLikeTuple();
         result.addAll(delegate);
         result.addAll(other);
         return result;
-    }
-
-    public PythonLikeList concatToSelf(PythonLikeList other) {
-        this.addAll(other);
-        return this;
     }
 
     public PythonInteger count(PythonLikeObject search) {

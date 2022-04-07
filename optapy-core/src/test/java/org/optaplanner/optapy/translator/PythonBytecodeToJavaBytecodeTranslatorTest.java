@@ -9,6 +9,7 @@ import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTran
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -19,6 +20,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.optapy.translator.types.PythonBoolean;
+import org.optaplanner.optapy.translator.types.PythonInteger;
 
 public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
@@ -418,12 +420,40 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
                 .tuple(3)
                 .loadParameter("a")
                 .op(OpCode.CONTAINS_OP, 0)
-                .op(OpCode.RETURN_VALUE) // Top is True (block was skipped)
+                .op(OpCode.RETURN_VALUE)
                 .build();
 
         Predicate javaFunction = translatePythonBytecode(pythonCompiledFunction, Predicate.class);
         assertThat(javaFunction.test(1L)).isEqualTo(true);
         assertThat(javaFunction.test(4L)).isEqualTo(false);
+
+        pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .tuple(3)
+                .loadParameter("a")
+                .op(OpCode.CONTAINS_OP, 1)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        javaFunction = translatePythonBytecode(pythonCompiledFunction, Predicate.class);
+        assertThat(javaFunction.test(1L)).isEqualTo(false);
+        assertThat(javaFunction.test(4L)).isEqualTo(true);
+    }
+
+    @Test
+    public void testSet() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(2)
+                .set(3)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(Set.of(PythonInteger.valueOf(1), PythonInteger.valueOf(2)));
     }
 
     private static class PythonFunctionBuilder {
@@ -568,9 +598,29 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             return this;
         }
 
+        public PythonFunctionBuilder list(int count) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.BUILD_LIST;
+            instruction.offset = instructionList.size();
+            instruction.arg = count;
+            instruction.argval = count;
+            instructionList.add(instruction);
+            return this;
+        }
+
         public PythonFunctionBuilder tuple(int count) {
             PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
             instruction.opcode = OpCode.BUILD_TUPLE;
+            instruction.offset = instructionList.size();
+            instruction.arg = count;
+            instruction.argval = count;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder set(int count) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.BUILD_SET;
             instruction.offset = instructionList.size();
             instruction.arg = count;
             instruction.argval = count;

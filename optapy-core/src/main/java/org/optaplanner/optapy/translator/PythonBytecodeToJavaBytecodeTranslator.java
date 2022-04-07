@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -25,6 +24,8 @@ import org.optaplanner.optapy.translator.types.PythonFloat;
 import org.optaplanner.optapy.translator.types.PythonInteger;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeList;
+import org.optaplanner.optapy.translator.types.PythonLikeSet;
+import org.optaplanner.optapy.translator.types.PythonLikeTuple;
 import org.optaplanner.optapy.translator.types.PythonLikeType;
 import org.optaplanner.optapy.translator.types.PythonNone;
 import org.optaplanner.optapy.translator.types.PythonNumber;
@@ -241,12 +242,12 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             } else if (constant instanceof Float) {
                 constant = ((Number) constant).doubleValue();
             }
-            if (constant instanceof Byte || constant instanceof Short || constant instanceof Integer || constant instanceof Long) {
+            if ( constant instanceof Long) {
                 methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonInteger.class));
                 methodVisitor.visitInsn(Opcodes.DUP);
                 methodVisitor.visitLdcInsn(constant);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonInteger.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.LONG_TYPE), false);
-            } else if (constant instanceof Float || constant instanceof Double) {
+            } else if (constant instanceof Double) {
                 methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonFloat.class));
                 methodVisitor.visitInsn(Opcodes.DUP);
                 methodVisitor.visitLdcInsn(constant);
@@ -625,6 +626,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     }
 
     private static void performNotOnTOS(MethodVisitor methodVisitor) {
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonBoolean.class));
         methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonBoolean.class),
                                       "not", Type.getMethodDescriptor(Type.getType(PythonBoolean.class)),
                                       false);
@@ -888,8 +890,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             }
             case BUILD_TUPLE: {
-                // TODO: Create a PythonLikeTuple class
-                buildCollection(PythonLikeList.class, methodVisitor, instruction.arg);
+                buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);
                 break;
             }
             case BUILD_LIST: {
@@ -897,8 +898,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             }
             case BUILD_SET: {
-                // TODO: Create a PythonLikeSet class
-                buildCollection(HashSet.class, methodVisitor, instruction.arg);
+                buildCollection(PythonLikeSet.class, methodVisitor, instruction.arg);
                 break;
             }
             case BUILD_MAP:
