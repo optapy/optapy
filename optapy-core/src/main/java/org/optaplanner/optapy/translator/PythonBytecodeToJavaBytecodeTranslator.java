@@ -878,6 +878,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             }
             case BUILD_SET: {
+                // TODO: Create a PythonLikeSet class
                 buildCollection(HashSet.class, methodVisitor, instruction.arg);
                 break;
             }
@@ -911,18 +912,48 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             case IMPORT_FROM:
                 break;
-            case JUMP_FORWARD:
+            case JUMP_FORWARD: {
+                Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg, key -> new Label());
+                methodVisitor.visitJumpInsn(Opcodes.GOTO, jumpLocation);
                 break;
-            case POP_JUMP_IF_TRUE:
+            }
+            case POP_JUMP_IF_TRUE: {
+                Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+                unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "TRUE",
+                                             Type.getDescriptor(PythonBoolean.class));
+                methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
                 break;
-            case POP_JUMP_IF_FALSE:
-                break;
+            }
+            case POP_JUMP_IF_FALSE: {
+                Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+                unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "FALSE",
+                                             Type.getDescriptor(PythonBoolean.class));
+                methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
+            }
             case JUMP_IF_NOT_EXC_MATCH:
                 break;
-            case JUMP_IF_TRUE_OR_POP:
+            case JUMP_IF_TRUE_OR_POP: {
+                Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+                methodVisitor.visitInsn(Opcodes.DUP);
+                unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "TRUE",
+                                             Type.getDescriptor(PythonBoolean.class));
+                methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
+                methodVisitor.visitInsn(Opcodes.POP);
                 break;
-            case JUMP_IF_FALSE_OR_POP:
+            }
+            case JUMP_IF_FALSE_OR_POP: {
+                Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+                methodVisitor.visitInsn(Opcodes.DUP);
+                unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "FALSE",
+                                             Type.getDescriptor(PythonBoolean.class));
+                methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
+                methodVisitor.visitInsn(Opcodes.POP);
                 break;
+            }
             case JUMP_ABSOLUTE: {
                 Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
                 methodVisitor.visitJumpInsn(Opcodes.GOTO, jumpLocation);

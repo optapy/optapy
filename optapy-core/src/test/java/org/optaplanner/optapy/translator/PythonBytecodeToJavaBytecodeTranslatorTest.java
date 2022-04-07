@@ -12,12 +12,13 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.LongToIntFunction;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
-import org.optaplanner.optapy.translator.types.PythonLikeType;
+import org.optaplanner.optapy.translator.types.PythonBoolean;
 
 public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
@@ -286,6 +287,80 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.get()).isEqualTo(6L);
     }
 
+    @Test
+    public void testIfTrue() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadParameter("a")
+                .loadConstant(5)
+                .compare(CompareOp.LESS_THAN)
+                .ifTrue(block -> {
+                    block.loadConstant(10);
+                    block.op(OpCode.RETURN_VALUE);
+                })
+                .loadConstant(-10)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        assertThat(javaFunction.apply(1L)).isEqualTo(10L);
+        assertThat(javaFunction.apply(10L)).isEqualTo(-10L);
+    }
+
+    @Test
+    public void testIfFalse() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadParameter("a")
+                .loadConstant(5)
+                .compare(CompareOp.LESS_THAN)
+                .ifFalse(block -> {
+                    block.loadConstant(10);
+                    block.op(OpCode.RETURN_VALUE);
+                })
+                .loadConstant(-10)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        assertThat(javaFunction.apply(1L)).isEqualTo(-10L);
+        assertThat(javaFunction.apply(10L)).isEqualTo(10L);
+    }
+
+    @Test
+    public void testIfTrueKeepTop() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadParameter("a")
+                .loadConstant(5)
+                .compare(CompareOp.LESS_THAN)
+                .ifTruePopTop(block -> {
+                    block.loadConstant(true);
+                    block.op(OpCode.RETURN_VALUE);
+                })
+                .op(OpCode.RETURN_VALUE) // Top is False (block was skipped)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        assertThat(javaFunction.apply(1L)).isEqualTo(PythonBoolean.TRUE);
+        assertThat(javaFunction.apply(10L)).isEqualTo(PythonBoolean.FALSE);
+    }
+
+    @Test
+    public void testIfFalseKeepTop() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadParameter("a")
+                .loadConstant(5)
+                .compare(CompareOp.LESS_THAN)
+                .ifFalsePopTop(block -> {
+                    block.loadConstant(false);
+                    block.op(OpCode.RETURN_VALUE);
+                })
+                .op(OpCode.RETURN_VALUE) // Top is True (block was skipped)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        assertThat(javaFunction.apply(1L)).isEqualTo(PythonBoolean.TRUE);
+        assertThat(javaFunction.apply(10L)).isEqualTo(PythonBoolean.FALSE);
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
@@ -339,6 +414,82 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             afterLoopInstruction.offset = instructionList.size();
             afterLoopInstruction.isJumpTarget = true;
             instructionList.add(afterLoopInstruction);
+
+            return this;
+        }
+
+        public PythonFunctionBuilder ifTrue(Consumer<PythonFunctionBuilder> blockBuilder) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.POP_JUMP_IF_FALSE; // Skip block if False (i.e. enter block if True)
+            instruction.offset = instructionList.size();
+            instructionList.add(instruction);
+
+            blockBuilder.accept(this);
+
+            PythonBytecodeInstruction afterIfInstruction = new PythonBytecodeInstruction();
+            afterIfInstruction.opcode = OpCode.NOP;
+            afterIfInstruction.offset = instructionList.size();
+            afterIfInstruction.isJumpTarget = true;
+            instructionList.add(afterIfInstruction);
+
+            instruction.arg = afterIfInstruction.offset;
+
+            return this;
+        }
+
+        public PythonFunctionBuilder ifFalse(Consumer<PythonFunctionBuilder> blockBuilder) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.POP_JUMP_IF_TRUE; // Skip block if True (i.e. enter block if False)
+            instruction.offset = instructionList.size();
+            instructionList.add(instruction);
+
+            blockBuilder.accept(this);
+
+            PythonBytecodeInstruction afterIfInstruction = new PythonBytecodeInstruction();
+            afterIfInstruction.opcode = OpCode.NOP;
+            afterIfInstruction.offset = instructionList.size();
+            afterIfInstruction.isJumpTarget = true;
+            instructionList.add(afterIfInstruction);
+
+            instruction.arg = afterIfInstruction.offset;
+
+            return this;
+        }
+
+        public PythonFunctionBuilder ifTruePopTop(Consumer<PythonFunctionBuilder> blockBuilder) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.JUMP_IF_FALSE_OR_POP; // Skip block if False (i.e. enter block if True)
+            instruction.offset = instructionList.size();
+            instructionList.add(instruction);
+
+            blockBuilder.accept(this);
+
+            PythonBytecodeInstruction afterIfInstruction = new PythonBytecodeInstruction();
+            afterIfInstruction.opcode = OpCode.NOP;
+            afterIfInstruction.offset = instructionList.size();
+            afterIfInstruction.isJumpTarget = true;
+            instructionList.add(afterIfInstruction);
+
+            instruction.arg = afterIfInstruction.offset;
+
+            return this;
+        }
+
+        public PythonFunctionBuilder ifFalsePopTop(Consumer<PythonFunctionBuilder> blockBuilder) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.JUMP_IF_TRUE_OR_POP; // Skip block if True (i.e. enter block if False)
+            instruction.offset = instructionList.size();
+            instructionList.add(instruction);
+
+            blockBuilder.accept(this);
+
+            PythonBytecodeInstruction afterIfInstruction = new PythonBytecodeInstruction();
+            afterIfInstruction.opcode = OpCode.NOP;
+            afterIfInstruction.offset = instructionList.size();
+            afterIfInstruction.isJumpTarget = true;
+            instructionList.add(afterIfInstruction);
+
+            instruction.arg = afterIfInstruction.offset;
 
             return this;
         }

@@ -1,22 +1,20 @@
 package org.optaplanner.optapy.translator.types;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.function.Function;
 
 public class PythonBoolean extends AbstractPythonLikeObject {
-    public static PythonBoolean TRUE = new PythonBoolean(true);
-    public static PythonBoolean FALSE = new PythonBoolean(false);
+    public final static PythonBoolean TRUE;
+    public final static PythonBoolean FALSE;
 
     private final static PythonLikeType BOOLEAN_TYPE = new PythonLikeType("bool");
 
     static {
-        try {
-            BOOLEAN_TYPE.__dir__.put("__bool__", new JavaMethodReference(Function.class.getMethod("identity"),
-                                                                              Collections.emptyMap()));
-            PythonNumericOperations.setup(BOOLEAN_TYPE.__dir__);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException(e);
-        }
+        BOOLEAN_TYPE.__dir__.put("__bool__", new UnaryLambdaReference(self -> self, Map.of()));
+        PythonNumericOperations.setup(BOOLEAN_TYPE.__dir__);
+        TRUE = new PythonBoolean(true);
+        FALSE = new PythonBoolean(false);
     }
 
     private final boolean value;
@@ -40,5 +38,14 @@ public class PythonBoolean extends AbstractPythonLikeObject {
 
     public static PythonBoolean valueOf(boolean result) {
         return (result)? TRUE : FALSE;
+    }
+
+    @Override
+    public String toString() {
+        if (this == TRUE) {
+            return "True";
+        } else {
+            return "False";
+        }
     }
 }
