@@ -26,6 +26,9 @@ public class PythonIterator extends AbstractPythonLikeObject implements Iterator
 
     @Override
     public Object next() {
+        if (!delegate.hasNext()) {
+            throw StopIteration.INSTANCE;
+        }
         return delegate.next();
     }
 }

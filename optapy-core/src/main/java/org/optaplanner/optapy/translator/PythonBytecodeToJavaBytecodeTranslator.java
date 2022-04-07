@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.objectweb.asm.ClassWriter;
@@ -29,6 +28,7 @@ import org.optaplanner.optapy.translator.types.PythonLikeList;
 import org.optaplanner.optapy.translator.types.PythonLikeType;
 import org.optaplanner.optapy.translator.types.PythonNone;
 import org.optaplanner.optapy.translator.types.PythonNumber;
+import org.optaplanner.optapy.translator.types.StopIteration;
 
 public class PythonBytecodeToJavaBytecodeTranslator {
     /**
@@ -595,7 +595,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         Label catchEndLabel = new Label();
         Label loopEndLabel = bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg, key -> new Label());
 
-        methodVisitor.visitTryCatchBlock(tryStartLabel, tryEndLabel, catchStartLabel, Type.getInternalName(NoSuchElementException.class));
+        methodVisitor.visitTryCatchBlock(tryStartLabel, tryEndLabel, catchStartLabel, Type.getInternalName(StopIteration.class));
 
         methodVisitor.visitLabel(tryStartLabel);
         methodVisitor.visitInsn(Opcodes.DUP);
