@@ -27,6 +27,7 @@ import org.optaplanner.optapy.translator.types.PythonInteger;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeList;
 import org.optaplanner.optapy.translator.types.PythonLikeType;
+import org.optaplanner.optapy.translator.types.PythonNone;
 import org.optaplanner.optapy.translator.types.PythonNumber;
 
 public class PythonBytecodeToJavaBytecodeTranslator {
@@ -230,7 +231,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
     private static void loadConstant(MethodVisitor methodVisitor, Object constant) {
         if (constant == null) {
-            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+            loadNone(methodVisitor);
             return;
         }
 
@@ -316,6 +317,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
      * 'TOS0 = operand_method.apply(args, null)
      */
     private static void binaryOperator(MethodVisitor methodVisitor, PythonBinaryOperators operator) {
+        methodVisitor.visitInsn(Opcodes.SWAP);
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                                       "__type__", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
@@ -330,20 +332,21 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
         methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonLikeList.class));
         methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitLdcInsn(2);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonLikeList.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE), false);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonLikeList.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
         methodVisitor.visitInsn(Opcodes.DUP_X1);
         methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeList.class),
-                                      "reverseAdd",
-                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
-                                      false);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                                      "add",
+                                      Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
+                                      true);
+        methodVisitor.visitInsn(Opcodes.POP);
         methodVisitor.visitInsn(Opcodes.DUP_X1);
         methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeList.class),
-                                      "reverseAdd",
-                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
-                                      false);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                                      "add",
+                                      Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
+                                      true);
+        methodVisitor.visitInsn(Opcodes.POP);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
                                       "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
@@ -606,6 +609,11 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitLabel(catchEndLabel);
     }
 
+    private static void loadNone(MethodVisitor methodVisitor) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonNone.class), "INSTANCE",
+                                     Type.getDescriptor(PythonNone.class));
+    }
+
     private static void loadTrue(MethodVisitor methodVisitor) {
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "TRUE",
                                      Type.getDescriptor(PythonBoolean.class));
@@ -614,6 +622,12 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     private static void loadFalse(MethodVisitor methodVisitor) {
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "FALSE",
                                      Type.getDescriptor(PythonBoolean.class));
+    }
+
+    private static void performNotOnTOS(MethodVisitor methodVisitor) {
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonBoolean.class),
+                                      "not", Type.getMethodDescriptor(Type.getType(PythonBoolean.class)),
+                                      false);
     }
 
     private static void translatePythonBytecodeInstruction(Method method, MethodVisitor methodVisitor,
@@ -678,9 +692,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
             case UNARY_NOT: {
                 unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
-                methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonBoolean.class),
-                                              "not", Type.getMethodDescriptor(Type.getType(PythonBoolean.class)),
-                                              false);
+                performNotOnTOS(methodVisitor);
                 break;
             }
             case UNARY_INVERT: {
@@ -925,8 +937,14 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 methodVisitor.visitLabel(endLabel);
                 break;
             }
-            case CONTAINS_OP:
+            case CONTAINS_OP: {
+                binaryOperator(methodVisitor, PythonBinaryOperators.CONTAINS);
+                // TODO: implement fallback on __getitem__ if __contains__ does not exist
+                if (instruction.arg == 1) {
+                    performNotOnTOS(methodVisitor);
+                }
                 break;
+            }
             case IMPORT_NAME:
                 break;
             case IMPORT_FROM:

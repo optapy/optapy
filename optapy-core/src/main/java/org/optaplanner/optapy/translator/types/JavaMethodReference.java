@@ -68,7 +68,7 @@ public class JavaMethodReference implements PythonLikeFunction {
 
         Class<?> type = result.getClass();
 
-        if (boolean.class.isAssignableFrom(type)) {
+        if (boolean.class.isAssignableFrom(type) || Boolean.class.isAssignableFrom(type)) {
             return PythonBoolean.valueOf((boolean) result);
         } else if (byte.class.isAssignableFrom(type)) {
             return new PythonInteger((byte) result);

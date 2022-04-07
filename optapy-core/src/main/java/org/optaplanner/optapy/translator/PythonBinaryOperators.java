@@ -48,7 +48,11 @@ public enum PythonBinaryOperators {
 
     // List operations
     // https://docs.python.org/3/reference/datamodel.html#object.__getitem__
-    GET_ITEM("__getitem__")
+    GET_ITEM("__getitem__"),
+
+    // Membership operations
+    // https://docs.python.org/3/reference/expressions.html#membership-test-operations
+    CONTAINS("__contains__")
     ;
 
     final String dunderMethod;

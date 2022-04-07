@@ -409,6 +409,23 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.apply(10L)).isEqualTo(PythonBoolean.FALSE);
     }
 
+    @Test
+    public void testContains() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .tuple(3)
+                .loadParameter("a")
+                .op(OpCode.CONTAINS_OP, 0)
+                .op(OpCode.RETURN_VALUE) // Top is True (block was skipped)
+                .build();
+
+        Predicate javaFunction = translatePythonBytecode(pythonCompiledFunction, Predicate.class);
+        assertThat(javaFunction.test(1L)).isEqualTo(true);
+        assertThat(javaFunction.test(4L)).isEqualTo(false);
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();

@@ -35,6 +35,8 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
                                                     Map.of()));
             LIST_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeList.class.getMethod("iterator"),
                                                                       Map.of()));
+            LIST_TYPE.__dir__.put("__contains__", new JavaMethodReference(PythonLikeList.class.getMethod("contains", Object.class),
+                                                                          Map.of()));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }
