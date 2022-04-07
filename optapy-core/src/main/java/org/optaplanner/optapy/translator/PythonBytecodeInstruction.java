@@ -41,6 +41,11 @@ public class PythonBytecodeInstruction {
      */
     public boolean isJumpTarget;
 
+    @Override
+    public String toString() {
+        return "[" + offset + "] " + opcode.name() + " (" + arg + ")";
+    }
+
     public enum OpCode {
         // *****************************
         // General instructions

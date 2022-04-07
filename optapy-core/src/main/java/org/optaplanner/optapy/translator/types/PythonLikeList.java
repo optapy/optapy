@@ -2,7 +2,6 @@ package org.optaplanner.optapy.translator.types;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -34,6 +33,8 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
                                                     Map.of()));
             LIST_TYPE.__dir__.put("__iadd__", new JavaMethodReference(PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class),
                                                     Map.of()));
+            LIST_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeList.class.getMethod("iterator"),
+                                                                      Map.of()));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }

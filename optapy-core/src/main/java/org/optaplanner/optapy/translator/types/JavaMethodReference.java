@@ -3,6 +3,7 @@ package org.optaplanner.optapy.translator.types;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -84,6 +85,8 @@ public class JavaMethodReference implements PythonLikeFunction {
             return new PythonFloat((float) result);
         } else if (double.class.isAssignableFrom(type)) {
             return new PythonFloat((double) result);
+        } else if (Iterator.class.isAssignableFrom(type)) {
+            return new PythonIterator((Iterator) result);
         } else {
             throw new IllegalStateException("Unhandled type (" + type + ").");
         }

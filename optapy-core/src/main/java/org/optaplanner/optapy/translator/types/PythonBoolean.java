@@ -11,8 +11,9 @@ public class PythonBoolean extends AbstractPythonLikeObject {
 
     static {
         try {
-            BOOLEAN_TYPE.__setattribute__("__bool__", new JavaMethodReference(Function.class.getMethod("identity"),
+            BOOLEAN_TYPE.__dir__.put("__bool__", new JavaMethodReference(Function.class.getMethod("identity"),
                                                                               Collections.emptyMap()));
+            PythonNumericOperations.setup(BOOLEAN_TYPE.__dir__);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(e);
         }

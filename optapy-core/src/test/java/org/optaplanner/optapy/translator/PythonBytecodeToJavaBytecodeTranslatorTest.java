@@ -248,6 +248,44 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.apply(3L, 2L)).isEqualTo(1L);
     }
 
+    @Test
+    public void testGetIterator() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .tuple(3)
+                .op(OpCode.GET_ITER)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Iterable javaFunction = translatePythonBytecode(pythonCompiledFunction, Iterable.class);
+        assertThat(javaFunction).containsExactly(1L, 2L, 3L);
+    }
+
+    @Test
+    public void testIteration() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(0)
+                .storeVariable("sum")
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .tuple(3)
+                .op(OpCode.GET_ITER)
+                .loop(block -> {
+                    block.loadVariable("sum");
+                    block.op(OpCode.BINARY_ADD);
+                    block.storeVariable("sum");
+                })
+                .loadVariable("sum")
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(6L);
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
@@ -275,6 +313,33 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             instruction.opcode = opcode;
             instruction.offset = instructionList.size();
             instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder loop(Consumer<PythonFunctionBuilder> blockBuilder) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.FOR_ITER;
+            instruction.offset = instructionList.size();
+            instruction.isJumpTarget = true;
+            instructionList.add(instruction);
+
+            blockBuilder.accept(this);
+
+            PythonBytecodeInstruction jumpBackInstruction = new PythonBytecodeInstruction();
+            jumpBackInstruction.opcode = OpCode.JUMP_ABSOLUTE;
+            jumpBackInstruction.offset = instructionList.size();
+            jumpBackInstruction.arg = instruction.offset;
+            jumpBackInstruction.isJumpTarget = true;
+            instructionList.add(jumpBackInstruction);
+
+            instruction.arg = instructionList.size() - instruction.offset;
+
+            PythonBytecodeInstruction afterLoopInstruction = new PythonBytecodeInstruction();
+            afterLoopInstruction.opcode = OpCode.NOP;
+            afterLoopInstruction.offset = instructionList.size();
+            afterLoopInstruction.isJumpTarget = true;
+            instructionList.add(afterLoopInstruction);
+
             return this;
         }
 
@@ -314,6 +379,36 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             if (instruction.arg == -1) {
                 throw new IllegalArgumentException("Parameter (" + parameterName + ") is not in the parameter list (" +
                         co_varnames + ").");
+            }
+
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder loadVariable(String variableName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.LOAD_FAST;
+            instruction.offset = instructionList.size();
+            instruction.arg = co_varnames.indexOf(variableName);
+
+            if (instruction.arg == -1) {
+                co_varnames.add(variableName);
+                instruction.arg = co_varnames.size() - 1;
+            }
+
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder storeVariable(String variableName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.STORE_FAST;
+            instruction.offset = instructionList.size();
+            instruction.arg = co_varnames.indexOf(variableName);
+
+            if (instruction.arg == -1) {
+                co_varnames.add(variableName);
+                instruction.arg = co_varnames.size() - 1;
             }
 
             instructionList.add(instruction);

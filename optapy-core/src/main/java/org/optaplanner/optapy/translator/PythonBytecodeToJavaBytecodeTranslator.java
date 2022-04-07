@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.objectweb.asm.ClassWriter;
@@ -285,7 +286,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                                       "__getattribute__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                                                                                    Type.getType(String.class)),
                                       true);
-        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.DUP_X1);
         methodVisitor.visitInsn(Opcodes.POP);
 
         methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonLikeList.class));
@@ -586,6 +587,28 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         }
     }
 
+    private static void iterateIterator(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, Map<Integer, Label> bytecodeCounterToLabelMap) {
+        Label tryStartLabel = new Label();
+        Label tryEndLabel = new Label();
+        Label catchStartLabel = new Label();
+        Label catchEndLabel = new Label();
+        Label loopEndLabel = bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg, key -> new Label());
+
+        methodVisitor.visitTryCatchBlock(tryStartLabel, tryEndLabel, catchStartLabel, Type.getInternalName(NoSuchElementException.class));
+
+        methodVisitor.visitLabel(tryStartLabel);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
+        methodVisitor.visitLabel(tryEndLabel);
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, catchEndLabel);
+
+        methodVisitor.visitLabel(catchStartLabel);
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, loopEndLabel);
+        methodVisitor.visitLabel(catchEndLabel);
+
+    }
+
     private static void translatePythonBytecodeInstruction(Method method, MethodVisitor methodVisitor,
             PythonCompiledFunction pythonCompiledFunction,
             PythonBytecodeInstruction instruction,
@@ -848,10 +871,6 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case BUILD_TUPLE: {
                 // TODO: Create a PythonLikeTuple class
                 buildCollection(PythonLikeList.class, methodVisitor, instruction.arg);
-                methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class),
-                        "unmodifiableList",
-                        Type.getMethodDescriptor(Type.getType(List.class), Type.getType(List.class)),
-                        false);
                 break;
             }
             case BUILD_LIST: {
@@ -904,12 +923,18 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             case JUMP_IF_FALSE_OR_POP:
                 break;
-            case JUMP_ABSOLUTE:
+            case JUMP_ABSOLUTE: {
+                Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+                methodVisitor.visitJumpInsn(Opcodes.GOTO, jumpLocation);
                 break;
-            case FOR_ITER:
+            }
+            case FOR_ITER: {
+                iterateIterator(methodVisitor, instruction, bytecodeCounterToLabelMap);
                 break;
-            case LOAD_GLOBAL:
+            }
+            case LOAD_GLOBAL: {
                 break;
+            }
             case SETUP_FINALLY:
                 break;
             case LOAD_FAST: {
