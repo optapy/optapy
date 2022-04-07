@@ -256,11 +256,9 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
         if (constant instanceof Boolean) {
             if (Boolean.TRUE.equals(constant)) {
-                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class),
-                        "TRUE", Type.getDescriptor(PythonBoolean.class));
+                loadTrue(methodVisitor);
             } else {
-                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class),
-                        "FALSE", Type.getDescriptor(PythonBoolean.class));
+                loadFalse(methodVisitor);
             }
             return;
         }
@@ -606,7 +604,16 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitInsn(Opcodes.POP);
         methodVisitor.visitJumpInsn(Opcodes.GOTO, loopEndLabel);
         methodVisitor.visitLabel(catchEndLabel);
+    }
 
+    private static void loadTrue(MethodVisitor methodVisitor) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "TRUE",
+                                     Type.getDescriptor(PythonBoolean.class));
+    }
+
+    private static void loadFalse(MethodVisitor methodVisitor) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "FALSE",
+                                     Type.getDescriptor(PythonBoolean.class));
     }
 
     private static void translatePythonBytecodeInstruction(Method method, MethodVisitor methodVisitor,
@@ -904,8 +911,20 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 compareValues(methodVisitor, CompareOp.getOp(instruction.arg));
                 break;
             }
-            case IS_OP:
+            case IS_OP: {
+                int opcode = (instruction.arg == 0)? Opcodes.IF_ACMPEQ : Opcodes.IF_ACMPNE;
+                Label trueBranchLabel = new Label();
+                Label endLabel = new Label();
+
+                methodVisitor.visitJumpInsn(opcode, trueBranchLabel);
+                loadFalse(methodVisitor);
+                methodVisitor.visitJumpInsn(Opcodes.GOTO, endLabel);
+
+                methodVisitor.visitLabel(trueBranchLabel);
+                loadTrue(methodVisitor);
+                methodVisitor.visitLabel(endLabel);
                 break;
+            }
             case CONTAINS_OP:
                 break;
             case IMPORT_NAME:
@@ -920,16 +939,14 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case POP_JUMP_IF_TRUE: {
                 Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
                 unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
-                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "TRUE",
-                                             Type.getDescriptor(PythonBoolean.class));
+                loadTrue(methodVisitor);
                 methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
                 break;
             }
             case POP_JUMP_IF_FALSE: {
                 Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
                 unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
-                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "FALSE",
-                                             Type.getDescriptor(PythonBoolean.class));
+                loadFalse(methodVisitor);
                 methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
             }
             case JUMP_IF_NOT_EXC_MATCH:
@@ -938,8 +955,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
                 methodVisitor.visitInsn(Opcodes.DUP);
                 unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
-                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "TRUE",
-                                             Type.getDescriptor(PythonBoolean.class));
+                loadTrue(methodVisitor);
                 methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
                 methodVisitor.visitInsn(Opcodes.POP);
                 break;
@@ -948,8 +964,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
                 methodVisitor.visitInsn(Opcodes.DUP);
                 unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
-                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonBoolean.class), "FALSE",
-                                             Type.getDescriptor(PythonBoolean.class));
+                loadFalse(methodVisitor);
                 methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
                 methodVisitor.visitInsn(Opcodes.POP);
                 break;

@@ -288,6 +288,54 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
     }
 
     @Test
+    public void testIs() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(5)
+                .op(OpCode.DUP_TOP)
+                .op(OpCode.IS_OP, 0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(PythonBoolean.TRUE);
+
+        pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(5)
+                .op(OpCode.DUP_TOP)
+                .loadConstant(0)
+                .op(OpCode.BINARY_ADD)
+                .op(OpCode.IS_OP, 0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(PythonBoolean.FALSE);
+
+        // Test is not
+        pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(5)
+                .op(OpCode.DUP_TOP)
+                .op(OpCode.IS_OP, 1)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(PythonBoolean.FALSE);
+
+        pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(5)
+                .op(OpCode.DUP_TOP)
+                .loadConstant(0)
+                .op(OpCode.BINARY_ADD)
+                .op(OpCode.IS_OP, 1)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(PythonBoolean.TRUE);
+    }
+
+    @Test
     public void testIfTrue() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
                 .loadParameter("a")
@@ -387,6 +435,15 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
             instruction.opcode = opcode;
             instruction.offset = instructionList.size();
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder op(OpCode opcode, int arg) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = opcode;
+            instruction.offset = instructionList.size();
+            instruction.arg = arg;
             instructionList.add(instruction);
             return this;
         }

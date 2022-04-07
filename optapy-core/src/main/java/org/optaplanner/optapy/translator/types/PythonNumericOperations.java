@@ -12,6 +12,17 @@ public class PythonNumericOperations {
     public static void setup(Map<String, PythonLikeObject> dict) {
         // MATRIX_MULTIPLY("__matmul__"),
 
+        var BOOL_CAST = new UnaryLambdaReference(a -> PythonBoolean.valueOf(((PythonNumber) a).compareTo(PythonInteger.valueOf(0)) == 0),
+                                            Map.of());
+        var INT_CAST = new UnaryNumericLambdaReference(Long::longValue, Double::longValue);
+        var FLOAT_CAST = new UnaryNumericLambdaReference(Long::doubleValue, Double::doubleValue);
+
+        var NEGATE = new UnaryNumericLambdaReference(a -> -a, a -> -a);
+        var POS = new UnaryNumericLambdaReference(a -> a, a -> a);
+        var INVERT = new UnaryNumericLambdaReference(a -> ~a, a -> {
+            throw new IllegalArgumentException("Cannot invert float");
+        });
+
         var POW = new BinaryNumericLambdaReference(Math::pow, Math::pow);
         var MUL = new BinaryNumericLambdaReference((a,b) -> a*b, (a,b) -> a*b);
         var FLOOR_DIVIDE = new BinaryNumericLambdaReference(Math::floorDiv, (a,b) -> Math.floor(a/b));
@@ -36,6 +47,17 @@ public class PythonNumericOperations {
             throw new ArithmeticException("Cannot OR doubles");
         });
 
+        // Casts
+        dict.put("__bool__", BOOL_CAST);
+        dict.put("__index__", INT_CAST);
+        dict.put("__float__", FLOAT_CAST);
+
+        // Unary Operations
+        dict.put("__neg__", NEGATE);
+        dict.put("__pos__", POS);
+        dict.put("__invert__", INVERT);
+
+        // Binary Operations
         dict.put("__pow__", POW);
         dict.put("__mul__", MUL);
         // dict.put("__matmul__", ?);

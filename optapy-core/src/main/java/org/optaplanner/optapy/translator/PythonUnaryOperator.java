@@ -12,6 +12,8 @@ public enum PythonUnaryOperator {
     INVERT("__invert__"),
     ITERATOR("__iter__"),
     AS_BOOLEAN("__bool__"),
+    AS_FLOAT("__float__"),
+    AS_INT("__index__"),
     NEXT("__next__");
 
     final String dunderMethod;

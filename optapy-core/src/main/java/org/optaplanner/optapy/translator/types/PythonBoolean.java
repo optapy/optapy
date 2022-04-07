@@ -11,8 +11,8 @@ public class PythonBoolean extends AbstractPythonLikeObject {
     private final static PythonLikeType BOOLEAN_TYPE = new PythonLikeType("bool");
 
     static {
-        BOOLEAN_TYPE.__dir__.put("__bool__", new UnaryLambdaReference(self -> self, Map.of()));
         PythonNumericOperations.setup(BOOLEAN_TYPE.__dir__);
+        BOOLEAN_TYPE.__dir__.put("__bool__", new UnaryLambdaReference(self -> self, Map.of()));
         TRUE = new PythonBoolean(true);
         FALSE = new PythonBoolean(false);
     }
