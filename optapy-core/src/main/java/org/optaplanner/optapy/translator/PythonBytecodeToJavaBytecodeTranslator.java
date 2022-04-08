@@ -22,6 +22,7 @@ import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.types.PythonBoolean;
 import org.optaplanner.optapy.translator.types.PythonFloat;
 import org.optaplanner.optapy.translator.types.PythonInteger;
+import org.optaplanner.optapy.translator.types.PythonLikeDict;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeList;
 import org.optaplanner.optapy.translator.types.PythonLikeSet;
@@ -386,25 +387,36 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         String typeInternalName = Type.getInternalName(collectionType);
         methodVisitor.visitTypeInsn(Opcodes.NEW, typeInternalName);
         methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, typeInternalName, "<init>", "()V", false);
+        methodVisitor.visitLdcInsn(itemCount);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, typeInternalName, "<init>",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE), false);
 
         for (int i = 0; i < itemCount; i++) {
             methodVisitor.visitInsn(Opcodes.DUP_X1);
             methodVisitor.visitInsn(Opcodes.SWAP);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
-                    "add",
-                    Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
-                    true);
-            methodVisitor.visitInsn(Opcodes.POP);
-        }
-
-        if (List.class.isAssignableFrom(collectionType)) {
-            // We built the list in reverse order, so we now need to reverse it
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class),
-                    "reverse",
-                    Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(List.class)),
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, typeInternalName,
+                    "reverseAdd",
+                    Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
                     false);
+        }
+    }
+
+    private static void buildMap(Class<? extends Map> mapType, MethodVisitor methodVisitor,
+                                        int itemCount) {
+        String typeInternalName = Type.getInternalName(mapType);
+        methodVisitor.visitTypeInsn(Opcodes.NEW, typeInternalName);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, typeInternalName, "<init>", "()V", false);
+
+        for (int i = 0; i < itemCount; i++) {
+            methodVisitor.visitInsn(Opcodes.DUP_X2);
+            methodVisitor.visitInsn(Opcodes.DUP_X2);
+            methodVisitor.visitInsn(Opcodes.POP);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                                          "put",
+                                          Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
+                                          true);
+            methodVisitor.visitInsn(Opcodes.POP);
         }
     }
 
@@ -901,8 +913,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 buildCollection(PythonLikeSet.class, methodVisitor, instruction.arg);
                 break;
             }
-            case BUILD_MAP:
+            case BUILD_MAP: {
+                buildMap(PythonLikeDict.class, methodVisitor, instruction.arg);
                 break;
+            }
             case BUILD_CONST_KEY_MAP:
                 break;
             case BUILD_STRING:

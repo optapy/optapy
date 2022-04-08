@@ -9,6 +9,7 @@ import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTran
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -456,6 +457,25 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.get()).isEqualTo(Set.of(PythonInteger.valueOf(1), PythonInteger.valueOf(2)));
     }
 
+    @Test
+    public void testMap() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(2)
+                .loadConstant(4)
+                .loadConstant(3)
+                .loadConstant(6)
+                .dict(3)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(Map.of(PythonInteger.valueOf(1), PythonInteger.valueOf(2),
+                                                        PythonInteger.valueOf(2), PythonInteger.valueOf(4),
+                                                        PythonInteger.valueOf(3), PythonInteger.valueOf(6)));
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
@@ -611,6 +631,16 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         public PythonFunctionBuilder tuple(int count) {
             PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
             instruction.opcode = OpCode.BUILD_TUPLE;
+            instruction.offset = instructionList.size();
+            instruction.arg = count;
+            instruction.argval = count;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder dict(int count) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.BUILD_MAP;
             instruction.offset = instructionList.size();
             instruction.arg = count;
             instruction.argval = count;

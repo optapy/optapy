@@ -44,6 +44,10 @@ public class PythonLikeSet extends AbstractPythonLikeObject implements Set<Pytho
         delegate = new HashSet<>(size);
     }
 
+    public void reverseAdd(PythonLikeObject object) {
+        delegate.add(object);
+    }
+
     public PythonLikeSet copy() {
         PythonLikeSet copy = new PythonLikeSet();
         copy.addAll(delegate);

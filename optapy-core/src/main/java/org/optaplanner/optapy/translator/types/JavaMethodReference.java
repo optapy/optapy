@@ -59,7 +59,7 @@ public class JavaMethodReference implements PythonLikeFunction {
 
     private PythonLikeObject wrapResult(Object result) {
         if (null == result) {
-            return null;
+            return PythonNone.INSTANCE;
         }
 
         if (result instanceof PythonLikeObject) {
