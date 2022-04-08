@@ -1,5 +1,8 @@
 package org.optaplanner.optapy.translator.implementors;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.optaplanner.optapy.translator.LocalVariableHelper;
@@ -75,5 +78,32 @@ public class StackManipulationImplementor {
      */
     public static void duplicateTOSAndTOS1(MethodVisitor methodVisitor) {
         methodVisitor.visitInsn(Opcodes.DUP2);
+    }
+
+   /**
+     * Copies TOS[posFromTOS] to TOS, leaving other stack elements in their original place
+     *
+     * (i.e. ..., TOS[posFromTOS], ..., TOS2, TOS1, TOS -> ..., TOS[i], ..., TOS2, TOS1, TOS, TOS[i])
+     */
+    public static void duplicateToTOS(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int posFromTOS) {
+        List<Integer> localList = new ArrayList<>(posFromTOS);
+
+        // Store TOS...TOS[posFromTOS - 1] into local variables
+        for (int i = 0; i < posFromTOS; i++) {
+            int local = localVariableHelper.newLocal();
+            localList.add(local);
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, local);
+        }
+
+        // Duplicate TOS[posFromTOS]
+        methodVisitor.visitInsn(Opcodes.DUP);
+
+        // Restore TOS...TOS[posFromTOS - 1] from local variables, swaping the duplicated value to keep it on TOS
+        for (int i = posFromTOS - 1; i >= 0; i--) {
+            int local = localList.get(i);
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, local);
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            localVariableHelper.freeLocal();
+        }
     }
 }

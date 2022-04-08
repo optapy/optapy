@@ -340,9 +340,11 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case PRINT_EXPR:
                 break;
             case SET_ADD:
+            case LIST_APPEND: {
+                // SET_ADD and LIST_APPEND have the same bytecode
+                CollectionImplementor.collectionAdd(methodVisitor, instruction, localVariableHelper);
                 break;
-            case LIST_APPEND:
-                break;
+            }
             case MAP_ADD:
                 break;
             case RETURN_VALUE: {

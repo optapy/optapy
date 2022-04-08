@@ -204,4 +204,18 @@ public class CollectionImplementor {
         DunderOperatorImplementor.ternaryOperator(methodVisitor, PythonTernaryOperators.SET_ITEM, localVariableHelper);
         StackManipulationImplementor.popTOS(methodVisitor);
     }
+
+    /**
+     * Calls collection.add(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to implement list comprehensions.
+     */
+    public static void collectionAdd(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
+                                      "add",
+                                      Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
+                                      true);
+        StackManipulationImplementor.popTOS(methodVisitor); // pop Collection.add return value
+    }
 }
