@@ -8,8 +8,10 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.optapy.PythonLikeObject;
+import org.optaplanner.optapy.translator.LocalVariableHelper;
 import org.optaplanner.optapy.translator.PythonBinaryOperators;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
+import org.optaplanner.optapy.translator.PythonTernaryOperators;
 import org.optaplanner.optapy.translator.PythonUnaryOperator;
 import org.optaplanner.optapy.translator.types.StopIteration;
 
@@ -109,13 +111,12 @@ public class CollectionImplementor {
 
         for (int i = 0; i < itemCount; i++) {
             methodVisitor.visitInsn(Opcodes.DUP_X2);
-            methodVisitor.visitInsn(Opcodes.DUP_X2);
-            methodVisitor.visitInsn(Opcodes.POP);
+            StackManipulationImplementor.rotateThree(methodVisitor);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
                                           "put",
                                           Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
                                           true);
-            methodVisitor.visitInsn(Opcodes.POP);
+            methodVisitor.visitInsn(Opcodes.POP); // pop return value of "put"
         }
     }
 
@@ -131,5 +132,17 @@ public class CollectionImplementor {
         if (instruction.arg == 1) {
             PythonBuiltinOperatorImplementor.performNotOnTOS(methodVisitor);
         }
+    }
+
+    /**
+     * Implements TOS1[TOS] = TOS2. TOS1 must be a collection/object that implement the "__setitem__" dunder method.
+     */
+    public static void setItem(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        // Stack is TOS2, TOS1, TOS
+        StackManipulationImplementor.rotateThree(methodVisitor);
+        StackManipulationImplementor.rotateThree(methodVisitor);
+        // Stack is TOS1, TOS, TOS2
+        DunderOperatorImplementor.ternaryOperator(methodVisitor, PythonTernaryOperators.SET_ITEM, localVariableHelper);
+        StackManipulationImplementor.popTOS(methodVisitor);
     }
 }

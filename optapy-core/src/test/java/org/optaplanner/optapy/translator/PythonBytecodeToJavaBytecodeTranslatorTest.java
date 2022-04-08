@@ -476,6 +476,37 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
                                                         PythonInteger.valueOf(3), PythonInteger.valueOf(6)));
     }
 
+    @Test
+    public void testSetItem() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("key", "value")
+                .dict(0)
+                .op(OpCode.DUP_TOP)
+                .loadParameter("value")
+                .op(OpCode.ROT_TWO)
+                .loadParameter("key")
+                .op(OpCode.STORE_SUBSCR)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        BiFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
+        assertThat(javaFunction.apply(1, 2)).isEqualTo(Map.of(PythonInteger.valueOf(1), PythonInteger.valueOf(2)));
+
+        pythonCompiledFunction = PythonFunctionBuilder.newFunction("key", "value")
+                .loadConstant(1)
+                .loadConstant(2)
+                .list(2)
+                .op(OpCode.DUP_TOP)
+                .loadParameter("value")
+                .op(OpCode.ROT_TWO)
+                .loadParameter("key")
+                .op(OpCode.STORE_SUBSCR)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
+        assertThat(javaFunction.apply(1, 0)).isEqualTo(List.of(PythonInteger.valueOf(1), PythonInteger.valueOf(0)));
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();

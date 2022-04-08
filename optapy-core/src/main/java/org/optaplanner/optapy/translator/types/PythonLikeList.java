@@ -35,6 +35,10 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
                                                     Map.of()));
             LIST_TYPE.__dir__.put("__iadd__", new JavaMethodReference(PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class),
                                                     Map.of()));
+            LIST_TYPE.__dir__.put("__getitem__", new JavaMethodReference(List.class.getMethod("get", int.class),
+                                                                     Map.of()));
+            LIST_TYPE.__dir__.put("__setitem__", new JavaMethodReference(List.class.getMethod("set", int.class, Object.class),
+                                                                         Map.of()));
             LIST_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeList.class.getMethod("iterator"),
                                                                       Map.of()));
             LIST_TYPE.__dir__.put("__contains__", new JavaMethodReference(PythonLikeList.class.getMethod("contains", Object.class),
@@ -206,6 +210,11 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     @Override
     public List<PythonLikeObject> subList(int i, int i1) {
         return delegate.subList(i, i1);
+    }
+
+    @Override
+    public String toString() {
+        return delegate.toString();
     }
 
     @Override

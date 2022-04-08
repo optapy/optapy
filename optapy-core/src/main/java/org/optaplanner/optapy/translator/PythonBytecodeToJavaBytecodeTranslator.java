@@ -319,8 +319,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_OR);
                 break;
             }
-            case STORE_SUBSCR:
+            case STORE_SUBSCR: {
+                CollectionImplementor.setItem(methodVisitor, instruction, localVariableHelper);
                 break;
+            }
             case DEL_SUBSCR:
                 break;
             case GET_AWAITABLE:
