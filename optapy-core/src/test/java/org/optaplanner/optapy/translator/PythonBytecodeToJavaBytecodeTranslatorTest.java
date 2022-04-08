@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -687,6 +688,36 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.apply(1, 0)).isEqualTo(List.of(PythonInteger.valueOf(1), PythonInteger.valueOf(0)));
     }
 
+    @Test
+    public void testGetAttribute() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
+                .loadParameter("item")
+                .getAttribute("name")
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        MyObject object = new MyObject();
+        object.name = "My name";
+        assertThat(javaFunction.apply(object)).isEqualTo("My name");
+    }
+
+    @Test
+    public void testSetAttribute() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item", "value")
+                .loadParameter("value")
+                .loadParameter("item")
+                .storeAttribute("name")
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        BiConsumer javaFunction = translatePythonBytecode(pythonCompiledFunction, BiConsumer.class);
+        MyObject object = new MyObject();
+        object.name = "My name";
+        javaFunction.accept(object,"New name");
+        assertThat(object.name).isEqualTo("New name");
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
@@ -875,6 +906,40 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             instruction.offset = instructionList.size();
             instruction.arg = count;
             instruction.argval = count;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder getAttribute(String attributeName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.LOAD_ATTR;
+            instruction.offset = instructionList.size();
+
+            int attributeIndex = co_names.indexOf(attributeName);
+            if (attributeIndex == -1) {
+                attributeIndex = co_names.size();
+                co_names.add(attributeName);
+            }
+
+            instruction.arg = attributeIndex;
+            instruction.argval = attributeIndex;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder storeAttribute(String attributeName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.STORE_ATTR;
+            instruction.offset = instructionList.size();
+
+            int attributeIndex = co_names.indexOf(attributeName);
+            if (attributeIndex == -1) {
+                attributeIndex = co_names.size();
+                co_names.add(attributeName);
+            }
+
+            instruction.arg = attributeIndex;
+            instruction.argval = attributeIndex;
             instructionList.add(instruction);
             return this;
         }

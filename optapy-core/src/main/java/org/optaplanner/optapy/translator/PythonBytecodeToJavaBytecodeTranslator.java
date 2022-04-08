@@ -20,6 +20,7 @@ import org.optaplanner.optapy.translator.implementors.DunderOperatorImplementor;
 import org.optaplanner.optapy.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.optapy.translator.implementors.JumpImplementor;
 import org.optaplanner.optapy.translator.implementors.LocalVariableImplementor;
+import org.optaplanner.optapy.translator.implementors.ObjectImplementor;
 import org.optaplanner.optapy.translator.implementors.PythonBuiltinOperatorImplementor;
 import org.optaplanner.optapy.translator.implementors.StackManipulationImplementor;
 import org.optaplanner.optapy.translator.types.PythonLikeDict;
@@ -385,8 +386,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             case UNPACK_EX:
                 break;
-            case STORE_ATTR:
+            case STORE_ATTR: {
+                ObjectImplementor.setAttribute(methodVisitor, instruction, pythonCompiledFunction);
                 break;
+            }
             case DELETE_ATTR:
                 break;
             case STORE_GLOBAL:
@@ -439,8 +442,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.mapPutAllOnlyIfAllNewElseThrow(methodVisitor, instruction, localVariableHelper);
                 break;
             }
-            case LOAD_ATTR:
+            case LOAD_ATTR: {
+                ObjectImplementor.getAttribute(methodVisitor, instruction, pythonCompiledFunction);
                 break;
+            }
             case COMPARE_OP: {
                 DunderOperatorImplementor.compareValues(methodVisitor, CompareOp.getOp(instruction.arg));
                 break;

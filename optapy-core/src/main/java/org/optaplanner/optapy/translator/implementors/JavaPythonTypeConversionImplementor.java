@@ -1,15 +1,19 @@
 package org.optaplanner.optapy.translator.implementors;
 
 import java.lang.reflect.Method;
+import java.util.Iterator;
 
-import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.LocalVariableHelper;
+import org.optaplanner.optapy.translator.types.JavaObjectWrapper;
 import org.optaplanner.optapy.translator.types.PythonBoolean;
 import org.optaplanner.optapy.translator.types.PythonFloat;
 import org.optaplanner.optapy.translator.types.PythonInteger;
+import org.optaplanner.optapy.translator.types.PythonIterator;
+import org.optaplanner.optapy.translator.types.PythonNone;
 import org.optaplanner.optapy.translator.types.PythonNumber;
 
 /**
@@ -18,17 +22,118 @@ import org.optaplanner.optapy.translator.types.PythonNumber;
 public class JavaPythonTypeConversionImplementor {
 
     /**
+     * Wraps {@code object} to a PythonLikeObject.
+     */
+    public static PythonLikeObject wrapJavaObject(Object object) {
+        if (object == null) {
+            return PythonNone.INSTANCE;
+        }
+
+        if (object instanceof PythonLikeObject) {
+            // Object already a PythonLikeObject; need to do nothing
+            return (PythonLikeObject) object;
+        }
+
+        if (object instanceof Byte || object instanceof Short || object instanceof Integer || object instanceof Long) {
+            return PythonInteger.valueOf(((Number) object).longValue());
+        }
+
+        if (object instanceof Float || object instanceof Double) {
+            return PythonFloat.valueOf(((Number) object).doubleValue());
+        }
+
+        if (object instanceof Boolean) {
+            return PythonBoolean.valueOf((Boolean) object);
+        }
+
+        if (object instanceof Iterator) {
+            return new PythonIterator((Iterator) object);
+        }
+
+        // TODO: List, Map, Set, String
+
+        // Default: return a JavaObjectWrapper
+        return new JavaObjectWrapper(object);
+    }
+
+    /**
+     * Converts a {@code PythonLikeObject} to the given {@code type}.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T convertPythonObjectToJavaType(Class<? extends T> type, PythonLikeObject object) {
+        if (object instanceof PythonNone) {
+            return null;
+        }
+
+        if (object instanceof JavaObjectWrapper) {
+            JavaObjectWrapper wrappedObject = (JavaObjectWrapper) object;
+            Object javaObject = wrappedObject.getWrappedObject();
+            if (!type.isAssignableFrom(javaObject.getClass())) {
+                throw new IllegalArgumentException("Cannot convert from (" + javaObject.getClass() + ") to (" + type + ").");
+            }
+            return (T) javaObject;
+        }
+
+        if (type.isAssignableFrom(object.getClass())) {
+            // Can directly assign; no modification needed
+            return (T) object;
+        }
+
+        if (type.equals(byte.class) || type.equals(short.class) || type.equals(int.class) || type.equals(long.class) ||
+                type.equals(float.class) || type.equals(double.class) || Number.class.isAssignableFrom(type)) {
+            if (!(object instanceof PythonNumber)) {
+                throw new IllegalArgumentException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+            }
+            PythonNumber pythonNumber = (PythonNumber) object;
+            Number value = pythonNumber.getValue();
+
+            if (type.equals(byte.class) || type.equals(Byte.class)) {
+                return (T) (Byte) value.byteValue();
+            }
+
+            if (type.equals(short.class) || type.equals(Short.class)) {
+                return (T) (Short) value.shortValue();
+            }
+
+            if (type.equals(int.class) || type.equals(Integer.class)) {
+                return (T) (Integer) value.intValue();
+            }
+
+            if (type.equals(long.class) || type.equals(Long.class)) {
+                return (T) (Long) value.longValue();
+            }
+
+            if (type.equals(float.class) || type.equals(Float.class)) {
+                return (T) (Float) value.floatValue();
+            }
+
+            if (type.equals(double.class) || type.equals(Double.class)) {
+                return (T) (Double) value.doubleValue();
+            }
+        }
+
+        if (type.equals(boolean.class) || type.equals(Boolean.class)) {
+            if (!(object instanceof PythonBoolean)) {
+                throw new IllegalArgumentException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+            }
+            PythonBoolean pythonBoolean = (PythonBoolean) object;
+            return (T) (Boolean) pythonBoolean.getValue();
+        }
+
+        // TODO: List, Map, Set, String
+
+        throw new IllegalStateException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+    }
+
+    /**
      * Convert the Java {@code constant} to its Python equivalent and push it onto the stack.
      *
      * @param constant The Java constant to load
      */
     public static void loadConstant(MethodVisitor methodVisitor, Object constant) {
-        if (constant == null) {
-            PythonConstantsImplementor.loadNone(methodVisitor);
-            return;
-        }
-
-        if (constant instanceof Number || constant instanceof String) {
+        // Cannot use wrapJavaObject to wrap primitives types with ldc (null, int, long, float, boolean)
+        // since that will load the unwrapped type instead of the wrap type
+        if (constant instanceof Number) {
             if (constant instanceof Byte || constant instanceof Short || constant instanceof Integer) {
                 constant = ((Number) constant).longValue();
             } else if (constant instanceof Float) {
@@ -56,7 +161,16 @@ public class JavaPythonTypeConversionImplementor {
             }
             return;
         }
-        throw new UnsupportedOperationException("Cannot load constant (" + constant + ").");
+
+        if (constant == null) {
+            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        } else {
+            methodVisitor.visitLdcInsn(constant);
+        }
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(JavaPythonTypeConversionImplementor.class),
+                                      "wrapJavaObject",
+                                      Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(Object.class)),
+                                      false);
     }
 
     /**
@@ -74,6 +188,13 @@ public class JavaPythonTypeConversionImplementor {
         }
 
         if (!returnType.isPrimitive()) {
+            methodVisitor.visitLdcInsn(Type.getType(method.getReturnType()));
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(JavaPythonTypeConversionImplementor.class),
+                                          "convertPythonObjectToJavaType",
+                                          Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Class.class),
+                                                                   Type.getType(PythonLikeObject.class)),
+                                          false);
             methodVisitor.visitInsn(Opcodes.ARETURN);
             return;
         }
@@ -153,7 +274,7 @@ public class JavaPythonTypeConversionImplementor {
     public static void copyParameter(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper,
             int parameterIndex) {
         Class<?> parameterClass = localVariableHelper.parameters[parameterIndex].getType();
-        if (parameterClass.isPrimitive() || Number.class.isAssignableFrom(parameterClass)) {
+        if (parameterClass.isPrimitive()) {
             int loadOpcode;
             String valueOfOwner;
             String valueOfDescriptor;
@@ -199,64 +320,10 @@ public class JavaPythonTypeConversionImplementor {
             methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
         } else {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
-
-            // Need to convert numeric types to wrappers
-            Label integerWrap = new Label();
-            Label floatWrap = new Label();
-            Label storeResult = new Label();
-
-            // This is basically an instanceof chain:
-            // if (x instanceof Byte || x instanceof Short || x instanceof Integer || x instanceof Long) {
-            //    wrapInteger(x);
-            // } else if (x instanceof Float || x instanceof Double) {
-            //    wrapFloat(x);
-            // }
-
-            // if (x instanceof Byte || x instanceof Short || x instanceof Integer || x instanceof Long)
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Byte.class));
-            methodVisitor.visitJumpInsn(Opcodes.IFNE, integerWrap);
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Short.class));
-            methodVisitor.visitJumpInsn(Opcodes.IFNE, integerWrap);
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Integer.class));
-            methodVisitor.visitJumpInsn(Opcodes.IFNE, integerWrap);
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Long.class));
-            methodVisitor.visitJumpInsn(Opcodes.IFNE, integerWrap);
-
-            // else if (x instanceof Float || x instanceof Double)
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Float.class));
-            methodVisitor.visitJumpInsn(Opcodes.IFNE, floatWrap);
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Double.class));
-            methodVisitor.visitJumpInsn(Opcodes.IFNE, floatWrap);
-
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, storeResult);
-
-            // wrapInteger(x);
-            methodVisitor.visitLabel(integerWrap);
-            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonInteger.class));
-            methodVisitor.visitInsn(Opcodes.DUP_X1);
-            methodVisitor.visitInsn(Opcodes.SWAP);
-            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Number.class));
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Number.class), "longValue", Type.getMethodDescriptor(Type.LONG_TYPE), false);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonInteger.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.LONG_TYPE), false);
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, storeResult);
-
-            // wrapFloat(x);
-            methodVisitor.visitLabel(floatWrap);
-            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonFloat.class));
-            methodVisitor.visitInsn(Opcodes.DUP_X1);
-            methodVisitor.visitInsn(Opcodes.SWAP);
-            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Number.class));
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Number.class), "doubleValue", Type.getMethodDescriptor(Type.DOUBLE_TYPE), false);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonFloat.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.DOUBLE_TYPE), false);
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, storeResult);
-
-            methodVisitor.visitLabel(storeResult);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(JavaPythonTypeConversionImplementor.class),
+                                          "wrapJavaObject",
+                                          Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(Object.class)),
+                                          false);
             methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
         }
     }
