@@ -27,6 +27,9 @@ public class JavaMethodReference implements PythonLikeFunction {
             args = unwrapPrimitiveArguments(positionalArguments, namedArguments);
         } else {
             self = positionalArguments.get(0);
+            if (self instanceof JavaObjectWrapper) { // unwrap wrapped Java Objects
+                self = ((JavaObjectWrapper) self).getWrappedObject();
+            }
             args = unwrapPrimitiveArguments(positionalArguments.subList(1, positionalArguments.size()), namedArguments);
         }
         try {

@@ -718,6 +718,23 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(object.name).isEqualTo("New name");
     }
 
+    @Test
+    public void testCallFunction() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
+                .loadParameter("item")
+                .getAttribute("concatToName")
+                .loadParameter("item")
+                .loadConstant(" is awesome!")
+                .callFunction(2)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        MyObject object = new MyObject();
+        object.name = "My name";
+        assertThat(javaFunction.apply(object)).isEqualTo("My name is awesome!");
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
@@ -906,6 +923,16 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             instruction.offset = instructionList.size();
             instruction.arg = count;
             instruction.argval = count;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder callFunction(int argc) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.CALL_FUNCTION;
+            instruction.offset = instructionList.size();
+            instruction.arg = argc;
+            instruction.argval = argc;
             instructionList.add(instruction);
             return this;
         }

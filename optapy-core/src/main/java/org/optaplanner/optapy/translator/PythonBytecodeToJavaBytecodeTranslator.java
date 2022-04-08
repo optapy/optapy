@@ -17,6 +17,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.optapy.translator.implementors.CollectionImplementor;
 import org.optaplanner.optapy.translator.implementors.DunderOperatorImplementor;
+import org.optaplanner.optapy.translator.implementors.FunctionImplementor;
 import org.optaplanner.optapy.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.optapy.translator.implementors.JumpImplementor;
 import org.optaplanner.optapy.translator.implementors.LocalVariableImplementor;
@@ -519,8 +520,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             case RAISE_VARARGS:
                 break;
-            case CALL_FUNCTION:
+            case CALL_FUNCTION: {
+                FunctionImplementor.callFunction(methodVisitor, instruction);
                 break;
+            }
             case CALL_FUNCTION_KW:
                 break;
             case CALL_FUNCTION_EX:

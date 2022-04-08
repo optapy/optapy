@@ -7,6 +7,8 @@ import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
 
 /**
  * Implementations of local variable manipulation opcodes.
+ * See https://tenthousandmeters.com/blog/python-behind-the-scenes-5-how-variables-are-implemented-in-cpython/
+ * for a detailed explanation of the differences between LOAD_FAST, LOAD_GLOBAL, LOAD_DEREF, etc.
  */
 public class LocalVariableImplementor {
 
