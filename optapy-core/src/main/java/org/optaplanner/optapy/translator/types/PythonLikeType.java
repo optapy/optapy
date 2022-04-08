@@ -46,7 +46,7 @@ public class PythonLikeType implements PythonLikeObject {
         if (out != null) {
             return out;
         } else {
-            throw new NoSuchElementException();
+            throw new NoSuchElementException("type '" + TYPE_NAME + "' does not have attribute '" + attributeName + "'.");
         }
     }
 

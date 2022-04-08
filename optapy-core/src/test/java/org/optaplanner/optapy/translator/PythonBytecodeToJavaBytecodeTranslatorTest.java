@@ -3,7 +3,7 @@ package org.optaplanner.optapy.translator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.optaplanner.optapy.translator.PythonBytecodeInstruction.OpCode;
-import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.CompareOp;
+
 import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode;
 
 import java.util.ArrayList;
@@ -415,11 +415,11 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
     @Test
     public void testContains() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadParameter("a")
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(3)
                 .tuple(3)
-                .loadParameter("a")
                 .op(OpCode.CONTAINS_OP, 0)
                 .op(OpCode.RETURN_VALUE)
                 .build();
@@ -429,11 +429,11 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.test(4L)).isEqualTo(false);
 
         pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadParameter("a")
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(3)
                 .tuple(3)
-                .loadParameter("a")
                 .op(OpCode.CONTAINS_OP, 1)
                 .op(OpCode.RETURN_VALUE)
                 .build();
