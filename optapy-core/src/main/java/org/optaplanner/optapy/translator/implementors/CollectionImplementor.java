@@ -220,6 +220,20 @@ public class CollectionImplementor {
     }
 
     /**
+     * Calls collection.addAll(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to implement list/set comprehensions.
+     */
+    public static void collectionAddAll(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
+                                      "addAll",
+                                      Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Collection.class)),
+                                      true);
+        StackManipulationImplementor.popTOS(methodVisitor); // pop Collection.add return value
+    }
+
+    /**
      * Calls map.put(TOS1[i], TOS1, TOS). TOS1[i] remains on stack; TOS and TOS1 are popped. Used to implement map comprehensions.
      */
     public static void mapPut(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {

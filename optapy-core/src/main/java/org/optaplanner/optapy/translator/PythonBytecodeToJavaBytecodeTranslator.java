@@ -424,9 +424,11 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case LIST_TO_TUPLE:
                 break;
             case LIST_EXTEND:
+            case SET_UPDATE: {
+                // LIST_EXTEND and SET_UPDATE have the same bytecode
+                CollectionImplementor.collectionAddAll(methodVisitor, instruction, localVariableHelper);
                 break;
-            case SET_UPDATE:
-                break;
+            }
             case DICT_UPDATE:
                 break;
             case DICT_MERGE:
