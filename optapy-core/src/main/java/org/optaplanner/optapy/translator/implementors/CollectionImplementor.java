@@ -206,7 +206,7 @@ public class CollectionImplementor {
     }
 
     /**
-     * Calls collection.add(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to implement list comprehensions.
+     * Calls collection.add(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to implement list/set comprehensions.
      */
     public static void collectionAdd(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
@@ -217,5 +217,19 @@ public class CollectionImplementor {
                                       Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
                                       true);
         StackManipulationImplementor.popTOS(methodVisitor); // pop Collection.add return value
+    }
+
+    /**
+     * Calls map.put(TOS1[i], TOS1, TOS). TOS1[i] remains on stack; TOS and TOS1 are popped. Used to implement map comprehensions.
+     */
+    public static void mapPut(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.rotateThree(methodVisitor);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                                      "put",
+                                      Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
+                                      true);
+        StackManipulationImplementor.popTOS(methodVisitor); // pop Map.put return value
     }
 }

@@ -492,6 +492,28 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
     }
 
     @Test
+    public void testMapAdd() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .dict(0)
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(2)
+                .loadConstant(4)
+                .loadConstant(3)
+                .loadConstant(6)
+                .op(OpCode.MAP_ADD, 5)
+                .op(OpCode.MAP_ADD, 3)
+                .op(OpCode.MAP_ADD, 1)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(Map.of(PythonInteger.valueOf(1), PythonInteger.valueOf(2),
+                                                        PythonInteger.valueOf(2), PythonInteger.valueOf(4),
+                                                        PythonInteger.valueOf(3), PythonInteger.valueOf(6)));
+    }
+
+    @Test
     public void testMap() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
                 .loadConstant(1)

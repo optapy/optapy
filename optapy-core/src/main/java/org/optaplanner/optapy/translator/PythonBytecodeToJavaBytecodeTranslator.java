@@ -345,8 +345,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.collectionAdd(methodVisitor, instruction, localVariableHelper);
                 break;
             }
-            case MAP_ADD:
+            case MAP_ADD: {
+                CollectionImplementor.mapPut(methodVisitor, instruction, localVariableHelper);
                 break;
+            }
             case RETURN_VALUE: {
                 JavaPythonTypeConversionImplementor.returnValue(methodVisitor, method);
                 break;
