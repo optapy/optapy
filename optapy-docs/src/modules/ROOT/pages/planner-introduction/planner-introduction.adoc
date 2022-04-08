@@ -122,7 +122,7 @@ This license is very liberal and allows reuse for commercial purposes.
 Read http://www.apache.org/foundation/licence-FAQ.html#WhatDoesItMEAN[the layman's explanation].
 
 OptaPy is a solver for Python that uses a Java Virtual Machine underneath.
-To use OptaPy, both https://www.python.org/[Python 3.9 or later] and a https://adoptium.net/[Java Development Kit (JDK) 11 or later] need to be installed.
+To use OptaPy, install both https://www.python.org/[Python 3.9 or later] and https://adoptium.net/[Java Development Kit (JDK) 11 or later].
 OptaPy is available in the <<pip,Python Package Index>>.
 
 OptaPy works with CPython.
