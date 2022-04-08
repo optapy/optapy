@@ -429,10 +429,14 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.collectionAddAll(methodVisitor, instruction, localVariableHelper);
                 break;
             }
-            case DICT_UPDATE:
+            case DICT_UPDATE: {
+                CollectionImplementor.mapPutAll(methodVisitor, instruction, localVariableHelper);
                 break;
-            case DICT_MERGE:
+            }
+            case DICT_MERGE: {
+                CollectionImplementor.mapPutAllOnlyIfAllNewElseThrow(methodVisitor, instruction, localVariableHelper);
                 break;
+            }
             case LOAD_ATTR:
                 break;
             case COMPARE_OP: {

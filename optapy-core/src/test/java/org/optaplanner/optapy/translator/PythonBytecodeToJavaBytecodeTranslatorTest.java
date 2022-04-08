@@ -551,6 +551,73 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
     }
 
     @Test
+    public void testMapUpdate() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .dict(0)
+                .loadConstant(1)
+                .loadConstant(2)
+                .dict(1)
+                .loadConstant(2)
+                .loadConstant(4)
+                .loadConstant(3)
+                .loadConstant(6)
+                .dict(2)
+                .op(OpCode.DICT_UPDATE, 1)
+                .op(OpCode.DICT_UPDATE, 0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(Map.of(PythonInteger.valueOf(1), PythonInteger.valueOf(2),
+                                                        PythonInteger.valueOf(2), PythonInteger.valueOf(4),
+                                                        PythonInteger.valueOf(3), PythonInteger.valueOf(6)));
+    }
+
+    @Test
+    public void testMapMergeNoDuplicates() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .dict(0)
+                .loadConstant(1)
+                .loadConstant(2)
+                .dict(1)
+                .loadConstant(2)
+                .loadConstant(4)
+                .loadConstant(3)
+                .loadConstant(6)
+                .dict(2)
+                .op(OpCode.DICT_MERGE, 1)
+                .op(OpCode.DICT_MERGE, 0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(Map.of(PythonInteger.valueOf(1), PythonInteger.valueOf(2),
+                                                        PythonInteger.valueOf(2), PythonInteger.valueOf(4),
+                                                        PythonInteger.valueOf(3), PythonInteger.valueOf(6)));
+    }
+
+    @Test
+    public void testMapMergeDuplicates() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .dict(0)
+                .loadConstant(1)
+                .loadConstant(2)
+                .dict(1)
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(2)
+                .loadConstant(4)
+                .dict(2)
+                .op(OpCode.DICT_MERGE, 1)
+                .op(OpCode.DICT_MERGE, 0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThatCode(javaFunction::get).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     public void testMap() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
                 .loadConstant(1)

@@ -1,8 +1,10 @@
 package org.optaplanner.optapy.translator.implementors;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -220,7 +222,7 @@ public class CollectionImplementor {
     }
 
     /**
-     * Calls collection.addAll(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to implement list/set comprehensions.
+     * Calls collection.addAll(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to build lists/maps.
      */
     public static void collectionAddAll(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
@@ -245,5 +247,69 @@ public class CollectionImplementor {
                                       Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
                                       true);
         StackManipulationImplementor.popTOS(methodVisitor); // pop Map.put return value
+    }
+
+    /**
+     * Calls map.putAll(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to build maps
+     */
+    public static void mapPutAll(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                                      "putAll",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Map.class)),
+                                      true);
+    }
+
+    /**
+     * Calls map.putAll(TOS1[i], TOS) if TOS does not share any common keys with TOS[i].
+     * If TOS shares common keys with TOS[i], an exception is thrown.
+     * TOS1[i] remains on stack; TOS is popped. Used to build maps
+     */
+    public static void mapPutAllOnlyIfAllNewElseThrow(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.swap(methodVisitor);
+
+        // Duplicate both maps so we can get their key sets
+        StackManipulationImplementor.duplicateTOSAndTOS1(methodVisitor);
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                                      "keySet",
+                                      Type.getMethodDescriptor(Type.getType(Set.class)),
+                                      true);
+
+        StackManipulationImplementor.swap(methodVisitor);
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                                      "keySet",
+                                      Type.getMethodDescriptor(Type.getType(Set.class)),
+                                      true);
+
+
+        // Check if the two key sets are disjoints
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class),
+                                      "disjoint",
+                                      Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Collection.class), Type.getType(Collection.class)),
+                                      false);
+
+        Label performPutAllLabel = new Label();
+        methodVisitor.visitJumpInsn(Opcodes.IFNE, performPutAllLabel); // if result == 1 (i.e. true), do the putAll operation
+
+        // else, throw a new exception
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
+                                      "<init>",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE),
+                                      false);
+        methodVisitor.visitInsn(Opcodes.ATHROW);
+
+        methodVisitor.visitLabel(performPutAllLabel);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                                      "putAll",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Map.class)),
+                                      true);
     }
 }
