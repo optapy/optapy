@@ -477,6 +477,26 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
     }
 
     @Test
+    public void testConstKeyMap() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadConstant(2)
+                .loadConstant(4)
+                .loadConstant(6)
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .tuple(3)
+                .constDict(3)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(Map.of(PythonInteger.valueOf(1), PythonInteger.valueOf(2),
+                                                        PythonInteger.valueOf(2), PythonInteger.valueOf(4),
+                                                        PythonInteger.valueOf(3), PythonInteger.valueOf(6)));
+    }
+
+    @Test
     public void testSetItem() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("key", "value")
                 .dict(0)
@@ -672,6 +692,16 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         public PythonFunctionBuilder dict(int count) {
             PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
             instruction.opcode = OpCode.BUILD_MAP;
+            instruction.offset = instructionList.size();
+            instruction.arg = count;
+            instruction.argval = count;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder constDict(int count) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.BUILD_CONST_KEY_MAP;
             instruction.offset = instructionList.size();
             instruction.arg = count;
             instruction.argval = count;

@@ -411,8 +411,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, instruction.arg);
                 break;
             }
-            case BUILD_CONST_KEY_MAP:
+            case BUILD_CONST_KEY_MAP: {
+                CollectionImplementor.buildConstKeysMap(PythonLikeDict.class, methodVisitor, instruction.arg);
                 break;
+            }
             case BUILD_STRING:
                 break;
             case LIST_TO_TUPLE:

@@ -1,6 +1,7 @@
 package org.optaplanner.optapy.translator.implementors;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import org.objectweb.asm.Label;
@@ -87,7 +88,7 @@ public class CollectionImplementor {
     }
 
     /**
-     * Constructs a map from the top {@code itemCount} on the stack.
+     * Constructs a map from the top {@code 2 * itemCount} on the stack.
      * {@code mapType} MUST implement PythonLikeObject. Basically generate the following code:
      *
      * <code>
@@ -96,7 +97,7 @@ public class CollectionImplementor {
      *     collection.put(TOS1, TOS);
      *     collection.put(TOS3, TOS2);
      *     ...
-     *     collection.reverseAdd(TTOS(2*itemCount - 1), TOS(2*itemCount - 2));
+     *     collection.put(TTOS(2*itemCount - 1), TOS(2*itemCount - 2));
      * </pre>
      * </code>
      * @param mapType The type of map to create
@@ -118,6 +119,64 @@ public class CollectionImplementor {
                                           true);
             methodVisitor.visitInsn(Opcodes.POP); // pop return value of "put"
         }
+    }
+
+    /**
+     * Constructs a map from the top {@code itemCount + 1} on the stack.
+     * TOS is a tuple containing keys; TOS1-TOS(itemCount) are the values
+     * {@code mapType} MUST implement PythonLikeObject. Basically generate the following code:
+     *
+     * <code>
+     * <pre>
+     *     MapType collection = new MapType(itemCount);
+     *     collection.put(TOS[0], TOS1);
+     *     collection.put(TOS[1], TOS2);
+     *     ...
+     *     collection.put(TOS[itemCount-1], TOS(itemCount));
+     * </pre>
+     * </code>
+     * @param mapType The type of map to create
+     * @param itemCount The number of key value pairs to put into map from the stack
+     */
+    public static void buildConstKeysMap(Class<? extends Map> mapType, MethodVisitor methodVisitor,
+                                int itemCount) {
+        String typeInternalName = Type.getInternalName(mapType);
+        methodVisitor.visitTypeInsn(Opcodes.NEW, typeInternalName);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, typeInternalName, "<init>", "()V", false);
+
+        for (int i = 0; i < itemCount; i++) {
+            // Stack is value, keyTuple, Map
+            methodVisitor.visitInsn(Opcodes.DUP_X2);
+            StackManipulationImplementor.rotateThree(methodVisitor);
+
+            // Stack is Map, Map, value, keyTuple
+            methodVisitor.visitInsn(Opcodes.DUP_X2);
+
+            //Stack is Map, keyTuple, Map, value, keyTuple
+            methodVisitor.visitLdcInsn(itemCount - i - 1); // We are adding in reverse order
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                                          "get",
+                                          Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(int.class)),
+                                          true);
+
+            // Stack is Map, keyTuple, Map, value, key
+            methodVisitor.visitInsn(Opcodes.SWAP);
+
+            // Stack is Map, keyTuple, Map, key, value
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                                          "put",
+                                          Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
+                                          true);
+            methodVisitor.visitInsn(Opcodes.POP); // pop return value of "put"
+
+            // Stack is Map, keyTuple
+            methodVisitor.visitInsn(Opcodes.SWAP);
+        }
+        // Stack is keyTuple, Map
+        // Pop the keyTuple off the stack
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.POP);
     }
 
     /**
