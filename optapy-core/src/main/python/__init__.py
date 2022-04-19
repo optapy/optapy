@@ -11,3 +11,4 @@ use init before decorators and any optapy.types imports.
 from .annotations import *
 from .optaplanner_api_wrappers import *
 from .optaplanner_java_interop import init, _planning_clone
+from .python_to_java_bytecode_translator import translate_python_bytecode_to_java_bytecode

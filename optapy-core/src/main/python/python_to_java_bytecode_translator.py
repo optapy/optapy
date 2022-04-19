@@ -56,15 +56,17 @@ def translate_python_bytecode_to_java_bytecode(python_function, java_function_ty
         python_compiled_function.co_varnames = copy_iterable(python_function.__code__.co_varnames)
         python_compiled_function.co_cellvars = copy_iterable(python_function.__code__.co_cellvars)
         python_compiled_function.co_freevars = copy_iterable(python_function.__code__.co_freevars)
-        python_compiled_function.co_constants = copy_constants(python_function.__code__.co_constants)
+        python_compiled_function.co_constants = copy_constants(python_function.__code__.co_consts)
         return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(python_compiled_function,
                                                                               java_function_type)
-    except:
+    except Exception as e:
+        print(e)
         return python_function
+
 
 @JImplements('org.optaplanner.core.api.score.stream.uni.UniConstraintStream', deferred=True)
 class PythonUniConstraintStream:
-    def __init__(self, delegate: UniConstraintStream, tuple_type):
+    def __init__(self, delegate: 'UniConstraintStream', tuple_type):
         self.delegate = delegate
         self.tuple_type = tuple_type
 
