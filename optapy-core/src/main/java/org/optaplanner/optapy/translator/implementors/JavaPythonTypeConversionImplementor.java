@@ -2,6 +2,9 @@ package org.optaplanner.optapy.translator.implementors;
 
 import java.lang.reflect.Method;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -13,8 +16,14 @@ import org.optaplanner.optapy.translator.types.PythonBoolean;
 import org.optaplanner.optapy.translator.types.PythonFloat;
 import org.optaplanner.optapy.translator.types.PythonInteger;
 import org.optaplanner.optapy.translator.types.PythonIterator;
+import org.optaplanner.optapy.translator.types.PythonLikeDict;
+import org.optaplanner.optapy.translator.types.PythonLikeList;
+import org.optaplanner.optapy.translator.types.PythonLikeSet;
 import org.optaplanner.optapy.translator.types.PythonNone;
 import org.optaplanner.optapy.translator.types.PythonNumber;
+import org.optaplanner.optapy.translator.types.PythonString;
+
+import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.CONSTANTS_STATIC_FIELD_NAME;
 
 /**
  * Implementations of opcodes and operations that require Java to Python or Python to Java conversions.
@@ -46,11 +55,38 @@ public class JavaPythonTypeConversionImplementor {
             return PythonBoolean.valueOf((Boolean) object);
         }
 
+        if (object instanceof String) {
+            return PythonString.valueOf((String) object);
+        }
+
         if (object instanceof Iterator) {
             return new PythonIterator((Iterator) object);
         }
 
-        // TODO: List, Map, Set, String
+        if (object instanceof List) {
+            PythonLikeList out = new PythonLikeList();
+            for (Object item : (List) object) {
+                out.add(wrapJavaObject(item));
+            }
+            return out;
+        }
+
+        if (object instanceof Set) {
+            PythonLikeSet out = new PythonLikeSet();
+            for (Object item : (Set) object) {
+                out.add(wrapJavaObject(item));
+            }
+            return out;
+        }
+
+        if (object instanceof Map) {
+            PythonLikeDict out = new PythonLikeDict();
+            Set<Map.Entry<?, ?>> entrySet = ((Map) object).entrySet();
+            for (Map.Entry<?, ?> entry : entrySet) {
+                out.put(wrapJavaObject(entry.getKey()), wrapJavaObject(entry.getKey()));
+            }
+            return out;
+        }
 
         // Default: return a JavaObjectWrapper
         return new JavaObjectWrapper(object);
@@ -120,56 +156,41 @@ public class JavaPythonTypeConversionImplementor {
             return (T) (Boolean) pythonBoolean.getValue();
         }
 
-        // TODO: List, Map, Set, String
+        if (type.equals(String.class)) {
+            PythonString pythonString = (PythonString) object;
+            return (T) pythonString.getValue();
+        }
+
+        // TODO: List, Map, Set
 
         throw new IllegalStateException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
     }
 
     /**
-     * Convert the Java {@code constant} to its Python equivalent and push it onto the stack.
+     * Gets the {@code constantIndex} constant from the class constant list
      *
-     * @param constant The Java constant to load
+     * @param className The class currently being defined by the methodVisitor
+     * @param constantIndex The index of the constant to load in the class constant list
      */
-    public static void loadConstant(MethodVisitor methodVisitor, Object constant) {
-        // Cannot use wrapJavaObject to wrap primitives types with ldc (null, int, long, float, boolean)
-        // since that will load the unwrapped type instead of the wrap type
-        if (constant instanceof Number) {
-            if (constant instanceof Byte || constant instanceof Short || constant instanceof Integer) {
-                constant = ((Number) constant).longValue();
-            } else if (constant instanceof Float) {
-                constant = ((Number) constant).doubleValue();
-            }
-            if ( constant instanceof Long) {
-                methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonInteger.class));
-                methodVisitor.visitInsn(Opcodes.DUP);
-                methodVisitor.visitLdcInsn(constant);
-                methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonInteger.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.LONG_TYPE), false);
-            } else if (constant instanceof Double) {
-                methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonFloat.class));
-                methodVisitor.visitInsn(Opcodes.DUP);
-                methodVisitor.visitLdcInsn(constant);
-                methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonFloat.class), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.DOUBLE_TYPE), false);
-            }
-            return;
-        }
+    public static void loadConstant(MethodVisitor methodVisitor, String className, int constantIndex) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, CONSTANTS_STATIC_FIELD_NAME, Type.getDescriptor(List.class));
+        methodVisitor.visitLdcInsn(constantIndex);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                                      "get",
+                                      Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
+                                      true);
+    }
 
-        if (constant instanceof Boolean) {
-            if (Boolean.TRUE.equals(constant)) {
-                PythonConstantsImplementor.loadTrue(methodVisitor);
-            } else {
-                PythonConstantsImplementor.loadFalse(methodVisitor);
-            }
-            return;
-        }
-
-        if (constant == null) {
-            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-        } else {
-            methodVisitor.visitLdcInsn(constant);
-        }
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(JavaPythonTypeConversionImplementor.class),
-                                      "wrapJavaObject",
-                                      Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(Object.class)),
+    /**
+     * Loads a String and push it onto the stack
+     *
+     * @param name The name to load
+     */
+    public static void loadName(MethodVisitor methodVisitor, String name) {
+        methodVisitor.visitLdcInsn(name);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class),
+                                      "valueOf",
+                                      Type.getMethodDescriptor(Type.getType(PythonString.class), Type.getType(PythonString.class)),
                                       false);
     }
 

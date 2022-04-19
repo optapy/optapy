@@ -138,4 +138,9 @@ public class PythonLikeDict extends AbstractPythonLikeObject implements Map<Pyth
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        return delegate.toString();
+    }
 }

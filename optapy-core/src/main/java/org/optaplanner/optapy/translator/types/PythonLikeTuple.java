@@ -203,4 +203,9 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        return delegate.toString();
+    }
 }

@@ -70,7 +70,7 @@ public class CollectionImplementor {
      * @param collectionType The type of collection to create
      * @param itemCount The number of items to put into collection from the stack
      */
-    public static void buildCollection(Class<? extends Collection> collectionType, MethodVisitor methodVisitor,
+    public static void buildCollection(Class<?> collectionType, MethodVisitor methodVisitor,
                                        int itemCount) {
         String typeInternalName = Type.getInternalName(collectionType);
         methodVisitor.visitTypeInsn(Opcodes.NEW, typeInternalName);
@@ -130,7 +130,7 @@ public class CollectionImplementor {
      *
      * <code>
      * <pre>
-     *     MapType collection = new MapType(itemCount);
+     *     MapType collection = new MapType();
      *     collection.put(TOS[0], TOS1);
      *     collection.put(TOS[1], TOS2);
      *     ...

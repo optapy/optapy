@@ -17,7 +17,7 @@ public interface PythonLikeFunction extends PythonLikeObject {
      * @param namedArguments Named arguments
      * @return The function result
      */
-    PythonLikeObject __call__(List<PythonLikeObject> positionalArguments, Map<String, PythonLikeObject> namedArguments);
+    PythonLikeObject __call__(List<PythonLikeObject> positionalArguments, Map<PythonString, PythonLikeObject> namedArguments);
 
     @Override
     default PythonLikeObject __getattribute__(String attributeName) {

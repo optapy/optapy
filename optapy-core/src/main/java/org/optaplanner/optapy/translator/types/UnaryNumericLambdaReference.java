@@ -27,7 +27,7 @@ public class UnaryNumericLambdaReference implements PythonLikeFunction {
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments, Map<String, PythonLikeObject> namedArguments) {
+    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments, Map<PythonString, PythonLikeObject> namedArguments) {
         PythonLikeObject[] args = new PythonLikeObject[1];
         for (int i = 0; i < positionalArguments.size(); i++) {
             args[i] = positionalArguments.get(i);
@@ -43,8 +43,8 @@ public class UnaryNumericLambdaReference implements PythonLikeFunction {
         }
 
         if (namedArguments != null) {
-            for (String key : namedArguments.keySet()) {
-                args[parameterNameToIndexMap.get(key)] = namedArguments.get(key);
+            for (PythonString key : namedArguments.keySet()) {
+                args[parameterNameToIndexMap.get(key.value)] = namedArguments.get(key);
             }
         }
 

@@ -21,8 +21,12 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
+import org.optaplanner.optapy.PythonLikeObject;
+import org.optaplanner.optapy.translator.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.optapy.translator.types.JavaMethodReference;
 import org.optaplanner.optapy.translator.types.PythonBoolean;
 import org.optaplanner.optapy.translator.types.PythonInteger;
+import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 
 public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
@@ -735,6 +739,28 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.apply(object)).isEqualTo("My name is awesome!");
     }
 
+    public static int keywordTestFunction(int first, int second, int third) {
+        return first + 2 * second + 3 * third;
+    }
+
+    @Test
+    public void testCallFunctionWithKeywords() throws NoSuchMethodException {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("function")
+                .loadParameter("function")
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .loadConstant(List.of("second", "third"))
+                .callFunctionWithKeywords(3)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        PythonLikeFunction pythonLikeFunction = new JavaMethodReference(PythonBytecodeToJavaBytecodeTranslatorTest.class.getMethod("keywordTestFunction", int.class, int.class, int.class),
+                                                                        Map.of("first", 0, "second", 1, "third", 2));
+        assertThat(javaFunction.apply(pythonLikeFunction)).isEqualTo(13); // 1 + 2*3 + 3*2
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
@@ -937,6 +963,16 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             return this;
         }
 
+        public PythonFunctionBuilder callFunctionWithKeywords(int argc) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.CALL_FUNCTION_KW;
+            instruction.offset = instructionList.size();
+            instruction.arg = argc;
+            instruction.argval = argc;
+            instructionList.add(instruction);
+            return this;
+        }
+
         public PythonFunctionBuilder getAttribute(String attributeName) {
             PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
             instruction.opcode = OpCode.LOAD_ATTR;
@@ -979,7 +1015,7 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             int index = co_consts.indexOf(constant);
             if (index == -1) {
                 index = co_consts.size();
-                co_consts.add(constant);
+                co_consts.add(JavaPythonTypeConversionImplementor.wrapJavaObject(constant));
             }
 
             instruction.arg = index;

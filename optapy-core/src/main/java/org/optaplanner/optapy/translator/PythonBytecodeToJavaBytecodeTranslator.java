@@ -35,6 +35,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
      * asmClassLoader to create the Java versions of Python methods
      */
     private static final Map<String, byte[]> classNameToBytecode = new HashMap<>();
+
+    public static final String CONSTANTS_STATIC_FIELD_NAME = "co_consts";
     private static long generatedClassId = 0L;
 
     /**
@@ -99,18 +101,22 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             exceptionNames[i] = Type.getInternalName(exceptionTypes[i]);
         }
         createConstructor(classWriter);
+        createConstantsStaticField(classWriter);
         MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC,
                 functionalMethod.getName(),
                 Type.getMethodDescriptor(functionalMethod),
                 null,
                 exceptionNames);
-        translatePythonBytecodeToMethod(functionalMethod, methodVisitor, pythonCompiledFunction);
+
+        translatePythonBytecodeToMethod(functionalMethod, internalClassName, methodVisitor, pythonCompiledFunction);
         classWriter.visitEnd();
 
         classNameToBytecode.put(className, classWriter.toByteArray());
 
         try {
-            return (T) asmClassLoader.loadClass(className).getConstructor().newInstance();
+            Class<?> compiledClass = asmClassLoader.loadClass(className);
+            setConstantsStaticField(compiledClass, pythonCompiledFunction);
+            return (T) compiledClass.getConstructor().newInstance();
         } catch (ClassNotFoundException | InvocationTargetException | InstantiationException | IllegalAccessException
                 | NoSuchMethodException e) {
             throw new IllegalStateException("Impossible State: Unable to create instance of generated class (" +
@@ -130,7 +136,21 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitEnd();
     }
 
-    private static void translatePythonBytecodeToMethod(Method method, MethodVisitor methodVisitor,
+    private static void createConstantsStaticField(ClassWriter classWriter) {
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
+                               CONSTANTS_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
+    }
+
+    private static void setConstantsStaticField(Class<?> compiledClass, PythonCompiledFunction pythonCompiledFunction) {
+        try {
+            compiledClass.getField(CONSTANTS_STATIC_FIELD_NAME).set(null, pythonCompiledFunction.co_constants);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            throw new IllegalStateException("Impossible state: generated class (" + compiledClass +
+                                                    ") does not have static field \"" + CONSTANTS_STATIC_FIELD_NAME + "\"", e);
+        }
+    }
+
+    private static void translatePythonBytecodeToMethod(Method method, String className, MethodVisitor methodVisitor,
             PythonCompiledFunction pythonCompiledFunction) {
         for (Parameter parameter : method.getParameters()) {
             methodVisitor.visitParameter(parameter.getName(), 0);
@@ -145,14 +165,16 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         }
 
         for (PythonBytecodeInstruction instruction : pythonCompiledFunction.instructionList) {
-            translatePythonBytecodeInstruction(method, methodVisitor, pythonCompiledFunction, instruction,
+            translatePythonBytecodeInstruction(method, className, methodVisitor, pythonCompiledFunction, instruction,
                     bytecodeCounterToLabelMap, localVariableHelper);
         }
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
     }
 
-    private static void translatePythonBytecodeInstruction(Method method, MethodVisitor methodVisitor,
+    private static void translatePythonBytecodeInstruction(Method method,
+            String className,
+            MethodVisitor methodVisitor,
             PythonCompiledFunction pythonCompiledFunction,
             PythonBytecodeInstruction instruction,
             Map<Integer, Label> bytecodeCounterToLabelMap,
@@ -398,11 +420,11 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case DELETE_GLOBAL:
                 break;
             case LOAD_CONST: {
-                JavaPythonTypeConversionImplementor.loadConstant(methodVisitor, pythonCompiledFunction.co_constants.get(instruction.arg));
+                JavaPythonTypeConversionImplementor.loadConstant(methodVisitor, className, instruction.arg);
                 break;
             }
             case LOAD_NAME: {
-                JavaPythonTypeConversionImplementor.loadConstant(methodVisitor, pythonCompiledFunction.co_names.get(instruction.arg));
+                JavaPythonTypeConversionImplementor.loadName(methodVisitor, pythonCompiledFunction.co_names.get(instruction.arg));
                 break;
             }
             case BUILD_TUPLE: {
@@ -493,9 +515,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.iterateIterator(methodVisitor, instruction, bytecodeCounterToLabelMap);
                 break;
             }
-            case LOAD_GLOBAL: {
+            case LOAD_GLOBAL:
                 break;
-            }
             case SETUP_FINALLY:
                 break;
             case LOAD_FAST: {
@@ -524,8 +545,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 FunctionImplementor.callFunction(methodVisitor, instruction);
                 break;
             }
-            case CALL_FUNCTION_KW:
+            case CALL_FUNCTION_KW: {
+                FunctionImplementor.callFunctionWithKeywords(methodVisitor, instruction);
                 break;
+            }
             case CALL_FUNCTION_EX:
                 break;
             case LOAD_METHOD:

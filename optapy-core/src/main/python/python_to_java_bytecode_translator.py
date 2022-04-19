@@ -16,19 +16,52 @@ def copy_iterable(iterable):
     return iterable_copy
 
 
+def convert_to_java_python_like_object(value):
+    from org.optaplanner.optapy.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
+        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict
+    if value is None:
+        return None
+    elif isinstance(value, bool):
+        return PythonBoolean.valueOf(value)
+    elif isinstance(value, int):
+        return PythonInteger.valueOf(value)
+    elif isinstance(value, float):
+        return PythonFloat.valueOf(value)
+    elif isinstance(value, str):
+        return PythonString.valueOf(value)
+    elif isinstance(value, tuple):
+        out = PythonLikeTuple()
+        for item in value:
+            out.add(convert_to_java_python_like_object(item))
+        return out
+    elif isinstance(value, list):
+        out = PythonLikeList()
+        for item in value:
+            out.add(convert_to_java_python_like_object(item))
+        return out
+    elif isinstance(value, set):
+        out = PythonLikeSet()
+        for item in value:
+            out.add(convert_to_java_python_like_object(item))
+        return out
+    elif isinstance(value, dict):
+        out = PythonLikeDict()
+        for map_key, map_value in value.items():
+            out.put(convert_to_java_python_like_object(map_key),
+                    convert_to_java_python_like_object(map_value))
+        return out
+    else:
+        # TODO: Get compiled class corresponding to function / class bytecode
+        raise NotImplementedError('Unable to convert object of type (' + type(value) + ')')
+
+
 def copy_constants(constants_iterable):
     from java.util import ArrayList
     if constants_iterable is None:
         return None
     iterable_copy = ArrayList()
     for item in constants_iterable:
-        if item is None:
-            iterable_copy.add(None)
-        elif isinstance(item, (int, float, str)):
-            iterable_copy.add(item)
-        else:
-            # TODO: Get compiled class corresponding to function / class bytecode
-            raise NotImplementedError()
+        iterable_copy.add(convert_to_java_python_like_object(item))
     return iterable_copy
 
 
