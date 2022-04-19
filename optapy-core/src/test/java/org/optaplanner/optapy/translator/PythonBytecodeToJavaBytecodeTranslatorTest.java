@@ -750,8 +750,46 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(3)
-                .loadConstant(List.of("second", "third"))
+                .loadConstant(List.of("third", "second"))
                 .callFunctionWithKeywords(3)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        PythonLikeFunction pythonLikeFunction = new JavaMethodReference(PythonBytecodeToJavaBytecodeTranslatorTest.class.getMethod("keywordTestFunction", int.class, int.class, int.class),
+                                                                        Map.of("first", 0, "second", 1, "third", 2));
+        assertThat(javaFunction.apply(pythonLikeFunction)).isEqualTo(13); // 1 + 2*3 + 3*2
+    }
+
+    @Test
+    public void testCallFunctionUnpackIterable() throws NoSuchMethodException {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("function")
+                .loadParameter("function")
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .tuple(3)
+                .callFunctionUnpack(false)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        PythonLikeFunction pythonLikeFunction = new JavaMethodReference(PythonBytecodeToJavaBytecodeTranslatorTest.class.getMethod("keywordTestFunction", int.class, int.class, int.class),
+                                                                        Map.of("first", 0, "second", 1, "third", 2));
+        assertThat(javaFunction.apply(pythonLikeFunction)).isEqualTo(14); // 1 + 2*2 + 3*3
+    }
+
+    @Test
+    public void testCallFunctionUnpackIterableAndKeywords() throws NoSuchMethodException {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("function")
+                .loadParameter("function")
+                .loadConstant(1)
+                .tuple(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .loadConstant(List.of("third", "second"))
+                .constDict(2)
+                .callFunctionUnpack(true)
                 .op(OpCode.RETURN_VALUE)
                 .build();
 
@@ -969,6 +1007,16 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             instruction.offset = instructionList.size();
             instruction.arg = argc;
             instruction.argval = argc;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder callFunctionUnpack(boolean hasKeywords) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.CALL_FUNCTION_EX;
+            instruction.offset = instructionList.size();
+            instruction.arg = (hasKeywords)? 1 : 0;
+            instruction.argval = instruction.arg;
             instructionList.add(instruction);
             return this;
         }

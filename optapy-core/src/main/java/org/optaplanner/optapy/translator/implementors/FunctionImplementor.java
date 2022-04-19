@@ -67,6 +67,36 @@ public class FunctionImplementor {
                                       true);
     }
 
+    /**
+     * Calls a function. If the lowest bit of instruction.arg is set, TOS is a mapping object containing keyword
+     * arguments, TOS[1] is an iterable containing positional arguments and TOS[2] is callable. Otherwise,
+     * TOS is an iterable containing positional arguments and TOS[1] is callable.
+     */
+    public static void callFunctionUnpack(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+        if ((instruction.arg & 1) == 1) {
+            callFunctionUnpackMapAndIterable(methodVisitor);
+        } else {
+            callFunctionUnpackIterable(methodVisitor);
+        }
+    }
+
+    public static void callFunctionUnpackMapAndIterable(MethodVisitor methodVisitor) {
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                                      "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                                                           Type.getType(List.class),
+                                                                           Type.getType(Map.class)),
+                                      true);
+    }
+
+    public static void callFunctionUnpackIterable(MethodVisitor methodVisitor) {
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                                      "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                                                           Type.getType(List.class),
+                                                                           Type.getType(Map.class)),
+                                      true);
+    }
+
     public static class TupleMapPair {
         public PythonLikeTuple tuple;
         public PythonLikeDict map;
@@ -90,7 +120,7 @@ public class FunctionImplementor {
             }
 
             if (map.size() < mapKeyTuple.size()) {
-                map.put(mapKeyTuple.get(map.size()), object);
+                map.put(mapKeyTuple.get(mapKeyTuple.size() - map.size() - 1), object);
             } else {
                 tuple.reverseAdd(object);
             }

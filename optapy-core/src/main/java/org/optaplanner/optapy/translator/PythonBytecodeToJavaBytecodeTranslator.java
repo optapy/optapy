@@ -549,8 +549,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 FunctionImplementor.callFunctionWithKeywords(methodVisitor, instruction);
                 break;
             }
-            case CALL_FUNCTION_EX:
+            case CALL_FUNCTION_EX: {
+                FunctionImplementor.callFunctionUnpack(methodVisitor, instruction);
                 break;
+            }
             case LOAD_METHOD:
                 break;
             case CALL_METHOD:
