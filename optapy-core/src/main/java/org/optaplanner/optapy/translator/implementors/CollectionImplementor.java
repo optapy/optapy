@@ -16,6 +16,7 @@ import org.optaplanner.optapy.translator.PythonBinaryOperators;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
 import org.optaplanner.optapy.translator.PythonTernaryOperators;
 import org.optaplanner.optapy.translator.PythonUnaryOperator;
+import org.optaplanner.optapy.translator.types.PythonLikeTuple;
 import org.optaplanner.optapy.translator.types.StopIteration;
 
 /**
@@ -87,6 +88,22 @@ public class CollectionImplementor {
                     Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
                     false);
         }
+    }
+
+    /**
+     * Convert TOS from a List to a tuple. Basically generates this code
+     *
+     * <code>
+     * <pre>
+     *     TOS' = PythonLikeTuple.fromList(TOS);
+     * </pre>
+     * </code>
+     */
+    public static void convertListToTuple(MethodVisitor methodVisitor) {
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonLikeTuple.class),
+                                      "fromList",
+                                      Type.getMethodDescriptor(Type.getType(PythonLikeTuple.class), Type.getType(List.class)),
+                                      false);
     }
 
     /**
@@ -183,8 +200,6 @@ public class CollectionImplementor {
 
     /**
      * Implements TOS1 in TOS. TOS must be a collection/object that implement the "__contains__" dunder method.
-     * @param methodVisitor
-     * @param instruction
      */
     public static void containsOperator(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
         StackManipulationImplementor.swap(methodVisitor);

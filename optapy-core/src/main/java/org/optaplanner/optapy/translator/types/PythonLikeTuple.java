@@ -47,6 +47,11 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
             delegate.add(null);
         }
     }
+    public static PythonLikeTuple fromList(List<PythonLikeObject> other) {
+        PythonLikeTuple result = new PythonLikeTuple();
+        result.addAll(other);
+        return result;
+    }
 
     public PythonLikeTuple concatToNew(PythonLikeTuple other) {
         PythonLikeTuple result = new PythonLikeTuple();

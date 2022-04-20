@@ -26,6 +26,7 @@ import org.optaplanner.optapy.translator.types.JavaMethodReference;
 import org.optaplanner.optapy.translator.types.PythonBoolean;
 import org.optaplanner.optapy.translator.types.PythonInteger;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
+import org.optaplanner.optapy.translator.types.PythonLikeTuple;
 import org.optaplanner.optapy.translator.types.PythonString;
 import org.optaplanner.optapy.translator.types.UnaryLambdaReference;
 
@@ -513,6 +514,23 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
         assertThat(javaFunction.get()).isEqualTo(List.of(PythonInteger.valueOf(2), PythonInteger.valueOf(3), PythonInteger.valueOf(1)));
+    }
+
+    @Test
+    public void testListToTuple() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadConstant(1)
+                .loadConstant(2)
+                .loadConstant(3)
+                .list(3)
+                .op(OpCode.LIST_TO_TUPLE)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        Object out = javaFunction.get();
+        assertThat(out).isInstanceOf(PythonLikeTuple.class);
+        assertThat(out).asList().containsExactly(1, 2, 3);
     }
 
     @Test

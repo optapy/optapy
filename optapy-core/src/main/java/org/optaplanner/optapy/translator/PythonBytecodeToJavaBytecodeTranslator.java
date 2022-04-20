@@ -464,8 +464,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
             case BUILD_STRING:
                 break;
-            case LIST_TO_TUPLE:
+            case LIST_TO_TUPLE: {
+                CollectionImplementor.convertListToTuple(methodVisitor);
                 break;
+            }
             case LIST_EXTEND:
             case SET_UPDATE: {
                 // LIST_EXTEND and SET_UPDATE have the same bytecode
