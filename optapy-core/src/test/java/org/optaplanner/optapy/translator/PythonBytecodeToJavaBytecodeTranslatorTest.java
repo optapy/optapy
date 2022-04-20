@@ -21,7 +21,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
-import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.optapy.translator.types.JavaMethodReference;
 import org.optaplanner.optapy.translator.types.PythonBoolean;
@@ -30,6 +29,7 @@ import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonString;
 import org.optaplanner.optapy.translator.types.UnaryLambdaReference;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
     @Test
@@ -239,8 +239,7 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
                 .op(OpCode.RETURN_VALUE)
                 .build();
 
-        BiFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
-        return javaFunction;
+        return translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
     }
 
     @Test
