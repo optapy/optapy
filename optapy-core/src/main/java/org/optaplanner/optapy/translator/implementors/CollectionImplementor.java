@@ -17,6 +17,7 @@ import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
 import org.optaplanner.optapy.translator.PythonTernaryOperators;
 import org.optaplanner.optapy.translator.PythonUnaryOperator;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
+import org.optaplanner.optapy.translator.types.PythonString;
 import org.optaplanner.optapy.translator.types.StopIteration;
 
 /**
@@ -88,6 +89,51 @@ public class CollectionImplementor {
                     Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
                     false);
         }
+    }
+
+    /**
+     * Constructs a string from the top {@code itemCount} on the stack.
+     * Basically generate the following code:
+     *
+     * <code>
+     * <pre>
+     *     StringBuilder builder = new StringBuilder();
+     *     builder.insert(0, TOS);
+     *     builder.insert(0, TOS1);
+     *     ...
+     *     builder.insert(0, TOS(itemCount - 1));
+     *     TOS' = PythonString.valueOf(builder.toString())
+     * </pre>
+     * </code>
+     * @param itemCount The number of items to put into collection from the stack
+     */
+    public static void buildString(MethodVisitor methodVisitor,
+                                   int itemCount) {
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(StringBuilder.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(StringBuilder.class), "<init>",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE), false);
+
+        for (int i = 0; i < itemCount; i++) {
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitInsn(Opcodes.ICONST_0);
+            methodVisitor.visitInsn(Opcodes.SWAP);
+
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
+                                          "insert",
+                                          Type.getMethodDescriptor(Type.getType(StringBuilder.class),
+                                                                   Type.INT_TYPE,
+                                                                   Type.getType(Object.class)),
+                                          false);
+        }
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Object.class),
+                                      "toString",
+                                      Type.getMethodDescriptor(Type.getType(String.class)), false);
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class),
+                                      "valueOf",
+                                      Type.getMethodDescriptor(Type.getType(PythonString.class),
+                                                               Type.getType(String.class)), false);
     }
 
     /**

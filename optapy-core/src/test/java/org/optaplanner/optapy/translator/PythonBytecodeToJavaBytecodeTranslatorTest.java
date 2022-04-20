@@ -532,6 +532,20 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(out).isInstanceOf(PythonLikeTuple.class);
         assertThat(out).asList().containsExactly(1, 2, 3);
     }
+    @Test
+    public void testBuildString() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+                .loadConstant("My name")
+                .loadConstant(" is ")
+                .loadConstant("awesome!")
+                .op(OpCode.BUILD_STRING, 3)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo("My name is awesome!");
+    }
+
 
     @Test
     public void testSetUpdate() {

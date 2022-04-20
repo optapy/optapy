@@ -414,10 +414,6 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             case SETUP_WITH:
                 break;
-            case STORE_NAME:
-                break;
-            case DELETE_NAME:
-                break;
             case UNPACK_SEQUENCE:
                 break;
             case UNPACK_EX:
@@ -436,10 +432,6 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
             case LOAD_CONST: {
                 PythonConstantsImplementor.loadConstant(methodVisitor, className, instruction.arg);
-                break;
-            }
-            case LOAD_NAME: {
-                JavaPythonTypeConversionImplementor.loadName(methodVisitor, pythonCompiledFunction.co_names.get(instruction.arg));
                 break;
             }
             case BUILD_TUPLE: {
@@ -462,8 +454,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.buildConstKeysMap(PythonLikeDict.class, methodVisitor, instruction.arg);
                 break;
             }
-            case BUILD_STRING:
+            case BUILD_STRING: {
+                CollectionImplementor.buildString(methodVisitor, instruction.arg);
                 break;
+            }
             case LIST_TO_TUPLE: {
                 CollectionImplementor.convertListToTuple(methodVisitor);
                 break;
@@ -531,6 +525,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case SETUP_FINALLY:
                 break;
 
+            case LOAD_NAME:
+                break;
+            case STORE_NAME:
+                break;
+            case DELETE_NAME:
+                break;
+
             case LOAD_GLOBAL:
                 break;
             case STORE_GLOBAL:
@@ -548,14 +549,17 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
             case DELETE_FAST:
                 break;
+
             case LOAD_CLOSURE:
                 break;
+
             case LOAD_DEREF:
-                break;
-            case DELETE_DEREF:
                 break;
             case STORE_DEREF:
                 break;
+            case DELETE_DEREF:
+                break;
+
             case LOAD_CLASSDEREF:
                 break;
 
