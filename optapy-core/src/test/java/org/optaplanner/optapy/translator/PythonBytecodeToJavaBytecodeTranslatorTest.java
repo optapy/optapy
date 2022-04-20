@@ -27,6 +27,8 @@ import org.optaplanner.optapy.translator.types.JavaMethodReference;
 import org.optaplanner.optapy.translator.types.PythonBoolean;
 import org.optaplanner.optapy.translator.types.PythonInteger;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
+import org.optaplanner.optapy.translator.types.PythonString;
+import org.optaplanner.optapy.translator.types.UnaryLambdaReference;
 
 public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
@@ -798,6 +800,39 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.apply(pythonLikeFunction)).isEqualTo(13); // 1 + 2*3 + 3*2
     }
 
+    @Test
+    public void testCallMethodOnType() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
+                .loadParameter("item")
+                .loadMethod("concatToName")
+                .loadConstant(" is awesome!")
+                .callMethod(1)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        MyObject object = new MyObject();
+        object.name = "My name";
+        assertThat(javaFunction.apply(object)).isEqualTo("My name is awesome!");
+    }
+
+    @Test
+    public void testCallMethodOnInstance() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
+                .loadParameter("item")
+                .loadMethod("attributeFunction")
+                .loadConstant(" is awesome!")
+                .callMethod(1)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        MyObject object = new MyObject();
+        object.attributeFunction = new UnaryLambdaReference((suffix) -> PythonString.valueOf("My name" + suffix), Map.of());
+
+        assertThat(javaFunction.apply(object)).isEqualTo("My name is awesome!");
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
@@ -1016,6 +1051,33 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             instruction.offset = instructionList.size();
             instruction.arg = (hasKeywords)? 1 : 0;
             instruction.argval = instruction.arg;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder loadMethod(String methodName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.LOAD_METHOD;
+            instruction.offset = instructionList.size();
+
+            int methodIndex = co_names.indexOf(methodName);
+            if (methodIndex == -1) {
+                methodIndex = co_names.size();
+                co_names.add(methodName);
+            }
+
+            instruction.arg = methodIndex;
+            instruction.argval = methodIndex;
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder callMethod(int argc) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.CALL_METHOD;
+            instruction.offset = instructionList.size();
+            instruction.arg = argc;
+            instruction.argval = argc;
             instructionList.add(instruction);
             return this;
         }

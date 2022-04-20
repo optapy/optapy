@@ -571,10 +571,14 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 FunctionImplementor.callFunctionUnpack(methodVisitor, instruction);
                 break;
             }
-            case LOAD_METHOD:
+            case LOAD_METHOD: {
+                FunctionImplementor.loadMethod(methodVisitor, className, pythonCompiledFunction, instruction);
                 break;
-            case CALL_METHOD:
+            }
+            case CALL_METHOD: {
+                FunctionImplementor.callMethod(methodVisitor, instruction, localVariableHelper);
                 break;
+            }
             case MAKE_FUNCTION:
                 break;
             case BUILD_SLICE:

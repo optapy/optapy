@@ -1,21 +1,129 @@
 package org.optaplanner.optapy.translator.implementors;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.optapy.PythonLikeObject;
+import org.optaplanner.optapy.translator.LocalVariableHelper;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
+import org.optaplanner.optapy.translator.PythonCompiledFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeDict;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
+import org.optaplanner.optapy.translator.types.PythonLikeType;
 
 /**
  * Implements opcodes related to functions
  */
 public class FunctionImplementor {
+
+    /**
+     * Loads a method named co_names[namei] from the TOS object. TOS is popped. This bytecode distinguishes two cases:
+     * if TOS has a method with the correct name, the bytecode pushes the unbound method and TOS.
+     * TOS will be used as the first argument (self) by CALL_METHOD when calling the unbound method.
+     * Otherwise, NULL and the object return by the attribute lookup are pushed.
+     */
+    public static void loadMethod(MethodVisitor methodVisitor, String className, PythonCompiledFunction function,
+                                  PythonBytecodeInstruction instruction) {
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                      "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                                      true);
+        methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                      "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                                                           Type.getType(String.class)),
+                                      true);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+
+        Label blockEnd = new Label();
+
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, blockEnd);
+
+        // TOS is null; type does not have attribute; do normal attribute lookup
+        // Stack is object, null
+        methodVisitor.visitInsn(Opcodes.POP);
+        ObjectImplementor.getAttribute(methodVisitor, className, instruction);
+
+        // Stack is method
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        methodVisitor.visitLabel(blockEnd);
+
+        // Stack is either:
+        // object, method if it was in type
+        // null, method if it was not in type
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        // Stack is now:
+        // method, object if it was in type
+        // method, null if it was not in type
+    }
+
+    /**
+     * Calls a method. argc is the number of positional arguments. Keyword arguments are not supported.
+     * This opcode is designed to be used with LOAD_METHOD. Positional arguments are on top of the stack.
+     * Below them, the two items described in LOAD_METHOD are on the stack
+     * (either self and an unbound method object or NULL and an arbitrary callable).
+     * All of them are popped and the return value is pushed.
+     */
+    public static void callMethod(MethodVisitor methodVisitor,
+                                  PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        // Stack is method, (obj or null), arg0, ..., arg(argc - 1)
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        // Stack is method, argList, (obj or null)
+        Label ifNullStart = new Label();
+        Label blockEnd = new Label();
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, ifNullStart);
+
+        // Stack is method, argList, obj
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, 1);
+        StackManipulationImplementor.swap(methodVisitor);
+
+        // Stack is method, argList, argList, obj
+        methodVisitor.visitInsn(Opcodes.ICONST_0);
+
+        // Stack is method, argList, argList, obj, index
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        // Stack is method, argList, argList, index, obj
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                                      "add",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE, Type.getType(Object.class)),
+                                      true);
+
+        // Stack is method, argList
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, blockEnd);
+
+        methodVisitor.visitLabel(ifNullStart);
+        // Stack is method, argList, null
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        // Stack is method, argList
+        methodVisitor.visitLabel(blockEnd);
+
+        // Stack is method, argList
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+
+        // Stack is callable, argument_list, null
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                                      "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                                                           Type.getType(List.class),
+                                                                           Type.getType(Map.class)),
+                                      true);
+    }
 
     /**
      * Calls a function. TOS...TOS[argc - 1] are the arguments to the function.
