@@ -20,17 +20,22 @@ public interface PythonLikeFunction extends PythonLikeObject {
     PythonLikeObject __call__(List<PythonLikeObject> positionalArguments, Map<PythonString, PythonLikeObject> namedArguments);
 
     @Override
-    default PythonLikeObject __getattribute__(String attributeName) {
-        throw new NoSuchElementException();
+    default PythonLikeObject __getAttributeOrNull(String attributeName) {
+        return null;
     }
 
     @Override
-    default void __setattribute__(String attributeName, PythonLikeObject value) {
+    default void __setAttribute(String attributeName, PythonLikeObject value) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default PythonLikeType __type__() {
+    default void __deleteAttribute(String attributeName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    default PythonLikeType __getType() {
         return FUNCTION_TYPE;
     }
 }

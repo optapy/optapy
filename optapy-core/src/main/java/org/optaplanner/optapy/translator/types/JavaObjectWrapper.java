@@ -89,10 +89,10 @@ public class JavaObjectWrapper implements PythonLikeObject {
     }
 
     @Override
-    public PythonLikeObject __getattribute__(String attributeName) {
+    public PythonLikeObject __getAttributeOrNull(String attributeName) {
         List<Member> candidates = attributeNameToMemberListMap.get(attributeName);
         if (candidates == null) {
-            throw new IllegalArgumentException("type '" + objectClass + "' does not have attribute '" + attributeName + "'");
+            return null;
         }
         if (candidates.size() == 1) {
             Member candidate = candidates.get(0);
@@ -123,7 +123,7 @@ public class JavaObjectWrapper implements PythonLikeObject {
     }
 
     @Override
-    public void __setattribute__(String attributeName, PythonLikeObject value) {
+    public void __setAttribute(String attributeName, PythonLikeObject value) {
         List<Member> candidates = attributeNameToMemberListMap.get(attributeName);
         if (candidates == null) {
             throw new IllegalArgumentException("type '" + objectClass + "' does not have attribute '" + attributeName + "'");
@@ -154,7 +154,12 @@ public class JavaObjectWrapper implements PythonLikeObject {
     }
 
     @Override
-    public PythonLikeType __type__() {
+    public void __deleteAttribute(String attributeName) {
+        throw new IllegalArgumentException("Cannot delete attributes on type '" + objectClass + "'");
+    }
+
+    @Override
+    public PythonLikeType __getType() {
         return CLASS_TYPE;
     }
 }

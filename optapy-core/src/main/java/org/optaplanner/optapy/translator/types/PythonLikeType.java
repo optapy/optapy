@@ -25,11 +25,11 @@ public class PythonLikeType implements PythonLikeObject {
         __dir__ = new HashMap<>();
     }
 
-    public PythonLikeObject getAttributeOrReturnNull(String attributeName) {
+    public PythonLikeObject __getAttributeOrNull(String attributeName) {
         PythonLikeObject out = __dir__.get(attributeName);
         if (out == null) {
             for (PythonLikeType type : PARENT_TYPES) {
-                out = type.getAttributeOrReturnNull(attributeName);
+                out = type.__getAttributeOrNull(attributeName);
                 if (out != null) {
                     return out;
                 }
@@ -41,22 +41,18 @@ public class PythonLikeType implements PythonLikeObject {
     }
 
     @Override
-    public PythonLikeObject __getattribute__(String attributeName) {
-        PythonLikeObject out = getAttributeOrReturnNull(attributeName);
-        if (out != null) {
-            return out;
-        } else {
-            throw new NoSuchElementException("type '" + TYPE_NAME + "' does not have attribute '" + attributeName + "'.");
-        }
-    }
-
-    @Override
-    public void __setattribute__(String attributeName, PythonLikeObject value) {
+    public void __setAttribute(String attributeName, PythonLikeObject value) {
         __dir__.put(attributeName, value);
     }
 
     @Override
-    public PythonLikeType __type__() {
+    public void __deleteAttribute(String attributeName) {
+        // TODO: Descriptors: https://docs.python.org/3/howto/descriptor.html
+        __dir__.remove(attributeName);
+    }
+
+    @Override
+    public PythonLikeType __getType() {
         return BASE_TYPE;
     }
 

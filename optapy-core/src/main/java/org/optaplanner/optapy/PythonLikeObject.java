@@ -2,8 +2,6 @@ package org.optaplanner.optapy;
 
 import java.util.NoSuchElementException;
 
-import javax.naming.directory.NoSuchAttributeException;
-
 import org.optaplanner.optapy.translator.types.PythonLikeType;
 
 /**
@@ -20,7 +18,22 @@ public interface PythonLikeObject {
      * @return The attribute of the object that corresponds with attributeName
      * @throws NoSuchElementException if the attribute does not exist
      */
-    PythonLikeObject __getattribute__(String attributeName);
+    PythonLikeObject __getAttributeOrNull(String attributeName);
+
+    /**
+     * Gets an attribute by name.
+     *
+     * @param attributeName Name of the attribute to get
+     * @return The attribute of the object that corresponds with attributeName
+     * @throws NoSuchElementException if the attribute does not exist
+     */
+    default PythonLikeObject __getAttributeOrError(String attributeName) {
+        PythonLikeObject out = this.__getAttributeOrNull(attributeName);
+        if (out == null) {
+            throw new NoSuchElementException();
+        }
+        return out;
+    }
 
     /**
      * Sets an attribute by name.
@@ -28,12 +41,19 @@ public interface PythonLikeObject {
      * @param attributeName Name of the attribute to set
      * @param value Value to set the attribute to
      */
-    void __setattribute__(String attributeName, PythonLikeObject value);
+    void __setAttribute(String attributeName, PythonLikeObject value);
+
+    /**
+     * Delete an attribute by name.
+     *
+     * @param attributeName Name of the attribute to delete
+     */
+    void __deleteAttribute(String attributeName);
 
     /**
      * Returns the type describing the object
      *
      * @return the type describing the object
      */
-    PythonLikeType __type__();
+    PythonLikeType __getType();
 }

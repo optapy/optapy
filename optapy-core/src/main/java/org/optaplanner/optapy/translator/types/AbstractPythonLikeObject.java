@@ -20,22 +20,23 @@ public abstract class AbstractPythonLikeObject implements PythonLikeObject {
     }
 
     @Override
-    public PythonLikeObject __getattribute__(String attributeName) {
-        PythonLikeObject out = __dir__.get(attributeName);
-        if (out == null) {
-            throw new NoSuchElementException();
-        } else {
-            return out;
-        }
+    public PythonLikeObject __getAttributeOrNull(String attributeName) {
+        return __dir__.get(attributeName);
     }
 
     @Override
-    public void __setattribute__(String attributeName, PythonLikeObject value) {
+    public void __setAttribute(String attributeName, PythonLikeObject value) {
         __dir__.put(attributeName, value);
     }
 
     @Override
-    public PythonLikeType __type__() {
+    public void __deleteAttribute(String attributeName) {
+        // TODO: Descriptors: https://docs.python.org/3/howto/descriptor.html
+        __dir__.remove(attributeName);
+    }
+
+    @Override
+    public PythonLikeType __getType() {
         return __type__;
     }
 }

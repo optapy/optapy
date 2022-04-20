@@ -20,7 +20,7 @@ public class ObjectImplementor {
     public static void getAttribute(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, PythonCompiledFunction function) {
         methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
-                                      "__getattribute__",
+                                      "__getAttributeOrError",
                                       Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(String.class)),
                                       true);
     }
@@ -33,7 +33,7 @@ public class ObjectImplementor {
         methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
-                                      "__setattribute__",
+                                      "__setAttribute",
                                       Type.getMethodDescriptor(Type.VOID_TYPE,
                                                                Type.getType(String.class),
                                                                Type.getType(PythonLikeObject.class)),
