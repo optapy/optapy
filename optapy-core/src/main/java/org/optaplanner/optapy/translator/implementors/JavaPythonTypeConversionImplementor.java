@@ -23,8 +23,6 @@ import org.optaplanner.optapy.translator.types.PythonNone;
 import org.optaplanner.optapy.translator.types.PythonNumber;
 import org.optaplanner.optapy.translator.types.PythonString;
 
-import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.CONSTANTS_STATIC_FIELD_NAME;
-
 /**
  * Implementations of opcodes and operations that require Java to Python or Python to Java conversions.
  */
@@ -97,6 +95,11 @@ public class JavaPythonTypeConversionImplementor {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convertPythonObjectToJavaType(Class<? extends T> type, PythonLikeObject object) {
+        if (type.isAssignableFrom(object.getClass())) {
+            // Can directly assign; no modification needed
+            return (T) object;
+        }
+
         if (object instanceof PythonNone) {
             return null;
         }
@@ -108,11 +111,6 @@ public class JavaPythonTypeConversionImplementor {
                 throw new IllegalArgumentException("Cannot convert from (" + javaObject.getClass() + ") to (" + type + ").");
             }
             return (T) javaObject;
-        }
-
-        if (type.isAssignableFrom(object.getClass())) {
-            // Can directly assign; no modification needed
-            return (T) object;
         }
 
         if (type.equals(byte.class) || type.equals(short.class) || type.equals(int.class) || type.equals(long.class) ||
@@ -164,21 +162,6 @@ public class JavaPythonTypeConversionImplementor {
         // TODO: List, Map, Set
 
         throw new IllegalStateException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
-    }
-
-    /**
-     * Gets the {@code constantIndex} constant from the class constant list
-     *
-     * @param className The class currently being defined by the methodVisitor
-     * @param constantIndex The index of the constant to load in the class constant list
-     */
-    public static void loadConstant(MethodVisitor methodVisitor, String className, int constantIndex) {
-        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, CONSTANTS_STATIC_FIELD_NAME, Type.getDescriptor(List.class));
-        methodVisitor.visitLdcInsn(constantIndex);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
-                                      "get",
-                                      Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
-                                      true);
     }
 
     /**

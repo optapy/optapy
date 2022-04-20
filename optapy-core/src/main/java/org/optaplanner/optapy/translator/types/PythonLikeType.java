@@ -4,9 +4,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 
 import org.optaplanner.optapy.PythonLikeObject;
+import org.optaplanner.optapy.translator.PythonBinaryOperators;
+import org.optaplanner.optapy.translator.PythonTernaryOperators;
+import org.optaplanner.optapy.translator.builtins.ObjectBuiltinOperations;
 
 public class PythonLikeType implements PythonLikeObject {
     public final static PythonLikeType BASE_TYPE = new PythonLikeType("type", Collections.emptyList());
@@ -14,6 +17,23 @@ public class PythonLikeType implements PythonLikeObject {
 
     private final String TYPE_NAME;
     private final List<PythonLikeType> PARENT_TYPES;
+
+    static {
+        try {
+            BASE_TYPE.__dir__.put(PythonBinaryOperators.GET_ATTRIBUTE.getDunderMethod(),
+                                  new JavaMethodReference(ObjectBuiltinOperations.class.getMethod("getAttribute", PythonLikeObject.class, String.class),
+                                                          Map.of("self", 0, "name", 1)));
+            BASE_TYPE.__dir__.put(PythonTernaryOperators.SET_ATTRIBUTE.getDunderMethod(),
+                                  new JavaMethodReference(ObjectBuiltinOperations.class.getMethod("setAttribute", PythonLikeObject.class, String.class,
+                                                                                                  PythonLikeObject.class),
+                                                          Map.of("self", 0, "name", 1, "value", 2)));
+            BASE_TYPE.__dir__.put(PythonBinaryOperators.DELETE_ATTRIBUTE.getDunderMethod(),
+                                  new JavaMethodReference(ObjectBuiltinOperations.class.getMethod("deleteAttribute", PythonLikeObject.class, String.class),
+                                                          Map.of("self", 0, "name", 1)));
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     public PythonLikeType(String typeName) {
         this(typeName, List.of(BASE_TYPE));
@@ -23,6 +43,11 @@ public class PythonLikeType implements PythonLikeObject {
         TYPE_NAME = typeName;
         PARENT_TYPES = parents;
         __dir__ = new HashMap<>();
+    }
+
+    public PythonLikeType(String typeName, Consumer<PythonLikeType> initializer) {
+        this(typeName, List.of(BASE_TYPE));
+        initializer.accept(this);
     }
 
     public PythonLikeObject __getAttributeOrNull(String attributeName) {

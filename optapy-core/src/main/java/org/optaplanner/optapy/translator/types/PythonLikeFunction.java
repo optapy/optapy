@@ -2,13 +2,21 @@ package org.optaplanner.optapy.translator.types;
 
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 import org.optaplanner.optapy.PythonLikeObject;
+import org.optaplanner.optapy.translator.PythonTernaryOperators;
+import org.optaplanner.optapy.translator.builtins.FunctionBuiltinOperations;
 
 public interface PythonLikeFunction extends PythonLikeObject {
 
-    PythonLikeType FUNCTION_TYPE = new PythonLikeType("function");
+    PythonLikeType FUNCTION_TYPE = new PythonLikeType("function", type -> {
+        try {
+            type.__dir__.put(PythonTernaryOperators.GET.dunderMethod, new JavaMethodReference(FunctionBuiltinOperations.class.getMethod("bindFunctionToInstance", PythonLikeFunction.class, PythonLikeObject.class, PythonLikeType.class),
+                                                                                              Map.of("self", 0, "obj", 1, "objtype", 2)));
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+        }
+    });
 
     /**
      * Calls the function with positional arguments and named arguments.

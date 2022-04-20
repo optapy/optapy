@@ -57,7 +57,12 @@ public enum PythonBinaryOperators {
 
     // Descriptor operations
     // https://docs.python.org/3/howto/descriptor.html
-    DELETE("__delete__")
+    DELETE("__delete__"),
+
+    // Attribute access
+    GET_ATTRIBUTE("__getattribute__"),
+    GET_ATTRIBUTE_NOT_IN_SLOTS("__getattr__"),
+    DELETE_ATTRIBUTE("__delattr__")
     ;
 
     final String dunderMethod;

@@ -727,9 +727,8 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
                 .loadParameter("item")
                 .getAttribute("concatToName")
-                .loadParameter("item")
                 .loadConstant(" is awesome!")
-                .callFunction(2)
+                .callFunction(1)
                 .op(OpCode.RETURN_VALUE)
                 .build();
 

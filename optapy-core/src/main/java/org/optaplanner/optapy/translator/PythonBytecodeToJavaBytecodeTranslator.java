@@ -23,11 +23,13 @@ import org.optaplanner.optapy.translator.implementors.JumpImplementor;
 import org.optaplanner.optapy.translator.implementors.LocalVariableImplementor;
 import org.optaplanner.optapy.translator.implementors.ObjectImplementor;
 import org.optaplanner.optapy.translator.implementors.PythonBuiltinOperatorImplementor;
+import org.optaplanner.optapy.translator.implementors.PythonConstantsImplementor;
 import org.optaplanner.optapy.translator.implementors.StackManipulationImplementor;
 import org.optaplanner.optapy.translator.types.PythonLikeDict;
 import org.optaplanner.optapy.translator.types.PythonLikeList;
 import org.optaplanner.optapy.translator.types.PythonLikeSet;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
+import org.optaplanner.optapy.translator.types.PythonString;
 
 public class PythonBytecodeToJavaBytecodeTranslator {
     /**
@@ -37,6 +39,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     private static final Map<String, byte[]> classNameToBytecode = new HashMap<>();
 
     public static final String CONSTANTS_STATIC_FIELD_NAME = "co_consts";
+
+    public static final String NAMES_STATIC_FIELD_NAME = "co_names";
     private static long generatedClassId = 0L;
 
     /**
@@ -139,11 +143,20 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     private static void createConstantsStaticField(ClassWriter classWriter) {
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
                                CONSTANTS_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
+                               NAMES_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
     }
 
     private static void setConstantsStaticField(Class<?> compiledClass, PythonCompiledFunction pythonCompiledFunction) {
         try {
             compiledClass.getField(CONSTANTS_STATIC_FIELD_NAME).set(null, pythonCompiledFunction.co_constants);
+
+            // Need to convert co_names to python strings (used in __getattribute__)
+            List<PythonString> pythonNameList = new ArrayList<>(pythonCompiledFunction.co_names.size());
+            for (String name : pythonCompiledFunction.co_names) {
+                pythonNameList.add(PythonString.valueOf(name));
+            }
+            compiledClass.getField(NAMES_STATIC_FIELD_NAME).set(null, pythonNameList);
         } catch (IllegalAccessException | NoSuchFieldException e) {
             throw new IllegalStateException("Impossible state: generated class (" + compiledClass +
                                                     ") does not have static field \"" + CONSTANTS_STATIC_FIELD_NAME + "\"", e);
@@ -409,18 +422,20 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             case UNPACK_EX:
                 break;
-            case STORE_ATTR: {
-                ObjectImplementor.setAttribute(methodVisitor, instruction, pythonCompiledFunction);
+            case LOAD_ATTR: {
+                ObjectImplementor.getAttribute(methodVisitor, className, instruction);
                 break;
             }
-            case DELETE_ATTR:
+            case STORE_ATTR: {
+                ObjectImplementor.setAttribute(methodVisitor, className, instruction, localVariableHelper);
                 break;
-            case STORE_GLOBAL:
+            }
+            case DELETE_ATTR: {
+                ObjectImplementor.deleteAttribute(methodVisitor, className, instruction);
                 break;
-            case DELETE_GLOBAL:
-                break;
+            }
             case LOAD_CONST: {
-                JavaPythonTypeConversionImplementor.loadConstant(methodVisitor, className, instruction.arg);
+                PythonConstantsImplementor.loadConstant(methodVisitor, className, instruction.arg);
                 break;
             }
             case LOAD_NAME: {
@@ -463,10 +478,6 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
             case DICT_MERGE: {
                 CollectionImplementor.mapPutAllOnlyIfAllNewElseThrow(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case LOAD_ATTR: {
-                ObjectImplementor.getAttribute(methodVisitor, instruction, pythonCompiledFunction);
                 break;
             }
             case COMPARE_OP: {
@@ -515,10 +526,16 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.iterateIterator(methodVisitor, instruction, bytecodeCounterToLabelMap);
                 break;
             }
-            case LOAD_GLOBAL:
-                break;
             case SETUP_FINALLY:
                 break;
+
+            case LOAD_GLOBAL:
+                break;
+            case STORE_GLOBAL:
+                break;
+            case DELETE_GLOBAL:
+                break;
+
             case LOAD_FAST: {
                 LocalVariableImplementor.loadLocalVariable(methodVisitor, instruction, localVariableHelper);
                 break;
@@ -533,12 +550,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             case LOAD_DEREF:
                 break;
-            case LOAD_CLASSDEREF:
+            case DELETE_DEREF:
                 break;
             case STORE_DEREF:
                 break;
-            case DELETE_DEREF:
+            case LOAD_CLASSDEREF:
                 break;
+
             case RAISE_VARARGS:
                 break;
             case CALL_FUNCTION: {

@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -14,7 +15,11 @@ import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.implementors.JavaPythonTypeConversionImplementor;
 
 public class JavaObjectWrapper implements PythonLikeObject {
-    final static PythonLikeType CLASS_TYPE = new PythonLikeType("object");
+
+    final static Map<Class<?>, PythonLikeType> classToPythonTypeMap = new HashMap<>();
+    final static Map<Class<?>, Map<String, List<Member>>> classToAttributeNameToMemberListMap = new HashMap<>();
+
+    private final PythonLikeType type;
 
     private final Object wrappedObject;
     private final Class<?> objectClass;
@@ -26,7 +31,7 @@ public class JavaObjectWrapper implements PythonLikeObject {
         return Stream.concat(fieldStream, methodStream);
     }
 
-    public static Map<String, List<Member>> getAllMembers(Class<?> baseClass) {
+    public static Map<String, List<Member>> getAllFields(Class<?> baseClass) {
         Class<?> clazz = baseClass;
 
         Stream<Member> memberStream;
@@ -34,7 +39,9 @@ public class JavaObjectWrapper implements PythonLikeObject {
             memberStream = Stream.concat(memberStream, getDeclaredMembersStream(clazz));
         }
 
-        return memberStream.collect(Collectors.groupingBy(Member::getName,
+        return memberStream
+                .filter(member -> member instanceof Field)
+                .collect(Collectors.groupingBy(Member::getName,
                                                           Collectors.mapping(
                                                                   member -> member,
                                                                   Collectors.toList())));
@@ -81,7 +88,18 @@ public class JavaObjectWrapper implements PythonLikeObject {
     public JavaObjectWrapper(Object wrappedObject) {
         this.wrappedObject = wrappedObject;
         this.objectClass = wrappedObject.getClass();
-        this.attributeNameToMemberListMap = getAllMembers(objectClass);
+        this.attributeNameToMemberListMap = classToAttributeNameToMemberListMap.computeIfAbsent(objectClass, JavaObjectWrapper::getAllFields);
+        this.type = classToPythonTypeMap.computeIfAbsent(objectClass, JavaObjectWrapper::generatePythonTypeForClass);
+    }
+
+    public static PythonLikeType generatePythonTypeForClass(Class<?> objectClass) {
+        PythonLikeType out = new PythonLikeType(objectClass.getName());
+        getDeclaredMembersStream(objectClass)
+                .filter(member -> member instanceof Method)
+                .forEach(member -> {
+                    out.__dir__.put(member.getName(), new JavaMethodReference((Method) member, Map.of()));
+                });
+        return out;
     }
 
     public Object getWrappedObject() {
@@ -160,6 +178,6 @@ public class JavaObjectWrapper implements PythonLikeObject {
 
     @Override
     public PythonLikeType __getType() {
-        return CLASS_TYPE;
+        return type;
     }
 }

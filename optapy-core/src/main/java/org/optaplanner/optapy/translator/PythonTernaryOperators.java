@@ -12,11 +12,14 @@ public enum PythonTernaryOperators {
     GET("__get__"),
     SET("__set__"),
 
+    // Attribute access
+    SET_ATTRIBUTE("__setattr__"),
+
     // List operations
     // https://docs.python.org/3/reference/datamodel.html#object.__setitem__
     SET_ITEM("__setitem__");
 
-    final String dunderMethod;
+    public final String dunderMethod;
 
     PythonTernaryOperators(String dunderMethod) {
         this.dunderMethod = dunderMethod;
