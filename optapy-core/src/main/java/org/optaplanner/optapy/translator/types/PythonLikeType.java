@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.PythonBinaryOperators;
 import org.optaplanner.optapy.translator.PythonTernaryOperators;
+import org.optaplanner.optapy.translator.PythonUnaryOperator;
 import org.optaplanner.optapy.translator.builtins.ObjectBuiltinOperations;
 
 public class PythonLikeType implements PythonLikeObject {
@@ -30,6 +31,11 @@ public class PythonLikeType implements PythonLikeObject {
             BASE_TYPE.__dir__.put(PythonBinaryOperators.DELETE_ATTRIBUTE.getDunderMethod(),
                                   new JavaMethodReference(ObjectBuiltinOperations.class.getMethod("deleteAttribute", PythonLikeObject.class, String.class),
                                                           Map.of("self", 0, "name", 1)));
+            BASE_TYPE.__dir__.put(PythonBinaryOperators.FORMAT.getDunderMethod(),
+                                  new JavaMethodReference(ObjectBuiltinOperations.class.getMethod("formatPythonObject", PythonLikeObject.class, PythonLikeObject.class),
+                                                          Map.of("self", 0, "format", 1)));
+            BASE_TYPE.__dir__.put(PythonUnaryOperator.AS_STRING.getDunderMethod(),
+                                  new JavaMethodReference(Object.class.getMethod("toString"), Map.of()));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(e);
         }

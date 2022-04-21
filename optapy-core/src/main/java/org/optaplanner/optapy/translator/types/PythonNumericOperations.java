@@ -3,6 +3,7 @@ package org.optaplanner.optapy.translator.types;
 import java.util.Map;
 
 import org.optaplanner.optapy.PythonLikeObject;
+import org.optaplanner.optapy.translator.builtins.NumberBuiltinOperations;
 
 public class PythonNumericOperations {
     private PythonNumericOperations() {
@@ -16,6 +17,8 @@ public class PythonNumericOperations {
                                             Map.of());
         var INT_CAST = new UnaryNumericLambdaReference(Long::longValue, Double::longValue);
         var FLOAT_CAST = new UnaryNumericLambdaReference(Long::doubleValue, Double::doubleValue);
+
+        var FORMAT = new BinaryLambdaReference(NumberBuiltinOperations::format, Map.of());
 
         var NEGATE = new UnaryNumericLambdaReference(a -> -a, a -> -a);
         var POS = new UnaryNumericLambdaReference(a -> a, a -> a);
@@ -51,6 +54,9 @@ public class PythonNumericOperations {
         dict.put("__bool__", BOOL_CAST);
         dict.put("__index__", INT_CAST);
         dict.put("__float__", FLOAT_CAST);
+
+        // Format
+        dict.put("__format__", FORMAT);
 
         // Unary Operations
         dict.put("__neg__", NEGATE);

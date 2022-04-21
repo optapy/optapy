@@ -864,6 +864,37 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.apply(object)).isEqualTo("My name is awesome!");
     }
 
+    @Test
+    public void testFormat() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item", "format")
+                .loadParameter("item")
+                .loadParameter("format")
+                .op(OpCode.FORMAT_VALUE, 4)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        BiFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
+
+        assertThat(javaFunction.apply(12, "x")).isEqualTo("c");
+        assertThat(javaFunction.apply(12, "o")).isEqualTo("14");
+        assertThat(javaFunction.apply(12, "")).isEqualTo("12");
+        assertThat(javaFunction.apply("hello", "")).isEqualTo("hello");
+    }
+
+    @Test
+    public void testFormatWithoutParameter() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
+                .loadParameter("item")
+                .op(OpCode.FORMAT_VALUE, 0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+
+        assertThat(javaFunction.apply(12)).isEqualTo("12");
+        assertThat(javaFunction.apply("hello")).isEqualTo("hello");
+    }
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();

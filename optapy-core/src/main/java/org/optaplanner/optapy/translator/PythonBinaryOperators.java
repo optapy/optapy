@@ -62,10 +62,13 @@ public enum PythonBinaryOperators {
     // Attribute access
     GET_ATTRIBUTE("__getattribute__"),
     GET_ATTRIBUTE_NOT_IN_SLOTS("__getattr__"),
-    DELETE_ATTRIBUTE("__delattr__")
+    DELETE_ATTRIBUTE("__delattr__"),
+
+    // Format string: https://peps.python.org/pep-3101/
+    FORMAT("__format__")
     ;
 
-    final String dunderMethod;
+    public final String dunderMethod;
 
     PythonBinaryOperators(String dunderMethod) {
         this.dunderMethod = dunderMethod;

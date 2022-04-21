@@ -25,6 +25,7 @@ import org.optaplanner.optapy.translator.implementors.ObjectImplementor;
 import org.optaplanner.optapy.translator.implementors.PythonBuiltinOperatorImplementor;
 import org.optaplanner.optapy.translator.implementors.PythonConstantsImplementor;
 import org.optaplanner.optapy.translator.implementors.StackManipulationImplementor;
+import org.optaplanner.optapy.translator.implementors.StringImplementor;
 import org.optaplanner.optapy.translator.types.PythonLikeDict;
 import org.optaplanner.optapy.translator.types.PythonLikeList;
 import org.optaplanner.optapy.translator.types.PythonLikeSet;
@@ -518,11 +519,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case PRINT_EXPR:
                 break;
 
-            case FORMAT_VALUE:
+            case FORMAT_VALUE: {
+                StringImplementor.formatValue(methodVisitor, instruction);
                 break;
+            }
 
             case BUILD_STRING: {
-                CollectionImplementor.buildString(methodVisitor, instruction.arg);
+                StringImplementor.buildString(methodVisitor, instruction.arg);
                 break;
             }
 

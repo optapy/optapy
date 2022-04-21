@@ -14,6 +14,7 @@ public class PythonBoolean extends AbstractPythonLikeObject {
     static {
         PythonNumericOperations.setup(BOOLEAN_TYPE.__dir__);
         BOOLEAN_TYPE.__dir__.put("__bool__", new UnaryLambdaReference(self -> self, Map.of()));
+        BOOLEAN_TYPE.__dir__.remove("__format__"); // Bool uses object format, not number format
         TRUE = new PythonBoolean(true);
         FALSE = new PythonBoolean(false);
     }
