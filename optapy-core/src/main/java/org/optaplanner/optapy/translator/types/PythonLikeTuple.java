@@ -210,6 +210,11 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
     }
 
     @Override
+    public int hashCode() {
+        return Objects.hash(delegate);
+    }
+
+    @Override
     public String toString() {
         return delegate.toString();
     }

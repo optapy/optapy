@@ -6,7 +6,7 @@ import java.util.Map;
  * A PythonObject holds a reference to {@link OpaquePythonReference}.
  * Its internal state and fields are mapped to the {@link OpaquePythonReference}.
  */
-public interface PythonObject {
+public interface PythonObject extends PythonLikeObject {
 
     /**
      * The {@link OpaquePythonReference} that this PythonObject

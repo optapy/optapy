@@ -153,4 +153,9 @@ public class PythonLikeSet extends AbstractPythonLikeObject implements Set<Pytho
         }
         return false;
     }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(delegate);
+    }
 }

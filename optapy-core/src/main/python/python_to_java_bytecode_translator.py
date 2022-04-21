@@ -17,10 +17,15 @@ def copy_iterable(iterable):
 
 
 def convert_to_java_python_like_object(value):
+    from org.optaplanner.optapy import PythonLikeObject
     from org.optaplanner.optapy.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
-        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict
-    if value is None:
-        return None
+        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone
+    if isinstance(value, PythonLikeObject):
+        return value
+    if hasattr(type(value), '__optapy_java_class'):
+        return id(value)
+    elif value is None:
+        return PythonNone.INSTANCE
     elif isinstance(value, bool):
         return PythonBoolean.valueOf(value)
     elif isinstance(value, int):

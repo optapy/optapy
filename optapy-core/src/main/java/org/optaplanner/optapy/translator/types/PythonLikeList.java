@@ -236,4 +236,9 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
         }
         return false;
     }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(delegate);
+    }
 }

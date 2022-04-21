@@ -15,6 +15,7 @@ from org.optaplanner.core.api.score import Score as _Score
 if TYPE_CHECKING:
     Joiners = JavaJoiners
 
+_convert_joiners_to_java = False
 
 # Cannot import DefaultConstraintMatchTotal as it is in impl
 @_JImplements(ConstraintMatchTotal)
@@ -175,7 +176,23 @@ class _PythonPentaPredicate:
 
 
 def _cast(function):
+    global _convert_joiners_to_java
     arg_count = len(inspect.signature(function).parameters)
+    if _convert_joiners_to_java:
+        from ..python_to_java_bytecode_translator import translate_python_bytecode_to_java_bytecode
+        from java.util.function import Function, BiFunction
+        from org.optaplanner.core.api.function import TriFunction, QuadFunction, PentaFunction
+        if arg_count == 1:
+            return translate_python_bytecode_to_java_bytecode(function, Function)
+        elif arg_count == 2:
+            return translate_python_bytecode_to_java_bytecode(function, BiFunction)
+        elif arg_count == 3:
+            return translate_python_bytecode_to_java_bytecode(function, TriFunction)
+        elif arg_count == 4:
+            return translate_python_bytecode_to_java_bytecode(function, QuadFunction)
+        elif arg_count == 5:
+            return translate_python_bytecode_to_java_bytecode(function, PentaFunction)
+
     if arg_count == 1:
         return _PythonFunction(lambda a: _convert_to_java_compatible_object(function(a)))
     elif arg_count == 2:
@@ -190,6 +207,21 @@ def _cast(function):
 
 def _filtering_cast(predicate):
     arg_count = len(inspect.signature(predicate).parameters)
+    if _convert_joiners_to_java:
+        from ..python_to_java_bytecode_translator import translate_python_bytecode_to_java_bytecode
+        from java.util.function import Predicate, BiPredicate
+        from org.optaplanner.core.api.function import TriPredicate, QuadPredicate, PentaPredicate
+        if arg_count == 1:
+            return translate_python_bytecode_to_java_bytecode(predicate, Predicate)
+        elif arg_count == 2:
+            return translate_python_bytecode_to_java_bytecode(predicate, BiPredicate)
+        elif arg_count == 3:
+            return translate_python_bytecode_to_java_bytecode(predicate, TriPredicate)
+        elif arg_count == 4:
+            return translate_python_bytecode_to_java_bytecode(predicate, QuadPredicate)
+        elif arg_count == 5:
+            return translate_python_bytecode_to_java_bytecode(predicate, PentaPredicate)
+
     if arg_count == 1:
         return _PythonPredicate(predicate)
     elif arg_count == 2:

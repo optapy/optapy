@@ -81,6 +81,15 @@ def _get_python_object_attribute(object_id, name):
         raise OptaPyException(error)
 
 
+def _get_python_object_attribute_as_python_like(object_id, name):
+    """Gets an attribute from a Python Object"""
+    from .python_to_java_bytecode_translator import convert_to_java_python_like_object
+    the_object = object_id
+    out = getattr(the_object, str(name))
+    out = convert_to_java_python_like_object(out)
+    return out
+
+
 def _get_python_array_to_id_array(the_object: List):
     """Maps a Python List to a Java List of OpaquePythonReference"""
     import org.optaplanner.optapy.OpaquePythonReference
@@ -328,6 +337,8 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
                                                             java.util.function.Function))
     PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToValue(
         JObject(PythonBiFunction(_get_python_object_attribute), java.util.function.BiFunction))
+    PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToPythonLikeValue(
+        JObject(PythonBiFunction(_get_python_object_attribute_as_python_like), java.util.function.BiFunction))
     PythonWrapperGenerator.setPythonObjectIdAndAttributeSetter(JObject(PythonTriFunction(_set_python_object_attribute),
                                                                        org.optaplanner.core.api.function.TriFunction))
 

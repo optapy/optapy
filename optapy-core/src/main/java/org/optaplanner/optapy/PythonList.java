@@ -9,6 +9,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.optaplanner.core.api.function.TriFunction;
+import org.optaplanner.optapy.translator.types.PythonLikeType;
 
 public class PythonList<T> implements PythonObject, List<T> {
     private static Function<OpaquePythonReference, Object> clearPythonList;
@@ -319,6 +320,26 @@ public class PythonList<T> implements PythonObject, List<T> {
     @Override
     public String toString() {
         return PythonWrapperGenerator.getPythonObjectString(pythonListOpaqueReference);
+    }
+
+    @Override
+    public PythonLikeObject __getAttributeOrNull(String attributeName) {
+        return null; // TODO
+    }
+
+    @Override
+    public void __setAttribute(String attributeName, PythonLikeObject value) {
+        // TODO
+    }
+
+    @Override
+    public void __deleteAttribute(String attributeName) {
+        // TODO
+    }
+
+    @Override
+    public PythonLikeType __getType() {
+        return null; // TODO
     }
 
     public class PythonListIterator implements ListIterator<T> {

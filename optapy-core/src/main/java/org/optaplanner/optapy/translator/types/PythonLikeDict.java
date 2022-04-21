@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.optaplanner.optapy.PythonLikeObject;
@@ -137,6 +138,11 @@ public class PythonLikeDict extends AbstractPythonLikeObject implements Map<Pyth
             return this.entrySet().containsAll(other.entrySet());
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(delegate);
     }
 
     @Override

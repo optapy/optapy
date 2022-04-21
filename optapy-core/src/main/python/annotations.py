@@ -585,7 +585,8 @@ def deep_planning_clone(planning_clone_object: Union[Type, Callable]):
     return planning_clone_object
 
 
-def constraint_provider(constraint_provider_function: Callable[['_ConstraintFactory'], List['_Constraint']]) -> \
+def constraint_provider(constraint_provider_function: Callable[['_ConstraintFactory'], List['_Constraint']] = None, /, *,
+                        convert_joiners = False) -> \
         Callable[['_ConstraintFactory'], List['_Constraint']]:
     """Marks a function as a ConstraintProvider.
 
@@ -597,8 +598,25 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
     :rtype: Callable[[ConstraintFactory], List[Constraint]]
     """
     ensure_init()
-    constraint_provider_function.__optapy_java_class = _generate_constraint_provider_class(constraint_provider_function)
-    return constraint_provider_function
+
+    def constraint_provider_wrapper(function):
+        if convert_joiners:
+            def wrapped_constraint_provider(constraint_factory):
+                from . import constraint
+                constraint._convert_joiners_to_java = True
+                out = function(constraint_factory)
+                constraint._convert_joiners_to_java = False
+                return out
+            wrapped_constraint_provider.__optapy_java_class = _generate_constraint_provider_class(wrapped_constraint_provider)
+            return wrapped_constraint_provider
+        else:
+            function.__optapy_java_class = _generate_constraint_provider_class(function)
+            return function
+
+    if constraint_provider_function:  # Called as @constraint_provider
+        return constraint_provider_wrapper(constraint_provider_function)
+    else:  # Called as @constraint_provider(convert_joiners=True)
+        return constraint_provider_wrapper
 
 
 def easy_score_calculator(easy_score_calculator_function: Callable[[Solution_], '_Score']) -> \
