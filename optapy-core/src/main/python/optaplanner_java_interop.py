@@ -1,5 +1,5 @@
 import inspect
-
+import pathlib
 import jpype
 import jpype.imports
 from jpype.types import *
@@ -384,6 +384,13 @@ def ensure_init():
         return
     else:
         init()
+
+
+def set_class_output_directory(path: pathlib.Path):
+    ensure_init()
+
+    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
+    PythonWrapperGenerator.classOutputRootPath = path
 
 
 solver_run_id_to_refs = dict()

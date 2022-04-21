@@ -1,10 +1,13 @@
 package org.optaplanner.optapy;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -72,6 +75,26 @@ public class PythonWrapperGenerator {
             }
         }
     };
+
+    public static Path classOutputRootPath = null;
+
+    public static void writeClassOutput(Map<String, byte[]> classNameToBytecode, String className, byte[] classByteCode) {
+        classNameToBytecode.put(className, classByteCode);
+
+        if (classOutputRootPath == null) {
+            return;
+        }
+
+        String[] parts = (className.replace('.', '/') + ".class").split("/");
+        Path classFileLocation =  classOutputRootPath.resolve(Path.of(".", parts));
+
+        try {
+            Files.createDirectories(classFileLocation.getParent());
+            Files.write(classFileLocation, classByteCode);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     // These functions are set in Python code
     // Maps a OpaquePythonReference to a unique, numerical id
@@ -383,7 +406,7 @@ public class PythonWrapperGenerator {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-        classNameToBytecode.put(className, classBytecodeHolder.get());
+        writeClassOutput(classNameToBytecode, className, classBytecodeHolder.get());
         try {
             // Now that the class created, we need to set it static field to the delegate function
             Class<? extends A> out = (Class<? extends A>) gizmoClassLoader.loadClass(className);
@@ -404,7 +427,7 @@ public class PythonWrapperGenerator {
      * private SomeInterface delegate;
      *
      * public JavaWrapper() {
-     * delegate = supplier.get();
+     * delegate = supplier.get();        classNameToBytecode.put(className, classBytecodeHolder.get());
      * }
      *
      * #64;Override
@@ -479,7 +502,7 @@ public class PythonWrapperGenerator {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-        classNameToBytecode.put(className, classBytecodeHolder.get());
+        writeClassOutput(classNameToBytecode, className, classBytecodeHolder.get());
         try {
             // Now that the class created, we need to set it static field to the supplier of the delegate
             Class<? extends A> out = (Class<? extends A>) gizmoClassLoader.loadClass(className);
@@ -651,7 +674,7 @@ public class PythonWrapperGenerator {
                     pythonLikeTypeField,
                     optaplannerMethodAnnotations);
         }
-        classNameToBytecode.put(className, classBytecodeHolder.get());
+        writeClassOutput(classNameToBytecode, className, classBytecodeHolder.get());
         return createAndInitializeClass(className);
     }
 
@@ -688,7 +711,7 @@ public class PythonWrapperGenerator {
                     pythonLikeValueMapField, pythonLikeTypeField,
                     optaplannerMethodAnnotations);
         }
-        classNameToBytecode.put(className, classBytecodeHolder.get());
+        writeClassOutput(classNameToBytecode, className, classBytecodeHolder.get());
         return createAndInitializeClass(className);
     }
 
@@ -726,7 +749,7 @@ public class PythonWrapperGenerator {
                     pythonLikeValueMapField, pythonLikeTypeField,
                     optaplannerMethodAnnotations);
         }
-        classNameToBytecode.put(className, classBytecodeHolder.get());
+        writeClassOutput(classNameToBytecode, className, classBytecodeHolder.get());
         return createAndInitializeClass(className);
     }
 
