@@ -199,10 +199,20 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             methodVisitor.visitLabel(label);
         }
         switch (instruction.opcode) {
+            // **************************************************
+            // Meta Operations
+            // **************************************************
             case NOP: { // use brackets to scope local variables
                 methodVisitor.visitInsn(Opcodes.NOP);
                 break;
             }
+
+            case EXTENDED_ARG:
+                break;
+
+            // **************************************************
+            // Stack Manipulation
+            // **************************************************
             case POP_TOP: {
                 StackManipulationImplementor.popTOS(methodVisitor);
                 break;
@@ -227,6 +237,311 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 StackManipulationImplementor.duplicateTOSAndTOS1(methodVisitor);
                 break;
             }
+
+            // **************************************************
+            // Object Operations
+            // **************************************************
+            case IS_OP: {
+                PythonBuiltinOperatorImplementor.isOperator(methodVisitor, instruction);
+                break;
+            }
+
+            case LOAD_ATTR: {
+                ObjectImplementor.getAttribute(methodVisitor, className, instruction);
+                break;
+            }
+            case STORE_ATTR: {
+                ObjectImplementor.setAttribute(methodVisitor, className, instruction, localVariableHelper);
+                break;
+            }
+            case DELETE_ATTR: {
+                ObjectImplementor.deleteAttribute(methodVisitor, className, instruction);
+                break;
+            }
+
+            // **************************************************
+            // Collection Access Operations
+            // **************************************************
+            case GET_ITER: {
+                DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.ITERATOR);
+                break;
+            }
+            case STORE_SUBSCR: {
+                CollectionImplementor.setItem(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+            case DEL_SUBSCR: {
+                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.DELETE_ITEM);
+                break;
+            }
+            case CONTAINS_OP: {
+                CollectionImplementor.containsOperator(methodVisitor, instruction);
+                break;
+            }
+            case UNPACK_SEQUENCE:
+                break;
+            case UNPACK_EX:
+                break;
+
+
+            // **************************************************
+            // Collection Construction Operations
+            // **************************************************
+            case BUILD_SLICE:
+                break;
+
+            case BUILD_TUPLE: {
+                CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);
+                break;
+            }
+            case BUILD_LIST: {
+                CollectionImplementor.buildCollection(PythonLikeList.class, methodVisitor, instruction.arg);
+                break;
+            }
+            case BUILD_SET: {
+                CollectionImplementor.buildCollection(PythonLikeSet.class, methodVisitor, instruction.arg);
+                break;
+            }
+            case BUILD_MAP: {
+                CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, instruction.arg);
+                break;
+            }
+            case BUILD_CONST_KEY_MAP: {
+                CollectionImplementor.buildConstKeysMap(PythonLikeDict.class, methodVisitor, instruction.arg);
+                break;
+            }
+
+            // **************************************************
+            // Collection Edit Operations
+            // **************************************************
+            case LIST_TO_TUPLE: {
+                CollectionImplementor.convertListToTuple(methodVisitor);
+                break;
+            }
+
+            case SET_ADD:
+            case LIST_APPEND: {
+                // SET_ADD and LIST_APPEND have the same bytecode
+                CollectionImplementor.collectionAdd(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+            case MAP_ADD: {
+                CollectionImplementor.mapPut(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+
+            case LIST_EXTEND:
+            case SET_UPDATE: {
+                // LIST_EXTEND and SET_UPDATE have the same bytecode
+                CollectionImplementor.collectionAddAll(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+            case DICT_UPDATE: {
+                CollectionImplementor.mapPutAll(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+            case DICT_MERGE: {
+                CollectionImplementor.mapPutAllOnlyIfAllNewElseThrow(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+
+            // **************************************************
+            // Control Flow Operations
+            // **************************************************
+            case SETUP_WITH:
+                break;
+
+            case RETURN_VALUE: {
+                JavaPythonTypeConversionImplementor.returnValue(methodVisitor, method);
+                break;
+            }
+            case JUMP_FORWARD: {
+                JumpImplementor.jumpRelative(methodVisitor, instruction, bytecodeCounterToLabelMap);
+                break;
+            }
+            case POP_JUMP_IF_TRUE: {
+                JumpImplementor.popAndJumpIfTrue(methodVisitor, instruction, bytecodeCounterToLabelMap);
+                break;
+            }
+            case POP_JUMP_IF_FALSE: {
+                JumpImplementor.popAndJumpIfFalse(methodVisitor, instruction, bytecodeCounterToLabelMap);
+                break;
+            }
+            case JUMP_IF_NOT_EXC_MATCH:
+                break;
+            case JUMP_IF_TRUE_OR_POP: {
+                JumpImplementor.jumpIfTrueElsePop(methodVisitor, instruction, bytecodeCounterToLabelMap);
+                break;
+            }
+            case JUMP_IF_FALSE_OR_POP: {
+                JumpImplementor.jumpIfFalseElsePop(methodVisitor, instruction, bytecodeCounterToLabelMap);
+                break;
+            }
+            case JUMP_ABSOLUTE: {
+                JumpImplementor.jumpAbsolute(methodVisitor, instruction, bytecodeCounterToLabelMap);
+                break;
+            }
+            case FOR_ITER: {
+                CollectionImplementor.iterateIterator(methodVisitor, instruction, bytecodeCounterToLabelMap);
+                break;
+            }
+
+            // **************************************************
+            // Function Operations
+            // **************************************************
+            case CALL_FUNCTION: {
+                FunctionImplementor.callFunction(methodVisitor, instruction);
+                break;
+            }
+            case CALL_FUNCTION_KW: {
+                FunctionImplementor.callFunctionWithKeywords(methodVisitor, instruction);
+                break;
+            }
+            case CALL_FUNCTION_EX: {
+                FunctionImplementor.callFunctionUnpack(methodVisitor, instruction);
+                break;
+            }
+            case LOAD_METHOD: {
+                FunctionImplementor.loadMethod(methodVisitor, className, pythonCompiledFunction, instruction);
+                break;
+            }
+            case CALL_METHOD: {
+                FunctionImplementor.callMethod(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+            case MAKE_FUNCTION:
+                break;
+
+            // **************************************************
+            // Variable Operations
+            // **************************************************
+            case LOAD_CONST: {
+                PythonConstantsImplementor.loadConstant(methodVisitor, className, instruction.arg);
+                break;
+            }
+
+            case LOAD_NAME:
+                break;
+            case STORE_NAME:
+                break;
+            case DELETE_NAME:
+                break;
+
+            case LOAD_GLOBAL:
+                break;
+            case STORE_GLOBAL:
+                break;
+            case DELETE_GLOBAL:
+                break;
+
+            case LOAD_FAST: {
+                LocalVariableImplementor.loadLocalVariable(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+            case STORE_FAST: {
+                LocalVariableImplementor.storeInLocalVariable(methodVisitor, instruction, localVariableHelper);
+                break;
+            }
+            case DELETE_FAST:
+                break;
+
+            case LOAD_CLOSURE:
+                break;
+
+            case LOAD_DEREF:
+                break;
+            case STORE_DEREF:
+                break;
+            case DELETE_DEREF:
+                break;
+
+            case LOAD_CLASSDEREF:
+                break;
+
+            // **************************************************
+            // Asynchronous Operations
+            // **************************************************
+            case GET_AWAITABLE:
+                break;
+            case GET_AITER:
+                break;
+            case GET_ANEXT:
+                break;
+            case END_ASYNC_FOR:
+                break;
+            case BEFORE_ASYNC_WITH:
+                break;
+            case SETUP_ASYNC_WITH:
+                break;
+
+            // **************************************************
+            // Generator Operations
+            // **************************************************
+            case YIELD_VALUE:
+                break;
+            case YIELD_FROM:
+                break;
+            case GET_YIELD_FROM_ITER:
+                break;
+
+            // **************************************************
+            // Exception Handling Operations
+            // **************************************************
+            case LOAD_ASSERTION_ERROR:
+                break;
+            case POP_BLOCK:
+                break;
+            case POP_EXCEPT:
+                break;
+            case WITH_EXCEPT_START:
+                break;
+            case RERAISE:
+                break;
+            case SETUP_FINALLY:
+                break;
+            case RAISE_VARARGS:
+                break;
+
+            // **************************************************
+            // Import Operations
+            // **************************************************
+            case IMPORT_STAR:
+                break;
+            case IMPORT_NAME:
+                break;
+            case IMPORT_FROM:
+                break;
+
+            // **************************************************
+            // String Operations
+            // **************************************************
+            case PRINT_EXPR:
+                break;
+
+            case FORMAT_VALUE:
+                break;
+
+            case BUILD_STRING: {
+                CollectionImplementor.buildString(methodVisitor, instruction.arg);
+                break;
+            }
+
+            // **************************************************
+            // Class Operations
+            // **************************************************
+            case LOAD_BUILD_CLASS:
+                break;
+
+            case SETUP_ANNOTATIONS:
+                break;
+
+            // **************************************************
+            // Dunder Operations
+            // **************************************************
+            case COMPARE_OP: {
+                DunderOperatorImplementor.compareValues(methodVisitor, CompareOp.getOp(instruction.arg));
+                break;
+            }
             case UNARY_POSITIVE:  {
                 DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.POSITIVE);
                 break;
@@ -244,12 +559,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.INVERT);
                 break;
             }
-            case GET_ITER: {
-                DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.ITERATOR);
-                break;
-            }
-            case GET_YIELD_FROM_ITER:
-                break;
+
             case BINARY_POWER: {
                 DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.POWER);
                 break;
@@ -306,6 +616,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.OR);
                 break;
             }
+
+            // **************************************************
+            // In-place Dunder Operations
+            // **************************************************
             case INPLACE_POWER: {
                 DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_POWER);
                 break;
@@ -358,243 +672,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_OR);
                 break;
             }
-            case STORE_SUBSCR: {
-                CollectionImplementor.setItem(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case DEL_SUBSCR: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.DELETE_ITEM);
-                break;
-            }
-            case GET_AWAITABLE:
-                break;
-            case GET_AITER:
-                break;
-            case GET_ANEXT:
-                break;
-            case END_ASYNC_FOR:
-                break;
-            case BEFORE_ASYNC_WITH:
-                break;
-            case SETUP_ASYNC_WITH:
-                break;
-            case PRINT_EXPR:
-                break;
-            case SET_ADD:
-            case LIST_APPEND: {
-                // SET_ADD and LIST_APPEND have the same bytecode
-                CollectionImplementor.collectionAdd(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case MAP_ADD: {
-                CollectionImplementor.mapPut(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case RETURN_VALUE: {
-                JavaPythonTypeConversionImplementor.returnValue(methodVisitor, method);
-                break;
-            }
-            case YIELD_VALUE:
-                break;
-            case YIELD_FROM:
-                break;
-            case SETUP_ANNOTATIONS:
-                break;
-            case IMPORT_STAR:
-                break;
-            case POP_BLOCK:
-                break;
-            case POP_EXCEPT:
-                break;
-            case RERAISE:
-                break;
-            case WITH_EXCEPT_START:
-                break;
-            case LOAD_ASSERTION_ERROR:
-                break;
-            case LOAD_BUILD_CLASS:
-                break;
-            case SETUP_WITH:
-                break;
-            case UNPACK_SEQUENCE:
-                break;
-            case UNPACK_EX:
-                break;
-            case LOAD_ATTR: {
-                ObjectImplementor.getAttribute(methodVisitor, className, instruction);
-                break;
-            }
-            case STORE_ATTR: {
-                ObjectImplementor.setAttribute(methodVisitor, className, instruction, localVariableHelper);
-                break;
-            }
-            case DELETE_ATTR: {
-                ObjectImplementor.deleteAttribute(methodVisitor, className, instruction);
-                break;
-            }
-            case LOAD_CONST: {
-                PythonConstantsImplementor.loadConstant(methodVisitor, className, instruction.arg);
-                break;
-            }
-            case BUILD_TUPLE: {
-                CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_LIST: {
-                CollectionImplementor.buildCollection(PythonLikeList.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_SET: {
-                CollectionImplementor.buildCollection(PythonLikeSet.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_MAP: {
-                CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_CONST_KEY_MAP: {
-                CollectionImplementor.buildConstKeysMap(PythonLikeDict.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_STRING: {
-                CollectionImplementor.buildString(methodVisitor, instruction.arg);
-                break;
-            }
-            case LIST_TO_TUPLE: {
-                CollectionImplementor.convertListToTuple(methodVisitor);
-                break;
-            }
-            case LIST_EXTEND:
-            case SET_UPDATE: {
-                // LIST_EXTEND and SET_UPDATE have the same bytecode
-                CollectionImplementor.collectionAddAll(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case DICT_UPDATE: {
-                CollectionImplementor.mapPutAll(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case DICT_MERGE: {
-                CollectionImplementor.mapPutAllOnlyIfAllNewElseThrow(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case COMPARE_OP: {
-                DunderOperatorImplementor.compareValues(methodVisitor, CompareOp.getOp(instruction.arg));
-                break;
-            }
-            case IS_OP: {
-                PythonBuiltinOperatorImplementor.isOperator(methodVisitor, instruction);
-                break;
-            }
-            case CONTAINS_OP: {
-                CollectionImplementor.containsOperator(methodVisitor, instruction);
-                break;
-            }
-            case IMPORT_NAME:
-                break;
-            case IMPORT_FROM:
-                break;
-            case JUMP_FORWARD: {
-                JumpImplementor.jumpRelative(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case POP_JUMP_IF_TRUE: {
-                JumpImplementor.popAndJumpIfTrue(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case POP_JUMP_IF_FALSE: {
-                JumpImplementor.popAndJumpIfFalse(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case JUMP_IF_NOT_EXC_MATCH:
-                break;
-            case JUMP_IF_TRUE_OR_POP: {
-                JumpImplementor.jumpIfTrueElsePop(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case JUMP_IF_FALSE_OR_POP: {
-                JumpImplementor.jumpIfFalseElsePop(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case JUMP_ABSOLUTE: {
-                JumpImplementor.jumpAbsolute(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case FOR_ITER: {
-                CollectionImplementor.iterateIterator(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case SETUP_FINALLY:
-                break;
 
-            case LOAD_NAME:
-                break;
-            case STORE_NAME:
-                break;
-            case DELETE_NAME:
-                break;
-
-            case LOAD_GLOBAL:
-                break;
-            case STORE_GLOBAL:
-                break;
-            case DELETE_GLOBAL:
-                break;
-
-            case LOAD_FAST: {
-                LocalVariableImplementor.loadLocalVariable(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case STORE_FAST: {
-                LocalVariableImplementor.storeInLocalVariable(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case DELETE_FAST:
-                break;
-
-            case LOAD_CLOSURE:
-                break;
-
-            case LOAD_DEREF:
-                break;
-            case STORE_DEREF:
-                break;
-            case DELETE_DEREF:
-                break;
-
-            case LOAD_CLASSDEREF:
-                break;
-
-            case RAISE_VARARGS:
-                break;
-            case CALL_FUNCTION: {
-                FunctionImplementor.callFunction(methodVisitor, instruction);
-                break;
-            }
-            case CALL_FUNCTION_KW: {
-                FunctionImplementor.callFunctionWithKeywords(methodVisitor, instruction);
-                break;
-            }
-            case CALL_FUNCTION_EX: {
-                FunctionImplementor.callFunctionUnpack(methodVisitor, instruction);
-                break;
-            }
-            case LOAD_METHOD: {
-                FunctionImplementor.loadMethod(methodVisitor, className, pythonCompiledFunction, instruction);
-                break;
-            }
-            case CALL_METHOD: {
-                FunctionImplementor.callMethod(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case MAKE_FUNCTION:
-                break;
-            case BUILD_SLICE:
-                break;
-            case EXTENDED_ARG:
-                break;
-            case FORMAT_VALUE:
-                break;
             default:
                 throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
         }
