@@ -1,5 +1,6 @@
 package org.optaplanner.optapy.translator.types;
 
+import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -8,16 +9,16 @@ import java.util.function.BiFunction;
 import org.optaplanner.optapy.PythonLikeObject;
 
 public class BinaryNumericLambdaReference implements PythonLikeFunction {
-    private final BiFunction<Long, Long, Number> longLambda;
+    private final BiFunction<BigInteger, BigInteger, Number> longLambda;
     private final BiFunction<Double, Double, Number> doubleLambda;
     private final Map<String, Integer> parameterNameToIndexMap;
 
-    public BinaryNumericLambdaReference(BiFunction<Long, Long, Number> longLambda,
+    public BinaryNumericLambdaReference(BiFunction<BigInteger, BigInteger, Number> longLambda,
                                         BiFunction<Double, Double, Number> doubleLambda) {
         this(longLambda, doubleLambda, Collections.emptyMap());
     }
 
-    public BinaryNumericLambdaReference(BiFunction<Long, Long, Number> longLambda,
+    public BinaryNumericLambdaReference(BiFunction<BigInteger, BigInteger, Number> longLambda,
                                         BiFunction<Double, Double, Number> doubleLambda,
                                         Map<String, Integer> parameterNameToIndexMap) {
         this.longLambda = longLambda;
@@ -55,8 +56,8 @@ public class BinaryNumericLambdaReference implements PythonLikeFunction {
                                         ((PythonNumber) args[1]).getValue().doubleValue());
         }
 
-        if (result instanceof Long) {
-            return PythonInteger.valueOf(result.longValue());
+        if (result instanceof BigInteger) {
+            return PythonInteger.valueOf((BigInteger) result);
         } else {
             return PythonFloat.valueOf(result.doubleValue());
         }

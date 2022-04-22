@@ -1,12 +1,9 @@
 package org.optaplanner.optapy.translator.types;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.optaplanner.optapy.PythonLikeObject;
+import java.math.BigInteger;
 
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
-    final long value;
+    final BigInteger value;
 
     private final static PythonLikeType INT_TYPE = new PythonLikeType("int");
 
@@ -16,6 +13,10 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public PythonInteger(long value) {
+        this(BigInteger.valueOf(value));
+    }
+
+    public PythonInteger(BigInteger value) {
         super(INT_TYPE);
         this.value = value;
     }
@@ -27,15 +28,15 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
 
     @Override
     public String toString() {
-        return Long.toString(value);
+        return value.toString();
     }
 
     @Override
     public boolean equals(Object o) {
         if (o instanceof Number) {
-            return ((Number) o).longValue() == value;
+            return value.equals(BigInteger.valueOf(((Number) o).longValue()));
         } else if (o instanceof PythonInteger) {
-            return ((PythonInteger) o).value == value;
+            return ((PythonInteger) o).value.equals(value);
         } else {
             return false;
         }
@@ -43,7 +44,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
 
     @Override
     public int hashCode() {
-        return Long.hashCode(value);
+        return value.hashCode();
     }
 
     public static PythonInteger valueOf(byte value) {
@@ -59,6 +60,10 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public static PythonInteger valueOf(long value) {
+        return new PythonInteger(value);
+    }
+
+    public static PythonInteger valueOf(BigInteger value) {
         return new PythonInteger(value);
     }
 }

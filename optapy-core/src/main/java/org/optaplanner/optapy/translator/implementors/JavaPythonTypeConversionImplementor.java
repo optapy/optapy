@@ -1,6 +1,7 @@
 package org.optaplanner.optapy.translator.implementors;
 
 import java.lang.reflect.Method;
+import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,10 @@ public class JavaPythonTypeConversionImplementor {
 
         if (object instanceof Byte || object instanceof Short || object instanceof Integer || object instanceof Long) {
             return PythonInteger.valueOf(((Number) object).longValue());
+        }
+
+        if (object instanceof BigInteger) {
+            return PythonInteger.valueOf((BigInteger) object);
         }
 
         if (object instanceof Float || object instanceof Double) {
@@ -120,6 +125,10 @@ public class JavaPythonTypeConversionImplementor {
             }
             PythonNumber pythonNumber = (PythonNumber) object;
             Number value = pythonNumber.getValue();
+
+            if (type.equals(BigInteger.class)) {
+                return (T) value;
+            }
 
             if (type.equals(byte.class) || type.equals(Byte.class)) {
                 return (T) (Byte) value.byteValue();

@@ -1,5 +1,6 @@
 package org.optaplanner.optapy.translator.types;
 
+import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -9,16 +10,16 @@ import java.util.function.Function;
 import org.optaplanner.optapy.PythonLikeObject;
 
 public class UnaryNumericLambdaReference implements PythonLikeFunction {
-    private final Function<Long, Number> longLambda;
+    private final Function<BigInteger, Number> longLambda;
     private final Function<Double, Number> doubleLambda;
     private final Map<String, Integer> parameterNameToIndexMap;
 
-    public UnaryNumericLambdaReference(Function<Long, Number> longLambda,
+    public UnaryNumericLambdaReference(Function<BigInteger, Number> longLambda,
                                        Function<Double, Number> doubleLambda) {
         this(longLambda, doubleLambda, Collections.emptyMap());
     }
 
-    public UnaryNumericLambdaReference(Function<Long, Number> longLambda,
+    public UnaryNumericLambdaReference(Function<BigInteger, Number> longLambda,
                                        Function<Double, Number> doubleLambda,
                                        Map<String, Integer> parameterNameToIndexMap) {
         this.longLambda = longLambda;
@@ -55,8 +56,8 @@ public class UnaryNumericLambdaReference implements PythonLikeFunction {
             result = doubleLambda.apply(((PythonNumber) args[0]).getValue().doubleValue());
         }
 
-        if (result instanceof Long) {
-            return PythonInteger.valueOf(result.longValue());
+        if (result instanceof BigInteger) {
+            return PythonInteger.valueOf((BigInteger) result);
         } else {
             return PythonFloat.valueOf(result.doubleValue());
         }

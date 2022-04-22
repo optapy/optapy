@@ -1,5 +1,6 @@
 package org.optaplanner.optapy.translator.types;
 
+import java.math.BigInteger;
 import java.util.Map;
 
 import org.optaplanner.optapy.PythonLikeObject;
@@ -15,38 +16,38 @@ public class PythonNumericOperations {
 
         var BOOL_CAST = new UnaryLambdaReference(a -> PythonBoolean.valueOf(((PythonNumber) a).compareTo(PythonInteger.valueOf(0)) == 0),
                                             Map.of());
-        var INT_CAST = new UnaryNumericLambdaReference(Long::longValue, Double::longValue);
-        var FLOAT_CAST = new UnaryNumericLambdaReference(Long::doubleValue, Double::doubleValue);
+        var INT_CAST = new UnaryNumericLambdaReference(self -> self, Double::longValue);
+        var FLOAT_CAST = new UnaryNumericLambdaReference(BigInteger::doubleValue, Double::doubleValue);
 
         var FORMAT = new BinaryLambdaReference(NumberBuiltinOperations::format, Map.of());
 
-        var NEGATE = new UnaryNumericLambdaReference(a -> -a, a -> -a);
+        var NEGATE = new UnaryNumericLambdaReference(BigInteger::negate, a -> -a);
         var POS = new UnaryNumericLambdaReference(a -> a, a -> a);
-        var INVERT = new UnaryNumericLambdaReference(a -> ~a, a -> {
+        var INVERT = new UnaryNumericLambdaReference(a -> a.add(BigInteger.ONE).negate(), a -> {
             throw new IllegalArgumentException("Cannot invert float");
         });
 
-        var POW = new BinaryNumericLambdaReference(Math::pow, Math::pow);
-        var MUL = new BinaryNumericLambdaReference((a,b) -> a*b, (a,b) -> a*b);
-        var FLOOR_DIVIDE = new BinaryNumericLambdaReference(Math::floorDiv, (a,b) -> Math.floor(a/b));
+        var POW = new BinaryNumericLambdaReference((a,b) -> a.pow(b.intValueExact()), Math::pow);
+        var MUL = new BinaryNumericLambdaReference(BigInteger::multiply, (a,b) -> a*b);
+        var FLOOR_DIVIDE = new BinaryNumericLambdaReference(BigInteger::divide, (a,b) -> Math.floor(a/b));
         var TRUE_DIVIDE = new BinaryNumericLambdaReference((a,b) -> a.doubleValue() / b.doubleValue(),
                                                            (a,b) -> a / b);
-        var MODULO = new BinaryNumericLambdaReference((a,b) -> a % b, (a,b) -> a % b);
-        var ADD = new BinaryNumericLambdaReference(Long::sum, Double::sum);
-        var SUBTRACT = new BinaryNumericLambdaReference((a,b) -> a - b, (a,b) -> a - b);
-        var LSHIFT = new BinaryNumericLambdaReference((a,b) -> a << b, (a,b) -> {
+        var MODULO = new BinaryNumericLambdaReference(BigInteger::mod, (a,b) -> a % b);
+        var ADD = new BinaryNumericLambdaReference(BigInteger::add, Double::sum);
+        var SUBTRACT = new BinaryNumericLambdaReference(BigInteger::subtract, (a,b) -> a - b);
+        var LSHIFT = new BinaryNumericLambdaReference((a,b) -> a.shiftLeft(b.intValueExact()), (a,b) -> {
             throw new ArithmeticException("Cannot LSHIFT doubles");
         });
-        var RSHIFT = new BinaryNumericLambdaReference((a,b) -> a >> b, (a,b) -> {
+        var RSHIFT = new BinaryNumericLambdaReference((a,b) -> a.shiftRight(b.intValueExact()), (a,b) -> {
             throw new ArithmeticException("Cannot RSHIFT doubles");
         });
-        var AND = new BinaryNumericLambdaReference((a,b) -> a & b, (a,b) -> {
+        var AND = new BinaryNumericLambdaReference(BigInteger::and, (a,b) -> {
             throw new ArithmeticException("Cannot AND doubles");
         });
-        var XOR = new BinaryNumericLambdaReference((a,b) -> a ^ b, (a,b) -> {
+        var XOR = new BinaryNumericLambdaReference(BigInteger::xor, (a,b) -> {
             throw new ArithmeticException("Cannot XOR doubles");
         });
-        var OR = new BinaryNumericLambdaReference((a,b) -> a | b, (a,b) -> {
+        var OR = new BinaryNumericLambdaReference(BigInteger::or, (a,b) -> {
             throw new ArithmeticException("Cannot OR doubles");
         });
 

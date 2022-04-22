@@ -35,7 +35,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         if (o instanceof Number) {
             return ((Number) o).doubleValue() == value;
         } else if (o instanceof PythonInteger) {
-            return ((PythonInteger) o).value == value;
+            return ((PythonInteger) o).value.equals(value);
         } else {
             return false;
         }

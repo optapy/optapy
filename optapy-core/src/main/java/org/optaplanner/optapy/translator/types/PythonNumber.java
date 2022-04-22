@@ -1,5 +1,7 @@
 package org.optaplanner.optapy.translator.types;
 
+import java.math.BigInteger;
+
 public interface PythonNumber extends Comparable<PythonNumber> {
     Number getValue();
 
@@ -8,18 +10,14 @@ public interface PythonNumber extends Comparable<PythonNumber> {
         Number value = getValue();
         Number otherValue = pythonNumber.getValue();
 
-        if (value instanceof Long) {
-            if (otherValue instanceof Long) {
-                return Long.compare(value.longValue(), otherValue.longValue());
+        if (value instanceof BigInteger) {
+            if (otherValue instanceof BigInteger) {
+                return ((BigInteger) value).compareTo((BigInteger) otherValue);
             } else {
                 return Double.compare(value.longValue(), otherValue.doubleValue());
             }
         } else {
-            if (otherValue instanceof Long) {
-                return Double.compare(value.doubleValue(), otherValue.longValue());
-            } else {
-                return Double.compare(value.doubleValue(), otherValue.doubleValue());
-            }
+            return Double.compare(value.doubleValue(), otherValue.doubleValue());
         }
     }
 }
