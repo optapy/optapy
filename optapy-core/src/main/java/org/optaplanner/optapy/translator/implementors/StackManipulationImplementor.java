@@ -83,7 +83,7 @@ public class StackManipulationImplementor {
    /**
      * Copies TOS[posFromTOS] to TOS, leaving other stack elements in their original place
      *
-     * (i.e. ..., TOS[posFromTOS], ..., TOS2, TOS1, TOS -> ..., TOS[i], ..., TOS2, TOS1, TOS, TOS[i])
+     * (i.e. ..., TOS[posFromTOS], ..., TOS2, TOS1, TOS -> ..., TOS[posFromTOS], ..., TOS2, TOS1, TOS, TOS[posFromTOS])
      */
     public static void duplicateToTOS(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int posFromTOS) {
         List<Integer> localList = new ArrayList<>(posFromTOS);
@@ -103,6 +103,37 @@ public class StackManipulationImplementor {
             int local = localList.get(i);
             methodVisitor.visitVarInsn(Opcodes.ALOAD, local);
             methodVisitor.visitInsn(Opcodes.SWAP);
+            localVariableHelper.freeLocal();
+        }
+    }
+
+    /**
+     * Copies TOS to TOS[posFromTOS], moving other stack elements up by one
+     *
+     * (i.e. ..., TOS[posFromTOS], ..., TOS2, TOS1, TOS -> ..., TOS, TOS[posFromTOS] ..., TOS2, TOS1)
+     */
+    public static void shiftTOSDownBy(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int posFromTOS) {
+        List<Integer> localList = new ArrayList<>(posFromTOS + 1);
+
+        if (posFromTOS == 0) {
+            // A rotation of 0 is a no-op
+            return;
+        }
+
+        // Store TOS...TOS[posFromTOS - 1] into local variables
+        for (int i = 0; i < posFromTOS + 1; i++) {
+            int local = localVariableHelper.newLocal();
+            localList.add(local);
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, local);
+        }
+
+        // Copy TOS to this position
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, localList.get(0));
+
+        // Restore TOS[1]...TOS[posFromTOS] from local variables
+        for (int i = posFromTOS; i > 0; i--) {
+            int local = localList.get(i);
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, local);
             localVariableHelper.freeLocal();
         }
     }

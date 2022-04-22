@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.optaplanner.optapy.translator.PythonBytecodeInstruction.OpCode;
 
 import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode;
+import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -911,6 +912,92 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
     }
 
     @Test
+    public void testMakeFunction() {
+        PythonCompiledFunction dependentFunction = PythonFunctionBuilder.newFunction()
+                .loadFreeVariable("a")
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Class<?> dependentFunctionClass = translatePythonBytecodeToClass(dependentFunction, PythonLikeFunction.class);
+
+        PythonCompiledFunction parentFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(0)
+                .storeCellVariable("a")
+                .op(OpCode.LOAD_CLOSURE, 0)
+                .tuple(1)
+                .loadConstant(dependentFunctionClass)
+                .loadConstant("parent.sub")
+                .op(OpCode.MAKE_FUNCTION, 8)
+                .storeVariable("sub")
+                .loadConstant(1)
+                .storeCellVariable("a")
+                .loadVariable("sub")
+                .callFunction(0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(parentFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(1);
+    }
+
+    @Test
+    public void testMakeFunctionComplex() {
+        PythonCompiledFunction secondDependentFunction = PythonFunctionBuilder.newFunction()
+                .loadFreeVariable("sub1")
+                .loadFreeVariable("sub2")
+                .loadFreeVariable("parent")
+                .op(OpCode.BINARY_ADD)
+                .op(OpCode.BINARY_ADD)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Class<?> secondDependentFunctionClass = translatePythonBytecodeToClass(secondDependentFunction, PythonLikeFunction.class);
+
+        PythonCompiledFunction firstDependentFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(1)
+                .storeCellVariable("sub1")
+                .loadConstant(100)
+                .storeCellVariable("sub2")
+                .loadFreeVariable("parent")
+                .op(OpCode.POP_TOP)
+                .op(OpCode.LOAD_CLOSURE, 0)
+                .op(OpCode.LOAD_CLOSURE, 1)
+                .op(OpCode.LOAD_CLOSURE, 2)
+                .tuple(3)
+                .loadConstant(secondDependentFunctionClass)
+                .loadConstant("parent.sub.sub")
+                .op(OpCode.MAKE_FUNCTION, 8)
+                .storeVariable("function")
+                .loadConstant(300)
+                .storeCellVariable("sub2")
+                .loadVariable("function")
+                .callFunction(0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Class<?> firstDependentFunctionClass = translatePythonBytecodeToClass(firstDependentFunction, PythonLikeFunction.class);
+
+        PythonCompiledFunction parentFunction = PythonFunctionBuilder.newFunction()
+                .loadConstant(10)
+                .storeCellVariable("parent")
+                .op(OpCode.LOAD_CLOSURE, 0)
+                .tuple(1)
+                .loadConstant(firstDependentFunctionClass)
+                .loadConstant("parent.sub")
+                .op(OpCode.MAKE_FUNCTION, 8)
+                .storeVariable("sub")
+                .loadConstant(20)
+                .storeCellVariable("parent")
+                .loadVariable("sub")
+                .callFunction(0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Supplier javaFunction = translatePythonBytecode(parentFunction, Supplier.class);
+        assertThat(javaFunction.get()).isEqualTo(321);
+    }
+
+    @Test
     public void testFormat() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item", "format")
                 .loadParameter("item")
@@ -945,12 +1032,20 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
         List<String> co_varnames = new ArrayList<>();
+
+        List<String> co_cellvars = new ArrayList<>();
+        List<String> co_freevars = new ArrayList<>();
         List<Object> co_consts = new ArrayList<>();
+
+        int co_argcount = 0;
+        int co_kwonlyargcount = 0;
 
         public static PythonFunctionBuilder newFunction(String... parameters) {
             PythonFunctionBuilder out = new PythonFunctionBuilder();
             out.co_varnames.addAll(Arrays.asList(parameters));
             out.co_names.addAll(out.co_varnames);
+            out.co_argcount = parameters.length;
+            out.co_kwonlyargcount = 0;
             return out;
         }
 
@@ -960,6 +1055,10 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             out.co_constants = co_consts;
             out.co_varnames = co_varnames;
             out.co_names = co_names;
+            out.co_argcount = co_argcount;
+            out.co_kwonlyargcount = co_kwonlyargcount;
+            out.co_cellvars = co_cellvars;
+            out.co_freevars = co_freevars;
             return out;
         }
 
@@ -1280,6 +1379,66 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             if (instruction.arg == -1) {
                 co_varnames.add(variableName);
                 instruction.arg = co_varnames.size() - 1;
+            }
+
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder loadCellVariable(String variableName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.LOAD_DEREF;
+            instruction.offset = instructionList.size();
+            instruction.arg = co_cellvars.indexOf(variableName);
+
+            if (instruction.arg == -1) {
+                co_cellvars.add(variableName);
+                instruction.arg = co_cellvars.size() - 1;
+            }
+
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder storeCellVariable(String variableName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.STORE_DEREF;
+            instruction.offset = instructionList.size();
+            instruction.arg = co_cellvars.indexOf(variableName);
+
+            if (instruction.arg == -1) {
+                co_cellvars.add(variableName);
+                instruction.arg = co_cellvars.size() - 1;
+            }
+
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder loadFreeVariable(String variableName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.LOAD_DEREF;
+            instruction.offset = instructionList.size();
+            instruction.arg = co_freevars.indexOf(variableName);
+
+            if (instruction.arg == -1) {
+                co_freevars.add(variableName);
+                instruction.arg = co_freevars.size() - 1;
+            }
+
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder storeFreeVariable(String variableName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.STORE_DEREF;
+            instruction.offset = instructionList.size();
+            instruction.arg = co_freevars.indexOf(variableName);
+
+            if (instruction.arg == -1) {
+                co_freevars.add(variableName);
+                instruction.arg = co_freevars.size() - 1;
             }
 
             instructionList.add(instruction);

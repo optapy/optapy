@@ -95,6 +95,9 @@ def translate_python_bytecode_to_java_bytecode(python_function, java_function_ty
         python_compiled_function.co_cellvars = copy_iterable(python_function.__code__.co_cellvars)
         python_compiled_function.co_freevars = copy_iterable(python_function.__code__.co_freevars)
         python_compiled_function.co_constants = copy_constants(python_function.__code__.co_consts)
+        python_compiled_function.co_argcount = python_function.__code__.co_argcount
+        python_compiled_function.co_kwonlyargcount = python_function.__code__.co_kwonlyargcount
+
         return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(python_compiled_function,
                                                                               java_function_type)
     except Exception as e:

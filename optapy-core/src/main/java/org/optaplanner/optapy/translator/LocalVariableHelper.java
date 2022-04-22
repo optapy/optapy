@@ -7,7 +7,12 @@ public class LocalVariableHelper {
 
     public final Parameter[] parameters;
     public final int parameterSlotsEnd;
+    public final int pythonCellVariablesStart;
+    public final int pythonFreeVariablesStart;
     public final int pythonLocalVariablesSlotEnd;
+
+    public final int pythonBoundVariables;
+    public final int pythonFreeVariables;
     int usedLocals;
 
     public LocalVariableHelper(Parameter[] parameters, PythonCompiledFunction compiledFunction) {
@@ -20,8 +25,14 @@ public class LocalVariableHelper {
                 slotsUsedByParameters += 1;
             }
         }
+
+        pythonBoundVariables = compiledFunction.co_cellvars.size();
+        pythonFreeVariables = compiledFunction.co_freevars.size();
+
         parameterSlotsEnd = slotsUsedByParameters;
-        pythonLocalVariablesSlotEnd = parameterSlotsEnd + compiledFunction.co_varnames.size();
+        pythonCellVariablesStart = parameterSlotsEnd + compiledFunction.co_varnames.size();
+        pythonFreeVariablesStart = pythonCellVariablesStart + pythonBoundVariables;
+        pythonLocalVariablesSlotEnd = pythonFreeVariablesStart + pythonFreeVariables;
     }
 
     public int getParameterSlot(int parameterIndex) {
@@ -43,6 +54,21 @@ public class LocalVariableHelper {
 
     public int getPythonLocalVariableSlot(int index) {
         return parameterSlotsEnd + index;
+    }
+
+    public int getPythonCellOrFreeVariableSlot(int index) {
+        return pythonCellVariablesStart + index;
+    }
+
+    public int getNumberOfFreeCells() {
+        return pythonFreeVariables;
+    }
+
+    public int getNumberOfBoundCells() {
+        return pythonBoundVariables;
+    }
+    public int getNumberOfCells() {
+        return pythonBoundVariables + pythonFreeVariables;
     }
 
     public int newLocal() {

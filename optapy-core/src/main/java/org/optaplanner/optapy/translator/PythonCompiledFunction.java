@@ -32,4 +32,14 @@ public class PythonCompiledFunction {
      * List of constants used in bytecode
      */
     public List<Object> co_constants;
+
+    /**
+     * The number of arguments the function takes
+     */
+    public int co_argcount;
+
+    /**
+     * The number of keyword only arguments the function takes
+     */
+    public int co_kwonlyargcount;
 }

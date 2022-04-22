@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
@@ -20,13 +19,14 @@ import org.optaplanner.optapy.translator.implementors.DunderOperatorImplementor;
 import org.optaplanner.optapy.translator.implementors.FunctionImplementor;
 import org.optaplanner.optapy.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.optapy.translator.implementors.JumpImplementor;
-import org.optaplanner.optapy.translator.implementors.LocalVariableImplementor;
+import org.optaplanner.optapy.translator.implementors.VariableImplementor;
 import org.optaplanner.optapy.translator.implementors.ObjectImplementor;
 import org.optaplanner.optapy.translator.implementors.PythonBuiltinOperatorImplementor;
 import org.optaplanner.optapy.translator.implementors.PythonConstantsImplementor;
 import org.optaplanner.optapy.translator.implementors.StackManipulationImplementor;
 import org.optaplanner.optapy.translator.implementors.StringImplementor;
 import org.optaplanner.optapy.translator.types.PythonLikeDict;
+import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeList;
 import org.optaplanner.optapy.translator.types.PythonLikeSet;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
@@ -44,6 +44,17 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static final String CONSTANTS_STATIC_FIELD_NAME = "co_consts";
 
     public static final String NAMES_STATIC_FIELD_NAME = "co_names";
+
+    public static final String VARIABLE_NAMES_STATIC_FIELD_NAME = "co_varnames";
+
+    public static final String DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME = "__defaults__";
+
+    public static final String DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME = "__kwdefaults__";
+
+    public static final String ANNOTATION_DIRECTORY_INSTANCE_FIELD_NAME = "__annotations__";
+    public static final String CELLS_INSTANCE_FIELD_NAME = "__closure__";
+
+    public static final String QUALIFIED_NAME_INSTANCE_FIELD_NAME = "__qualname__";
     private static long generatedClassId = 0L;
 
     /**
@@ -90,64 +101,188 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         return candidateList.get(0);
     }
 
-    @SuppressWarnings({ "unused", "unchecked" })
-    public static <T> T translatePythonBytecode(PythonCompiledFunction pythonCompiledFunction,
-            Class<T> javaFunctionalInterfaceType) {
+    @SuppressWarnings("unchecked")
+    public static <T> Class<T> translatePythonBytecodeToClass(PythonCompiledFunction pythonCompiledFunction,
+                                                              Class<T> javaFunctionalInterfaceType) {
         Method functionalMethod = getFunctionalInterfaceMethod(javaFunctionalInterfaceType);
         String className = "org.optaplanner.optapy.generated." + "function" + generatedClassId + ".GeneratedFunction";
         generatedClassId++;
 
         String internalClassName = className.replace('.', '/');
-        AtomicReference<byte[]> classBytecodeHolder = new AtomicReference<>();
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
         classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null, Type.getInternalName(Object.class),
-                new String[] { Type.getInternalName(javaFunctionalInterfaceType) });
+                          new String[] { Type.getInternalName(javaFunctionalInterfaceType) });
         Class<?>[] exceptionTypes = functionalMethod.getExceptionTypes();
         String[] exceptionNames = new String[exceptionTypes.length];
         for (int i = 0; i < exceptionTypes.length; i++) {
             exceptionNames[i] = Type.getInternalName(exceptionTypes[i]);
         }
-        createConstructor(classWriter);
-        createConstantsStaticField(classWriter);
-        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC,
-                functionalMethod.getName(),
-                Type.getMethodDescriptor(functionalMethod),
-                null,
-                exceptionNames);
 
-        translatePythonBytecodeToMethod(functionalMethod, internalClassName, methodVisitor, pythonCompiledFunction);
+        final boolean isPythonLikeFunction = javaFunctionalInterfaceType.equals(PythonLikeFunction.class);
+
+        if (isPythonLikeFunction) {
+            createPythonLikeFunctionInstanceFields(classWriter);
+            createPythonLikeFunctionConstructor(classWriter, internalClassName);
+        } else {
+            createJavaFunctionConstructor(classWriter, internalClassName);
+        }
+
+        createSharedFields(classWriter);
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC,
+                                                              functionalMethod.getName(),
+                                                              Type.getMethodDescriptor(functionalMethod),
+                                                              null,
+                                                              exceptionNames);
+
+        translatePythonBytecodeToMethod(functionalMethod, internalClassName, methodVisitor, pythonCompiledFunction, isPythonLikeFunction);
         classWriter.visitEnd();
 
         writeClassOutput(classNameToBytecode, className, classWriter.toByteArray());
 
         try {
-            Class<?> compiledClass = asmClassLoader.loadClass(className);
+            Class<T> compiledClass = (Class<T>) asmClassLoader.loadClass(className);
             setConstantsStaticField(compiledClass, pythonCompiledFunction);
-            return (T) compiledClass.getConstructor().newInstance();
-        } catch (ClassNotFoundException | InvocationTargetException | InstantiationException | IllegalAccessException
-                | NoSuchMethodException e) {
-            throw new IllegalStateException("Impossible State: Unable to create instance of generated class (" +
-                    className + ") despite it being just generated.", e);
+            return compiledClass;
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Impossible State: Unable to load generated class (" +
+                                                    className + ") despite it being just generated.", e);
         }
     }
 
-    private static void createConstructor(ClassWriter classWriter) {
+    @SuppressWarnings({ "unused" })
+    public static <T> T translatePythonBytecode(PythonCompiledFunction pythonCompiledFunction,
+            Class<T> javaFunctionalInterfaceType) {
+        Class<T> compiledClass = translatePythonBytecodeToClass(pythonCompiledFunction, javaFunctionalInterfaceType);
+        try {
+            return compiledClass.getConstructor().newInstance();
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
+                | NoSuchMethodException e) {
+            throw new IllegalStateException("Impossible State: Unable to create instance of generated class (" +
+                                                    compiledClass + ") despite it being just generated.", e);
+        }
+    }
+
+    private static void createPythonLikeFunctionInstanceFields(ClassWriter classWriter) {
+        classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
+                               DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeTuple.class), null, null);
+        classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
+                               DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeDict.class), null, null);
+        classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
+                               ANNOTATION_DIRECTORY_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeDict.class), null, null);
+        classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
+                               QUALIFIED_NAME_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonString.class), null, null);
+        classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
+                               CELLS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeTuple.class), null, null);
+    }
+
+    private static void createJavaFunctionConstructor(ClassWriter classWriter, String className) {
         MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "<init>", "()V",
                 null, null);
         methodVisitor.visitCode();
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>",
                 "()V", false);
+
         methodVisitor.visitInsn(Opcodes.RETURN);
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
     }
 
-    private static void createConstantsStaticField(ClassWriter classWriter) {
+    private static void createPythonLikeFunctionConstructor(ClassWriter classWriter, String className) {
+        // Empty constructor, for java code
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "<init>",
+                                                              Type.getMethodDescriptor(Type.VOID_TYPE),
+                                                              null, null);
+        methodVisitor.visitCode();
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>",
+                                      "()V", false);
+
+        // Positional only and Positional/Keyword default arguments
+        methodVisitor.visitInsn(Opcodes.DUP);
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeTuple.class));
+
+        // Keyword only default arguments
+        methodVisitor.visitInsn(Opcodes.DUP);
+        CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeDict.class));
+
+        // Annotation Directory as key/value tuple
+        methodVisitor.visitInsn(Opcodes.DUP);
+        CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, ANNOTATION_DIRECTORY_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeDict.class));
+
+        // Free variable cells
+        methodVisitor.visitInsn(Opcodes.DUP);
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, CELLS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeTuple.class));
+
+        // Function name
+        methodVisitor.visitLdcInsn(className.replace('/', '.'));
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class),
+                                      "valueOf", Type.getMethodDescriptor(Type.getType(PythonString.class), Type.getType(String.class)),
+                                      false);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonString.class));
+        methodVisitor.visitInsn(Opcodes.RETURN);
+
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+
+        // Full constructor, for MAKE_FUNCTION
+        methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "<init>",
+                                                              Type.getMethodDescriptor(Type.VOID_TYPE,
+                                                                                       Type.getType(PythonLikeTuple.class),
+                                                                                       Type.getType(PythonLikeDict.class),
+                                                                                       Type.getType(PythonLikeDict.class),
+                                                                                       Type.getType(PythonLikeTuple.class),
+                                                                                       Type.getType(PythonString.class)),
+                                                              null, null);
+        methodVisitor.visitCode();
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>",
+                                      "()V", false);
+
+        // Positional only and Positional/Keyword default arguments
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeTuple.class));
+
+        // Keyword only default arguments
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeDict.class));
+
+        // Annotation Directory as key/value tuple
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 3);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, ANNOTATION_DIRECTORY_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeDict.class));
+
+        // Free variable cells
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 4);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, CELLS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeTuple.class));
+
+        // Function name
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 5);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonString.class));
+
+        methodVisitor.visitInsn(Opcodes.RETURN);
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+    }
+
+    private static void createSharedFields(ClassWriter classWriter) {
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
                                CONSTANTS_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
                                NAMES_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
+                               VARIABLE_NAMES_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
     }
 
     private static void setConstantsStaticField(Class<?> compiledClass, PythonCompiledFunction pythonCompiledFunction) {
@@ -160,6 +295,12 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 pythonNameList.add(PythonString.valueOf(name));
             }
             compiledClass.getField(NAMES_STATIC_FIELD_NAME).set(null, pythonNameList);
+
+            List<PythonString> pythonVariableNameList = new ArrayList<>(pythonCompiledFunction.co_varnames.size());
+            for (String name : pythonCompiledFunction.co_varnames) {
+                pythonVariableNameList.add(PythonString.valueOf(name));
+            }
+            compiledClass.getField(VARIABLE_NAMES_STATIC_FIELD_NAME).set(null, pythonVariableNameList);
         } catch (IllegalAccessException | NoSuchFieldException e) {
             throw new IllegalStateException("Impossible state: generated class (" + compiledClass +
                                                     ") does not have static field \"" + CONSTANTS_STATIC_FIELD_NAME + "\"", e);
@@ -167,7 +308,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     }
 
     private static void translatePythonBytecodeToMethod(Method method, String className, MethodVisitor methodVisitor,
-            PythonCompiledFunction pythonCompiledFunction) {
+            PythonCompiledFunction pythonCompiledFunction, boolean isPythonLikeFunction) {
         for (Parameter parameter : method.getParameters()) {
             methodVisitor.visitParameter(parameter.getName(), 0);
         }
@@ -176,16 +317,66 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         Map<Integer, Label> bytecodeCounterToLabelMap = new HashMap<>();
         LocalVariableHelper localVariableHelper = new LocalVariableHelper(method.getParameters(), pythonCompiledFunction);
 
-        for (int i = 0; i < localVariableHelper.parameters.length; i++) {
-            JavaPythonTypeConversionImplementor.copyParameter(methodVisitor, localVariableHelper, i);
+        if (!isPythonLikeFunction) {
+            // Need to convert Java parameters
+            for (int i = 0; i < localVariableHelper.parameters.length; i++) {
+                JavaPythonTypeConversionImplementor.copyParameter(methodVisitor, localVariableHelper, i);
+            }
+        } else {
+            // Need to move Python parameters from the argument list + keyword list to their variable slots
+            movePythonParametersToSlots(methodVisitor, className, pythonCompiledFunction, localVariableHelper);
+        }
+
+        for (int i = 0; i < localVariableHelper.getNumberOfBoundCells(); i++) {
+            VariableImplementor.createCell(methodVisitor, localVariableHelper, i);
+        }
+
+        for (int i = 0; i < localVariableHelper.getNumberOfFreeCells(); i++) {
+            VariableImplementor.setupFreeVariableCell(methodVisitor, className, localVariableHelper, i);
         }
 
         for (PythonBytecodeInstruction instruction : pythonCompiledFunction.instructionList) {
             translatePythonBytecodeInstruction(method, className, methodVisitor, pythonCompiledFunction, instruction,
                     bytecodeCounterToLabelMap, localVariableHelper);
         }
+
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
+    }
+
+    private static void movePythonParametersToSlots(MethodVisitor methodVisitor,
+                                                    String internalClassName,
+                                                    PythonCompiledFunction pythonCompiledFunction,
+                                                    LocalVariableHelper localVariableHelper) {
+        // Call {@link FunctionImplementor#extractArguments} to extract argument into a list
+        methodVisitor.visitLdcInsn(pythonCompiledFunction.co_argcount);
+        methodVisitor.visitLdcInsn(pythonCompiledFunction.co_kwonlyargcount);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, internalClassName, VARIABLE_NAMES_STATIC_FIELD_NAME,
+                                     Type.getDescriptor(List.class));
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME,
+                                     Type.getDescriptor(PythonLikeTuple.class));
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME,
+                                     Type.getDescriptor(PythonLikeDict.class));
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class), "extractArguments",
+                                      Type.getMethodDescriptor(Type.getType(List.class), Type.INT_TYPE, Type.INT_TYPE,
+                                                               Type.getType(List.class), Type.getType(List.class),
+                                                               Type.getType(Map.class), Type.getType(List.class),
+                                                               Type.getType(Map.class)), false);
+
+        for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitLdcInsn(i);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
+                                          Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE), true);
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(i));
+            methodVisitor.visitInsn(Opcodes.POP);
+        }
+        methodVisitor.visitInsn(Opcodes.POP);
     }
 
     private static void translatePythonBytecodeInstruction(Method method,
@@ -413,8 +604,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 FunctionImplementor.callMethod(methodVisitor, instruction, localVariableHelper);
                 break;
             }
-            case MAKE_FUNCTION:
+            case MAKE_FUNCTION: {
+                FunctionImplementor.createFunction(methodVisitor, instruction, localVariableHelper);
                 break;
+            }
 
             // **************************************************
             // Variable Operations
@@ -439,25 +632,34 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
 
             case LOAD_FAST: {
-                LocalVariableImplementor.loadLocalVariable(methodVisitor, instruction, localVariableHelper);
+                VariableImplementor.loadLocalVariable(methodVisitor, instruction, localVariableHelper);
                 break;
             }
             case STORE_FAST: {
-                LocalVariableImplementor.storeInLocalVariable(methodVisitor, instruction, localVariableHelper);
+                VariableImplementor.storeInLocalVariable(methodVisitor, instruction, localVariableHelper);
                 break;
             }
-            case DELETE_FAST:
+            case DELETE_FAST: {
+                VariableImplementor.deleteLocalVariable(methodVisitor, instruction, localVariableHelper);
                 break;
+            }
 
-            case LOAD_CLOSURE:
+            case LOAD_CLOSURE: {
+                VariableImplementor.loadCell(methodVisitor, instruction, localVariableHelper);
                 break;
-
-            case LOAD_DEREF:
+            }
+            case LOAD_DEREF: {
+                VariableImplementor.loadCellVariable(methodVisitor, instruction, localVariableHelper);
                 break;
-            case STORE_DEREF:
+            }
+            case STORE_DEREF: {
+                VariableImplementor.storeInCellVariable(methodVisitor, instruction, localVariableHelper);
                 break;
-            case DELETE_DEREF:
+            }
+            case DELETE_DEREF: {
+                VariableImplementor.deleteCellVariable(methodVisitor, instruction, localVariableHelper);
                 break;
+            }
 
             case LOAD_CLASSDEREF:
                 break;

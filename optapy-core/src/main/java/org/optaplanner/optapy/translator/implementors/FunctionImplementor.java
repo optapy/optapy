@@ -1,6 +1,8 @@
 package org.optaplanner.optapy.translator.implementors;
 
-import java.util.Collection;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,10 +14,12 @@ import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.LocalVariableHelper;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
 import org.optaplanner.optapy.translator.PythonCompiledFunction;
+import org.optaplanner.optapy.translator.types.PythonCode;
 import org.optaplanner.optapy.translator.types.PythonLikeDict;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
 import org.optaplanner.optapy.translator.types.PythonLikeType;
+import org.optaplanner.optapy.translator.types.PythonString;
 
 /**
  * Implements opcodes related to functions
@@ -203,6 +207,166 @@ public class FunctionImplementor {
                                                                            Type.getType(List.class),
                                                                            Type.getType(Map.class)),
                                       true);
+    }
+
+    /**
+     * Creates a function. The stack depends on {@code instruction.arg}:
+     *
+     * - If (arg & 1) == 1, a tuple of default values for positional-only and positional-or-keyword parameters in positional order
+     * - If (arg & 2) == 2, a dictionary of keyword-only parameters’ default values
+     * - If (arg & 4) == 4, an annotation dictionary
+     * - If (arg & 8) == 8, a tuple containing cells for free variables
+     *
+     * The stack will contain the following items, in the given order:
+     *
+     * TOP
+     * [Mandatory] Function Name
+     * [Mandatory] Class of the PythonLikeFunction to create
+     * [Optional, flag = 0x8] A tuple containing the cells for free variables
+     * [Optional, flag = 0x4] A tuple containing key,value pairs for the annotation directory
+     * [Optional, flag = 0x2] A dictionary of keyword-only parameters’ default values
+     * [Optional, flag = 0x1] A tuple of default values for positional-only and positional-or-keyword parameters in positional order
+     * BOTTOM
+     *
+     * All arguments are popped. A new instance of Class is created with the arguments and pushed to the stack.
+     */
+    public static void createFunction(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        int providedOptionalArgs = Integer.bitCount(instruction.arg);
+
+        // If the argument present, decrement providedOptionalArgs to keep argument shifting logic the same
+        // Ex: present, missing, present, present -> need to shift default for missing down by 4 = 2 + (3 - 1)
+        // Ex: present, present, missing, present -> need to shift default for missing down by 3 = 2 + (3 - 2)
+        // Ex: present, missing1, missing2, present -> need to shift default for missing1 down by 3 = 2 + (2 - 1),
+        //                                             need to shift default for missing2 down by 3 = 2 + (2 - 1)
+        if ((instruction.arg & 1) != 1) {
+            CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+        } else {
+            providedOptionalArgs--;
+        }
+
+        if ((instruction.arg & 2) != 2) {
+            CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
+            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+        }  else {
+            providedOptionalArgs--;
+        }
+
+        if ((instruction.arg & 4) != 4) {
+            CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+        }  else {
+            providedOptionalArgs--;
+        }
+
+        if ((instruction.arg & 8) != 8) {
+            CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+        }
+
+        // Stack is now:
+        // default positional args, default keyword args, annotation directory tuple, cell tuple, function class, function name
+
+        // Do type casts for name string and code object
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonString.class));
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonCode.class));
+
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class),
+                                      "createInstance", Type.getMethodDescriptor(Type.getType(PythonLikeFunction.class),
+                                                                             Type.getType(PythonLikeTuple.class),
+                                                                             Type.getType(PythonLikeDict.class),
+                                                                             Type.getType(PythonLikeTuple.class),
+                                                                             Type.getType(PythonLikeTuple.class),
+                                                                             Type.getType(PythonString.class),
+                                                                             Type.getType(PythonCode.class)),
+                                      false);
+
+    }
+
+    @SuppressWarnings("unused")
+    public static List<PythonLikeObject> extractArguments(int totalArgCount,
+                                                   int keywordOnlyArgCount,
+                                                   List<PythonString> variableNameList,
+                                                   List<PythonLikeObject> defaultPositionalArguments,
+                                                   Map<PythonString, PythonLikeObject> defaultNamedArguments,
+                                                   List<PythonLikeObject> positionalArguments,
+                                                   Map<PythonString, PythonLikeObject> namedArguments) {
+        if (positionalArguments == null) {
+            positionalArguments = List.of();
+        }
+
+        if (namedArguments == null) {
+            namedArguments = Map.of();
+        }
+
+        if (positionalArguments.size() + namedArguments.size() + defaultPositionalArguments.size() + defaultNamedArguments.size() < totalArgCount) {
+            // TODO: explain missing positional/named arguments
+            throw new IllegalArgumentException();
+        }
+
+        int positionalArgumentEnd = totalArgCount - keywordOnlyArgCount;
+        List<PythonLikeObject> out = new ArrayList<>(totalArgCount);
+
+        out.addAll(positionalArguments);
+        if (out.size() < positionalArgumentEnd) {
+            int defaultPositionalArgumentsStart = positionalArgumentEnd - defaultPositionalArguments.size() - out.size();
+            if (defaultPositionalArgumentsStart < 0) {
+                // TODO: explain missing positional/named arguments
+                throw new IllegalArgumentException();
+            }
+            out.addAll(defaultPositionalArguments.subList(defaultPositionalArgumentsStart, defaultPositionalArguments.size()));
+        }
+
+        for (int i = out.size(); i < totalArgCount; i++) {
+            out.add(null);
+        }
+
+        for (PythonString key : defaultNamedArguments.keySet()) {
+            int index = variableNameList.indexOf(key);
+            out.set(index, namedArguments.get(key));
+        }
+
+        for (PythonString key : namedArguments.keySet()) {
+            int index = variableNameList.indexOf(key);
+            if (index == -1 || index >= totalArgCount) {
+                // TODO: explain invalid named arguments
+                throw new IllegalArgumentException();
+            }
+            out.set(index, namedArguments.get(key));
+        }
+
+        if (out.size() != totalArgCount) {
+            // TODO: explain invalid argument count
+            throw new IllegalArgumentException();
+        }
+
+        return out;
+    }
+
+    @SuppressWarnings({"unused", "unchecked"})
+    public static PythonLikeFunction createInstance(PythonLikeTuple defaultPositionalArgs,
+                                 PythonLikeDict defaultKeywordArgs,
+                                 PythonLikeTuple annotationTuple,
+                                 PythonLikeTuple closure,
+                                 PythonString functionName,
+                                 PythonCode code) {
+        PythonLikeDict annotationDirectory = new PythonLikeDict();
+        for (int i = 0; i < annotationTuple.size(); i++) {
+            annotationDirectory.put(annotationTuple.get(i*2), annotationTuple.get(i*2 + 1));
+        }
+
+        try {
+            Constructor<PythonLikeFunction> constructor = (Constructor<PythonLikeFunction>) code.functionClass.getConstructor(PythonLikeTuple.class,
+                                                                                                                              PythonLikeDict.class,
+                                                                                                                              PythonLikeDict.class,
+                                                                                                                              PythonLikeTuple.class,
+                                                                                                                              PythonString.class);
+            return constructor.newInstance(defaultPositionalArgs, defaultKeywordArgs, annotationDirectory, closure, functionName);
+        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static class TupleMapPair {
