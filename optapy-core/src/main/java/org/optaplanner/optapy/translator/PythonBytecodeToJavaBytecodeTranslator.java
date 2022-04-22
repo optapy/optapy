@@ -268,7 +268,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             }
             case STORE_SUBSCR: {
-                CollectionImplementor.setItem(methodVisitor, instruction, localVariableHelper);
+                CollectionImplementor.setItem(methodVisitor, localVariableHelper);
                 break;
             }
             case DEL_SUBSCR: {
@@ -279,8 +279,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.containsOperator(methodVisitor, instruction);
                 break;
             }
-            case UNPACK_SEQUENCE:
+            case UNPACK_SEQUENCE: {
+                CollectionImplementor.unpackSequence(methodVisitor, instruction.arg, localVariableHelper);
                 break;
+            }
             case UNPACK_EX:
                 break;
 

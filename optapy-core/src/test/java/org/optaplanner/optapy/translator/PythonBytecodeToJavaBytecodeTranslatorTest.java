@@ -518,7 +518,7 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
     @Test
     public void testListToTuple() {
-        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(3)
@@ -531,6 +531,21 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         Object out = javaFunction.get();
         assertThat(out).isInstanceOf(PythonLikeTuple.class);
         assertThat(out).asList().containsExactly(1, 2, 3);
+    }
+
+    @Test
+    public void testUnpackSequence() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("sequence")
+                .loadParameter("sequence")
+                .op(OpCode.UNPACK_SEQUENCE, 3)
+                .tuple(3)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        assertThat(javaFunction.apply(List.of(1,2,3))).isEqualTo(List.of(1,2,3));
+        assertThatCode(() -> javaFunction.apply(List.of(1,2))).hasMessage("not enough values to unpack (expected 3, got 2)");
+        assertThatCode(() -> javaFunction.apply(List.of(1,2,3,4))).hasMessage("too many values to unpack (expected 3)");
     }
     @Test
     public void testBuildString() {

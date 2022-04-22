@@ -55,6 +55,128 @@ public class CollectionImplementor {
     }
 
     /**
+     * TOS is an iterable; pop {@code toUnpack} elements from it. Raise an exception if it does not
+     * have exactly {@code toUnpack} elements.
+     */
+    public static void unpackSequence(MethodVisitor methodVisitor, int toUnpack, LocalVariableHelper localVariableHelper) {
+        // Initialize size and unpacked elements local variables
+        int sizeLocal = localVariableHelper.newLocal();
+
+        methodVisitor.visitInsn(Opcodes.ICONST_0);
+        methodVisitor.visitVarInsn(Opcodes.ISTORE, sizeLocal);
+
+        int[] unpackedLocals = new int[toUnpack];
+
+        for (int i = 0; i < toUnpack; i++) {
+            unpackedLocals[i] = localVariableHelper.newLocal();
+            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, unpackedLocals[i]);
+        }
+
+        // Get the iterator for the iterable
+        DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.ITERATOR);
+
+        // Surround the unpacking code in a try...finally block
+        Label tryStartLabel = new Label();
+        Label tryEndLabel = new Label();
+        Label finallyStartLabel = new Label();
+
+        methodVisitor.visitTryCatchBlock(tryStartLabel, tryEndLabel, finallyStartLabel, null);
+
+        methodVisitor.visitLabel(tryStartLabel);
+
+        for (int i = 0; i < toUnpack + 1; i++) {
+            // Call the next method of the iterator
+            methodVisitor.visitInsn(Opcodes.DUP);
+            DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
+            if (i < toUnpack) { // Store the unpacked value in a local
+                methodVisitor.visitVarInsn(Opcodes.ASTORE, unpackedLocals[i]);
+            } else { // Try to get more elements to see if the iterable contain exactly enough
+                methodVisitor.visitInsn(Opcodes.POP);
+            }
+            // increment size
+            methodVisitor.visitIincInsn(sizeLocal, 1);
+        }
+        methodVisitor.visitLabel(tryEndLabel);
+
+        methodVisitor.visitLabel(finallyStartLabel);
+
+        Label toFewElements = new Label();
+        Label toManyElements = new Label();
+        Label exactNumberOfElements = new Label();
+
+        // Pop off the iterator
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        // Check if too few
+        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        methodVisitor.visitLdcInsn(toUnpack);
+        methodVisitor.visitJumpInsn(Opcodes.IF_ICMPLT, toFewElements);
+
+        // Check if too many
+        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        methodVisitor.visitLdcInsn(toUnpack);
+        methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGT, toManyElements);
+
+        // Must have exactly enough
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, exactNumberOfElements);
+
+        // TODO: Throw ValueError instead
+        methodVisitor.visitLabel(toFewElements);
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+
+        // Build error message string
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(StringBuilder.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitLdcInsn("not enough values to unpack (expected " + toUnpack + ", got ");
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(StringBuilder.class),
+                                      "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
+                                      false);
+
+        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
+                                      "append", Type.getMethodDescriptor(Type.getType(StringBuilder.class), Type.INT_TYPE),
+                                      false);
+
+        methodVisitor.visitLdcInsn(")");
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
+                                      "append", Type.getMethodDescriptor(Type.getType(StringBuilder.class), Type.getType(String.class)),
+                                      false);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Object.class),
+                                      "toString", Type.getMethodDescriptor(Type.getType(String.class)),
+                                      false);
+
+        // Call the constructor of the Error
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
+                                      "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
+                                      false);
+        // And throw it
+        methodVisitor.visitInsn(Opcodes.ATHROW);
+
+
+        methodVisitor.visitLabel(toManyElements);
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitLdcInsn("too many values to unpack (expected " + toUnpack + ")");
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
+                                      "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
+                                      false);
+        methodVisitor.visitInsn(Opcodes.ATHROW);
+
+
+        methodVisitor.visitLabel(exactNumberOfElements);
+        for (int i = 0; i < toUnpack; i++) {
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, unpackedLocals[i]);
+        }
+
+        localVariableHelper.freeLocal();
+        for (int i = 0; i < toUnpack; i++) {
+            localVariableHelper.freeLocal();
+        }
+    }
+
+    /**
      * Constructs a collection from the top {@code itemCount} on the stack.
      * {@code collectionType} MUST implement PythonLikeObject and define
      * a reverseAdd(PythonLikeObject) method. Basically generate the following code:
@@ -213,7 +335,7 @@ public class CollectionImplementor {
     /**
      * Implements TOS1[TOS] = TOS2. TOS1 must be a collection/object that implement the "__setitem__" dunder method.
      */
-    public static void setItem(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+    public static void setItem(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper) {
         // Stack is TOS2, TOS1, TOS
         StackManipulationImplementor.rotateThree(methodVisitor);
         StackManipulationImplementor.rotateThree(methodVisitor);
