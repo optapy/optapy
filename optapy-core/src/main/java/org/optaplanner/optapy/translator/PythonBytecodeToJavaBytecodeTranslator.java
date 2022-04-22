@@ -283,9 +283,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 CollectionImplementor.unpackSequence(methodVisitor, instruction.arg, localVariableHelper);
                 break;
             }
-            case UNPACK_EX:
+            case UNPACK_EX:{
+                CollectionImplementor.unpackSequenceWithTail(methodVisitor, instruction.arg, localVariableHelper);
                 break;
-
+            }
 
             // **************************************************
             // Collection Construction Operations

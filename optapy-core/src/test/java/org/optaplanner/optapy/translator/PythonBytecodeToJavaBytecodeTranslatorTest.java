@@ -553,6 +553,31 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThatCode(() -> javaFunction.apply(List.of(1,2))).hasMessage("not enough values to unpack (expected 3, got 2)");
         assertThatCode(() -> javaFunction.apply(List.of(1,2,3,4))).hasMessage("too many values to unpack (expected 3)");
     }
+
+    @Test
+    public void testUnpackSequenceWithTail() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("sequence")
+                .loadParameter("sequence")
+                .op(OpCode.UNPACK_EX, 3)
+                .storeVariable("a")
+                .storeVariable("b")
+                .storeVariable("c")
+                .storeVariable("tail")
+                .loadVariable("tail")
+                .loadVariable("a")
+                .op(OpCode.LIST_APPEND, 0)
+                .loadVariable("b")
+                .op(OpCode.LIST_APPEND, 0)
+                .loadVariable("c")
+                .op(OpCode.LIST_APPEND, 0)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+        assertThat(javaFunction.apply(List.of(1,2,3))).isEqualTo(List.of(1,2,3));
+        assertThatCode(() -> javaFunction.apply(List.of(1,2))).hasMessage("not enough values to unpack (expected 3, got 2)");
+        assertThat(javaFunction.apply(List.of(1, 2, 3, 4, 5))).isEqualTo(List.of(4, 5, 1, 2, 3));
+    }
     @Test
     public void testBuildString() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")

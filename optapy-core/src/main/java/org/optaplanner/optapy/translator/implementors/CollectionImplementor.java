@@ -16,6 +16,7 @@ import org.optaplanner.optapy.translator.PythonBinaryOperators;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
 import org.optaplanner.optapy.translator.PythonTernaryOperators;
 import org.optaplanner.optapy.translator.PythonUnaryOperator;
+import org.optaplanner.optapy.translator.types.PythonLikeList;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
 import org.optaplanner.optapy.translator.types.StopIteration;
 
@@ -55,7 +56,8 @@ public class CollectionImplementor {
     }
 
     /**
-     * TOS is an iterable; pop {@code toUnpack} elements from it. Raise an exception if it does not
+     * TOS is an iterable; push {@code toUnpack} elements from it to the stack
+     * (with first item of the iterable as the new TOS). Raise an exception if it does not
      * have exactly {@code toUnpack} elements.
      */
     public static void unpackSequence(MethodVisitor methodVisitor, int toUnpack, LocalVariableHelper localVariableHelper) {
@@ -176,6 +178,131 @@ public class CollectionImplementor {
             localVariableHelper.freeLocal();
         }
     }
+
+    /**
+     * TOS is an iterable; push {@code toUnpack} elements from it to the stack
+     * (with first item of the iterable as the new TOS). Below the elements in the stack
+     * is a list containing the remaining elements in the iterable (empty if there are none).
+     * Raise an exception if it has less than {@code toUnpack} elements.
+     */
+    public static void unpackSequenceWithTail(MethodVisitor methodVisitor, int toUnpack, LocalVariableHelper localVariableHelper) {
+        // Initialize size, unpacked elements and tail local variables
+        int sizeLocal = localVariableHelper.newLocal();
+
+        methodVisitor.visitInsn(Opcodes.ICONST_0);
+        methodVisitor.visitVarInsn(Opcodes.ISTORE, sizeLocal);
+
+        int[] unpackedLocals = new int[toUnpack];
+
+        for (int i = 0; i < toUnpack; i++) {
+            unpackedLocals[i] = localVariableHelper.newLocal();
+            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, unpackedLocals[i]);
+        }
+
+        int tailLocal = localVariableHelper.newLocal();
+        CollectionImplementor.buildCollection(PythonLikeList.class, methodVisitor, 0);
+        methodVisitor.visitVarInsn(Opcodes.ASTORE, tailLocal);
+
+        // Get the iterator for the iterable
+        DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.ITERATOR);
+
+        // Surround the unpacking code in a try...finally block
+        Label tryStartLabel = new Label();
+        Label tryEndLabel = new Label();
+        Label finallyStartLabel = new Label();
+
+        methodVisitor.visitTryCatchBlock(tryStartLabel, tryEndLabel, finallyStartLabel, null);
+
+        methodVisitor.visitLabel(tryStartLabel);
+
+        for (int i = 0; i < toUnpack; i++) {
+            // Call the next method of the iterator
+            methodVisitor.visitInsn(Opcodes.DUP);
+            DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
+            // Store the unpacked value in a local
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, unpackedLocals[i]);
+            // increment size
+            methodVisitor.visitIincInsn(sizeLocal, 1);
+        }
+
+        // Keep iterating through the iterable until StopIteration is raised to get all of its elements
+        Label tailLoopStart = new Label();
+        methodVisitor.visitLabel(tailLoopStart);
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, tailLocal);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
+                                      "add",
+                                      Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
+                                      true);
+        methodVisitor.visitInsn(Opcodes.POP); // Pop the return value of add
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, tailLoopStart);
+
+
+        methodVisitor.visitLabel(tryEndLabel);
+
+        methodVisitor.visitLabel(finallyStartLabel);
+
+        Label exactNumberOfElements = new Label();
+
+        // Pop off the iterator
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        // Check if too few
+        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        methodVisitor.visitLdcInsn(toUnpack);
+        methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, exactNumberOfElements);
+
+        // TODO: Throw ValueError instead
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+
+        // Build error message string
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(StringBuilder.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitLdcInsn("not enough values to unpack (expected " + toUnpack + ", got ");
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(StringBuilder.class),
+                                      "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
+                                      false);
+
+        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
+                                      "append", Type.getMethodDescriptor(Type.getType(StringBuilder.class), Type.INT_TYPE),
+                                      false);
+
+        methodVisitor.visitLdcInsn(")");
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
+                                      "append", Type.getMethodDescriptor(Type.getType(StringBuilder.class), Type.getType(String.class)),
+                                      false);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Object.class),
+                                      "toString", Type.getMethodDescriptor(Type.getType(String.class)),
+                                      false);
+
+        // Call the constructor of the Error
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
+                                      "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
+                                      false);
+        // And throw it
+        methodVisitor.visitInsn(Opcodes.ATHROW);
+
+        methodVisitor.visitLabel(exactNumberOfElements);
+
+        // Unlike all other collection operators, UNPACK_SEQUENCE unpacks the result in reverse order
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, tailLocal);
+        for (int i = toUnpack - 1; i >= 0; i--) {
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, unpackedLocals[i]);
+        }
+
+        localVariableHelper.freeLocal();
+        for (int i = 0; i < toUnpack; i++) {
+            localVariableHelper.freeLocal();
+        }
+        localVariableHelper.freeLocal();
+    }
+
 
     /**
      * Constructs a collection from the top {@code itemCount} on the stack.
