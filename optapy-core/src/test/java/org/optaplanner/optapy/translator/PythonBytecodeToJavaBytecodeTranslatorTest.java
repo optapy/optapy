@@ -538,6 +538,12 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("sequence")
                 .loadParameter("sequence")
                 .op(OpCode.UNPACK_SEQUENCE, 3)
+                .storeVariable("a")
+                .storeVariable("b")
+                .storeVariable("c")
+                .loadVariable("a")
+                .loadVariable("b")
+                .loadVariable("c")
                 .tuple(3)
                 .op(OpCode.RETURN_VALUE)
                 .build();

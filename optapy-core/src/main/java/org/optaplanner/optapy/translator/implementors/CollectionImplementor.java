@@ -166,7 +166,8 @@ public class CollectionImplementor {
 
 
         methodVisitor.visitLabel(exactNumberOfElements);
-        for (int i = 0; i < toUnpack; i++) {
+        for (int i = toUnpack - 1; i >= 0; i--) {
+            // Unlike all other collection operators, UNPACK_SEQUENCE unpacks the result in reverse order
             methodVisitor.visitVarInsn(Opcodes.ALOAD, unpackedLocals[i]);
         }
 
