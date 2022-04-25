@@ -5,6 +5,8 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
+import org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator;
+import org.optaplanner.optapy.translator.PythonInterpreter;
 import org.optaplanner.optapy.translator.PythonUnaryOperator;
 import org.optaplanner.optapy.translator.builtins.ObjectBuiltinOperations;
 import org.optaplanner.optapy.translator.types.PythonString;
@@ -103,5 +105,19 @@ public class StringImplementor {
                                                                Type.getType(PythonLikeObject.class),
                                                                Type.getType(PythonLikeObject.class)),
                                       false);
+    }
+
+    /**
+     * TOS is an PythonLikeObject to be printed. Pop TOS off the stack and print it.
+     */
+    public static void print(MethodVisitor methodVisitor, String className) {
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
+                                     Type.getDescriptor(PythonInterpreter.class));
+        StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
+                                      "print",
+                                      Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
+                                      true);
     }
 }

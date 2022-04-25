@@ -731,8 +731,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             // **************************************************
             // String Operations
             // **************************************************
-            case PRINT_EXPR:
+            case PRINT_EXPR: {
+                StringImplementor.print(methodVisitor, className);
                 break;
+            }
 
             case FORMAT_VALUE: {
                 StringImplementor.formatValue(methodVisitor, instruction);

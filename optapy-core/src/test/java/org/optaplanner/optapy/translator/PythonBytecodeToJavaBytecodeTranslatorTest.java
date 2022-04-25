@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -23,6 +24,8 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.optapy.translator.types.JavaMethodReference;
 import org.optaplanner.optapy.translator.types.PythonBoolean;
@@ -800,7 +803,14 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
                 .op(OpCode.RETURN_VALUE)
                 .build();
 
-        PythonInterpreter interpreter = new CPythonBackedPythonInterpreter(); // TODO: Use mock instead
+        AtomicReference<PythonLikeObject> myGlobalReference = new AtomicReference<>();
+        PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
+        
+        Mockito.when(interpreter.getGlobal("my_global")).thenAnswer(invocationOnMock -> myGlobalReference.get());
+        Mockito.doAnswer(invocationOnMock -> {
+            myGlobalReference.set(invocationOnMock.getArgument(1, PythonLikeObject.class));
+            return null;
+        }).when(interpreter).setGlobal(Mockito.eq("my_global"), Mockito.any());
 
         Class<? extends Consumer> setterFunctionClass = translatePythonBytecodeToClass(setterCompiledFunction, Consumer.class);
         Class<? extends Supplier> getterFunctionClass = translatePythonBytecodeToClass(getterCompiledFunction, Supplier.class);
@@ -817,6 +827,32 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
         assertThat(interpreter.getGlobal("my_global")).isEqualTo(PythonString.valueOf("Value 2"));
         assertThat(getter.get()).isEqualTo(PythonString.valueOf("Value 2"));
+    }
+
+    @Test
+    public void testPrint() {
+        PythonCompiledFunction compiledFunction = PythonFunctionBuilder.newFunction("to_print")
+                .loadParameter("to_print")
+                .op(OpCode.PRINT_EXPR)
+                .loadConstant(null)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
+
+        Class<? extends Consumer> functionClass = translatePythonBytecodeToClass(compiledFunction, Consumer.class);
+
+        Consumer consumer = createInstance(functionClass, interpreter);
+
+        consumer.accept("Value 1");
+
+        Mockito.verify(interpreter).print(PythonString.valueOf("Value 1"));
+
+        Mockito.reset(interpreter);
+
+        consumer.accept(10);
+
+        Mockito.verify(interpreter).print(PythonInteger.valueOf(10));
     }
 
     @Test

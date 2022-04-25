@@ -1,5 +1,6 @@
 package org.optaplanner.optapy.translator;
 
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -7,9 +8,15 @@ import org.optaplanner.optapy.PythonLikeObject;
 
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     Map<String, PythonLikeObject> globalsMap;
+    PrintStream standardOutput;
 
     public CPythonBackedPythonInterpreter() {
-        globalsMap = new HashMap<>();
+        this(System.out);
+    }
+
+    public CPythonBackedPythonInterpreter(PrintStream standardOutput) {
+        this.globalsMap = new HashMap<>();
+        this.standardOutput = standardOutput;
     }
     @Override
     public PythonLikeObject getGlobal(String name) {
@@ -24,5 +31,10 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     @Override
     public void deleteGlobal(String name) {
         globalsMap.remove(name);
+    }
+
+    @Override
+    public void print(PythonLikeObject object) {
+        standardOutput.println(object);
     }
 }
