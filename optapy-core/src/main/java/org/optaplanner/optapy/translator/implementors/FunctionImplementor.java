@@ -13,7 +13,9 @@ import org.objectweb.asm.Type;
 import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.LocalVariableHelper;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
+import org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.optapy.translator.PythonCompiledFunction;
+import org.optaplanner.optapy.translator.PythonInterpreter;
 import org.optaplanner.optapy.translator.types.PythonCode;
 import org.optaplanner.optapy.translator.types.PythonLikeDict;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
@@ -230,7 +232,7 @@ public class FunctionImplementor {
      *
      * All arguments are popped. A new instance of Class is created with the arguments and pushed to the stack.
      */
-    public static void createFunction(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+    public static void createFunction(MethodVisitor methodVisitor, String className, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
         int providedOptionalArgs = Integer.bitCount(instruction.arg);
 
         // If the argument present, decrement providedOptionalArgs to keep argument shifting logic the same
@@ -272,6 +274,11 @@ public class FunctionImplementor {
         methodVisitor.visitInsn(Opcodes.SWAP);
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonCode.class));
 
+        // Pass the current function's interpreter to the new function instance
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
+                                     Type.getDescriptor(PythonInterpreter.class));
+
 
         methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class),
                                       "createInstance", Type.getMethodDescriptor(Type.getType(PythonLikeFunction.class),
@@ -280,7 +287,8 @@ public class FunctionImplementor {
                                                                              Type.getType(PythonLikeTuple.class),
                                                                              Type.getType(PythonLikeTuple.class),
                                                                              Type.getType(PythonString.class),
-                                                                             Type.getType(PythonCode.class)),
+                                                                             Type.getType(PythonCode.class),
+                                                                             Type.getType(PythonInterpreter.class)),
                                       false);
 
     }
@@ -351,7 +359,8 @@ public class FunctionImplementor {
                                  PythonLikeTuple annotationTuple,
                                  PythonLikeTuple closure,
                                  PythonString functionName,
-                                 PythonCode code) {
+                                 PythonCode code,
+                                 PythonInterpreter pythonInterpreter) {
         PythonLikeDict annotationDirectory = new PythonLikeDict();
         for (int i = 0; i < annotationTuple.size(); i++) {
             annotationDirectory.put(annotationTuple.get(i*2), annotationTuple.get(i*2 + 1));
@@ -362,8 +371,9 @@ public class FunctionImplementor {
                                                                                                                               PythonLikeDict.class,
                                                                                                                               PythonLikeDict.class,
                                                                                                                               PythonLikeTuple.class,
-                                                                                                                              PythonString.class);
-            return constructor.newInstance(defaultPositionalArgs, defaultKeywordArgs, annotationDirectory, closure, functionName);
+                                                                                                                              PythonString.class,
+                                                                                                                              PythonInterpreter.class);
+            return constructor.newInstance(defaultPositionalArgs, defaultKeywordArgs, annotationDirectory, closure, functionName, pythonInterpreter);
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
