@@ -353,7 +353,7 @@ public class FunctionImplementor {
         return out;
     }
 
-    @SuppressWarnings({"unused", "unchecked"})
+    @SuppressWarnings("unused")
     public static PythonLikeFunction createInstance(PythonLikeTuple defaultPositionalArgs,
                                  PythonLikeDict defaultKeywordArgs,
                                  PythonLikeTuple annotationTuple,
@@ -361,18 +361,28 @@ public class FunctionImplementor {
                                  PythonString functionName,
                                  PythonCode code,
                                  PythonInterpreter pythonInterpreter) {
+        return createInstance(defaultPositionalArgs, defaultKeywordArgs, annotationTuple, closure, functionName, code.functionClass, pythonInterpreter);
+    }
+
+    public static <T> T createInstance(PythonLikeTuple defaultPositionalArgs,
+                                                        PythonLikeDict defaultKeywordArgs,
+                                                        PythonLikeTuple annotationTuple,
+                                                        PythonLikeTuple closure,
+                                                        PythonString functionName,
+                                                        Class<T> functionClass,
+                                                        PythonInterpreter pythonInterpreter) {
         PythonLikeDict annotationDirectory = new PythonLikeDict();
         for (int i = 0; i < annotationTuple.size(); i++) {
             annotationDirectory.put(annotationTuple.get(i*2), annotationTuple.get(i*2 + 1));
         }
 
         try {
-            Constructor<PythonLikeFunction> constructor = (Constructor<PythonLikeFunction>) code.functionClass.getConstructor(PythonLikeTuple.class,
-                                                                                                                              PythonLikeDict.class,
-                                                                                                                              PythonLikeDict.class,
-                                                                                                                              PythonLikeTuple.class,
-                                                                                                                              PythonString.class,
-                                                                                                                              PythonInterpreter.class);
+            Constructor<T> constructor = functionClass.getConstructor(PythonLikeTuple.class,
+                                                                      PythonLikeDict.class,
+                                                                      PythonLikeDict.class,
+                                                                      PythonLikeTuple.class,
+                                                                      PythonString.class,
+                                                                      PythonInterpreter.class);
             return constructor.newInstance(defaultPositionalArgs, defaultKeywordArgs, annotationDirectory, closure, functionName, pythonInterpreter);
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.optaplanner.optapy.translator.PythonBytecodeInstruction.OpCode;
 
+import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.createInstance;
 import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode;
 import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass;
 
@@ -787,6 +788,38 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
     }
 
     @Test
+    public void testGlobalVariables() {
+        PythonCompiledFunction setterCompiledFunction = PythonFunctionBuilder.newFunction("value")
+                .loadParameter("value")
+                .storeGlobalVariable("my_global")
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        PythonCompiledFunction getterCompiledFunction = PythonFunctionBuilder.newFunction()
+                .loadGlobalVariable("my_global")
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        PythonInterpreter interpreter = new CPythonBackedPythonInterpreter(); // TODO: Use mock instead
+
+        Class<? extends Consumer> setterFunctionClass = translatePythonBytecodeToClass(setterCompiledFunction, Consumer.class);
+        Class<? extends Supplier> getterFunctionClass = translatePythonBytecodeToClass(getterCompiledFunction, Supplier.class);
+
+        Consumer setter = createInstance(setterFunctionClass, interpreter);
+        Supplier getter = createInstance(getterFunctionClass, interpreter);
+
+        setter.accept("Value 1");
+
+        assertThat(interpreter.getGlobal("my_global")).isEqualTo(PythonString.valueOf("Value 1"));
+        assertThat(getter.get()).isEqualTo(PythonString.valueOf("Value 1"));
+
+        setter.accept("Value 2");
+
+        assertThat(interpreter.getGlobal("my_global")).isEqualTo(PythonString.valueOf("Value 2"));
+        assertThat(getter.get()).isEqualTo(PythonString.valueOf("Value 2"));
+    }
+
+    @Test
     public void testSetAttribute() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item", "value")
                 .loadParameter("value")
@@ -1439,6 +1472,36 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             if (instruction.arg == -1) {
                 co_freevars.add(variableName);
                 instruction.arg = co_freevars.size() - 1;
+            }
+
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder loadGlobalVariable(String variableName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.LOAD_GLOBAL;
+            instruction.offset = instructionList.size();
+            instruction.arg = co_names.indexOf(variableName);
+
+            if (instruction.arg == -1) {
+                co_names.add(variableName);
+                instruction.arg = co_names.size() - 1;
+            }
+
+            instructionList.add(instruction);
+            return this;
+        }
+
+        public PythonFunctionBuilder storeGlobalVariable(String variableName) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.STORE_GLOBAL;
+            instruction.offset = instructionList.size();
+            instruction.arg = co_names.indexOf(variableName);
+
+            if (instruction.arg == -1) {
+                co_names.add(variableName);
+                instruction.arg = co_names.size() - 1;
             }
 
             instructionList.add(instruction);

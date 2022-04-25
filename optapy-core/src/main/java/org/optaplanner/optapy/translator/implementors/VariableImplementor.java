@@ -9,6 +9,8 @@ import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.LocalVariableHelper;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
 import org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTranslator;
+import org.optaplanner.optapy.translator.PythonCompiledFunction;
+import org.optaplanner.optapy.translator.PythonInterpreter;
 import org.optaplanner.optapy.translator.types.PythonCell;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
 
@@ -31,6 +33,57 @@ public class VariableImplementor {
      */
     public static void storeInLocalVariable(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
         methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(instruction.arg));
+    }
+
+    /**
+     * Deletes the global variable or parameter indicated by the {@code instruction} argument.
+     */
+    public static void deleteGlobalVariable(MethodVisitor methodVisitor, String className, PythonCompiledFunction pythonCompiledFunction,
+                                          PythonBytecodeInstruction instruction) {
+        String globalName = pythonCompiledFunction.co_names.get(instruction.arg);
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
+                                     Type.getDescriptor(PythonInterpreter.class));
+        methodVisitor.visitLdcInsn(globalName);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
+                                      "deleteGlobal", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
+                                      true);
+    }
+
+    /**
+     * Loads the global variable or parameter indicated by the {@code instruction} argument onto the stack.
+     */
+    public static void loadGlobalVariable(MethodVisitor methodVisitor, String className, PythonCompiledFunction pythonCompiledFunction,
+                                          PythonBytecodeInstruction instruction) {
+        String globalName = pythonCompiledFunction.co_names.get(instruction.arg);
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
+                                     Type.getDescriptor(PythonInterpreter.class));
+        methodVisitor.visitLdcInsn(globalName);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
+                                      "getGlobal", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(String.class)),
+                                      true);
+    }
+
+    /**
+     * Stores TOS into the global variable or parameter indicated by the {@code instruction} argument.
+     */
+    public static void storeInGlobalVariable(MethodVisitor methodVisitor, String className, PythonCompiledFunction pythonCompiledFunction,
+                                             PythonBytecodeInstruction instruction) {
+        String globalName = pythonCompiledFunction.co_names.get(instruction.arg);
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
+                                     Type.getDescriptor(PythonInterpreter.class));
+        StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitLdcInsn(globalName);
+        StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
+                                      "setGlobal", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class),
+                                                                                 Type.getType(PythonLikeObject.class)),
+                                      true);
     }
 
     /**

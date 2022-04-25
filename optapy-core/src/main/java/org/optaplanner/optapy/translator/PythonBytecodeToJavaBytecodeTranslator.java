@@ -103,6 +103,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         return candidateList.get(0);
     }
 
+    public static <T> T createInstance(Class<T> functionClass, PythonInterpreter pythonInterpreter) {
+        return FunctionImplementor.createInstance(new PythonLikeTuple(), new PythonLikeDict(),
+                                                  new PythonLikeTuple(), new PythonLikeTuple(),
+                                                  PythonString.valueOf(functionClass.getName()),
+                                                  functionClass, pythonInterpreter);
+    }
+
     @SuppressWarnings({ "unused" })
     public static <T> T translatePythonBytecode(PythonCompiledFunction pythonCompiledFunction,
                                                 Class<T> javaFunctionalInterfaceType) {
@@ -250,8 +257,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonString.class));
 
         // Interpreter
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 5);
-        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonString.class));
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, INTERPRETER_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonInterpreter.class));
 
         methodVisitor.visitInsn(Opcodes.RETURN);
         methodVisitor.visitMaxs(-1, -1);
@@ -621,12 +628,18 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             case DELETE_NAME:
                 break;
 
-            case LOAD_GLOBAL:
+            case LOAD_GLOBAL: {
+                VariableImplementor.loadGlobalVariable(methodVisitor, className, pythonCompiledFunction, instruction);
                 break;
-            case STORE_GLOBAL:
+            }
+            case STORE_GLOBAL: {
+                VariableImplementor.storeInGlobalVariable(methodVisitor, className, pythonCompiledFunction, instruction);
                 break;
-            case DELETE_GLOBAL:
+            }
+            case DELETE_GLOBAL: {
+                VariableImplementor.deleteGlobalVariable(methodVisitor, className, pythonCompiledFunction, instruction);
                 break;
+            }
 
             case LOAD_FAST: {
                 VariableImplementor.loadLocalVariable(methodVisitor, instruction, localVariableHelper);
