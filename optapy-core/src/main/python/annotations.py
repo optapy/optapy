@@ -585,8 +585,12 @@ def deep_planning_clone(planning_clone_object: Union[Type, Callable]):
     return planning_clone_object
 
 
+"""
+Enable Python -> Java bytecode translation
+function_bytecode_translation=force/if_possible/none
+"""
 def constraint_provider(constraint_provider_function: Callable[['_ConstraintFactory'], List['_Constraint']] = None, /, *,
-                        convert_joiners = False) -> \
+                        function_bytecode_translation = False) -> \
         Callable[['_ConstraintFactory'], List['_Constraint']]:
     """Marks a function as a ConstraintProvider.
 

@@ -43,7 +43,7 @@ public class PythonBytecodeInstruction {
 
     @Override
     public String toString() {
-        return "[" + offset + "] " + opcode.name() + " (" + arg + ")";
+        return "[" + offset + "] " + opcode.name() + " (" + arg + ")" + (isJumpTarget? " {JUMP TARGET}" : "");
     }
 
     public enum OpCode {

@@ -1,5 +1,6 @@
 package org.optaplanner.optapy.translator;
 
+import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
@@ -16,6 +18,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.optapy.translator.implementors.CollectionImplementor;
 import org.optaplanner.optapy.translator.implementors.DunderOperatorImplementor;
+import org.optaplanner.optapy.translator.implementors.ExceptionImplementor;
 import org.optaplanner.optapy.translator.implementors.FunctionImplementor;
 import org.optaplanner.optapy.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.optapy.translator.implementors.JumpImplementor;
@@ -339,9 +342,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             VariableImplementor.setupFreeVariableCell(methodVisitor, className, localVariableHelper, i);
         }
 
+        Map<Integer, List<Runnable>> bytecodeIndexToArgumentorsMap = new HashMap<>();
         for (PythonBytecodeInstruction instruction : pythonCompiledFunction.instructionList) {
             translatePythonBytecodeInstruction(method, className, methodVisitor, pythonCompiledFunction, instruction,
-                    bytecodeCounterToLabelMap, localVariableHelper);
+                    bytecodeCounterToLabelMap, bytecodeIndexToArgumentorsMap, localVariableHelper);
         }
 
         methodVisitor.visitMaxs(-1, -1);
@@ -383,17 +387,39 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitInsn(Opcodes.POP);
     }
 
+    /**
+     * Used for debugging; prints the offset of the instruction when it is executed
+     */
+    @SuppressWarnings("unused")
+    private static void trace(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(System.class),
+                                     "out", Type.getDescriptor(PrintStream.class));
+        methodVisitor.visitLdcInsn(instruction.offset);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PrintStream.class),
+                                      "println", Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE),
+                                      false);
+    }
+
     private static void translatePythonBytecodeInstruction(Method method,
             String className,
             MethodVisitor methodVisitor,
             PythonCompiledFunction pythonCompiledFunction,
             PythonBytecodeInstruction instruction,
             Map<Integer, Label> bytecodeCounterToLabelMap,
+            Map<Integer, List<Runnable>> bytecodeCounterToCodeArgumenterList,
             LocalVariableHelper localVariableHelper) {
         if (instruction.isJumpTarget) {
             Label label = bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset, offset -> new Label());
             methodVisitor.visitLabel(label);
         }
+
+        bytecodeCounterToCodeArgumenterList.getOrDefault(instruction.offset, List.of()).forEach(Runnable::run);
+
+        BiConsumer<Integer, Runnable> bytecodeIndexArgumentorConsumer = (bytecodeIndex, runnable) -> {
+                bytecodeCounterToCodeArgumenterList
+                        .computeIfAbsent(bytecodeIndex, key -> new ArrayList<>()).add(runnable);
+        };
+
         switch (instruction.opcode) {
             // **************************************************
             // Meta Operations
@@ -566,8 +592,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 JumpImplementor.popAndJumpIfFalse(methodVisitor, instruction, bytecodeCounterToLabelMap);
                 break;
             }
-            case JUMP_IF_NOT_EXC_MATCH:
+            case JUMP_IF_NOT_EXC_MATCH: {
+                JumpImplementor.popAndJumpIfExceptionDoesNotMatch(methodVisitor, instruction, bytecodeCounterToLabelMap);
                 break;
+            }
             case JUMP_IF_TRUE_OR_POP: {
                 JumpImplementor.jumpIfTrueElsePop(methodVisitor, instruction, bytecodeCounterToLabelMap);
                 break;
@@ -703,20 +731,35 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             // **************************************************
             // Exception Handling Operations
             // **************************************************
-            case LOAD_ASSERTION_ERROR:
+            case LOAD_ASSERTION_ERROR: {
+                ExceptionImplementor.createAssertionError(methodVisitor);
                 break;
-            case POP_BLOCK:
+            }
+            case POP_BLOCK: {
+                // Do nothing, since Java already popped the block for us
                 break;
-            case POP_EXCEPT:
+            }
+            case POP_EXCEPT: {
+                ExceptionImplementor.endExcept(methodVisitor, localVariableHelper);
                 break;
-            case WITH_EXCEPT_START:
+            }
+            case WITH_EXCEPT_START: {
+                // TODO
                 break;
-            case RERAISE:
+            }
+            case RERAISE: {
+                ExceptionImplementor.reraise(methodVisitor);
                 break;
-            case SETUP_FINALLY:
+            }
+            case SETUP_FINALLY: {
+                ExceptionImplementor.createTryFinallyBlock(methodVisitor, className, instruction, localVariableHelper, bytecodeCounterToLabelMap,
+                                                           bytecodeIndexArgumentorConsumer);
                 break;
-            case RAISE_VARARGS:
+            }
+            case RAISE_VARARGS: {
+                ExceptionImplementor.raiseWithOptionalExceptionAndCause(methodVisitor, instruction, localVariableHelper);
                 break;
+            }
 
             // **************************************************
             // Import Operations

@@ -10,6 +10,7 @@ import static org.optaplanner.optapy.translator.PythonBytecodeToJavaBytecodeTran
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,8 +33,12 @@ import org.optaplanner.optapy.translator.types.PythonBoolean;
 import org.optaplanner.optapy.translator.types.PythonInteger;
 import org.optaplanner.optapy.translator.types.PythonLikeFunction;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
+import org.optaplanner.optapy.translator.types.PythonLikeType;
+import org.optaplanner.optapy.translator.types.PythonNone;
 import org.optaplanner.optapy.translator.types.PythonString;
 import org.optaplanner.optapy.translator.types.UnaryLambdaReference;
+import org.optaplanner.optapy.translator.types.errors.PythonAssertionError;
+import org.optaplanner.optapy.translator.types.errors.StopIteration;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class PythonBytecodeToJavaBytecodeTranslatorTest {
@@ -1097,6 +1102,93 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
         assertThat(javaFunction.apply("hello")).isEqualTo("hello");
     }
 
+    @Test
+    public void testTryExcept() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
+                .tryCode(code -> {
+                    code.loadParameter("item")
+                            .loadConstant(5)
+                            .compare(CompareOp.LESS_THAN)
+                            .ifTrue(block -> {
+                                block.loadConstant("Try").op(OpCode.RETURN_VALUE);
+                            })
+                            .op(OpCode.LOAD_ASSERTION_ERROR)
+                            .op(OpCode.RAISE_VARARGS, 1);
+                })
+                .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
+                    except.loadConstant("Assert").op(OpCode.RETURN_VALUE);
+                })
+                .tryEnd()
+                .loadConstant(null)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
+
+        assertThat(javaFunction.apply(1)).isEqualTo("Try");
+        assertThat(javaFunction.apply(6)).isEqualTo("Assert");
+    }
+
+    @Test
+    public void testTryExceptFinally() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
+                .loadConstant(null).storeGlobalVariable("exception")
+                .loadConstant("Before Try").storeGlobalVariable("finally")
+                .tryCode(code -> {
+                    code.loadParameter("item")
+                            .loadConstant(1)
+                            .compare(CompareOp.EQUALS)
+                            .ifTrue(block -> {
+                                block.op(OpCode.LOAD_ASSERTION_ERROR)
+                                     .op(OpCode.RAISE_VARARGS, 1);
+                            })
+                            .loadParameter("item")
+                            .loadConstant(2)
+                            .compare(CompareOp.EQUALS)
+                            .ifTrue(block -> {
+                                block.loadConstant(new StopIteration())
+                                        .op(OpCode.RAISE_VARARGS, 1);
+                            });
+                })
+                .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
+                    except.loadConstant("Assert").storeGlobalVariable("exception");
+                })
+                .andFinally(code -> {
+                    code.loadConstant("Finally")
+                            .storeGlobalVariable("finally");
+                })
+                .tryEnd()
+                .loadConstant(1)
+                .op(OpCode.RETURN_VALUE)
+                .build();
+
+        Class javaFunctionClass = translatePythonBytecodeToClass(pythonCompiledFunction, Function.class);
+
+        Map<String, PythonLikeObject> globalsMap = new HashMap<>();
+        PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
+
+        Mockito.when(interpreter.getGlobal(Mockito.any())).thenAnswer(invocationOnMock -> globalsMap.get(invocationOnMock.getArgument(0, String.class)));
+        Mockito.doAnswer(invocationOnMock -> {
+            globalsMap.put(invocationOnMock.getArgument(0, String.class), invocationOnMock.getArgument(1, PythonLikeObject.class));
+            return null;
+        }).when(interpreter).setGlobal(Mockito.any(), Mockito.any());
+
+        Function javaFunction = (Function) createInstance(javaFunctionClass, interpreter);
+
+        assertThat(javaFunction.apply(0)).isEqualTo(1);
+        assertThat(globalsMap.get("exception")).isEqualTo(PythonNone.INSTANCE);
+        assertThat(globalsMap.get("finally")).isEqualTo("Finally");
+
+        assertThat(javaFunction.apply(1)).isEqualTo(1);
+        assertThat(globalsMap.get("exception")).isEqualTo("Assert");
+        assertThat(globalsMap.get("finally")).isEqualTo("Finally");
+
+        assertThat(javaFunction.apply(2)).isEqualTo(1);
+        assertThat(globalsMap.get("exception")).isEqualTo(PythonNone.INSTANCE);
+        assertThat(globalsMap.get("finally")).isEqualTo("Finally");
+    }
+
+
     private static class PythonFunctionBuilder {
         List<PythonBytecodeInstruction> instructionList = new ArrayList<>();
         List<String> co_names = new ArrayList<>();
@@ -1173,6 +1265,26 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
             instructionList.add(afterLoopInstruction);
 
             return this;
+        }
+
+        public ExceptBuilder tryCode(Consumer<PythonFunctionBuilder> tryBlockBuilder) {
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.SETUP_FINALLY;
+            instruction.offset = instructionList.size();
+            instructionList.add(instruction);
+            int tryStart = instructionList.size();
+
+            tryBlockBuilder.accept(this);
+
+            instruction.arg = instructionList.size() - tryStart + 2;
+
+            instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.JUMP_ABSOLUTE;
+            instruction.offset = instructionList.size();
+            instruction.arg = 0;
+            instructionList.add(instruction);
+
+            return new ExceptBuilder(this, instruction);
         }
 
         public PythonFunctionBuilder ifTrue(Consumer<PythonFunctionBuilder> blockBuilder) {
@@ -1552,6 +1664,81 @@ public class PythonBytecodeToJavaBytecodeTranslatorTest {
 
             instructionList.add(instruction);
             return this;
+        }
+    }
+
+    public static class ExceptBuilder {
+        final PythonFunctionBuilder delegate;
+        final PythonBytecodeInstruction tryEndGoto;
+
+        public ExceptBuilder(PythonFunctionBuilder delegate, PythonBytecodeInstruction tryEndGoto) {
+            this.delegate = delegate;
+            this.tryEndGoto = tryEndGoto;
+        }
+
+        public ExceptBuilder except(PythonLikeType type, Consumer<PythonFunctionBuilder> exceptBuilder) {
+            PythonBytecodeInstruction exceptBlockStartInstruction = new PythonBytecodeInstruction();
+            exceptBlockStartInstruction.opcode = OpCode.DUP_TOP;
+            exceptBlockStartInstruction.offset = delegate.instructionList.size();
+            exceptBlockStartInstruction.isJumpTarget = true;
+            delegate.instructionList.add(exceptBlockStartInstruction);
+
+            delegate.loadConstant(type);
+
+            PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+            instruction.opcode = OpCode.JUMP_IF_NOT_EXC_MATCH; // Skip block if False (i.e. enter block if True)
+            instruction.offset = delegate.instructionList.size();
+            delegate.instructionList.add(instruction);
+
+            exceptBuilder.accept(delegate);
+
+            delegate.op(OpCode.POP_EXCEPT);
+
+            instruction.arg = delegate.instructionList.size();
+            return this;
+        }
+
+        public ExceptBuilder andFinally(Consumer<PythonFunctionBuilder> finallyBuilder) {
+            PythonBytecodeInstruction finallyFromExceptStartInstruction = new PythonBytecodeInstruction();
+            finallyFromExceptStartInstruction.opcode = OpCode.POP_TOP;
+            finallyFromExceptStartInstruction.offset = delegate.instructionList.size();
+            finallyFromExceptStartInstruction.isJumpTarget = true;
+            delegate.instructionList.add(finallyFromExceptStartInstruction);
+
+            delegate.op(OpCode.POP_TOP);
+            delegate.op(OpCode.POP_TOP);
+
+            finallyBuilder.accept(delegate); // finally to handle if no except handler catches
+
+            tryEndGoto.arg = delegate.instructionList.size();
+
+            PythonBytecodeInstruction finallyFromTryStartInstruction = new PythonBytecodeInstruction();
+            finallyFromTryStartInstruction.opcode = OpCode.NOP;
+            finallyFromTryStartInstruction.offset = delegate.instructionList.size();
+            finallyFromTryStartInstruction.isJumpTarget = true;
+            delegate.instructionList.add(finallyFromTryStartInstruction);
+
+            finallyBuilder.accept(delegate); // finally from try
+            return this;
+        }
+
+        public PythonFunctionBuilder tryEnd() {
+            if (tryEndGoto.arg == 0) {
+                PythonBytecodeInstruction reraiseInstruction = new PythonBytecodeInstruction();
+                reraiseInstruction.opcode = OpCode.RAISE_VARARGS;
+                reraiseInstruction.arg = 0;
+                reraiseInstruction.offset = delegate.instructionList.size();
+                reraiseInstruction.isJumpTarget = true;
+                delegate.instructionList.add(reraiseInstruction);
+
+                tryEndGoto.arg = delegate.instructionList.size();
+                PythonBytecodeInstruction noopInstruction = new PythonBytecodeInstruction();
+                noopInstruction.opcode = OpCode.NOP;
+                noopInstruction.offset = delegate.instructionList.size();
+                noopInstruction.isJumpTarget = true;
+                delegate.instructionList.add(noopInstruction);
+            }
+            return delegate;
         }
     }
 }

@@ -5,8 +5,11 @@ import java.util.Map;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.optaplanner.optapy.PythonLikeObject;
 import org.optaplanner.optapy.translator.PythonBytecodeInstruction;
 import org.optaplanner.optapy.translator.PythonUnaryOperator;
+import org.optaplanner.optapy.translator.types.PythonLikeType;
 
 /**
  * Implementations of jump opcodes
@@ -47,6 +50,21 @@ public class JumpImplementor {
         DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
         PythonConstantsImplementor.loadFalse(methodVisitor);
         methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
+    }
+
+    /**
+     * TOS and TOS1 are an exception types. If TOS1 is not an instance of TOS, set the bytecode counter to the {@code instruction} argument.
+     * Pop TOS and TOS1 off the stack.
+     */
+    public static void popAndJumpIfExceptionDoesNotMatch(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction, Map<Integer, Label> bytecodeCounterToLabelMap) {
+        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeType.class));
+        StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeType.class),
+                                      "isSubclassOf", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(PythonLikeType.class)),
+                                      false);
+        methodVisitor.visitJumpInsn(Opcodes.IFEQ, jumpLocation);
     }
 
     /**

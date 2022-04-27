@@ -13,6 +13,8 @@ public class LocalVariableHelper {
 
     public final int pythonBoundVariables;
     public final int pythonFreeVariables;
+
+    public final int currentExceptionVariableSlot;
     int usedLocals;
 
     public LocalVariableHelper(Parameter[] parameters, PythonCompiledFunction compiledFunction) {
@@ -32,7 +34,8 @@ public class LocalVariableHelper {
         parameterSlotsEnd = slotsUsedByParameters;
         pythonCellVariablesStart = parameterSlotsEnd + compiledFunction.co_varnames.size();
         pythonFreeVariablesStart = pythonCellVariablesStart + pythonBoundVariables;
-        pythonLocalVariablesSlotEnd = pythonFreeVariablesStart + pythonFreeVariables;
+        currentExceptionVariableSlot = pythonFreeVariablesStart + pythonFreeVariables;
+        pythonLocalVariablesSlotEnd = currentExceptionVariableSlot + 1;
     }
 
     public int getParameterSlot(int parameterIndex) {
@@ -58,6 +61,10 @@ public class LocalVariableHelper {
 
     public int getPythonCellOrFreeVariableSlot(int index) {
         return pythonCellVariablesStart + index;
+    }
+
+    public int getCurrentExceptionVariableSlot() {
+        return currentExceptionVariableSlot;
     }
 
     public int getNumberOfFreeCells() {

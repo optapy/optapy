@@ -18,7 +18,7 @@ import org.optaplanner.optapy.translator.PythonTernaryOperators;
 import org.optaplanner.optapy.translator.PythonUnaryOperator;
 import org.optaplanner.optapy.translator.types.PythonLikeList;
 import org.optaplanner.optapy.translator.types.PythonLikeTuple;
-import org.optaplanner.optapy.translator.types.StopIteration;
+import org.optaplanner.optapy.translator.types.errors.StopIteration;
 
 /**
  * Implementations of opcodes related to collections (list, tuple, set, dict).

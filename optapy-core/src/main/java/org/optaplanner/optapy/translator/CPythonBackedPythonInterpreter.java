@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.optaplanner.optapy.PythonLikeObject;
+import org.optaplanner.optapy.translator.types.errors.PythonTraceback;
 
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     Map<String, PythonLikeObject> globalsMap;
@@ -36,5 +37,11 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     @Override
     public void print(PythonLikeObject object) {
         standardOutput.println(object);
+    }
+
+    @Override
+    public PythonTraceback getTraceback() {
+        // TODO: Implement this with an actually traceback
+        return new PythonTraceback();
     }
 }
