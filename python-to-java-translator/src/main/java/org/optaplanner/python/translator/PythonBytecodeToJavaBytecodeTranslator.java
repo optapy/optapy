@@ -439,6 +439,20 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 false);
     }
 
+    /**
+     * Used for debugging; prints TOS
+     */
+    @SuppressWarnings("unused")
+    public static void print(MethodVisitor methodVisitor) {
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(System.class),
+                "out", Type.getDescriptor(PrintStream.class));
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PrintStream.class),
+                "println", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Object.class)),
+                false);
+    }
+
     private static void translatePythonBytecodeInstruction(Method method,
             String className,
             MethodVisitor methodVisitor,

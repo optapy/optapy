@@ -1,0 +1,10 @@
+[build-system]
+requires = [
+    # Pin setuptools to 58.4.0 since 58.5.{0,1} accidentally introduced breaking changes that break custom build classes
+    # https://github.com/pypa/setuptools/issues/2849
+    "setuptools==58.4.0",
+    "stubgenj>=0.2.5",
+    "JPype1>=1.3.0",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
