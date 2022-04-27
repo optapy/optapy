@@ -390,7 +390,9 @@ def set_class_output_directory(path: pathlib.Path):
     ensure_init()
 
     from org.optaplanner.optapy import PythonWrapperGenerator # noqa
+    from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
     PythonWrapperGenerator.classOutputRootPath = path
+    PythonBytecodeToJavaBytecodeTranslator.classOutputRootPath = path
 
 
 solver_run_id_to_refs = dict()

@@ -1,9 +1,10 @@
 package org.optaplanner.optapy.logging;
 
+import org.slf4j.LoggerFactory;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
-import org.slf4j.LoggerFactory;
 
 public class PythonLoggingToLogbackAdapter {
 

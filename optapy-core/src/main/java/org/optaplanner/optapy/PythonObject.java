@@ -2,6 +2,8 @@ package org.optaplanner.optapy;
 
 import java.util.Map;
 
+import org.optaplanner.python.translator.PythonLikeObject;
+
 /**
  * A PythonObject holds a reference to {@link OpaquePythonReference}.
  * Its internal state and fields are mapped to the {@link OpaquePythonReference}.

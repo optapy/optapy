@@ -604,7 +604,7 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
     ensure_init()
 
     def constraint_provider_wrapper(function):
-        if convert_joiners:
+        if function_bytecode_translation:
             def wrapped_constraint_provider(constraint_factory):
                 from . import constraint
                 constraint._convert_joiners_to_java = True
@@ -619,7 +619,7 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
 
     if constraint_provider_function:  # Called as @constraint_provider
         return constraint_provider_wrapper(constraint_provider_function)
-    else:  # Called as @constraint_provider(convert_joiners=True)
+    else:  # Called as @constraint_provider(function_bytecode_translation=True)
         return constraint_provider_wrapper
 
 

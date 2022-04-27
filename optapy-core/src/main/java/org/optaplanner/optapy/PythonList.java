@@ -9,7 +9,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.optaplanner.core.api.function.TriFunction;
-import org.optaplanner.optapy.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class PythonList<T> implements PythonObject, List<T> {
     private static Function<OpaquePythonReference, Object> clearPythonList;

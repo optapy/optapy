@@ -7,32 +7,16 @@
     <version>8.19.0.Final</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>optapy</artifactId>
+  <artifactId>python-to-java-translator</artifactId>
 
   <properties>
-    <java.module.name>org.optaplanner.optapy</java.module.name>
+    <java.module.name>python.to.java.translator</java.module.name>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>org.optaplanner</groupId>
-      <artifactId>optaplanner-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.optaplanner</groupId>
-      <artifactId>python-to-java-translator</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus.gizmo</groupId>
-      <artifactId>gizmo</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -72,31 +56,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <configuration>
-          <ignoredUnusedDeclaredDependencies>org.optaplanner:optaplanner-core</ignoredUnusedDeclaredDependencies>
-          <ignoredUsedUndeclaredDependencies>org.optaplanner:optaplanner-core-impl</ignoredUsedUndeclaredDependencies>
-        </configuration>
-        <executions>
-          <execution>
-            <id>copy-dependencies</id>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>dependency-classpath</id>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <configuration>
-              <outputFile>target/classpath.txt</outputFile>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>

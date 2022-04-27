@@ -18,7 +18,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import io.quarkus.gizmo.FunctionCreator;
 import org.objectweb.asm.Type;
 import org.optaplanner.core.api.domain.entity.PinningFilter;
 import org.optaplanner.core.api.domain.entity.PlanningEntity;
@@ -32,6 +31,8 @@ import org.optaplanner.core.api.score.calculator.ConstraintMatchAwareIncremental
 import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
 import org.optaplanner.core.api.score.calculator.IncrementalScoreCalculator;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
+import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeType;
 
 import io.quarkus.gizmo.AnnotationCreator;
 import io.quarkus.gizmo.BranchResult;
@@ -42,7 +43,6 @@ import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
-import org.optaplanner.optapy.translator.types.PythonLikeType;
 
 public class PythonWrapperGenerator {
     /**
@@ -86,7 +86,7 @@ public class PythonWrapperGenerator {
         }
 
         String[] parts = (className.replace('.', '/') + ".class").split("/");
-        Path classFileLocation =  classOutputRootPath.resolve(Path.of(".", parts));
+        Path classFileLocation = classOutputRootPath.resolve(Path.of(".", parts));
 
         try {
             Files.createDirectories(classFileLocation.getParent());
@@ -161,7 +161,8 @@ public class PythonWrapperGenerator {
     }
 
     @SuppressWarnings("unused")
-    public static void setPythonObjectIdAndAttributeNameToPythonLikeValue(BiFunction<OpaquePythonReference, String, Object> function) {
+    public static void
+            setPythonObjectIdAndAttributeNameToPythonLikeValue(BiFunction<OpaquePythonReference, String, Object> function) {
         pythonObjectIdAndAttributeNameToPythonLikeValue = function;
     }
 
@@ -427,7 +428,7 @@ public class PythonWrapperGenerator {
      * private SomeInterface delegate;
      *
      * public JavaWrapper() {
-     * delegate = supplier.get();        classNameToBytecode.put(className, classBytecodeHolder.get());
+     * delegate = supplier.get(); classNameToBytecode.put(className, classBytecodeHolder.get());
      * }
      *
      * #64;Override
@@ -668,9 +669,11 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor pythonLikeValueMapField = classCreator.getFieldCreator(PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            FieldDescriptor pythonLikeTypeField = classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
-                    .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, parentClass, defineEqualsAndHashcode, valueField, referenceMapField, pythonLikeValueMapField,
+            FieldDescriptor pythonLikeTypeField =
+                    classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
+                            .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
+            generateWrapperMethods(classCreator, parentClass, defineEqualsAndHashcode, valueField, referenceMapField,
+                    pythonLikeValueMapField,
                     pythonLikeTypeField,
                     optaplannerMethodAnnotations);
         }
@@ -705,8 +708,9 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor pythonLikeValueMapField = classCreator.getFieldCreator(PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            FieldDescriptor pythonLikeTypeField = classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
-                    .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
+            FieldDescriptor pythonLikeTypeField =
+                    classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
+                            .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, parentClass, defineEqualsAndHashcode, valueField, referenceMapField,
                     pythonLikeValueMapField, pythonLikeTypeField,
                     optaplannerMethodAnnotations);
@@ -743,8 +747,9 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor pythonLikeValueMapField = classCreator.getFieldCreator(PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            FieldDescriptor pythonLikeTypeField = classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
-                    .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
+            FieldDescriptor pythonLikeTypeField =
+                    classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
+                            .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
             generateWrapperMethods(classCreator, null, defineEqualsAndHashcode, valueField, referenceMapField,
                     pythonLikeValueMapField, pythonLikeTypeField,
                     optaplannerMethodAnnotations);
@@ -763,7 +768,7 @@ public class PythonWrapperGenerator {
     // Generate PythonObject interface methods
     private static void generateAsPointer(ClassCreator classCreator, FieldDescriptor valueField,
             FieldDescriptor referenceMapField, FieldDescriptor pythonLikeObjectValueField,
-                                          FieldDescriptor typeField) {
+            FieldDescriptor typeField) {
         MethodCreator methodCreator = classCreator.getMethodCreator("get__optapy_Id", OpaquePythonReference.class);
         ResultHandle valueResultHandle = methodCreator.readInstanceField(valueField, methodCreator.getThis());
         methodCreator.returnValue(valueResultHandle);
@@ -777,12 +782,13 @@ public class PythonWrapperGenerator {
         ResultHandle attributeName = methodCreator.getMethodParam(0);
         ResultHandle pythonLikeObjectMapResultHandle = methodCreator.readInstanceField(pythonLikeObjectValueField, thisHandle);
 
-        methodCreator.returnValue(methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Map.class, "computeIfAbsent", Object.class,
-                                                                        Object.class, Function.class),
-                                            pythonLikeObjectMapResultHandle, attributeName, methodCreator.newInstance(MethodDescriptor.ofConstructor(PythonAttributeGetter.class,
-                                                                                                                                                     PythonObject.class),
-                                                                                                                      thisHandle)));
-
+        methodCreator.returnValue(methodCreator.invokeInterfaceMethod(
+                MethodDescriptor.ofMethod(Map.class, "computeIfAbsent", Object.class,
+                        Object.class, Function.class),
+                pythonLikeObjectMapResultHandle, attributeName,
+                methodCreator.newInstance(MethodDescriptor.ofConstructor(PythonAttributeGetter.class,
+                        PythonObject.class),
+                        thisHandle)));
 
         // TODO
         methodCreator = classCreator.getMethodCreator("__setAttribute", void.class, String.class, PythonLikeObject.class);
@@ -791,7 +797,6 @@ public class PythonWrapperGenerator {
         // TODO
         methodCreator = classCreator.getMethodCreator("__deleteAttribute", void.class, String.class);
         methodCreator.returnValue(null);
-
 
         methodCreator = classCreator.getMethodCreator("__getType", PythonLikeType.class);
         ResultHandle typeResultHandle = methodCreator.readStaticField(typeField);
@@ -868,11 +873,12 @@ public class PythonWrapperGenerator {
             }
             List<Map<String, Object>> annotations = (List<Map<String, Object>>) optaplannerMethodAnnotation.get(3);
             fieldDescriptorList
-                    .add(generateWrapperMethod(classCreator, valueField, pythonLikeValueMapField, methodName, returnType, signature, annotations,
+                    .add(generateWrapperMethod(classCreator, valueField, pythonLikeValueMapField, methodName, returnType,
+                            signature, annotations,
                             returnTypeList));
         }
         createConstructor(classCreator, valueField, referenceMapField, pythonLikeValueMapField,
-                          parentClass, fieldDescriptorList, returnTypeList);
+                parentClass, fieldDescriptorList, returnTypeList);
 
         if (parentClass == null) {
             createToString(classCreator, valueField);
@@ -939,7 +945,7 @@ public class PythonWrapperGenerator {
             methodCreator.writeInstanceField(valueField, methodCreator.getThis(), value);
             methodCreator.writeInstanceField(referenceMapField, methodCreator.getThis(), methodCreator.getMethodParam(2));
             methodCreator.writeInstanceField(pythonLikeValueMapField, methodCreator.getThis(),
-                                             methodCreator.newInstance(MethodDescriptor.ofConstructor(HashMap.class)));
+                    methodCreator.newInstance(MethodDescriptor.ofConstructor(HashMap.class)));
         }
 
         for (int i = 0; i < fieldDescriptorList.size(); i++) {
@@ -1002,7 +1008,7 @@ public class PythonWrapperGenerator {
 
     private static FieldDescriptor generateWrapperMethod(ClassCreator classCreator, FieldDescriptor valueField,
             FieldDescriptor pythonLikeAttributeField, String methodName, Class<?> returnType, String signature,
-                                                         List<Map<String, Object>> annotations, List<Object> returnTypeList) {
+            List<Map<String, Object>> annotations, List<Object> returnTypeList) {
         // Python types are not required, so we need to discover them. If the type is unknown, we default to Object,
         // but some annotations need something more specific than Object
         Object actualReturnType = returnType;
@@ -1073,9 +1079,9 @@ public class PythonWrapperGenerator {
                 fieldName = fieldName.substring(1);
             }
             setterMethodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Map.class, "put", Object.class,
-                                                                             Object.class, Object.class),
-                                                   setterMethodCreator.readInstanceField(pythonLikeAttributeField, setterMethodCreator.getThis()),
-                                                   setterMethodCreator.load(fieldName), setterMethodCreator.getMethodParam(0));
+                    Object.class, Object.class),
+                    setterMethodCreator.readInstanceField(pythonLikeAttributeField, setterMethodCreator.getThis()),
+                    setterMethodCreator.load(fieldName), setterMethodCreator.getMethodParam(0));
             setterMethodCreator.returnValue(null);
         }
         return fieldDescriptor;

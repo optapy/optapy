@@ -17,8 +17,8 @@ def copy_iterable(iterable):
 
 
 def convert_to_java_python_like_object(value):
-    from org.optaplanner.optapy import PythonLikeObject
-    from org.optaplanner.optapy.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
+    from org.optaplanner.python.translator import PythonLikeObject
+    from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
         PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone
     if isinstance(value, PythonLikeObject):
         return value
@@ -72,8 +72,8 @@ def copy_constants(constants_iterable):
 
 def translate_python_bytecode_to_java_bytecode(python_function, java_function_type):
     from java.util import ArrayList
-    from org.optaplanner.optapy.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
-    from org.optaplanner.optapy.translator import PythonBytecodeInstruction, PythonCompiledFunction # noqa
+    from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
+    from org.optaplanner.python.translator import PythonBytecodeInstruction, PythonCompiledFunction # noqa
     try:
         python_compiled_function = PythonCompiledFunction()
         instruction_list = ArrayList()
