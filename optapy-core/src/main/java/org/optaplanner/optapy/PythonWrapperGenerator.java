@@ -594,6 +594,19 @@ public class PythonWrapperGenerator {
         return defineWrapperClass(className, IncrementalScoreCalculator.class, incrementalScoreCalculatorSupplier);
     }
 
+    private static FieldDescriptor getPythonLikeObjectMapFieldDescriptor(ClassCreator classCreator, Class<?> parentClass) {
+        if (parentClass == null || parentClass.equals(Object.class)) {
+            return classCreator.getFieldCreator(PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class)
+                    .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
+        } else {
+            Class<?> firstParentClass = parentClass;
+            while (!firstParentClass.getSuperclass().equals(Object.class)) {
+                firstParentClass = firstParentClass.getSuperclass();
+            }
+            return FieldDescriptor.of(firstParentClass, PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class);
+        }
+    }
+
     /*
      * The Planning Entity, Problem Fact, and Planning Solution classes look similar, with the only
      * difference being their top-level annotation. They all look like this:
@@ -667,8 +680,7 @@ public class PythonWrapperGenerator {
             }
             FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            FieldDescriptor pythonLikeValueMapField = classCreator.getFieldCreator(PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class)
-                    .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
+            FieldDescriptor pythonLikeValueMapField = getPythonLikeObjectMapFieldDescriptor(classCreator, parentClass);
             FieldDescriptor pythonLikeTypeField =
                     classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
                             .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
@@ -706,8 +718,7 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            FieldDescriptor pythonLikeValueMapField = classCreator.getFieldCreator(PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class)
-                    .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
+            FieldDescriptor pythonLikeValueMapField = getPythonLikeObjectMapFieldDescriptor(classCreator, parentClass);
             FieldDescriptor pythonLikeTypeField =
                     classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
                             .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();

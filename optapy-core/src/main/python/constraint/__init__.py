@@ -179,7 +179,7 @@ def _cast(function):
     global _convert_joiners_to_java
     arg_count = len(inspect.signature(function).parameters)
     if _convert_joiners_to_java:
-        from ..python_to_java_bytecode_translator import translate_python_bytecode_to_java_bytecode
+        from javapython import translate_python_bytecode_to_java_bytecode
         from java.util.function import Function, BiFunction
         from org.optaplanner.core.api.function import TriFunction, QuadFunction, PentaFunction
         if arg_count == 1:
@@ -208,7 +208,7 @@ def _cast(function):
 def _filtering_cast(predicate):
     arg_count = len(inspect.signature(predicate).parameters)
     if _convert_joiners_to_java:
-        from ..python_to_java_bytecode_translator import translate_python_bytecode_to_java_bytecode
+        from javapython import translate_python_bytecode_to_java_bytecode
         from java.util.function import Predicate, BiPredicate
         from org.optaplanner.core.api.function import TriPredicate, QuadPredicate, PentaPredicate
         if arg_count == 1:

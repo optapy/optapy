@@ -1,5 +1,6 @@
 # OptaPy
 
+[![PyPI](https://img.shields.io/pypi/v/optapy "PyPI")](https://pypi.org/project/optapy/)
 [![Binder](https://mybinder.org/badge_logo.svg "Launch on Binder")](https://mybinder.org/v2/gh/optapy/optapy-quickstarts/stable?filepath=school-timetabling/school-timetabling-quickstart.ipynb)
 
 OptaPy is *an AI constraint solver for Python* to optimize

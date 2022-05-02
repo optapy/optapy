@@ -18,23 +18,23 @@ class FetchDependencies(build_py):
     """
     def create_stubs(self, project_root, command):
         subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies'],
-                       cwd=project_root, check=True)
+                       cwd=(project_root / 'optapy-core'), check=True)
         subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies',
                         '-Dclassifier=javadoc'], cwd=project_root, check=True)
-        subprocess.run([sys.executable, str((project_root / 'create-stubs.py').absolute())], cwd=project_root,
-                       check=True)
+        subprocess.run([sys.executable, str((project_root / 'create-stubs.py').absolute())],
+                       cwd=(project_root / 'optapy-core'), check=True)
         target_dir = os.path.join(self.build_lib, 'java-stubs')
-        for fn in find_stub_files('java-stubs'):
+        for fn in find_stub_files(str(project_root / 'java-stubs')):
             os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
-            copyfile(os.path.join('java-stubs', fn), os.path.join(target_dir, fn))
+            copyfile(os.path.join(str(project_root / 'java-stubs'), fn), os.path.join(target_dir, fn))
         target_dir = os.path.join(self.build_lib, 'jpype-stubs')
-        for fn in find_stub_files('jpype-stubs'):
+        for fn in find_stub_files(str(project_root / 'jpype-stubs')):
             os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
-            copyfile(os.path.join('jpype-stubs', fn), os.path.join(target_dir, fn))
+            copyfile(os.path.join(str(project_root / 'jpype-stubs'), fn), os.path.join(target_dir, fn))
         target_dir = os.path.join(self.build_lib, 'org-stubs')
-        for fn in find_stub_files('org-stubs'):
+        for fn in find_stub_files(str(project_root / 'org-stubs')):
             os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
-            copyfile(os.path.join('org-stubs', fn), os.path.join(target_dir, fn))
+            copyfile(os.path.join(str(project_root / 'org-stubs'), fn), os.path.join(target_dir, fn))
 
 
 
@@ -47,12 +47,14 @@ class FetchDependencies(build_py):
             if platform.system() == 'Windows':
                 command = 'mvnw.cmd'
             self.create_stubs(project_root, command)
-            subprocess.run([str((project_root / command).absolute()), 'clean', 'install'], cwd=project_root, check=True)
+            subprocess.run([str((project_root / command).absolute()), 'clean', 'install', '-Dasciidoctor.skip',
+                            '-Dassembly.skipAssembly'],
+                           cwd=project_root, check=True)
             classpath_jars = []
             # Add the main artifact
-            classpath_jars.extend(glob.glob(os.path.join(project_root, 'target', '*.jar')))
+            classpath_jars.extend(glob.glob(os.path.join(project_root, 'optapy-core', 'target', '*.jar')))
             # Add the main artifact's dependencies
-            classpath_jars.extend(glob.glob(os.path.join(project_root, 'target', 'dependency', '*.jar')))
+            classpath_jars.extend(glob.glob(os.path.join(project_root, 'optapy-core', 'target', 'dependency', '*.jar')))
             # Get the basename of each file (to be stored in classpath.txt, which is used
             # when setting the classpath)
             filenames = list(map(os.path.basename, classpath_jars))
@@ -117,17 +119,20 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent'
     ],
-    packages=['optapy', 'optapy.config', 'optapy.constraint', 'optapy.score', 'optapy.types', 'java-stubs', 'jpype-stubs', 'org-stubs'],
+    packages=['optapy', 'optapy.config', 'optapy.constraint', 'optapy.score', 'optapy.types',
+              'javapython',
+              'java-stubs', 'jpype-stubs', 'org-stubs'],
     package_dir={
-        'optapy': 'src/main/python',
+        'optapy': 'optapy-core/src/main/python',
+        'javapython': 'python-to-java-translator/src/main/python',
         # Setup tools need a non-empty directory to use as base
         # Since these packages are generated during the build,
         # we use the src/main/resources package, which does
         # not contain any python files and is already included
         # in the build
-        'java-stubs': 'src/main/resources',
-        'jpype-stubs': 'src/main/resources',
-        'org-stubs': 'src/main/resources',
+        'java-stubs': 'optapy-core/src/main/resources',
+        'jpype-stubs': 'optapy-core/src/main/resources',
+        'org-stubs': 'optapy-core/src/main/resources',
     },
     test_suite='tests',
     python_requires='>=3.9',
