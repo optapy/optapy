@@ -40,6 +40,7 @@ import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
 import org.optaplanner.core.api.score.calculator.IncrementalScoreCalculator;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 import io.quarkus.gizmo.AnnotationCreator;
@@ -1093,9 +1094,11 @@ public class PythonWrapperGenerator {
         ResultHandle value = methodCreator.getMethodParam(0);
         if (parentClass != null) {
             methodCreator.invokeSpecialMethod(
-                    MethodDescriptor.ofConstructor(parentClass, OpaquePythonReference.class, Number.class, Map.class),
+                    MethodDescriptor.ofConstructor(parentClass, OpaquePythonReference.class, Number.class, Map.class,
+                                                   TriFunction.class),
                     methodCreator.getThis(), value, methodCreator.getMethodParam(1),
-                    methodCreator.getMethodParam(2));
+                    methodCreator.getMethodParam(2),
+                    methodCreator.getMethodParam(3));
         } else {
             methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), methodCreator.getThis());
             methodCreator.invokeInterfaceMethod(
@@ -1279,10 +1282,19 @@ public class PythonWrapperGenerator {
             if (fieldName.startsWith("_")) {
                 fieldName = fieldName.substring(1);
             }
+            ResultHandle valueAsPythonLikeObject;
+            if (actualReturnType instanceof Class && PythonLikeObject.class.isAssignableFrom((Class<?>) actualReturnType)) {
+                valueAsPythonLikeObject = setterMethodCreator.getMethodParam(0);
+            } else {
+                valueAsPythonLikeObject = setterMethodCreator.invokeStaticMethod(
+                        MethodDescriptor.ofMethod(JavaPythonTypeConversionImplementor.class, "wrapJavaObject",
+                                                  PythonLikeObject.class, Object.class),
+                        setterMethodCreator.getMethodParam(0));
+            }
             setterMethodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Map.class, "put", Object.class,
                     Object.class, Object.class),
                     setterMethodCreator.readInstanceField(pythonLikeAttributeField, setterMethodCreator.getThis()),
-                    setterMethodCreator.load(fieldName), setterMethodCreator.getMethodParam(0));
+                    setterMethodCreator.load(fieldName), valueAsPythonLikeObject);
             setterMethodCreator.returnValue(null);
         }
         return fieldDescriptor;
