@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -23,9 +24,16 @@ import org.optaplanner.core.api.domain.entity.PinningFilter;
 import org.optaplanner.core.api.domain.entity.PlanningEntity;
 import org.optaplanner.core.api.domain.lookup.PlanningId;
 import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty;
+import org.optaplanner.core.api.domain.solution.PlanningEntityProperty;
+import org.optaplanner.core.api.domain.solution.PlanningScore;
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
 import org.optaplanner.core.api.domain.valuerange.ValueRangeProvider;
+import org.optaplanner.core.api.domain.variable.AnchorShadowVariable;
+import org.optaplanner.core.api.domain.variable.CustomShadowVariable;
+import org.optaplanner.core.api.domain.variable.IndexShadowVariable;
+import org.optaplanner.core.api.domain.variable.InverseRelationShadowVariable;
+import org.optaplanner.core.api.domain.variable.PlanningVariable;
 import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.core.api.score.calculator.ConstraintMatchAwareIncrementalScoreCalculator;
 import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
@@ -35,6 +43,7 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 import io.quarkus.gizmo.AnnotationCreator;
+import io.quarkus.gizmo.AssignableResultHandle;
 import io.quarkus.gizmo.BranchResult;
 import io.quarkus.gizmo.BytecodeCreator;
 import io.quarkus.gizmo.ClassCreator;
@@ -43,6 +52,7 @@ import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
+import io.quarkus.gizmo.WhileLoop;
 
 public class PythonWrapperGenerator {
     /**
@@ -117,7 +127,7 @@ public class PythonWrapperGenerator {
     private static BiFunction<OpaquePythonReference, String, Object> pythonObjectIdAndAttributeNameToPythonLikeValue;
 
     // Sets an attribute on a OpaquePythonReference
-    private static TriFunction<OpaquePythonReference, String, Object, Object> pythonObjectIdAndAttributeSetter;
+    public static TriFunction<OpaquePythonReference, String, Object, Object> pythonObjectIdAndAttributeSetter;
 
     // These functions are used in Python to set fields to the corresponding Python function
     @SuppressWarnings("unused")
@@ -266,10 +276,15 @@ public class PythonWrapperGenerator {
     static final String PYTHON_BINDING_FIELD_NAME = "__optaplannerPythonValue";
     static final String REFERENCE_MAP_FIELD_NAME = "__optaplannerReferenceMap";
 
+    static final String PYTHON_SETTER_FIELD_NAME = "__optaplannerPythonSetter";
+
     static final String PYTHON_LIKE_VALUE_MAP_FIELD_NAME = "__optaplannerPythonLikeValueCacheMap";
     static final String PYTHON_LIKE_TYPE_FIELD_NAME = "__optaplannerPythonLikeType";
 
-    private static <T> T wrapArray(Class<T> javaClass, OpaquePythonReference object, Number id, Map<Number, Object> map) {
+    static final TriFunction<OpaquePythonReference, String, Object, Object> NONE_PYTHON_SETTER = (a, b, c) -> null;
+
+    private static <T> T wrapArray(Class<T> javaClass, OpaquePythonReference object, Number id, Map<Number, Object> map,
+                                   TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
         // If the class is an array, we need to extract
         // its elements from the OpaquePythonReference
         if (Comparable.class.isAssignableFrom(javaClass.getComponentType()) ||
@@ -300,19 +315,20 @@ public class PythonWrapperGenerator {
 
         // Set the elements of the array to the wrapped python items
         for (int i = 0; i < length; i++) {
-            Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i), map));
+            Array.set(out, i, wrap(javaClass.getComponentType(), itemIds.get(i), map, pythonSetter));
         }
         return (T) out;
     }
 
-    public static <T> T wrapCollection(OpaquePythonReference object, Number id, Map<Number, Object> map) {
-        PythonList out = new PythonList(object, id, map);
+    public static <T> T wrapCollection(OpaquePythonReference object, Number id, Map<Number, Object> map, TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
+        PythonList out = new PythonList(object, id, map, pythonSetter);
         map.put(id, out);
         return (T) out;
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T wrap(Class<T> javaClass, OpaquePythonReference object, Map<Number, Object> map) {
+    public static <T> T wrap(Class<T> javaClass, OpaquePythonReference object, Map<Number, Object> map,
+                             TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
         if (object == null) {
             return null;
         }
@@ -325,16 +341,16 @@ public class PythonWrapperGenerator {
 
         try {
             if (javaClass.isArray()) {
-                return wrapArray(javaClass, object, id, map);
+                return wrapArray(javaClass, object, id, map, pythonSetter);
             } else if (javaClass.isAssignableFrom(PythonList.class)) {
-                return wrapCollection(object, id, map);
+                return wrapCollection(object, id, map, pythonSetter);
             } else if (javaClass.isAssignableFrom(OpaquePythonReference.class)) {
                 // Don't wrap OpaquePythonReference if it is a pointer to an OpaquePythonReference
                 return (T) object;
             } else {
                 // Create a new instance of the Java Class. Its constructor will put the instance into the map
-                return javaClass.getConstructor(OpaquePythonReference.class, Number.class, Map.class).newInstance(object,
-                        id, map);
+                return javaClass.getConstructor(OpaquePythonReference.class, Number.class, Map.class,
+                        TriFunction.class).newInstance(object, id, map, pythonSetter);
             }
         } catch (IllegalAccessException | NoSuchMethodException | InstantiationException | InvocationTargetException e) {
             throw new IllegalStateException("Error occurred when wrapping object (" + getPythonObjectString(object) + ")", e);
@@ -594,16 +610,17 @@ public class PythonWrapperGenerator {
         return defineWrapperClass(className, IncrementalScoreCalculator.class, incrementalScoreCalculatorSupplier);
     }
 
-    private static FieldDescriptor getPythonLikeObjectMapFieldDescriptor(ClassCreator classCreator, Class<?> parentClass) {
+    private static FieldDescriptor getInheritedFieldDescriptor(ClassCreator classCreator, Class<?> parentClass,
+            String fieldName, Class<?> fieldClass) {
         if (parentClass == null || parentClass.equals(Object.class)) {
-            return classCreator.getFieldCreator(PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class)
+            return classCreator.getFieldCreator(fieldName, fieldClass)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
         } else {
             Class<?> firstParentClass = parentClass;
             while (!firstParentClass.getSuperclass().equals(Object.class)) {
                 firstParentClass = firstParentClass.getSuperclass();
             }
-            return FieldDescriptor.of(firstParentClass, PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class);
+            return FieldDescriptor.of(firstParentClass, fieldName, fieldClass);
         }
     }
 
@@ -680,12 +697,18 @@ public class PythonWrapperGenerator {
             }
             FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            FieldDescriptor pythonLikeValueMapField = getPythonLikeObjectMapFieldDescriptor(classCreator, parentClass);
+            FieldDescriptor pythonLikeValueMapField = getInheritedFieldDescriptor(classCreator, parentClass,
+                    PYTHON_LIKE_VALUE_MAP_FIELD_NAME,
+                    Map.class);
+            FieldDescriptor pythonSetterField = getInheritedFieldDescriptor(classCreator, parentClass,
+                    PYTHON_SETTER_FIELD_NAME, TriFunction.class);
             FieldDescriptor pythonLikeTypeField =
                     classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
                             .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, parentClass, defineEqualsAndHashcode, valueField, referenceMapField,
+            generateWrapperMethods(classCreator, parentClass, GeneratedClassType.PLANNING_ENTITY,
+                    defineEqualsAndHashcode, valueField, referenceMapField,
                     pythonLikeValueMapField,
+                    pythonSetterField,
                     pythonLikeTypeField,
                     optaplannerMethodAnnotations);
         }
@@ -718,12 +741,17 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor referenceMapField = classCreator.getFieldCreator(REFERENCE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
-            FieldDescriptor pythonLikeValueMapField = getPythonLikeObjectMapFieldDescriptor(classCreator, parentClass);
+            FieldDescriptor pythonLikeValueMapField = getInheritedFieldDescriptor(classCreator, parentClass,
+                    PYTHON_LIKE_VALUE_MAP_FIELD_NAME,
+                    Map.class);
+            FieldDescriptor pythonSetterField = getInheritedFieldDescriptor(classCreator, parentClass,
+                    PYTHON_SETTER_FIELD_NAME, TriFunction.class);
             FieldDescriptor pythonLikeTypeField =
                     classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
                             .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, parentClass, defineEqualsAndHashcode, valueField, referenceMapField,
-                    pythonLikeValueMapField, pythonLikeTypeField,
+            generateWrapperMethods(classCreator, parentClass, GeneratedClassType.PROBLEM_FACT, defineEqualsAndHashcode,
+                    valueField, referenceMapField,
+                    pythonLikeValueMapField, pythonSetterField, pythonLikeTypeField,
                     optaplannerMethodAnnotations);
         }
         writeClassOutput(classNameToBytecode, className, classBytecodeHolder.get());
@@ -758,11 +786,14 @@ public class PythonWrapperGenerator {
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor pythonLikeValueMapField = classCreator.getFieldCreator(PYTHON_LIKE_VALUE_MAP_FIELD_NAME, Map.class)
                     .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
+            FieldDescriptor pythonSetterField = classCreator.getFieldCreator(PYTHON_SETTER_FIELD_NAME, TriFunction.class)
+                    .setModifiers(Modifier.PUBLIC).getFieldDescriptor();
             FieldDescriptor pythonLikeTypeField =
                     classCreator.getFieldCreator(PYTHON_LIKE_TYPE_FIELD_NAME, PythonLikeType.class)
                             .setModifiers(Modifier.PUBLIC | Modifier.STATIC).getFieldDescriptor();
-            generateWrapperMethods(classCreator, null, defineEqualsAndHashcode, valueField, referenceMapField,
-                    pythonLikeValueMapField, pythonLikeTypeField,
+            generateWrapperMethods(classCreator, null, GeneratedClassType.PLANNING_SOLUTION,
+                    defineEqualsAndHashcode, valueField, referenceMapField,
+                    pythonLikeValueMapField, pythonSetterField, pythonLikeTypeField,
                     optaplannerMethodAnnotations);
         }
         writeClassOutput(classNameToBytecode, className, classBytecodeHolder.get());
@@ -814,6 +845,108 @@ public class PythonWrapperGenerator {
         methodCreator.returnValue(typeResultHandle);
     }
 
+    private static void generateForceUpdate(ClassCreator classCreator, GeneratedClassType generatedClassType,
+            Class<?> parentClass,
+            FieldDescriptor valueField, List<FieldDescriptor> planningEntityPropertyFieldList,
+            List<FieldDescriptor> planningEntityCollectionFieldList,
+            List<FieldDescriptor> planningVariableFieldList,
+            List<String> planningVariableSetterNameList,
+            List<FieldDescriptor> planningScoreFieldList,
+            List<String> planningScoreSetterNameList) {
+        MethodCreator methodCreator = classCreator.getMethodCreator("forceUpdate", void.class);
+
+        switch (generatedClassType) {
+            case PROBLEM_FACT: {
+                break; // Do nothing
+            }
+            case PLANNING_ENTITY: {
+                if (parentClass != null) {
+                    methodCreator.invokeSpecialInterfaceMethod(MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate",
+                            void.class),
+                            methodCreator.getThis());
+                }
+                ResultHandle thisObj = methodCreator.getThis();
+                ResultHandle opaquePythonReference = methodCreator.readInstanceField(valueField, methodCreator.getThis());
+                for (int i = 0; i < planningVariableFieldList.size(); i++) {
+                    FieldDescriptor planningVariableField = planningVariableFieldList.get(i);
+                    String setterName = planningVariableSetterNameList.get(i);
+
+                    methodCreator.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class,
+                                    OpaquePythonReference.class, String.class, Object.class),
+                            opaquePythonReference,
+                            methodCreator.load(setterName),
+                            methodCreator.readInstanceField(planningVariableField, thisObj));
+                }
+                break;
+            }
+            case PLANNING_SOLUTION: {
+                ResultHandle thisObject = methodCreator.getThis();
+                for (int i = 0; i < planningScoreFieldList.size(); i++) {
+                    FieldDescriptor planningScoreField = planningScoreFieldList.get(i);
+                    String setterName = planningScoreSetterNameList.get(i);
+
+                    methodCreator.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class,
+                                                      OpaquePythonReference.class, String.class, Object.class),
+                            methodCreator.readInstanceField(valueField, methodCreator.getThis()),
+                            methodCreator.load(setterName),
+                            methodCreator.readInstanceField(planningScoreField, thisObject));
+                }
+                for (FieldDescriptor planningEntityField : planningEntityPropertyFieldList) {
+                    methodCreator.invokeInterfaceMethod(
+                            MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate", void.class),
+                            methodCreator.readInstanceField(planningEntityField, thisObject));
+                }
+                for (FieldDescriptor planningEntityCollectionField : planningEntityCollectionFieldList) {
+                    if (planningEntityCollectionField.getType().endsWith("[]")) {
+                        // Array
+                        AssignableResultHandle arrayIndex = methodCreator.createVariable(int.class);
+                        methodCreator.assign(arrayIndex, methodCreator.load(0));
+
+                        ResultHandle array = methodCreator.readInstanceField(planningEntityCollectionField, thisObject);
+                        ResultHandle arrayLength = methodCreator.arrayLength(array);
+
+                        WhileLoop arrayLoop =
+                                methodCreator.whileLoop(condition -> condition.ifIntegerLessThan(arrayIndex, arrayLength));
+                        try (BytecodeCreator arrayLoopBlock = arrayLoop.block()) {
+                            ResultHandle arrayElement = arrayLoopBlock.readArrayValue(array, arrayIndex);
+                            arrayLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate", void.class), arrayElement);
+                            arrayLoopBlock.assign(arrayIndex, methodCreator.increment(arrayIndex));
+                        }
+                    } else {
+                        // Collection
+                        ResultHandle iterator = methodCreator.invokeInterfaceMethod(
+                                MethodDescriptor.ofMethod(Collection.class, "iterator",
+                                        Iterator.class),
+                                methodCreator.readInstanceField(planningEntityCollectionField, thisObject));
+                        WhileLoop iteratorLoop = methodCreator.whileLoop(condition -> condition.ifTrue(condition
+                                .invokeInterfaceMethod(MethodDescriptor.ofMethod(Iterator.class, "hasNext", boolean.class),
+                                        iterator)));
+                        try (BytecodeCreator iteratorLoopBlock = iteratorLoop.block()) {
+                            ResultHandle element = iteratorLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(Iterator.class, "next", Object.class),
+                                    iterator);
+                            iteratorLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate", void.class), element);
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                throw new IllegalStateException("Unhandled GeneratedClassType (" + generatedClassType + ")");
+        }
+        methodCreator.returnValue(null);
+    }
+
+    public enum GeneratedClassType {
+        PROBLEM_FACT,
+        PLANNING_ENTITY,
+        PLANNING_SOLUTION
+    }
+
     public static class PythonAttributeGetter implements Function<String, PythonLikeObject> {
         final PythonObject pythonObject;
 
@@ -861,9 +994,11 @@ public class PythonWrapperGenerator {
     // Create all methods in the class
     @SuppressWarnings("unchecked")
     private static void generateWrapperMethods(ClassCreator classCreator, Class<?> parentClass,
+            GeneratedClassType generatedClassType,
             boolean defineEqualsAndHashcode, FieldDescriptor valueField,
             FieldDescriptor referenceMapField,
             FieldDescriptor pythonLikeValueMapField,
+            FieldDescriptor pythonSetterField,
             FieldDescriptor typeField,
             List<List<Object>> optaplannerMethodAnnotations) {
         if (parentClass == null) {
@@ -875,6 +1010,13 @@ public class PythonWrapperGenerator {
         // (Each annotation is represented by a Map)
         List<FieldDescriptor> fieldDescriptorList = new ArrayList<>(optaplannerMethodAnnotations.size());
         List<Object> returnTypeList = new ArrayList<>(optaplannerMethodAnnotations.size());
+        List<FieldDescriptor> planningEntityFieldList = new ArrayList<>();
+        List<FieldDescriptor> planningEntityCollectionFieldList = new ArrayList<>();
+        List<FieldDescriptor> planningVariableFieldList = new ArrayList<>();
+        List<String> planningVariableSetterNameList = new ArrayList<>();
+        List<FieldDescriptor> planningScoreFieldList = new ArrayList<>();
+        List<String> planningScoreSetterNameList = new ArrayList<>();
+
         for (List<Object> optaplannerMethodAnnotation : optaplannerMethodAnnotations) {
             String methodName = (String) (optaplannerMethodAnnotation.get(0));
             Class<?> returnType = (Class<?>) (optaplannerMethodAnnotation.get(1));
@@ -884,12 +1026,18 @@ public class PythonWrapperGenerator {
             }
             List<Map<String, Object>> annotations = (List<Map<String, Object>>) optaplannerMethodAnnotation.get(3);
             fieldDescriptorList
-                    .add(generateWrapperMethod(classCreator, valueField, pythonLikeValueMapField, methodName, returnType,
-                            signature, annotations,
-                            returnTypeList));
+                    .add(generateWrapperMethod(classCreator, valueField, pythonLikeValueMapField, pythonSetterField,
+                            methodName, returnType, signature, annotations, returnTypeList,
+                            planningEntityFieldList, planningEntityCollectionFieldList,
+                            planningVariableFieldList, planningVariableSetterNameList,
+                            planningScoreFieldList, planningScoreSetterNameList));
         }
-        createConstructor(classCreator, valueField, referenceMapField, pythonLikeValueMapField,
+        createConstructor(classCreator, valueField, referenceMapField, pythonLikeValueMapField, pythonSetterField,
                 parentClass, fieldDescriptorList, returnTypeList);
+
+        generateForceUpdate(classCreator, generatedClassType, parentClass, valueField,
+                planningEntityFieldList, planningEntityCollectionFieldList, planningVariableFieldList,
+                planningVariableSetterNameList, planningScoreFieldList, planningScoreSetterNameList);
 
         if (parentClass == null) {
             createToString(classCreator, valueField);
@@ -936,10 +1084,10 @@ public class PythonWrapperGenerator {
     }
 
     private static void createConstructor(ClassCreator classCreator, FieldDescriptor valueField,
-            FieldDescriptor referenceMapField, FieldDescriptor pythonLikeValueMapField,
+            FieldDescriptor referenceMapField, FieldDescriptor pythonLikeValueMapField, FieldDescriptor pythonSetterField,
             Class<?> parentClass, List<FieldDescriptor> fieldDescriptorList, List<Object> returnTypeList) {
         MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(),
-                OpaquePythonReference.class, Number.class, Map.class));
+                OpaquePythonReference.class, Number.class, Map.class, TriFunction.class));
         methodCreator.setModifiers(Modifier.PUBLIC);
 
         ResultHandle value = methodCreator.getMethodParam(0);
@@ -955,6 +1103,7 @@ public class PythonWrapperGenerator {
                     methodCreator.getMethodParam(2), methodCreator.getMethodParam(1), methodCreator.getThis());
             methodCreator.writeInstanceField(valueField, methodCreator.getThis(), value);
             methodCreator.writeInstanceField(referenceMapField, methodCreator.getThis(), methodCreator.getMethodParam(2));
+            methodCreator.writeInstanceField(pythonSetterField, methodCreator.getThis(), methodCreator.getMethodParam(3));
             methodCreator.writeInstanceField(pythonLikeValueMapField, methodCreator.getThis(),
                     methodCreator.newInstance(MethodDescriptor.ofConstructor(HashMap.class)));
         }
@@ -1002,24 +1151,31 @@ public class PythonWrapperGenerator {
                     }
                     methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
                             methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                                    "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
-                                    actualClass, outResultHandle, methodCreator.getMethodParam(2)));
+                                    "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class, TriFunction.class),
+                                    actualClass, outResultHandle, methodCreator.getMethodParam(2),
+                                                             methodCreator.getMethodParam(3)));
                 }
             } else {
                 // It a reference to the current class; need to be wrapped
                 ResultHandle actualClass = methodCreator.loadClass(classCreator.getClassName());
                 methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
                         methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                                "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class),
-                                actualClass, outResultHandle, methodCreator.getMethodParam(2)));
+                                "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class, TriFunction.class),
+                                actualClass, outResultHandle, methodCreator.getMethodParam(2),
+                                                         methodCreator.getMethodParam(3)));
             }
         }
         methodCreator.returnValue(methodCreator.getThis());
     }
 
     private static FieldDescriptor generateWrapperMethod(ClassCreator classCreator, FieldDescriptor valueField,
-            FieldDescriptor pythonLikeAttributeField, String methodName, Class<?> returnType, String signature,
-            List<Map<String, Object>> annotations, List<Object> returnTypeList) {
+            FieldDescriptor pythonLikeAttributeField, FieldDescriptor pythonSetterField,
+            String methodName, Class<?> returnType, String signature,
+            List<Map<String, Object>> annotations, List<Object> returnTypeList,
+            List<FieldDescriptor> planningEntityFieldList, List<FieldDescriptor> planningEntityCollectionFieldList,
+            List<FieldDescriptor> planningVariableFieldList, List<String> planningVariableSetterNameList,
+            List<FieldDescriptor> planningScoreFieldDescriptor,
+            List<String> planningScoreFieldDescriptorName) {
         // Python types are not required, so we need to discover them. If the type is unknown, we default to Object,
         // but some annotations need something more specific than Object
         Object actualReturnType = returnType;
@@ -1041,6 +1197,25 @@ public class PythonWrapperGenerator {
         returnTypeList.add(actualReturnType);
         FieldDescriptor fieldDescriptor =
                 classCreator.getFieldCreator(methodName + "$field", actualReturnType).getFieldDescriptor();
+
+        for (Map<String, Object> annotation : annotations) {
+            Class<?> annotationType = (Class<?>) annotation.get("annotationType");
+
+            if (PlanningEntityProperty.class.isAssignableFrom(annotationType)) {
+                planningEntityFieldList.add(fieldDescriptor);
+            } else if (PlanningEntityCollectionProperty.class.isAssignableFrom(annotationType)) {
+                planningEntityCollectionFieldList.add(fieldDescriptor);
+            } else if (PlanningVariable.class.isAssignableFrom(annotationType) ||
+                    InverseRelationShadowVariable.class.isAssignableFrom(annotationType) ||
+                    IndexShadowVariable.class.isAssignableFrom(annotationType) ||
+                    AnchorShadowVariable.class.isAssignableFrom(annotationType) ||
+                    CustomShadowVariable.class.isAssignableFrom(annotationType)) {
+                planningVariableFieldList.add(fieldDescriptor);
+            } else if (PlanningScore.class.isAssignableFrom(annotationType)) {
+                planningScoreFieldDescriptor.add(fieldDescriptor);
+            }
+        }
+
         MethodCreator methodCreator = classCreator.getMethodCreator(methodName, actualReturnType);
         if (signature != null) {
             methodCreator.setSignature("()" + signature);
@@ -1074,11 +1249,26 @@ public class PythonWrapperGenerator {
                 setterMethodCreator.setSignature("(" + signature + ")V;");
             }
 
-            // Use PythonWrapperGenerator.setValueOnPythonObject(obj, attribute, value)
-            // to set the value on the Python Object
-            setterMethodCreator.invokeStaticMethod(
-                    MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class,
-                            OpaquePythonReference.class, String.class, Object.class),
+            for (Map<String, Object> annotation : annotations) {
+                Class<?> annotationType = (Class<?>) annotation.get("annotationType");
+                if (PlanningVariable.class.isAssignableFrom(annotationType) ||
+                        InverseRelationShadowVariable.class.isAssignableFrom(annotationType) ||
+                        IndexShadowVariable.class.isAssignableFrom(annotationType) ||
+                        AnchorShadowVariable.class.isAssignableFrom(annotationType) ||
+                        CustomShadowVariable.class.isAssignableFrom(annotationType)) {
+                    planningVariableSetterNameList.add(setterMethodName);
+                } else if (PlanningScore.class.isAssignableFrom(annotationType)) {
+                    planningScoreFieldDescriptorName.add(setterMethodName);
+                }
+            }
+
+            // Use pythonSetterField to set the value on the Python Object (or ignore if score calculation was completely translated to Java)
+            ResultHandle setterTriFunction =
+                    setterMethodCreator.readInstanceField(pythonSetterField, setterMethodCreator.getThis());
+            setterMethodCreator.invokeInterfaceMethod(
+                    MethodDescriptor.ofMethod(TriFunction.class, "apply", Object.class,
+                            Object.class, Object.class, Object.class),
+                    setterTriFunction,
                     setterMethodCreator.readInstanceField(valueField, setterMethodCreator.getThis()),
                     setterMethodCreator.load(setterMethodName),
                     setterMethodCreator.getMethodParam(0));

@@ -482,8 +482,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             }
 
-            case EXTENDED_ARG:
+            case EXTENDED_ARG: {
+                // Do nothing; this isn't really an opcode
                 break;
+            }
 
             // **************************************************
             // Stack Manipulation
@@ -703,11 +705,11 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
 
             case LOAD_NAME:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case STORE_NAME:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case DELETE_NAME:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
 
             case LOAD_GLOBAL: {
                 VariableImplementor.loadGlobalVariable(methodVisitor, className, pythonCompiledFunction, instruction);
@@ -753,33 +755,33 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
 
             case LOAD_CLASSDEREF:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
 
             // **************************************************
             // Asynchronous Operations
             // **************************************************
             case GET_AWAITABLE:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case GET_AITER:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case GET_ANEXT:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case END_ASYNC_FOR:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case BEFORE_ASYNC_WITH:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case SETUP_ASYNC_WITH:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
 
             // **************************************************
             // Generator Operations
             // **************************************************
             case YIELD_VALUE:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case YIELD_FROM:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case GET_YIELD_FROM_ITER:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
 
             // **************************************************
             // Exception Handling Operations
@@ -797,8 +799,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 break;
             }
             case WITH_EXCEPT_START: {
-                // TODO
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             }
             case RERAISE: {
                 ExceptionImplementor.reraise(methodVisitor);
@@ -819,11 +820,11 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             // Import Operations
             // **************************************************
             case IMPORT_STAR:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case IMPORT_NAME:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
             case IMPORT_FROM:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
 
             // **************************************************
             // String Operations
@@ -847,10 +848,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             // Class Operations
             // **************************************************
             case LOAD_BUILD_CLASS:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
 
             case SETUP_ANNOTATIONS:
-                break;
+                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
 
             // **************************************************
             // Dunder Operations

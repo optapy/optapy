@@ -74,9 +74,13 @@ public class PythonList<T> implements PythonObject, List<T> {
     private OpaquePythonReference pythonListOpaqueReference;
     private Map<Number, Object> idMap;
 
-    public PythonList(OpaquePythonReference pythonListOpaqueReference, Number id, Map<Number, Object> idMap) {
+    private TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter;
+
+    public PythonList(OpaquePythonReference pythonListOpaqueReference, Number id, Map<Number, Object> idMap,
+                      TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
         this.pythonListOpaqueReference = pythonListOpaqueReference;
         this.idMap = idMap;
+        this.pythonSetter = pythonSetter;
     }
 
     @Override
@@ -87,6 +91,11 @@ public class PythonList<T> implements PythonObject, List<T> {
     @Override
     public Map<Number, Object> get__optapy_reference_map() {
         return idMap;
+    }
+
+    @Override
+    public void forceUpdate() {
+
     }
 
     @Override
@@ -246,7 +255,7 @@ public class PythonList<T> implements PythonObject, List<T> {
         // Different proxies of the same object are different objects according to IdentityHashMap,
         // so wrap it (which will return the same Proxy if it was already created)
         T wrapped_out = (T) PythonWrapperGenerator.wrap(PythonWrapperGenerator.getJavaClass((OpaquePythonReference) out),
-                (OpaquePythonReference) out, idMap);
+                (OpaquePythonReference) out, idMap, pythonSetter);
         return wrapped_out;
     }
 
@@ -315,7 +324,7 @@ public class PythonList<T> implements PythonObject, List<T> {
 
     @Override
     public List<T> subList(int start, int end) {
-        return new PythonList<>(slicePythonList.apply(pythonListOpaqueReference, start, end), null, null);
+        return new PythonList<>(slicePythonList.apply(pythonListOpaqueReference, start, end), null, null, pythonSetter);
     }
 
     @Override

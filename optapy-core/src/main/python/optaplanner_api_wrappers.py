@@ -26,6 +26,7 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
         from org.optaplanner.core.api.solver import SolverManager
         self.delegate = SolverManager.create(solver_config)
         self.problem_id_to_solver_run_ref_set = dict()
+        self.only_use_java_setters = PythonSolver.onlyUseJavaSetters
 
     def _optapy_debug_get_solver_runs_dicts(self):
         """
@@ -52,6 +53,7 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
             solver_run_id = (id(self), the_problem_id)
             self.problem_id_to_solver_run_ref_set[the_problem_id] = set()
             _setup_solver_run(solver_run_id, problem, self.problem_id_to_solver_run_ref_set[the_problem_id])
+            PythonSolver.onlyUseJavaSetters = self.only_use_java_setters
             wrapped_problem = PythonSolver.wrapProblem(get_class(type(problem)), problem)
             return wrapped_problem
 

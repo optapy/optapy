@@ -26,4 +26,6 @@ public interface PythonObject extends PythonLikeObject {
      * @return The map used to store references.
      */
     Map<Number, Object> get__optapy_reference_map();
+
+    void forceUpdate();
 }

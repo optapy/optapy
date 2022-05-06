@@ -83,7 +83,7 @@ def _get_python_object_attribute(object_id, name):
 
 def _get_python_object_attribute_as_python_like(object_id, name):
     """Gets an attribute from a Python Object"""
-    from .python_to_java_bytecode_translator import convert_to_java_python_like_object
+    from javapython import convert_to_java_python_like_object
     the_object = object_id
     out = getattr(the_object, str(name))
     out = convert_to_java_python_like_object(out)
@@ -536,8 +536,10 @@ def _get_optaplanner_annotations(python_class: Type) -> List[Tuple[str, JClass, 
 
 def get_class(python_class: Union[Type, Callable]) -> JClass:
     """Return the Java Class for the given Python Class"""
-    from java.lang import Object
+    from java.lang import Object, Class
     if isinstance(python_class, jpype.JClass):
+        return cast(JClass, python_class)
+    if isinstance(python_class, Class):
         return cast(JClass, python_class)
     if hasattr(python_class, '__optapy_java_class'):
         return python_class.__optapy_java_class
@@ -637,15 +639,16 @@ def _to_constraint_java_array(python_list: List['_Constraint']) -> JArray:
     return out
 
 
-def _generate_constraint_provider_class(constraint_provider: Callable[['_ConstraintFactory'], List['_Constraint']]) -> \
-        JClass:
+def _generate_constraint_provider_class(original_function: Callable[['_ConstraintFactory'], List['_Constraint']],
+                                        wrapped_constraint_provider: Callable[['_ConstraintFactory'],
+                                                                              List['_Constraint']]) -> JClass:
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     from org.optaplanner.core.api.score.stream import ConstraintProvider
-    class_identifier = _get_class_identifier_for_object(constraint_provider)
+    class_identifier = _get_class_identifier_for_object(original_function)
     out = PythonWrapperGenerator.defineConstraintProviderClass(
         _compose_unique_class_name(class_identifier),
-        JObject(ConstraintProviderFunction(lambda cf: _to_constraint_java_array(constraint_provider(cf))),
+        JObject(ConstraintProviderFunction(lambda cf: _to_constraint_java_array(wrapped_constraint_provider(cf))),
                 ConstraintProvider))
     class_identifier_to_java_class_map[class_identifier] = out
     return out

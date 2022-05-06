@@ -1,6 +1,6 @@
 import dis
 
-from jpype import JInt, JFloat, JBoolean
+from jpype import JInt, JLong, JFloat, JBoolean
 
 def copy_iterable(iterable):
     from java.util import ArrayList
@@ -49,9 +49,11 @@ def convert_to_java_python_like_object(value):
             out.put(convert_to_java_python_like_object(map_key),
                     convert_to_java_python_like_object(map_value))
         return out
+    elif hasattr(value, '__optapy_java_class'):
+        return JLong(id(value))
     else:
         # TODO: Get compiled class corresponding to function / class bytecode
-        raise NotImplementedError('Unable to convert object of type (' + type(value) + ')')
+        raise NotImplementedError(f'Unable to convert object of type {type(value)}')
 
 
 def copy_constants(constants_iterable):

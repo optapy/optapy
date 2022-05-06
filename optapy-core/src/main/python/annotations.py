@@ -5,6 +5,7 @@ from .optaplanner_java_interop import ensure_init, _add_shallow_copy_to_class, _
     _generate_easy_score_calculator_class, _generate_incremental_score_calculator_class, get_class
 from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING, TypeVar
+from .constraint_translator import BytecodeTranslation
 
 if TYPE_CHECKING:
     from org.optaplanner.core.api.solver.change import ProblemChange as _ProblemChange
@@ -585,12 +586,8 @@ def deep_planning_clone(planning_clone_object: Union[Type, Callable]):
     return planning_clone_object
 
 
-"""
-Enable Python -> Java bytecode translation
-function_bytecode_translation=force/if_possible/none
-"""
 def constraint_provider(constraint_provider_function: Callable[['_ConstraintFactory'], List['_Constraint']] = None, /, *,
-                        function_bytecode_translation = False) -> \
+                        function_bytecode_translation: BytecodeTranslation = BytecodeTranslation.IF_POSSIBLE) -> \
         Callable[['_ConstraintFactory'], List['_Constraint']]:
     """Marks a function as a ConstraintProvider.
 
@@ -598,24 +595,29 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
     must return a list of Constraints.
     To create a Constraint, start with ConstraintFactory.from(get_class(PythonClass)).
 
+    :param function_bytecode_translation: Specifies how bytecode translator should occur.
+                                          Defaults to BytecodeTranslation.IF_POSSIBLE.
     :type constraint_provider_function: Callable[[ConstraintFactory], List[Constraint]]
     :rtype: Callable[[ConstraintFactory], List[Constraint]]
     """
     ensure_init()
 
     def constraint_provider_wrapper(function):
-        if function_bytecode_translation:
-            def wrapped_constraint_provider(constraint_factory):
-                from . import constraint
-                constraint._convert_joiners_to_java = True
-                out = function(constraint_factory)
-                constraint._convert_joiners_to_java = False
+        def wrapped_constraint_provider(constraint_factory):
+            from . import constraint_translator
+            from org.optaplanner.optapy import PythonSolver
+            try:
+                constraint_translator.convert_to_java = function_bytecode_translation
+                out = function(constraint_translator.PythonConstraintFactory(constraint_factory))
+                if function_bytecode_translation is not BytecodeTranslation.NONE:
+                    PythonSolver.onlyUseJavaSetters = constraint_translator.all_translated_successfully
                 return out
-            wrapped_constraint_provider.__optapy_java_class = _generate_constraint_provider_class(wrapped_constraint_provider)
-            return wrapped_constraint_provider
-        else:
-            function.__optapy_java_class = _generate_constraint_provider_class(function)
-            return function
+            finally:
+                constraint_translator.convert_to_java = BytecodeTranslation.IF_POSSIBLE
+                constraint_translator.all_translated_successfully = True
+        wrapped_constraint_provider.__optapy_java_class = _generate_constraint_provider_class(function,
+                                                                                              wrapped_constraint_provider)
+        return wrapped_constraint_provider
 
     if constraint_provider_function:  # Called as @constraint_provider
         return constraint_provider_wrapper(constraint_provider_function)

@@ -16,7 +16,8 @@ public enum PythonUnaryOperator {
     AS_INT("__index__"),
     AS_STRING("__str__"),
     REPRESENTATION("__repr__"),
-    NEXT("__next__");
+    NEXT("__next__"),
+    HASH("__hash__");
 
     final String dunderMethod;
 

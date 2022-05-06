@@ -1,5 +1,5 @@
 from ..optaplanner_java_interop import ensure_init
-from ..jpype_type_conversions import _convert_to_java_compatible_object
+from ..constraint_translator import function_cast, predicate_cast
 import jpype.imports  # noqa
 from jpype import JImplements as _JImplements, JOverride as _JOverride, JObject as _JObject
 import inspect
@@ -115,124 +115,6 @@ class DefaultConstraintMatchTotal:
             raise ValueError(f'The ConstraintMatchTotal ({self}) could not remove the ConstraintMatch'
                              f'({constraint_match}) from its constraint_match_set ({self.constraint_match_set}).')
 
-# Workaround for https://github.com/jpype-project/jpype/issues/1016
-# TODO: Remove EVERYTHING below when https://github.com/jpype-project/jpype/issues/1016 is resolved
-#       and a new version of JPype is released
-from jpype import JImplements, JOverride # noqa
-from ..jpype_type_conversions import PythonFunction as _PythonFunction, PythonBiFunction as _PythonBiFunction, \
-    PythonTriFunction as _PythonTriFunction, PythonQuadFunction as _PythonQuadFunction,\
-    PythonPentaFunction as _PythonPentaFunction # noqa
-
-
-# Also need Predicates wrappers for filtering
-@JImplements('java.util.function.Predicate', deferred=True)
-class _PythonPredicate:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def test(self, argument):
-        return self.delegate(argument)
-
-
-@JImplements('java.util.function.BiPredicate', deferred=True)
-class _PythonBiPredicate:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def test(self, argument1, argument2):
-        return self.delegate(argument1, argument2)
-
-
-@JImplements('org.optaplanner.core.api.function.TriPredicate', deferred=True)
-class _PythonTriPredicate:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def test(self, argument1, argument2, argument3):
-        return self.delegate(argument1, argument2, argument3)
-
-
-@JImplements('org.optaplanner.core.api.function.QuadPredicate', deferred=True)
-class _PythonQuadPredicate:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def test(self, argument1, argument2, argument3, argument4):
-        return self.delegate(argument1, argument2, argument3, argument4)
-
-
-@JImplements('org.optaplanner.core.api.function.PentaPredicate', deferred=True)
-class _PythonPentaPredicate:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def test(self, argument1, argument2, argument3, argument4, argument5):
-        return self.delegate(argument1, argument2, argument3, argument4, argument5)
-
-
-def _cast(function):
-    global _convert_joiners_to_java
-    arg_count = len(inspect.signature(function).parameters)
-    if _convert_joiners_to_java:
-        from javapython import translate_python_bytecode_to_java_bytecode
-        from java.util.function import Function, BiFunction
-        from org.optaplanner.core.api.function import TriFunction, QuadFunction, PentaFunction
-        if arg_count == 1:
-            return translate_python_bytecode_to_java_bytecode(function, Function)
-        elif arg_count == 2:
-            return translate_python_bytecode_to_java_bytecode(function, BiFunction)
-        elif arg_count == 3:
-            return translate_python_bytecode_to_java_bytecode(function, TriFunction)
-        elif arg_count == 4:
-            return translate_python_bytecode_to_java_bytecode(function, QuadFunction)
-        elif arg_count == 5:
-            return translate_python_bytecode_to_java_bytecode(function, PentaFunction)
-
-    if arg_count == 1:
-        return _PythonFunction(lambda a: _convert_to_java_compatible_object(function(a)))
-    elif arg_count == 2:
-        return _PythonBiFunction(lambda a, b: _convert_to_java_compatible_object(function(a, b)))
-    elif arg_count == 3:
-        return _PythonTriFunction(lambda a, b, c: _convert_to_java_compatible_object(function(a, b, c)))
-    elif arg_count == 4:
-        return _PythonQuadFunction(lambda a, b, c, d: _convert_to_java_compatible_object(function(a, b, c, d)))
-    elif arg_count == 5:
-        return _PythonPentaFunction(lambda a, b, c, d, e: _convert_to_java_compatible_object(function(a, b, c, d, e)))
-
-
-def _filtering_cast(predicate):
-    arg_count = len(inspect.signature(predicate).parameters)
-    if _convert_joiners_to_java:
-        from javapython import translate_python_bytecode_to_java_bytecode
-        from java.util.function import Predicate, BiPredicate
-        from org.optaplanner.core.api.function import TriPredicate, QuadPredicate, PentaPredicate
-        if arg_count == 1:
-            return translate_python_bytecode_to_java_bytecode(predicate, Predicate)
-        elif arg_count == 2:
-            return translate_python_bytecode_to_java_bytecode(predicate, BiPredicate)
-        elif arg_count == 3:
-            return translate_python_bytecode_to_java_bytecode(predicate, TriPredicate)
-        elif arg_count == 4:
-            return translate_python_bytecode_to_java_bytecode(predicate, QuadPredicate)
-        elif arg_count == 5:
-            return translate_python_bytecode_to_java_bytecode(predicate, PentaPredicate)
-
-    if arg_count == 1:
-        return _PythonPredicate(predicate)
-    elif arg_count == 2:
-        return _PythonBiPredicate(predicate)
-    elif arg_count == 3:
-        return _PythonTriPredicate(predicate)
-    elif arg_count == 4:
-        return _PythonQuadPredicate(predicate)
-    elif arg_count == 5:
-        return _PythonPentaPredicate(predicate)
-
 
 class _JoinersWrapper:
     def __getattr__(self, item):
@@ -240,9 +122,9 @@ class _JoinersWrapper:
         java_method = getattr(JavaJoiners, item)
 
         def function_wrapper(*args):
-            cast_function = _cast
+            cast_function = function_cast
             if is_filtering:
-                cast_function = _filtering_cast
+                cast_function = predicate_cast
 
             cast_args = tuple(map(lambda arg: cast_function(arg), args))
             return java_method(*cast_args)
