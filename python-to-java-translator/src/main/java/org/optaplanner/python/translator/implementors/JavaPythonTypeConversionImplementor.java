@@ -13,6 +13,7 @@ import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.JavaObjectWrapper;
+import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonCode;
 import org.optaplanner.python.translator.types.PythonFloat;
@@ -24,6 +25,7 @@ import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeSet;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonNumber;
+import org.optaplanner.python.translator.types.PythonObjectWrapper;
 import org.optaplanner.python.translator.types.PythonString;
 
 /**
@@ -98,6 +100,10 @@ public class JavaPythonTypeConversionImplementor {
             if (Set.of(maybeFunctionClass.getInterfaces()).contains(PythonLikeFunction.class)) {
                 return new PythonCode((Class<? extends PythonLikeFunction>) maybeFunctionClass);
             }
+        }
+
+        if (object instanceof OpaquePythonReference) {
+            return new PythonObjectWrapper((OpaquePythonReference) object);
         }
 
         // Default: return a JavaObjectWrapper

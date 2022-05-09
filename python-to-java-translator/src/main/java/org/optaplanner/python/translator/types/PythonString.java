@@ -1,12 +1,20 @@
 package org.optaplanner.python.translator.types;
 
+import java.util.Map;
+
 public class PythonString extends AbstractPythonLikeObject {
     public final String value;
 
     private final static PythonLikeType STRING_TYPE = new PythonLikeType("str");
 
     static {
-        PythonLikeComparable.setup(STRING_TYPE.__dir__);
+        try {
+            PythonLikeComparable.setup(STRING_TYPE.__dir__);
+            STRING_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonString.class.getMethod("length"),
+                                                                         Map.of()));
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public PythonString(String value) {
@@ -41,5 +49,9 @@ public class PythonString extends AbstractPythonLikeObject {
 
     public String getValue() {
         return value;
+    }
+
+    public int length() {
+        return value.length();
     }
 }

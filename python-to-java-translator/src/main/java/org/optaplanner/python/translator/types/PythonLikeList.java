@@ -32,6 +32,8 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
             LIST_TYPE.__dir__.put("count",
                     new JavaMethodReference(PythonLikeList.class.getMethod("count", PythonLikeObject.class),
                             Map.of("x", 1)));
+            LIST_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonLikeList.class.getMethod("size"),
+                                  Map.of()));
             LIST_TYPE.__dir__.put("__add__",
                     new JavaMethodReference(PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class),
                             Map.of()));

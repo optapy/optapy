@@ -2,6 +2,8 @@ package org.optaplanner.optapy;
 
 import java.util.HashMap;
 
+import org.optaplanner.python.translator.types.OpaquePythonReference;
+
 @SuppressWarnings("unused")
 public class PythonSolver {
 

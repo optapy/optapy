@@ -41,6 +41,7 @@ import org.optaplanner.core.api.score.calculator.IncrementalScoreCalculator;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 import io.quarkus.gizmo.AnnotationCreator;
@@ -861,7 +862,16 @@ public class PythonWrapperGenerator {
                 break; // Do nothing
             }
             case PLANNING_ENTITY: {
-                if (parentClass != null) {
+                boolean parentHasForceUpdate = false;
+                try {
+                    if (parentClass != null) {
+                        Method method = parentClass.getMethod("forceUpdate", void.class);
+                        parentHasForceUpdate = !Modifier.isAbstract(method.getModifiers());
+                    }
+                } catch (NoSuchMethodException e) {
+                    // ignore
+                }
+                if (parentHasForceUpdate) {
                     methodCreator.invokeSpecialInterfaceMethod(MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate",
                             void.class),
                             methodCreator.getThis());
@@ -1209,7 +1219,9 @@ public class PythonWrapperGenerator {
             } else if (PlanningEntityCollectionProperty.class.isAssignableFrom(annotationType)) {
                 planningEntityCollectionFieldList.add(fieldDescriptor);
             } else if (PlanningVariable.class.isAssignableFrom(annotationType) ||
-                    InverseRelationShadowVariable.class.isAssignableFrom(annotationType) ||
+                    (InverseRelationShadowVariable.class.isAssignableFrom(annotationType) &&
+                            actualReturnType instanceof Class &&
+                            !Collection.class.isAssignableFrom((Class<?>) actualReturnType)) ||
                     IndexShadowVariable.class.isAssignableFrom(annotationType) ||
                     AnchorShadowVariable.class.isAssignableFrom(annotationType) ||
                     CustomShadowVariable.class.isAssignableFrom(annotationType)) {
@@ -1255,7 +1267,9 @@ public class PythonWrapperGenerator {
             for (Map<String, Object> annotation : annotations) {
                 Class<?> annotationType = (Class<?>) annotation.get("annotationType");
                 if (PlanningVariable.class.isAssignableFrom(annotationType) ||
-                        InverseRelationShadowVariable.class.isAssignableFrom(annotationType) ||
+                        (InverseRelationShadowVariable.class.isAssignableFrom(annotationType) &&
+                                actualReturnType instanceof Class &&
+                                !Collection.class.isAssignableFrom((Class<?>) actualReturnType)) ||
                         IndexShadowVariable.class.isAssignableFrom(annotationType) ||
                         AnchorShadowVariable.class.isAssignableFrom(annotationType) ||
                         CustomShadowVariable.class.isAssignableFrom(annotationType)) {

@@ -1,6 +1,6 @@
 import dis
 
-from jpype import JInt, JLong, JFloat, JBoolean
+from jpype import JInt, JLong, JFloat, JBoolean, JProxy
 
 def copy_iterable(iterable):
     from java.util import ArrayList
@@ -13,9 +13,10 @@ def copy_iterable(iterable):
 
 
 def convert_to_java_python_like_object(value):
+    from org.optaplanner.python.translator.types import OpaquePythonReference
     from org.optaplanner.python.translator import PythonLikeObject
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
-        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone
+        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper
     if isinstance(value, PythonLikeObject):
         return value
     elif value is None:
@@ -52,7 +53,48 @@ def convert_to_java_python_like_object(value):
     elif hasattr(value, '__optapy_java_class'):
         return JLong(id(value))
     else:
-        # TODO: Get compiled class corresponding to function / class bytecode
+        return PythonObjectWrapper(JProxy(OpaquePythonReference, inst=value, convert=True))
+    # TODO: Get compiled class corresponding to function / class bytecode
+
+
+def unwrap_python_like_object(python_like_object):
+    from org.optaplanner.python.translator import PythonLikeObject
+    from java.util import List, Map, Set
+    from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
+        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper, \
+        JavaObjectWrapper
+
+    if isinstance(python_like_object, (PythonObjectWrapper, JavaObjectWrapper)):
+        out = python_like_object.getWrappedObject()
+        return out
+    elif python_like_object is PythonNone.INSTANCE:
+        return None
+    elif isinstance(python_like_object, (PythonBoolean, PythonInteger, PythonFloat, PythonString)):
+        return python_like_object.getValue()
+    elif isinstance(python_like_object, (PythonLikeTuple, tuple)):
+        out = []
+        for item in python_like_object:
+            out.append(unwrap_python_like_object(item))
+        return tuple(out)
+    elif isinstance(python_like_object, List):
+        out = []
+        for item in python_like_object:
+            out.append(unwrap_python_like_object(item))
+        return out
+    elif isinstance(python_like_object, Set):
+        out = set()
+        for item in python_like_object:
+            out.add(unwrap_python_like_object(item))
+        return out
+    elif isinstance(python_like_object, Map):
+        out = dict()
+        for entry in python_like_object.entrySet():
+            out.put(unwrap_python_like_object(entry.getKey()),
+                    unwrap_python_like_object(entry.getValue()))
+        return out
+    elif not isinstance(python_like_object, PythonLikeObject):
+        return python_like_object
+    else:
         raise NotImplementedError(f'Unable to convert object of type {type(value)}')
 
 

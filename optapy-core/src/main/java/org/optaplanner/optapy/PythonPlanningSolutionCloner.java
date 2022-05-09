@@ -4,6 +4,7 @@ import java.util.function.Function;
 
 import org.optaplanner.core.api.domain.solution.cloner.SolutionCloner;
 import org.optaplanner.core.api.function.TriFunction;
+import org.optaplanner.python.translator.types.OpaquePythonReference;
 
 public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
     // A function in python that deep clones a given OpaquePythonReference

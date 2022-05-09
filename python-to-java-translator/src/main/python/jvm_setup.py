@@ -29,17 +29,57 @@ def init(*args, path: List[str] = None, include_translator_jars: bool = True):
     if jpype.isJVMStarted():  # noqa
         raise RuntimeError('JVM already started.')
     if path is None:
-        include_optaplanner_jars = True
+        include_translator_jars = True
         path = []
     if include_translator_jars:
         path = path + extract_python_translator_jars()
     jpype.startJVM(*args, classpath=path, convertStrings=True)  # noqa
 
+    from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
+    CPythonBackedPythonInterpreter.lookupAttributeOnPythonReferencePythonFunction = GetAttributeOnPythonObject()
+    CPythonBackedPythonInterpreter.setAttributeOnPythonReferencePythonFunction = SetAttributeOnPythonObject()
+    CPythonBackedPythonInterpreter.deleteAttributeOnPythonReferencePythonFunction = DeleteAttributeOnPythonObject()
+    CPythonBackedPythonInterpreter.callPythonFunction = CallPythonFunction()
+
+
+@jpype.JImplements('java.util.function.BiFunction', deferred=True)
+class GetAttributeOnPythonObject:
+    @jpype.JOverride()
+    def apply(self, python_object, attribute_name):
+        from .python_to_java_bytecode_translator import convert_to_java_python_like_object
+        out = getattr(python_object, attribute_name)
+        return convert_to_java_python_like_object(out)
+
+
+@jpype.JImplements('org.optaplanner.python.translator.TriConsumer', deferred=True)
+class SetAttributeOnPythonObject:
+    @jpype.JOverride()
+    def accept(self, python_object, attribute_name, value):
+        setattr(python_object, attribute_name, value)
+
+
+@jpype.JImplements('java.util.function.BiConsumer', deferred=True)
+class DeleteAttributeOnPythonObject:
+    @jpype.JOverride()
+    def accept(python_object, attribute_name):
+        delattr(python_object, attribute_name)
+
+
+@jpype.JImplements('org.optaplanner.python.translator.TriFunction', deferred=True)
+class CallPythonFunction:
+    @jpype.JOverride()
+    def apply(self, python_object, var_args_list, keyword_args_map):
+        from .python_to_java_bytecode_translator import unwrap_python_like_object, convert_to_java_python_like_object
+        actual_vargs = unwrap_python_like_object(var_args_list)
+        actual_keyword_args = unwrap_python_like_object(keyword_args_map)
+        out = python_object(*actual_vargs, **actual_keyword_args)
+        return convert_to_java_python_like_object(out)
+
 
 def ensure_init():
     """Start the JVM if it isn't started; does nothing otherwise
 
-    Used by OptaPy to start the JVM when needed by a method, so
+    Used by the translator to start the JVM when needed by a method, so
     users don't need to start the JVM themselves.
 
     :return: None

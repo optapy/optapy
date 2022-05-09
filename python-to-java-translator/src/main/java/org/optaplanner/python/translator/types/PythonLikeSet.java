@@ -25,6 +25,8 @@ public class PythonLikeSet extends AbstractPythonLikeObject implements Set<Pytho
                     Map.of("x", 1)));
             SET_TYPE.__dir__.put("clear", new JavaMethodReference(List.class.getMethod("clear"), Map.of()));
             SET_TYPE.__dir__.put("copy", new JavaMethodReference(PythonLikeSet.class.getMethod("copy"), Map.of()));
+            SET_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonLikeSet.class.getMethod("size"),
+                                                                     Map.of()));
             SET_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeSet.class.getMethod("iterator"),
                     Map.of()));
             SET_TYPE.__dir__.put("__contains__",

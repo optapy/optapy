@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 
-public class JavaObjectWrapper implements PythonLikeObject {
+public class JavaObjectWrapper implements PythonLikeObject, Comparable<JavaObjectWrapper> {
 
     final static Map<Class<?>, PythonLikeType> classToPythonTypeMap = new HashMap<>();
     final static Map<Class<?>, Map<String, List<Member>>> classToAttributeNameToMemberListMap = new HashMap<>();
@@ -186,5 +186,23 @@ public class JavaObjectWrapper implements PythonLikeObject {
     @Override
     public PythonLikeType __getType() {
         return type;
+    }
+
+    @Override
+    public int compareTo(JavaObjectWrapper javaObjectWrapper) {
+        List<Member> compareToMembers = attributeNameToMemberListMap.get("compareTo");
+        for (Member member : compareToMembers) {
+            if (member instanceof Method) {
+                Method method = (Method) member;
+                if (method.getDeclaringClass().equals(Comparable.class)) {
+                    try {
+                        return (int) method.invoke(wrappedObject, javaObjectWrapper.wrappedObject);
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        throw new IllegalStateException(e);
+                    }
+                }
+            }
+        }
+        throw new IllegalStateException("Class " + objectClass + " does not implement Comparable");
     }
 }

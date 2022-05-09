@@ -132,13 +132,13 @@ def _has_java_class(item):
 
 
 def _proxy(value):
-    from org.optaplanner.optapy import OpaquePythonReference  # noqa
+    from org.optaplanner.python.translator.types import OpaquePythonReference  # noqa
     return JProxy(OpaquePythonReference, inst=value, convert=True)
 
 
 def _convert_to_java_compatible_object(item):
     from org.optaplanner.optapy import PythonComparable  # noqa
-    if _has_java_class(item):
+    if _has_java_class(item) or item is None:
         return item
     return PythonComparable(_proxy(item))
 

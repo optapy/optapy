@@ -3,6 +3,8 @@ package org.optaplanner.optapy;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.optaplanner.python.translator.types.OpaquePythonReference;
+
 @SuppressWarnings("unused")
 public class PythonComparable implements Comparable<PythonComparable> {
 

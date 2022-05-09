@@ -74,7 +74,8 @@ def _get_python_object_attribute(object_id, name):
             out = JObject(python_object, java.lang.Object)
             return out
         else:
-            return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=python_object, convert=True)
+            return JProxy(org.optaplanner.python.translator.types.OpaquePythonReference, inst=python_object,
+                          convert=True)
     except Exception as e:
         from org.optaplanner.optapy import OptaPyException  # noqa
         error = f'An exception occur when calling {str(name)} on {str(the_object)}: {str(e)}. Check the code.'
@@ -92,9 +93,9 @@ def _get_python_object_attribute_as_python_like(object_id, name):
 
 def _get_python_array_to_id_array(the_object: List):
     """Maps a Python List to a Java List of OpaquePythonReference"""
-    import org.optaplanner.optapy.OpaquePythonReference
-    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=x, convert=True),
-                                 the_object)))
+    import org.optaplanner.python.translator.types.OpaquePythonReference
+    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.python.translator.types.OpaquePythonReference,
+                                                  inst=x, convert=True), the_object)))
     return out
 
 
@@ -129,14 +130,14 @@ def _deep_clone_python_object(the_object: Any):
     :parameter the_object: the object to be cloned.
     :return: An OpaquePythonReference of the cloned Python Object
     """
-    import org.optaplanner.optapy.OpaquePythonReference
+    import org.optaplanner.python.translator.types.OpaquePythonReference
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     item = PythonWrapperGenerator.getPythonObject(the_object)
     the_clone = _planning_clone(item, dict())
     for run_id in ref_id_to_solver_run_id[id(item)]:
         solver_run_id_to_refs[run_id].add(the_clone)
     ref_id_to_solver_run_id[id(the_clone)] = ref_id_to_solver_run_id[id(item)]
-    return JProxy(org.optaplanner.optapy.OpaquePythonReference, inst=the_clone, convert=True)
+    return JProxy(org.optaplanner.python.translator.types.OpaquePythonReference, inst=the_clone, convert=True)
 
 
 def _is_deep_planning_clone(object):
@@ -309,6 +310,7 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
                       Defaults to 'INFO'
     :return: None
     """
+    from javapython import init
     if jpype.isJVMStarted():  # noqa
         raise RuntimeError('JVM already started. Maybe call init before optapy.type imports?')
     if path is None:
@@ -320,7 +322,7 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
         args = (jpype.getDefaultJVMPath(), '-Dlogback.level.org.optaplanner={}'.format(log_level))  # noqa
     else:
         args = args + ('-Dlogback.level.org.optaplanner={}'.format(log_level),)
-    jpype.startJVM(*args, classpath=path, convertStrings=True)  # noqa
+    init(*args, path=path, include_translator_jars=False)
     import java.util.function.Function
     import java.util.function.BiFunction
     import org.optaplanner.core.api.function.TriFunction

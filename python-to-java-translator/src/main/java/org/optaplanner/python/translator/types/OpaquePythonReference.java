@@ -1,4 +1,4 @@
-package org.optaplanner.optapy;
+package org.optaplanner.python.translator.types;
 
 /**
  * An OpaquePythonReference represents an

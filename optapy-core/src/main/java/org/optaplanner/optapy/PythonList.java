@@ -10,6 +10,7 @@ import java.util.function.Function;
 
 import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class PythonList<T> implements PythonObject, List<T> {

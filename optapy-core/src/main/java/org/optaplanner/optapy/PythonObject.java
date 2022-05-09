@@ -3,6 +3,7 @@ package org.optaplanner.optapy;
 import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.OpaquePythonReference;
 
 /**
  * A PythonObject holds a reference to {@link OpaquePythonReference}.
