@@ -109,13 +109,15 @@ def copy_constants(constants_iterable):
 
 
 def copy_closure(closure):
-    from org.optaplanner.python.translator.types import PythonLikeTuple
+    from org.optaplanner.python.translator.types import PythonLikeTuple, PythonCell
     out = PythonLikeTuple()
     if closure is None:
         return out
     else:
         for cell in closure:
-            out.add(cell.cell_contents)
+            java_cell = PythonCell()
+            java_cell.cellValue = convert_to_java_python_like_object(cell.cell_contents)
+            out.add(java_cell)
         return out
 
 def translate_python_bytecode_to_java_bytecode(python_function, java_function_type):
