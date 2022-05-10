@@ -8,6 +8,7 @@ import importlib.metadata
 from inspect import signature, Parameter
 from typing import cast, List, Tuple, Type, TypeVar, Callable, Dict, Any, Union, TYPE_CHECKING
 import copy
+from collections.abc import Sequence, MutableSequence, Mapping, Set
 from .optaplanner_python_logger import optapy_logger
 from .jpype_type_conversions import PythonSupplier, PythonFunction, PythonBiFunction, PythonTriFunction, \
     ConstraintProviderFunction
@@ -152,7 +153,7 @@ def _planning_clone(item, memo):
     item_id = id(item)
     if item_id in memo:
         return memo[item_id]
-    elif isinstance(item, list):
+    elif isinstance(item, Sequence):
         out = list()
         memo[item_id] = out
         for element in item:
@@ -161,8 +162,21 @@ def _planning_clone(item, memo):
                 out.append(planning_clone)
             else:
                 out.append(element)
+        if isinstance(item, MutableSequence):
+            return out
+        else:
+            return tuple(out)
+    elif isinstance(item, Set):
+        out = set()
+        memo[item_id] = out
+        for element in item:
+            if _is_deep_planning_clone(element):
+                planning_clone = _planning_clone(element, memo)
+                out.add(planning_clone)
+            else:
+                out.add(element)
         return out
-    elif isinstance(item, dict):
+    elif isinstance(item, Mapping):
         out = dict()
         memo[item_id] = out
         for key, value in item.items():
@@ -185,10 +199,14 @@ def _planning_clone(item, memo):
             setattr(planning_clone, planning_clone_attribute_name, memo[id(planning_clone_attribute)])
         elif _is_deep_planning_clone(planning_clone_attribute):
             setattr(planning_clone, planning_clone_attribute_name, _planning_clone(planning_clone_attribute, memo))
-        elif (isinstance(planning_clone_attribute, list) and len(planning_clone_attribute) > 0 and
+        elif (isinstance(planning_clone_attribute, Sequence) and len(planning_clone_attribute) > 0 and
               _is_deep_planning_clone(planning_clone_attribute[0])):
             setattr(planning_clone, planning_clone_attribute_name, _planning_clone(planning_clone_attribute, memo))
-        elif isinstance(planning_clone_attribute, dict) and len(planning_clone_attribute) > 0:
+        elif isinstance(planning_clone_attribute, Set) and len(planning_clone_attribute) > 0:
+            element = next(iter(planning_clone_attribute))
+            if _is_deep_planning_clone(element):
+                setattr(planning_clone, planning_clone_attribute_name, _planning_clone(planning_clone_attribute, memo))
+        elif isinstance(planning_clone_attribute, Mapping) and len(planning_clone_attribute) > 0:
             (key, value) = next(iter(planning_clone_attribute.items()))
             if _is_deep_planning_clone(key) or _is_deep_planning_clone(value):
                 setattr(planning_clone, planning_clone_attribute_name, _planning_clone(planning_clone_attribute, memo))
