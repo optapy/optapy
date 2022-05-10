@@ -142,13 +142,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static <T> T translatePythonBytecode(PythonCompiledFunction pythonCompiledFunction,
             Class<T> javaFunctionalInterfaceType) {
         Class<T> compiledClass = translatePythonBytecodeToClass(pythonCompiledFunction, javaFunctionalInterfaceType);
-        try {
-            return compiledClass.getConstructor().newInstance();
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                | NoSuchMethodException e) {
-            throw new IllegalStateException("Impossible State: Unable to create instance of generated class (" +
-                    compiledClass + ") despite it being just generated.", e);
-        }
+        return FunctionImplementor.createInstance(new PythonLikeTuple(), new PythonLikeDict(),
+                                                  new PythonLikeTuple(), pythonCompiledFunction.closure,
+                                                  PythonString.valueOf(compiledClass.getName()),
+                                                  compiledClass, PythonInterpreter.DEFAULT);
     }
 
     @SuppressWarnings("unchecked")

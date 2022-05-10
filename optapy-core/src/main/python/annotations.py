@@ -609,9 +609,12 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
             from org.optaplanner.optapy import PythonSolver
             try:
                 constraint_translator.convert_to_java = function_bytecode_translation
-                out = function(constraint_translator.PythonConstraintFactory(constraint_factory))
+                out = function(constraint_translator.PythonConstraintFactory(constraint_factory,
+                                                                             function_bytecode_translation))
                 if function_bytecode_translation is not BytecodeTranslation.NONE:
                     PythonSolver.onlyUseJavaSetters = constraint_translator.all_translated_successfully
+                else:
+                    PythonSolver.onlyUseJavaSetters = False
                 return out
             finally:
                 constraint_translator.convert_to_java = BytecodeTranslation.IF_POSSIBLE
@@ -739,9 +742,13 @@ def problem_change(problem_change_class: Type['_ProblemChange']) -> \
     class_doChange = getattr(problem_change_class, 'doChange', None)
     def wrapper_doChange(self, solution, problem_change_director):
         run_id = id(problem_change_director)
+        solution.forceUpdate()
+
         problem_change_director._set_instance_map(run_id, solution.get__optapy_reference_map())
+        problem_change_director._set_update_function(run_id, solution.__optaplannerPythonSetter)
         class_doChange(self, solution, problem_change_director)
         problem_change_director._unset_instance_map(run_id)
+        problem_change_director._unset_update_function(run_id)
 
     setattr(problem_change_class, 'doChange', JOverride()(wrapper_doChange))
     out = jpype.JImplements(ProblemChange)(problem_change_class)

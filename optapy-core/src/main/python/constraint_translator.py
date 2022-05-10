@@ -94,7 +94,7 @@ class PythonPentaPredicate:
 def function_cast(function):
     global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(function).parameters)
-    if function_bytecode_translation != BytecodeTranslation.NONE:
+    if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import Function, BiFunction
         from org.optaplanner.core.api.function import TriFunction, QuadFunction, PentaFunction
 
@@ -110,7 +110,7 @@ def function_cast(function):
             elif arg_count == 5:
                 return translate_python_bytecode_to_java_bytecode(function, PentaFunction)
         except:  # noqa
-            if function_bytecode_translation == BytecodeTranslation.FORCE:
+            if function_bytecode_translation is BytecodeTranslation.FORCE:
                 raise
 
             all_translated_successfully = False
@@ -137,10 +137,9 @@ def default_function_cast(function, arg_count):
 def predicate_cast(predicate):
     global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(predicate).parameters)
-    if function_bytecode_translation:
+    if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import Predicate, BiPredicate
         from org.optaplanner.core.api.function import TriPredicate, QuadPredicate, PentaPredicate
-
         try:
             if arg_count == 1:
                 return translate_python_bytecode_to_java_bytecode(predicate, Predicate)
@@ -153,7 +152,7 @@ def predicate_cast(predicate):
             elif arg_count == 5:
                 return translate_python_bytecode_to_java_bytecode(predicate, PentaPredicate)
         except:  # noqa
-            if function_bytecode_translation == BytecodeTranslation.FORCE:
+            if function_bytecode_translation is BytecodeTranslation.FORCE:
                 raise
 
             all_translated_successfully = False
@@ -180,7 +179,7 @@ def default_predicate_cast(predicate, arg_count):
 def to_int_function_cast(function):
     global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(function).parameters)
-    if function_bytecode_translation != BytecodeTranslation.NONE:
+    if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import ToIntFunction, ToIntBiFunction
         from org.optaplanner.core.api.function import ToIntTriFunction, ToIntQuadFunction
 
@@ -194,7 +193,7 @@ def to_int_function_cast(function):
             elif arg_count == 4:
                 return translate_python_bytecode_to_java_bytecode(function, ToIntQuadFunction)
         except:  # noqa
-            if function_bytecode_translation == BytecodeTranslation.FORCE:
+            if function_bytecode_translation is BytecodeTranslation.FORCE:
                 raise
 
             all_translated_successfully = False
@@ -250,41 +249,55 @@ def extract_joiners(joiner_tuple, *stream_types):
 
 class PythonConstraintFactory:
     delegate: 'ConstraintFactory'
+    function_bytecode_translation: BytecodeTranslation
 
-    def __init__(self, delegate: 'ConstraintFactory'):
+    def __init__(self, delegate: 'ConstraintFactory', function_bytecode_translation: BytecodeTranslation):
         self.delegate = delegate
+        self.function_bytecode_translation = function_bytecode_translation
 
     def getDefaultConstraintPackage(self) -> str:
         return self.delegate.getDefaultConstraintPackage()
 
     def forEach(self, item_type: Type) -> 'PythonUniConstraintStream':
+        global function_bytecode_translation
         item_type = get_class(item_type)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonUniConstraintStream(self.delegate.forEach(item_type), self.getDefaultConstraintPackage(),
                                          item_type)
 
     def forEachIncludingNullVars(self, item_type: Type) -> 'PythonUniConstraintStream':
+        global function_bytecode_translation
         item_type = get_class(item_type)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonUniConstraintStream(self.delegate.forEachIncludingNullVars(item_type),
                                          self.getDefaultConstraintPackage(), item_type)
 
     def forEachUniquePair(self, item_type: Type, *joiners: List['BiJoiner']):
+        global function_bytecode_translation
         item_type = get_class(item_type)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonBiConstraintStream(self.delegate.forEachUniquePair(item_type,
                                                                         extract_joiners(joiners, item_type, item_type)),
                                         self.getDefaultConstraintPackage(), item_type, item_type)
 
     def from_(self, item_type: Type) -> 'PythonUniConstraintStream':
+        global function_bytecode_translation
         item_type = get_class(item_type)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonUniConstraintStream(self.delegate.from_(item_type), self.getDefaultConstraintPackage(),
                                          item_type)
 
     def fromUnfiltered(self, item_type: Type) -> 'PythonUniConstraintStream':
+        global function_bytecode_translation
         item_type = get_class(item_type)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonUniConstraintStream(self.delegate.fromUnfiltered(item_type), self.getDefaultConstraintPackage(),
                                          item_type)
 
     def fromUniquePair(self, item_type: Type, *joiners: List['BiJoiner']) -> 'PythonBiConstraintStream':
+        global function_bytecode_translation
         item_type = get_class(item_type)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonBiConstraintStream(self.delegate.fromUniquePair(item_type,
                                                                      extract_joiners(joiners, item_type, item_type)),
                                         self.getDefaultConstraintPackage(), item_type, item_type)

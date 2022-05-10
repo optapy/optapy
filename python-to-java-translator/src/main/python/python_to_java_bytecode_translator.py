@@ -108,6 +108,16 @@ def copy_constants(constants_iterable):
     return iterable_copy
 
 
+def copy_closure(closure):
+    from org.optaplanner.python.translator.types import PythonLikeTuple
+    out = PythonLikeTuple()
+    if closure is None:
+        return out
+    else:
+        for cell in closure:
+            out.add(cell.cell_contents)
+        return out
+
 def translate_python_bytecode_to_java_bytecode(python_function, java_function_type):
     from java.util import ArrayList
     from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
@@ -145,6 +155,7 @@ def translate_python_bytecode_to_java_bytecode(python_function, java_function_ty
     python_compiled_function.co_constants = copy_constants(python_function.__code__.co_consts)
     python_compiled_function.co_argcount = python_function.__code__.co_argcount
     python_compiled_function.co_kwonlyargcount = python_function.__code__.co_kwonlyargcount
+    python_compiled_function.closure = copy_closure(python_function.__closure__)
 
     return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(python_compiled_function,
                                                                           java_function_type)

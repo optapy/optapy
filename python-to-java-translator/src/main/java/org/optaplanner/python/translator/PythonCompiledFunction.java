@@ -2,11 +2,18 @@ package org.optaplanner.python.translator;
 
 import java.util.List;
 
+import org.optaplanner.python.translator.types.PythonLikeTuple;
+
 public class PythonCompiledFunction {
     /**
      * List of bytecode instructions in the function
      */
     public List<PythonBytecodeInstruction> instructionList;
+
+    /**
+     * The closure of the function
+     */
+    public PythonLikeTuple closure;
 
     /**
      * List of all names used in the function

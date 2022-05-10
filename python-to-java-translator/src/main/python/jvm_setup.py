@@ -61,7 +61,7 @@ class SetAttributeOnPythonObject:
 @jpype.JImplements('java.util.function.BiConsumer', deferred=True)
 class DeleteAttributeOnPythonObject:
     @jpype.JOverride()
-    def accept(python_object, attribute_name):
+    def accept(self, python_object, attribute_name):
         delattr(python_object, attribute_name)
 
 
@@ -72,6 +72,8 @@ class CallPythonFunction:
         from .python_to_java_bytecode_translator import unwrap_python_like_object, convert_to_java_python_like_object
         actual_vargs = unwrap_python_like_object(var_args_list)
         actual_keyword_args = unwrap_python_like_object(keyword_args_map)
+        if actual_keyword_args is None:
+            actual_keyword_args = dict()
         out = python_object(*actual_vargs, **actual_keyword_args)
         return convert_to_java_python_like_object(out)
 

@@ -50,7 +50,7 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     public PythonLikeObject getGlobal(String name) {
         PythonLikeObject out = globalsMap.get(name);
         if (out == null) {
-            return GlobalBuiltins.lookupOrError(name);
+            return GlobalBuiltins.lookupOrError(this, name);
         }
         return out;
     }

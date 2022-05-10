@@ -1177,6 +1177,22 @@ public class PythonWrapperGenerator {
                                 actualClass, outResultHandle, methodCreator.getMethodParam(2),
                                                          methodCreator.getMethodParam(3)));
             }
+            // Put it into the map used by the python interpreter
+            ResultHandle valueAsPythonLikeObject = methodCreator.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(JavaPythonTypeConversionImplementor.class, "wrapJavaObject",
+                                              PythonLikeObject.class, Object.class),
+                    methodCreator.readInstanceField(fieldDescriptor, methodCreator.getThis()));
+            String fieldName;
+            if (methodName.startsWith("get_")) {
+                fieldName = methodName.substring(4);
+            } else {
+                fieldName = methodName.substring(3);
+            }
+            methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Map.class, "put", Object.class,
+                                                                          Object.class, Object.class),
+                                                methodCreator.readInstanceField(pythonLikeValueMapField, methodCreator.getThis()),
+                                                methodCreator.load(fieldName),
+                                                valueAsPythonLikeObject);
         }
         methodCreator.returnValue(methodCreator.getThis());
     }
@@ -1193,13 +1209,14 @@ public class PythonWrapperGenerator {
         // but some annotations need something more specific than Object
         Object actualReturnType = returnType;
         for (Map<String, Object> annotation : annotations) {
+            Class<?> annotationType = (Class<?>) annotation.get("annotationType");
             if (PlanningId.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
                     && !Comparable.class.isAssignableFrom(returnType)) {
                 // A PlanningId MUST be comparable
                 actualReturnType = Comparable.class;
-            } else if ((ProblemFactCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
-                    || PlanningEntityCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
-                    || ValueRangeProvider.class.isAssignableFrom((Class<?>) annotation.get("annotationType")))
+            } else if ((ProblemFactCollectionProperty.class.isAssignableFrom(annotationType)
+                    || PlanningEntityCollectionProperty.class.isAssignableFrom(annotationType)
+                    || ValueRangeProvider.class.isAssignableFrom(annotationType))
                     && !(Collection.class.isAssignableFrom(returnType) || returnType.isArray())) {
                 // A ProblemFactCollection/PlanningEntityCollection MUST be a collection or array
                 actualReturnType = List.class;

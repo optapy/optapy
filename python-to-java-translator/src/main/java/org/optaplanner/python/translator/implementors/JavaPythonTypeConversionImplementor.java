@@ -13,6 +13,7 @@ import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.JavaObjectWrapper;
+import org.optaplanner.python.translator.types.OpaqueJavaReference;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonCode;
@@ -39,6 +40,10 @@ public class JavaPythonTypeConversionImplementor {
     public static PythonLikeObject wrapJavaObject(Object object) {
         if (object == null) {
             return PythonNone.INSTANCE;
+        }
+
+        if (object instanceof OpaqueJavaReference) {
+            return ((OpaqueJavaReference) object).proxy();
         }
 
         if (object instanceof PythonLikeObject) {

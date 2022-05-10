@@ -10,10 +10,12 @@ import java.util.function.Function;
 
 import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.OpaqueJavaReference;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
+import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
-public class PythonList<T> implements PythonObject, List<T> {
+public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference {
     private static Function<OpaquePythonReference, Object> clearPythonList;
     private static Function<OpaquePythonReference, Integer> getPythonListLength;
     private static BiFunction<OpaquePythonReference, Integer, Object> getItemAtIndexInPythonList;
@@ -333,24 +335,27 @@ public class PythonList<T> implements PythonObject, List<T> {
         return PythonWrapperGenerator.getPythonObjectString(pythonListOpaqueReference);
     }
 
+    public PythonLikeObject proxy() {
+        return new PythonLikeList((List<PythonLikeObject>) this);
+    }
+
+    // These methods do not need to be implemented since the list is proxied
     @Override
     public PythonLikeObject __getAttributeOrNull(String attributeName) {
-        return null; // TODO
+        return null;
     }
 
     @Override
     public void __setAttribute(String attributeName, PythonLikeObject value) {
-        // TODO
     }
 
     @Override
     public void __deleteAttribute(String attributeName) {
-        // TODO
     }
 
     @Override
     public PythonLikeType __getType() {
-        return null; // TODO
+        return null;
     }
 
     public class PythonListIterator implements ListIterator<T> {

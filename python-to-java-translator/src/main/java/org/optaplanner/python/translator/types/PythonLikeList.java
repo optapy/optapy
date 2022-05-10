@@ -71,6 +71,12 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
         }
     }
 
+    public PythonLikeList(List<PythonLikeObject> delegate) {
+        super(LIST_TYPE);
+        this.delegate = delegate;
+        remainderToAdd = 0;
+    }
+
     public PythonLikeList copy() {
         PythonLikeList copy = new PythonLikeList();
         copy.addAll(delegate);

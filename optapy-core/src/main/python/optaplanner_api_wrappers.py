@@ -180,7 +180,7 @@ class _PythonScoreManager:
         return self._wrap_call(lambda wrapped_solution: self._java_explainScore(wrapped_solution), solution)
 
 
-def _wrap_object(object_to_wrap, instance_map):
+def _wrap_object(object_to_wrap, instance_map, update_function):
     from org.optaplanner.optapy import PythonSolver, PythonWrapperGenerator  # noqa
     maybe_object = instance_map.get(id(object_to_wrap))
     if maybe_object is not None:
@@ -190,10 +190,11 @@ def _wrap_object(object_to_wrap, instance_map):
     elif isinstance(object_to_wrap, bool):
         return PythonWrapperGenerator.wrapBoolean(object_to_wrap)
     object_class = get_class(type(object_to_wrap))
-    return PythonWrapperGenerator.wrap(object_class, object_to_wrap, instance_map)
+    return PythonWrapperGenerator.wrap(object_class, object_to_wrap, instance_map, update_function)
 
 
 _problem_change_director_to_instance_dict = dict()
+_problem_change_director_to_update_function = dict()
 
 
 @JImplementationFor('org.optaplanner.core.api.solver.change.ProblemChangeDirector')
@@ -206,53 +207,77 @@ class _PythonProblemChangeDirector:
         global _problem_change_director_to_instance_dict
         del _problem_change_director_to_instance_dict[run_id]
 
+    def _set_update_function(self, run_id, update_function):
+        global _problem_change_director_to_update_function
+        _problem_change_director_to_update_function[run_id] = update_function
+
+    def _unset_update_function(self, run_id):
+        global _problem_change_director_to_update_function
+        del _problem_change_director_to_update_function[run_id]
+
     @JOverride(sticky=True, rename='_java_addEntity')
     def addEntity(self, entity, entityConsumer):
         global _problem_change_director_to_instance_dict
+        global _problem_change_director_to_update_function
         instance_map = _problem_change_director_to_instance_dict[id(self)]
-        self._java_addEntity(_wrap_object(entity, instance_map), entityConsumer)
+        update_function = _problem_change_director_to_update_function[id(self)]
+        self._java_addEntity(_wrap_object(entity, instance_map, update_function), entityConsumer)
 
     @JOverride(sticky=True, rename='_java_addProblemFact')
     def addProblemFact(self, problemFact, problemFactConsumer):
         global _problem_change_director_to_instance_dict
+        global _problem_change_director_to_update_function
         instance_map = _problem_change_director_to_instance_dict[id(self)]
-        self._java_addProblemFact(_wrap_object(problemFact, instance_map), problemFactConsumer)
+        update_function = _problem_change_director_to_update_function[id(self)]
+        self._java_addProblemFact(_wrap_object(problemFact, instance_map, update_function), problemFactConsumer)
 
     @JOverride(sticky=True, rename='_java_changeProblemProperty')
     def changeProblemProperty(self, problemFactOrEntity, problemFactOrEntityConsumer):
         global _problem_change_director_to_instance_dict
+        global _problem_change_director_to_update_function
         instance_map = _problem_change_director_to_instance_dict[id(self)]
-        self._java_changeProblemProperty(_wrap_object(problemFactOrEntity, instance_map), problemFactOrEntityConsumer)
+        update_function = _problem_change_director_to_update_function[id(self)]
+        self._java_changeProblemProperty(_wrap_object(problemFactOrEntity, instance_map, update_function), problemFactOrEntityConsumer)
 
     @JOverride(sticky=True, rename='_java_changeVariable')
     def changeVariable(self, entity, variableName, entityConsumer):
         global _problem_change_director_to_instance_dict
+        global _problem_change_director_to_update_function
         instance_map = _problem_change_director_to_instance_dict[id(self)]
-        self._java_changeVariable(_wrap_object(entity, instance_map), variableName, entityConsumer)
+        update_function = _problem_change_director_to_update_function[id(self)]
+        self._java_changeVariable(_wrap_object(entity, instance_map, update_function), variableName, entityConsumer)
 
     @JOverride(sticky=True, rename='_java_lookUpWorkingObject')
     def lookUpWorkingObject(self, externalObject):
         global _problem_change_director_to_instance_dict
+        global _problem_change_director_to_update_function
         instance_map = _problem_change_director_to_instance_dict[id(self)]
-        return self._java_lookUpWorkingObject(_wrap_object(externalObject, instance_map))
+        update_function = _problem_change_director_to_update_function[id(self)]
+        return self._java_lookUpWorkingObject(_wrap_object(externalObject, instance_map, update_function))
 
     @JOverride(sticky=True, rename='_java_lookUpWorkingObjectOrFail')
     def lookUpWorkingObjectOrFail(self, externalObject):
         global _problem_change_director_to_instance_dict
+        global _problem_change_director_to_update_function
         instance_map = _problem_change_director_to_instance_dict[id(self)]
-        return self._java_lookUpWorkingObjectOrFail(_wrap_object(externalObject, instance_map))
+        update_function = _problem_change_director_to_update_function[id(self)]
+        return self._java_lookUpWorkingObjectOrFail(_wrap_object(externalObject, instance_map, update_function))
 
     @JOverride(sticky=True, rename='_java_removeEntity')
     def removeEntity(self, entity, entityConsumer):
         global _problem_change_director_to_instance_dict
+        global _problem_change_director_to_update_function
         instance_map = _problem_change_director_to_instance_dict[id(self)]
-        self._java_removeEntity(_wrap_object(entity, instance_map), entityConsumer)
+        update_function = _problem_change_director_to_update_function[id(self)]
+        self._java_removeEntity(_wrap_object(entity, instance_map, update_function), entityConsumer)
 
     @JOverride(sticky=True, rename='_java_removeProblemFact')
     def removeProblemFact(self, problemFact, problemFactConsumer):
         global _problem_change_director_to_instance_dict
+        global _problem_change_director_to_update_function
         instance_map = _problem_change_director_to_instance_dict[id(self)]
-        self._java_removeProblemFact(_wrap_object(problemFact, instance_map), problemFactConsumer)
+        update_function = _problem_change_director_to_update_function[id(self)]
+        self._java_removeProblemFact(_wrap_object(problemFact, instance_map, update_function), problemFactConsumer)
 
 
 def solver_config_create_from_xml_file(solver_config_path: pathlib.Path) -> '_SolverConfig':
