@@ -149,6 +149,7 @@ def test_clone_solution():
     assert clone_solution.entity_list is not original_entity_list
     assert clone_solution.score is original_solution.score
     assert len(clone_solution.entity_list) == len(original_solution.entity_list)
+    assert type(clone_solution.entity_list) == type(original_solution.entity_list)
     for i in range(len(clone_solution.entity_list)):
         clone_entity = clone_solution.entity_list[i]
         original_entity = original_entity_list[i]
@@ -158,6 +159,68 @@ def test_clone_solution():
     clone_solution.get_entity_list()[1].set_value(val2)
     assert clone_solution.get_entity_list()[1].get_value() is val2
     assert b.get_value() is val1
+
+
+def test_clone_solution_with_immutable_collections():
+    val1 = ExampleValue("1")
+    val2 = ExampleValue("2")
+    val3 = ExampleValue("3")
+    a = ExampleEntity("a", val1)
+    b = ExampleEntity("b", val1)
+    c = ExampleEntity("c", val3)
+    d = ExampleEntity("d", val3)
+
+    original_value_list = (val1, val2, val3)
+    original_entity_list = (a, b, c, d)
+    original_score = optapy.score.SimpleScore.ONE
+
+    original_solution = ExampleSolution("solution", original_value_list, original_entity_list, original_score)
+
+    clone_solution = optapy._planning_clone(original_solution, dict())
+    assert original_solution is not clone_solution
+    assert original_solution.code == clone_solution.code
+    assert clone_solution.value_list is original_value_list
+    assert clone_solution.entity_list is not original_entity_list
+    assert clone_solution.score is original_solution.score
+    assert len(clone_solution.entity_list) == len(original_solution.entity_list)
+    assert type(clone_solution.entity_list) == type(original_solution.entity_list)
+    for i in range(len(clone_solution.entity_list)):
+        clone_entity = clone_solution.entity_list[i]
+        original_entity = original_entity_list[i]
+        assert clone_entity is not original_entity
+        assert clone_entity.code == original_entity.code
+        assert clone_entity.value is original_entity.value
+    clone_solution.get_entity_list()[1].set_value(val2)
+    assert clone_solution.get_entity_list()[1].get_value() is val2
+    assert b.get_value() is val1
+
+
+def test_clone_solution_with_sets():
+    val1 = ExampleValue("1")
+    val2 = ExampleValue("2")
+    val3 = ExampleValue("3")
+    a = ExampleEntity("a", val1)
+    b = ExampleEntity("b", val1)
+    c = ExampleEntity("c", val3)
+    d = ExampleEntity("d", val3)
+
+    original_value_list = (val1, val2, val3)
+    original_entity_list = {a, b, c, d}
+    original_score = optapy.score.SimpleScore.ONE
+
+    original_solution = ExampleSolution("solution", original_value_list, original_entity_list, original_score)
+
+    clone_solution = optapy._planning_clone(original_solution, dict())
+    assert original_solution is not clone_solution
+    assert original_solution.code == clone_solution.code
+    assert clone_solution.value_list is original_value_list
+    assert clone_solution.entity_list is not original_entity_list
+    assert clone_solution.score is original_solution.score
+    assert len(clone_solution.entity_list) == len(original_solution.entity_list)
+    assert type(clone_solution.entity_list) == type(original_solution.entity_list)
+    for item in original_entity_list:
+        assert item not in clone_solution.entity_list
+        assert len(tuple(filter(lambda x: x.code == item.code, clone_solution.entity_list))) == 1
 
 
 def test_clone_extended_solution():
