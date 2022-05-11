@@ -400,11 +400,15 @@ ref_id_to_solver_run_id = dict()
 """Maps solution clone ids to the solver runs it is used in"""
 
 
+def _optapy_error(item):
+    raise AttributeError
+
+
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
 class _PythonObject:
     """Maps a Java Python Object to a Python Python Object.
 
-    Overrides __getattr__ and __setattr__ so it can be
+    Overrides all dunder methods so it can be
     accessed like a normal Python Object in Python code.
     Note: JPype goes into infinite recursion when trying
     to access an attribute on the Java Object when
@@ -413,19 +417,441 @@ class _PythonObject:
     to PythonWrapperGenerator to get the corresponding
     Python Object versus accessing it directly.
     """
-
     def __jclass_init__(self):
         pass
 
-    def __getattr__(self, name):
+    def __optapy_get_python_reference(self):
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-        item = PythonWrapperGenerator.getPythonObject(self)
-        return getattr(item, name)
+        return PythonWrapperGenerator.getPythonObject(self)
 
-    def __setattr__(self, key, value):
+    def __optapy_lookup(self, attribute, default_fun, *args, **kwargs):
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-        item = PythonWrapperGenerator.getPythonObject(self)
-        setattr(item, key, value)
+        item = self.__optapy_get_python_reference()
+        if hasattr(type(item), attribute):
+            return getattr(type(item), attribute)(item, *args, **kwargs)
+        else:
+            return default_fun(item)
+
+    # These are needed for Python bytecodes, which look directly at the type and ignore attribute shenanigans
+    def __getattr__(self, name):
+        return self.__optapy_lookup('__getattr__', lambda item: getattr(item, name), name)
+
+    def __setattr__(self, name, value):
+        return self.__optapy_lookup('__setattr__', lambda item: setattr(item, name, value), name, value)
+
+    def __delattr__(self, name):
+        return self.__optapy_lookup('__delattr__', lambda item: delattr(item, name), name)
+
+    def __lt__(self, other):
+        return self.__optapy_lookup('__lt__', lambda item: item < other, other)
+
+    def __le__(self, other):
+        return self.__optapy_lookup('__le__', lambda item: item <= other, other)
+
+    def __eq__(self, other):
+        return self.__optapy_lookup('__eq__', lambda item: item == other, other)
+
+    def __gt__(self, other):
+        return self.__optapy_lookup('__gt__', lambda item: item > other, other)
+
+    def __ge__(self, other):
+        return self.__optapy_lookup('__ge__', lambda item: item >= other, other)
+
+    def __ne__(self, other):
+        return self.__optapy_lookup('__ne__', lambda item: item != other, other)
+
+    def __bool__(self):
+        return self.__optapy_lookup('__bool__', lambda item: bool(item))
+
+    def __hash__(self):
+        return self.__optapy_lookup('__hash__', lambda item: hash(item))
+
+    def __str__(self):
+        return self.__optapy_lookup('__str__', lambda item: str(item))
+
+    def __repr__(self):
+        return self.__optapy_lookup('__repr__', lambda item: repr(item))
+
+    def __len__(self):
+        return self.__optapy_lookup('__len__', lambda item: len(item))
+
+    def __iter__(self):
+        return self.__optapy_lookup('__iter__', lambda item: iter(item))
+
+    def __contains__(self, item):
+        return self.__optapy_lookup('__contains__', lambda container: item in container, item)
+
+    def __getitem__(self, key):
+        return self.__optapy_lookup('__getitem__', lambda container: container[key], key)
+
+    def __setitem__(self, key, value):
+        return self.__optapy_lookup('__setitem__', _optapy_error, key, value)
+
+    def __delitem__(self, key):
+        return self.__optapy_lookup('__delitem__', _optapy_error, key)
+
+    def __add__(self, other):
+        return self.__optapy_lookup('__add__', lambda item: item + other, other)
+
+    def __sub__(self, other):
+        return self.__optapy_lookup('__sub__', lambda item: item - other, other)
+
+    def __mul__(self, other):
+        return self.__optapy_lookup('__mul__', lambda item: item * other, other)
+
+    def __matmul__(self, other):
+        return self.__optapy_lookup('__matmul__', lambda item: item @ other, other)
+
+    def __truediv__(self, other):
+        return self.__optapy_lookup('__truediv__', lambda item: item / other, other)
+
+    def __floordiv__(self, other):
+        return self.__optapy_lookup('__floordiv__', lambda item: item // other, other)
+
+    def __mod__(self, other):
+        return self.__optapy_lookup('__mod__', lambda item: item % other, other)
+
+    def __divmod__(self, other):
+        return self.__optapy_lookup('__divmod__', lambda item: divmod(item, other), other)
+
+    def __pow__(self, other, *extra_args):
+        return self.__optapy_lookup('__pow__', lambda item: item ** other, other, *extra_args)
+
+    def __lshift__(self, other):
+        return self.__optapy_lookup('__lshift__', lambda item: item << other, other)
+
+    def __rshift__(self, other):
+        return self.__optapy_lookup('__rshift__', lambda item: item >> other, other)
+
+    def __and__(self, other):
+        return self.__optapy_lookup('__and__', lambda item: item and other, other)
+
+    def __xor__(self, other):
+        return self.__optapy_lookup('__xor__', lambda item: item ^ other, other)
+
+    def __or__(self, other):
+        return self.__optapy_lookup('__or__', lambda item: item or other, other)
+
+    def __radd__(self, other):
+        return self.__optapy_lookup('__radd__', lambda item: other + item, other)
+
+    def __rsub__(self, other):
+        return self.__optapy_lookup('__rsub__', lambda item: other - item, other)
+
+    def __rmul__(self, other):
+        return self.__optapy_lookup('__rmul__', lambda item: other * item, other)
+
+    def __rmatmul__(self, other):
+        return self.__optapy_lookup('__rmatmul__', lambda item: other @ item, other)
+
+    def __rtruediv__(self, other):
+        return self.__optapy_lookup('__rtruediv__', lambda item: other / item, other)
+
+    def __rfloordiv__(self, other):
+        return self.__optapy_lookup('__rfloordiv__', lambda item: other // item, other)
+
+    def __rmod__(self, other):
+        return self.__optapy_lookup('__rmod__', lambda item: other % item, other)
+
+    def __rdivmod__(self, other):
+        return self.__optapy_lookup('__rdivmod__', lambda item: divmod(other, item), other)
+
+    def __rpow__(self, other, *extra_args):
+        return self.__optapy_lookup('__rpow__', lambda item: other ** item, other, *extra_args)
+
+    def __rlshift__(self, other):
+        return self.__optapy_lookup('__rlshift__', lambda item: other << item, other)
+
+    def __rrshift__(self, other):
+        return self.__optapy_lookup('__rrshift__', lambda item: other >> item, other)
+
+    def __rand__(self, other):
+        return self.__optapy_lookup('__rand__', lambda item: other and item, other)
+
+    def __rxor__(self, other):
+        return self.__optapy_lookup('__rxor__', lambda item: other ^ item, other)
+
+    def __ror__(self, other):
+        return self.__optapy_lookup('__ror__', lambda item: other or item, other)
+
+    def __iadd__(self, other):
+        return self.__optapy_lookup('__iadd__', _optapy_error, other)
+
+    def __isub__(self, other):
+        return self.__optapy_lookup('__isub__', _optapy_error, other)
+
+    def __imul__(self, other):
+        return self.__optapy_lookup('__imul__', _optapy_error, other)
+
+    def __imatmul__(self, other):
+        return self.__optapy_lookup('__imatmul__', _optapy_error, other)
+
+    def __itruediv__(self, other):
+        return self.__optapy_lookup('__itruediv__', _optapy_error, other)
+
+    def __ifloordiv__(self, other):
+        return self.__optapy_lookup('__ifloordiv__', _optapy_error, other)
+
+    def __imod__(self, other):
+        return self.__optapy_lookup('__imod__', _optapy_error, other)
+
+    def __ipow__(self, other, *extra_args):
+        return self.__optapy_lookup('__ipow__', _optapy_error, other, *extra_args)
+
+    def __ilshift__(self, other):
+        return self.__optapy_lookup('__ilshift__', _optapy_error, other)
+
+    def __irshift__(self, other):
+        return self.__optapy_lookup('__irshift__', _optapy_error, other)
+
+    def __iand__(self, other):
+        return self.__optapy_lookup('__iand__', _optapy_error, other)
+
+    def __ixor__(self, other):
+        return self.__optapy_lookup('__ixor__', _optapy_error, other)
+
+    def __ior__(self, other):
+        return self.__optapy_lookup('__ior__', _optapy_error, other)
+
+    def __neg__(self):
+        return self.__optapy_lookup('__neg__', lambda item: -item)
+
+    def __pos__(self):
+        return self.__optapy_lookup('__pos__', lambda item: +item)
+
+    def __abs__(self):
+        return self.__optapy_lookup('__neg__', lambda item: abs(item))
+
+    def __invert__(self):
+        return self.__optapy_lookup('__invert__', lambda item: ~item)
+
+    def __call__(self, *args, **kwargs):
+        return self.__optapy_lookup('__call__', lambda item: item(*args, **kwargs), *args, **kwargs)
+
+
+# Class duplication, since JImplementationFor does not seem to follow/allow class inheritance
+@JImplementationFor('org.optaplanner.optapy.PythonComparable')
+class _PythonComparable:
+    """Maps a Java Python Object to a Python Python Object.
+    Overrides all dunder methods so it can be
+    accessed like a normal Python Object in Python code.
+    Note: JPype goes into infinite recursion when trying
+    to access an attribute on the Java Object when
+    used in a @JImplementationFor class with __getattr__
+    overridden, which is why we pass the Java Object
+    to PythonWrapperGenerator to get the corresponding
+    Python Object versus accessing it directly.
+    """
+    def __jclass_init__(self):
+        pass
+
+    def __optapy_get_python_reference(self):
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+        return PythonWrapperGenerator.getPythonObject(self)
+
+    def __optapy_lookup(self, attribute, default_fun, *args, **kwargs):
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+        item = self.__optapy_get_python_reference()
+        if hasattr(type(item), attribute):
+            return getattr(type(item), attribute)(item, *args, **kwargs)
+        else:
+            return default_fun(item)
+
+    # These are needed for Python bytecodes, which look directly at the type and ignore attribute shenanigans
+    def __getattr__(self, name):
+        return self.__optapy_lookup('__getattr__', lambda item: getattr(item, name), name)
+
+    def __setattr__(self, name, value):
+        return self.__optapy_lookup('__setattr__', lambda item: setattr(item, name, value), name, value)
+
+    def __delattr__(self, name):
+        return self.__optapy_lookup('__delattr__', lambda item: delattr(item, name), name)
+
+    def __lt__(self, other):
+        return self.__optapy_lookup('__lt__', lambda item: item < other, other)
+
+    def __le__(self, other):
+        return self.__optapy_lookup('__le__', lambda item: item <= other, other)
+
+    def __eq__(self, other):
+        return self.__optapy_lookup('__eq__', lambda item: item == other, other)
+
+    def __gt__(self, other):
+        return self.__optapy_lookup('__gt__', lambda item: item > other, other)
+
+    def __ge__(self, other):
+        return self.__optapy_lookup('__ge__', lambda item: item >= other, other)
+
+    def __ne__(self, other):
+        return self.__optapy_lookup('__ne__', lambda item: item != other, other)
+
+    def __bool__(self):
+        return self.__optapy_lookup('__bool__', lambda item: bool(item))
+
+    def __hash__(self):
+        return self.__optapy_lookup('__hash__', lambda item: hash(item))
+
+    def __str__(self):
+        return self.__optapy_lookup('__str__', lambda item: str(item))
+
+    def __repr__(self):
+        return self.__optapy_lookup('__repr__', lambda item: repr(item))
+
+    def __len__(self):
+        return self.__optapy_lookup('__len__', lambda item: len(item))
+
+    def __iter__(self):
+        return self.__optapy_lookup('__iter__', lambda item: iter(item))
+
+    def __contains__(self, item):
+        return self.__optapy_lookup('__contains__', lambda container: item in container, item)
+
+    def __getitem__(self, key):
+        return self.__optapy_lookup('__getitem__', lambda container: container[key], key)
+
+    def __setitem__(self, key, value):
+        return self.__optapy_lookup('__setitem__', _optapy_error, key, value)
+
+    def __delitem__(self, key):
+        return self.__optapy_lookup('__delitem__', _optapy_error, key)
+
+    def __add__(self, other):
+        return self.__optapy_lookup('__add__', lambda item: item + other, other)
+
+    def __sub__(self, other):
+        return self.__optapy_lookup('__sub__', lambda item: item - other, other)
+
+    def __mul__(self, other):
+        return self.__optapy_lookup('__mul__', lambda item: item * other, other)
+
+    def __matmul__(self, other):
+        return self.__optapy_lookup('__matmul__', lambda item: item @ other, other)
+
+    def __truediv__(self, other):
+        return self.__optapy_lookup('__truediv__', lambda item: item / other, other)
+
+    def __floordiv__(self, other):
+        return self.__optapy_lookup('__floordiv__', lambda item: item // other, other)
+
+    def __mod__(self, other):
+        return self.__optapy_lookup('__mod__', lambda item: item % other, other)
+
+    def __divmod__(self, other):
+        return self.__optapy_lookup('__divmod__', lambda item: divmod(item, other), other)
+
+    def __pow__(self, other, *extra_args):
+        return self.__optapy_lookup('__pow__', lambda item: item ** other, other, *extra_args)
+
+    def __lshift__(self, other):
+        return self.__optapy_lookup('__lshift__', lambda item: item << other, other)
+
+    def __rshift__(self, other):
+        return self.__optapy_lookup('__rshift__', lambda item: item >> other, other)
+
+    def __and__(self, other):
+        return self.__optapy_lookup('__and__', lambda item: item and other, other)
+
+    def __xor__(self, other):
+        return self.__optapy_lookup('__xor__', lambda item: item ^ other, other)
+
+    def __or__(self, other):
+        return self.__optapy_lookup('__or__', lambda item: item or other, other)
+
+    def __radd__(self, other):
+        return self.__optapy_lookup('__radd__', lambda item: other + item, other)
+
+    def __rsub__(self, other):
+        return self.__optapy_lookup('__rsub__', lambda item: other - item, other)
+
+    def __rmul__(self, other):
+        return self.__optapy_lookup('__rmul__', lambda item: other * item, other)
+
+    def __rmatmul__(self, other):
+        return self.__optapy_lookup('__rmatmul__', lambda item: other @ item, other)
+
+    def __rtruediv__(self, other):
+        return self.__optapy_lookup('__rtruediv__', lambda item: other / item, other)
+
+    def __rfloordiv__(self, other):
+        return self.__optapy_lookup('__rfloordiv__', lambda item: other // item, other)
+
+    def __rmod__(self, other):
+        return self.__optapy_lookup('__rmod__', lambda item: other % item, other)
+
+    def __rdivmod__(self, other):
+        return self.__optapy_lookup('__rdivmod__', lambda item: divmod(other, item), other)
+
+    def __rpow__(self, other, *extra_args):
+        return self.__optapy_lookup('__rpow__', lambda item: other ** item, other, *extra_args)
+
+    def __rlshift__(self, other):
+        return self.__optapy_lookup('__rlshift__', lambda item: other << item, other)
+
+    def __rrshift__(self, other):
+        return self.__optapy_lookup('__rrshift__', lambda item: other >> item, other)
+
+    def __rand__(self, other):
+        return self.__optapy_lookup('__rand__', lambda item: other and item, other)
+
+    def __rxor__(self, other):
+        return self.__optapy_lookup('__rxor__', lambda item: other ^ item, other)
+
+    def __ror__(self, other):
+        return self.__optapy_lookup('__ror__', lambda item: other or item, other)
+
+    def __iadd__(self, other):
+        return self.__optapy_lookup('__iadd__', _optapy_error, other)
+
+    def __isub__(self, other):
+        return self.__optapy_lookup('__isub__', _optapy_error, other)
+
+    def __imul__(self, other):
+        return self.__optapy_lookup('__imul__', _optapy_error, other)
+
+    def __imatmul__(self, other):
+        return self.__optapy_lookup('__imatmul__', _optapy_error, other)
+
+    def __itruediv__(self, other):
+        return self.__optapy_lookup('__itruediv__', _optapy_error, other)
+
+    def __ifloordiv__(self, other):
+        return self.__optapy_lookup('__ifloordiv__', _optapy_error, other)
+
+    def __imod__(self, other):
+        return self.__optapy_lookup('__imod__', _optapy_error, other)
+
+    def __ipow__(self, other, *extra_args):
+        return self.__optapy_lookup('__ipow__', _optapy_error, other, *extra_args)
+
+    def __ilshift__(self, other):
+        return self.__optapy_lookup('__ilshift__', _optapy_error, other)
+
+    def __irshift__(self, other):
+        return self.__optapy_lookup('__irshift__', _optapy_error, other)
+
+    def __iand__(self, other):
+        return self.__optapy_lookup('__iand__', _optapy_error, other)
+
+    def __ixor__(self, other):
+        return self.__optapy_lookup('__ixor__', _optapy_error, other)
+
+    def __ior__(self, other):
+        return self.__optapy_lookup('__ior__', _optapy_error, other)
+
+    def __neg__(self):
+        return self.__optapy_lookup('__neg__', lambda item: -item)
+
+    def __pos__(self):
+        return self.__optapy_lookup('__pos__', lambda item: +item)
+
+    def __abs__(self):
+        return self.__optapy_lookup('__neg__', lambda item: abs(item))
+
+    def __invert__(self):
+        return self.__optapy_lookup('__invert__', lambda item: ~item)
+
+    def __call__(self, *args, **kwargs):
+        return self.__optapy_lookup('__call__', lambda item: item(*args, **kwargs), *args, **kwargs)
 
 
 def _add_shallow_copy_to_class(the_class: Type):

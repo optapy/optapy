@@ -110,6 +110,13 @@ def test_python_object():
             constraint_factory.forEach(optapy.get_class(Entity))
                 .groupBy(lambda entity: entity.value, optapy.constraint.ConstraintCollectors.count())
                 .reward('Entity have same value', optapy.score.SimpleScore.ONE, lambda value, count: count * count),
+            constraint_factory.forEach(optapy.get_class(Entity))
+                .groupBy(lambda entity: (entity.code, entity.value))
+                .join(optapy.get_class(Entity), [
+                    optapy.constraint.Joiners.equal(lambda pair: pair[0], lambda entity: entity.code),
+                    optapy.constraint.Joiners.equal(lambda pair: pair[1], lambda entity: entity.value)
+                ])
+                .reward('Entity for pair', optapy.score.SimpleScore.ONE),
         ]
 
     @optapy.planning_solution
@@ -149,7 +156,7 @@ def test_python_object():
     problem: Solution = Solution(Entity('A'), Value(date1), [date1, date2, date3])
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     solution = solver.solve(problem)
-    assert solution.get_score().getScore() == 2
+    assert solution.get_score().getScore() == 3
     assert solution.entity.value == date1
 
 
