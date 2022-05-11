@@ -148,6 +148,10 @@ public class PythonWrapperGenerator {
         return pythonObject.get__optapy_Id();
     }
 
+    public static OpaquePythonReference getPythonObject(PythonComparable pythonObject) {
+        return pythonObject.reference;
+    }
+
     @SuppressWarnings("unused")
     public static ClassLoader getClassLoaderForAliasMap(Map<String, Class<?>> aliasMap) {
         return new ClassLoader() {
