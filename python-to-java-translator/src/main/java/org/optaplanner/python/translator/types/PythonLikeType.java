@@ -24,9 +24,6 @@ public class PythonLikeType implements PythonLikeObject,
 
     private final PythonLikeFunction constructor;
 
-    static {
-    }
-
     public PythonLikeType(String typeName) {
         this(typeName, List.of(getBaseType()));
     }
@@ -54,7 +51,7 @@ public class PythonLikeType implements PythonLikeObject,
      *
      * @return
      */
-    private static PythonLikeType getBaseType() {
+    static PythonLikeType getBaseType() {
         if (BASE_TYPE == null) {
             BASE_TYPE = new PythonLikeType("type", Collections.emptyList());
             try {

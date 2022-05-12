@@ -15,7 +15,6 @@ import org.optaplanner.python.translator.types.errors.PythonTraceback;
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     Map<String, PythonLikeObject> globalsMap;
     PrintStream standardOutput;
-
     public static BiFunction<OpaquePythonReference, String, PythonLikeObject> lookupAttributeOnPythonReferencePythonFunction;
     public static TriConsumer<OpaquePythonReference, String, Object> setAttributeOnPythonReferencePythonFunction;
     public static BiConsumer<OpaquePythonReference, String> deleteAttributeOnPythonReferencePythonFunction;

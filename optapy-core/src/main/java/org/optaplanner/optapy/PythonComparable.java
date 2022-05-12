@@ -3,10 +3,13 @@ package org.optaplanner.optapy;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.OpaqueJavaReference;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
+import org.optaplanner.python.translator.types.PythonObjectWrapper;
 
 @SuppressWarnings("unused")
-public class PythonComparable implements Comparable<PythonComparable> {
+public class PythonComparable implements Comparable<PythonComparable>, OpaqueJavaReference {
 
     // Compares two OpaquePythonReference
     private static BiFunction<OpaquePythonReference, OpaquePythonReference, Integer> pythonObjectCompareTo;
@@ -76,5 +79,10 @@ public class PythonComparable implements Comparable<PythonComparable> {
     @Override
     public String toString() {
         return PythonWrapperGenerator.getPythonObjectString(reference);
+    }
+
+    @Override
+    public PythonLikeObject proxy() {
+        return new PythonObjectWrapper(reference);
     }
 }

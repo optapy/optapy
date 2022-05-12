@@ -347,15 +347,15 @@ def perform_group_by(delegate, package, group_by_args, *type_arguments):
             actual_group_by_args.append(group_by_args[i])
 
     if len(group_by_args) == 1:
-        return PythonUniConstraintStream(delegate.groupBy(*group_by_args), package, JClass('java.lang.Object'))
+        return PythonUniConstraintStream(delegate.groupBy(*actual_group_by_args), package, JClass('java.lang.Object'))
     elif len(group_by_args) == 2:
-        return PythonBiConstraintStream(delegate.groupBy(*group_by_args), package, JClass('java.lang.Object'),
+        return PythonBiConstraintStream(delegate.groupBy(*actual_group_by_args), package, JClass('java.lang.Object'),
                                         JClass('java.lang.Object'))
     elif len(group_by_args) == 3:
-        return PythonTriConstraintStream(delegate.groupBy(*group_by_args), package, JClass('java.lang.Object'),
+        return PythonTriConstraintStream(delegate.groupBy(*actual_group_by_args), package, JClass('java.lang.Object'),
                                          JClass('java.lang.Object'), JClass('java.lang.Object'))
     elif len(group_by_args) == 4:
-        return PythonQuadConstraintStream(delegate.groupBy(*group_by_args), package, JClass('java.lang.Object'),
+        return PythonQuadConstraintStream(delegate.groupBy(*actual_group_by_args), package, JClass('java.lang.Object'),
                                           JClass('java.lang.Object'), JClass('java.lang.Object'),
                                           JClass('java.lang.Object'))
     else:

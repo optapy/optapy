@@ -28,6 +28,9 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
             TUPLE_TYPE.__dir__.put("__add__",
                     new JavaMethodReference(PythonLikeTuple.class.getMethod("concatToNew", PythonLikeTuple.class),
                             Map.of()));
+            TUPLE_TYPE.__dir__.put("__getitem__",
+                                   new JavaMethodReference(PythonLikeTuple.class.getMethod("get", int.class),
+                                                           Map.of()));
             TUPLE_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeTuple.class.getMethod("iterator"),
                     Map.of()));
             TUPLE_TYPE.__dir__.put("__contains__",

@@ -205,4 +205,22 @@ public class JavaObjectWrapper implements PythonLikeObject, Comparable<JavaObjec
         }
         throw new IllegalStateException("Class " + objectClass + " does not implement Comparable");
     }
+
+    @Override
+    public String toString() {
+        return wrappedObject.toString();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (other instanceof JavaObjectWrapper) {
+            return wrappedObject.equals(((JavaObjectWrapper) other).wrappedObject);
+        }
+        return wrappedObject.equals(other);
+    }
+
+    @Override
+    public int hashCode() {
+        return wrappedObject.hashCode();
+    }
 }
