@@ -138,7 +138,6 @@ def test_solve():
         time.sleep(0.1)  # Sleep so cleanup is guaranteed to be executed
         solver_run_dicts = solver_manager._optapy_debug_get_solver_runs_dicts()
         assert len(solver_run_dicts['solver_run_id_to_refs']) == 0
-        assert len(solver_run_dicts['ref_id_to_solver_run_id']) == 0
 
     def assert_problem_change_solver_run(solver_manager, solver_job):
         assert solver_manager.getSolverStatus(1) != SolverStatus.NOT_SOLVING
@@ -155,7 +154,6 @@ def test_solve():
         time.sleep(0.1)  # Sleep so cleanup is guaranteed to be executed
         solver_run_dicts = solver_manager._optapy_debug_get_solver_runs_dicts()
         assert len(solver_run_dicts['solver_run_id_to_refs']) == 0
-        assert len(solver_run_dicts['ref_id_to_solver_run_id']) == 0
 
     with optapy.solver_manager_create(solver_config) as solver_manager:
         lock.acquire()
