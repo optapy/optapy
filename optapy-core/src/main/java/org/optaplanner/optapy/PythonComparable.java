@@ -49,7 +49,7 @@ public class PythonComparable implements Comparable<PythonComparable> {
         return pythonObjectHash.apply(pythonObject);
     }
 
-    private final OpaquePythonReference reference;
+    public final OpaquePythonReference reference;
 
     public PythonComparable(OpaquePythonReference reference) {
         this.reference = reference;
