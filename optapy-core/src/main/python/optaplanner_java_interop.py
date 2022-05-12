@@ -420,13 +420,9 @@ class _PythonObject:
     def __jclass_init__(self):
         pass
 
-    def __optapy_get_python_reference(self):
-        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-        return PythonWrapperGenerator.getPythonObject(self)
-
     def __optapy_lookup(self, attribute, default_fun, *args, **kwargs):
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-        item = self.__optapy_get_python_reference()
+        item = PythonWrapperGenerator.getPythonObject(self)
         if hasattr(type(item), attribute):
             return getattr(type(item), attribute)(item, *args, **kwargs)
         else:
@@ -645,13 +641,9 @@ class _PythonComparable:
     def __jclass_init__(self):
         pass
 
-    def __optapy_get_python_reference(self):
-        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-        return PythonWrapperGenerator.getPythonObject(self)
-
     def __optapy_lookup(self, attribute, default_fun, *args, **kwargs):
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-        item = self.__optapy_get_python_reference()
+        item = PythonWrapperGenerator.getPythonObject(self)
         if hasattr(type(item), attribute):
             return getattr(type(item), attribute)(item, *args, **kwargs)
         else:
