@@ -134,10 +134,12 @@ def _deep_clone_python_object(the_object: Any):
     import org.optaplanner.python.translator.types.OpaquePythonReference
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     item = PythonWrapperGenerator.getPythonObject(the_object)
+    run_id = item._optapy_solver_run_id  # noqa ; cannot use __ since then we cannot access it here
     the_clone = _planning_clone(item, dict())
-    for run_id in ref_id_to_solver_run_id[id(item)]:
-        solver_run_id_to_refs[run_id].add(the_clone)
-    ref_id_to_solver_run_id[id(the_clone)] = ref_id_to_solver_run_id[id(item)]
+
+    # Only need to keep two references: the best solution, and the working solution
+    solver_run_id_to_refs[run_id].append(the_clone)  # add the new working solution
+    solver_run_id_to_refs[run_id].pop(0)  # pop the old best solution
     return JProxy(org.optaplanner.python.translator.types.OpaquePythonReference, inst=the_clone, convert=True)
 
 
@@ -417,9 +419,6 @@ def set_class_output_directory(path: pathlib.Path):
 
 solver_run_id_to_refs = dict()
 """Maps solver run id to solution clones it references"""
-
-ref_id_to_solver_run_id = dict()
-"""Maps solution clone ids to the solver runs it is used in"""
 
 
 def _optapy_error(item):
@@ -904,21 +903,11 @@ def _add_shallow_copy_to_class(the_class: Type):
     the_class.__copy__ = class_shallow_copy
 
 
-def _setup_solver_run(solver_run_id, problem, solver_run_ref_set):
-    solver_run_ref_set.add(problem)
-    solver_run_id_to_refs[solver_run_id] = solver_run_ref_set
-    if id(problem) in ref_id_to_solver_run_id:
-        ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
-    else:
-        ref_id_to_solver_run_id[id(problem)] = set()
-        ref_id_to_solver_run_id[id(problem)].add(solver_run_id)
+def _setup_solver_run(solver_run_id, solver_run_ref_list):
+    solver_run_id_to_refs[solver_run_id] = solver_run_ref_list
 
 
-def _cleanup_solver_run(solver_run_id, problem, solver_run_ref_set):
-    ref_id_to_solver_run_id[id(problem)].remove(solver_run_id)
-    for ref in solver_run_ref_set:
-        if len(ref_id_to_solver_run_id[id(ref)]) == 0:
-            del ref_id_to_solver_run_id[id(ref)]
+def _cleanup_solver_run(solver_run_id):
     del solver_run_id_to_refs[solver_run_id]
 
 

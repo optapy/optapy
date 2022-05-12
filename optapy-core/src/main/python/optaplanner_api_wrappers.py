@@ -5,7 +5,7 @@ from jpype import JImplements, JImplementationFor, JOverride
 from typing import TypeVar, Generic, Callable, Union, TYPE_CHECKING
 from uuid import uuid1 as _uuid1
 from .optaplanner_java_interop import _setup_solver_run, _cleanup_solver_run, _unwrap_java_object, \
-    solver_run_id_to_refs as _solver_run_id_to_refs, ref_id_to_solver_run_id as _ref_id_to_solver_run_id, get_class, \
+    solver_run_id_to_refs as _solver_run_id_to_refs, get_class, \
     class_identifier_to_java_class_map as _class_identifier_to_java_class_map
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
         from org.optaplanner.optapy import PythonSolver  # noqa
         from org.optaplanner.core.api.solver import SolverManager
         self.delegate = SolverManager.create(solver_config)
-        self.problem_id_to_solver_run_ref_set = dict()
+        self.problem_id_to_solver_run_ref_list = dict()
         self.only_use_java_setters = PythonSolver.onlyUseJavaSetters
 
     def _optapy_debug_get_solver_runs_dicts(self):
@@ -33,14 +33,12 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
         Internal method used for testing; do not use
         """
         return {
-            'solver_run_id_to_refs': _solver_run_id_to_refs,
-            'ref_id_to_solver_run_id': _ref_id_to_solver_run_id,
+            'solver_run_id_to_refs': _solver_run_id_to_refs
         }
 
     def _get_problem_getter_and_cleanup(self, problem_id, the_problem):
         from org.optaplanner.optapy import PythonSolver # noqa
 
-        problem_list = []
         problem_function = the_problem
         if not callable(problem_function):
             def the_problem_function(the_problem_id):
@@ -48,23 +46,20 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
             problem_function = the_problem_function
 
         def problem_getter(the_problem_id):
-            problem = problem_function(the_problem_id)
-            problem_list.append(problem)
+            from copy import copy
+            problem = copy(problem_function(the_problem_id))
             solver_run_id = (id(self), the_problem_id)
-            self.problem_id_to_solver_run_ref_set[the_problem_id] = set()
-            _setup_solver_run(solver_run_id, problem, self.problem_id_to_solver_run_ref_set[the_problem_id])
+            problem._optapy_solver_run_id = solver_run_id
+            self.problem_id_to_solver_run_ref_list[the_problem_id] = [problem, problem]
+            _setup_solver_run(solver_run_id, self.problem_id_to_solver_run_ref_list[the_problem_id])
             PythonSolver.onlyUseJavaSetters = self.only_use_java_setters
             wrapped_problem = PythonSolver.wrapProblem(get_class(type(problem)), problem)
             return wrapped_problem
 
         def cleanup():
-            if len(problem_list) == 0:
-                return
-            problem = problem_list[0]
-            solver_run_ref_set = self.problem_id_to_solver_run_ref_set[problem_id]
             solver_run_id = (id(self), problem_id)
-            _cleanup_solver_run(solver_run_id, problem, solver_run_ref_set)
-            del self.problem_id_to_solver_run_ref_set[problem_id]
+            _cleanup_solver_run(solver_run_id)
+            del self.problem_id_to_solver_run_ref_list[problem_id]
 
         return problem_getter, cleanup
 
@@ -145,10 +140,13 @@ class _PythonScoreExplanation:
 class _PythonScoreManager:
     def _wrap_call(self, function, problem):
         from org.optaplanner.optapy import PythonSolver  # noqa
+
+        # No solution cloning happens in ScoreManager
+        # so we don't need to clone the problem and set run id.
         solver_run_id = (id(self), id(problem), _uuid1())
-        solver_run_ref_set = set()
+        solver_run_ref_list = [problem, problem]
         wrapped_problem = PythonSolver.wrapProblem(get_class(type(problem)), problem)
-        _setup_solver_run(solver_run_id, problem, solver_run_ref_set)
+        _setup_solver_run(solver_run_id, solver_run_ref_list)
         try:
             return function(wrapped_problem)
         except JException as e:
@@ -159,7 +157,7 @@ class _PythonScoreManager:
                             f'constraints/getters/setters.'
             raise RuntimeError(error_message) from e
         finally:
-            _cleanup_solver_run(solver_run_id, problem, solver_run_ref_set)
+            _cleanup_solver_run(solver_run_id)
 
     @JOverride(sticky=True, rename='_java_updateScore')
     def updateScore(self, solution):
@@ -364,13 +362,13 @@ class _PythonSolver:
         """
         return {
             'solver_run_id_to_refs': _solver_run_id_to_refs,
-            'ref_id_to_solver_run_id': _ref_id_to_solver_run_id,
         }
 
     @JOverride(sticky=True, rename='_java_solve')
     def solve(self, problem):
         from org.optaplanner.optapy import PythonSolver  # noqa
         from jpype import JException
+        from copy import copy
 
         if problem is None:
             raise ValueError(f'A problem was not passed to solve (parameter problem was ({problem})). Maybe '
@@ -380,11 +378,14 @@ class _PythonSolver:
             raise ValueError(f'The problem ({problem}) is not an instance of a @planning_solution class. Maybe '
                              f'decorate the problem class ({type(problem)}) with @planning_solution?')
 
+        problem = copy(problem)
         solver_run_id = (id(self), id(problem), _uuid1())
-        solver_run_ref_set = set()
+        solver_run_ref_list = [problem, problem]
         object_class = get_class(type(problem))
+        problem._optapy_solver_run_id = solver_run_id
+
         wrapped_problem = PythonSolver.wrapProblem(object_class, problem)
-        _setup_solver_run(solver_run_id, problem, solver_run_ref_set)
+        _setup_solver_run(solver_run_id, solver_run_ref_list)
         try:
             return _unwrap_java_object(self._java_solve(wrapped_problem))
         except JException as e:
@@ -395,5 +396,5 @@ class _PythonSolver:
                             f'constraints/getters/setters.'
             raise RuntimeError(error_message) from e
         finally:
-            _cleanup_solver_run(solver_run_id, problem, solver_run_ref_set)
+            _cleanup_solver_run(solver_run_id)
 
