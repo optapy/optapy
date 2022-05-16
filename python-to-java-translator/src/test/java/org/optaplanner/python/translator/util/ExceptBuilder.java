@@ -16,7 +16,7 @@ public class ExceptBuilder {
     final PythonFunctionBuilder delegate;
 
     /**
-     * The {@link PythonBytecodeInstruction.OpCode#JUMP_ABSOLUTE} instruction at the end
+     * The {@link PythonBytecodeInstruction.OpcodeIdentifier#JUMP_ABSOLUTE} instruction at the end
      * of the try block, which is where the try should go if it completed without error
      * (finally block if it was specified, else catch block).
      */
@@ -35,7 +35,7 @@ public class ExceptBuilder {
      */
     public ExceptBuilder except(PythonLikeType type, Consumer<PythonFunctionBuilder> exceptBuilder) {
         PythonBytecodeInstruction exceptBlockStartInstruction = new PythonBytecodeInstruction();
-        exceptBlockStartInstruction.opcode = PythonBytecodeInstruction.OpCode.DUP_TOP;
+        exceptBlockStartInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.DUP_TOP;
         exceptBlockStartInstruction.offset = delegate.instructionList.size();
         exceptBlockStartInstruction.isJumpTarget = true;
         delegate.instructionList.add(exceptBlockStartInstruction);
@@ -43,13 +43,13 @@ public class ExceptBuilder {
         delegate.loadConstant(type);
 
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.JUMP_IF_NOT_EXC_MATCH; // Skip block if False (i.e. enter block if True)
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.JUMP_IF_NOT_EXC_MATCH; // Skip block if False (i.e. enter block if True)
         instruction.offset = delegate.instructionList.size();
         delegate.instructionList.add(instruction);
 
         exceptBuilder.accept(delegate);
 
-        delegate.op(PythonBytecodeInstruction.OpCode.POP_EXCEPT);
+        delegate.op(PythonBytecodeInstruction.OpcodeIdentifier.POP_EXCEPT);
 
         instruction.arg = delegate.instructionList.size();
         return this;
@@ -62,20 +62,20 @@ public class ExceptBuilder {
      */
     public ExceptBuilder andFinally(Consumer<PythonFunctionBuilder> finallyBuilder) {
         PythonBytecodeInstruction finallyFromExceptStartInstruction = new PythonBytecodeInstruction();
-        finallyFromExceptStartInstruction.opcode = PythonBytecodeInstruction.OpCode.POP_TOP;
+        finallyFromExceptStartInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.POP_TOP;
         finallyFromExceptStartInstruction.offset = delegate.instructionList.size();
         finallyFromExceptStartInstruction.isJumpTarget = true;
         delegate.instructionList.add(finallyFromExceptStartInstruction);
 
-        delegate.op(PythonBytecodeInstruction.OpCode.POP_TOP);
-        delegate.op(PythonBytecodeInstruction.OpCode.POP_TOP);
+        delegate.op(PythonBytecodeInstruction.OpcodeIdentifier.POP_TOP);
+        delegate.op(PythonBytecodeInstruction.OpcodeIdentifier.POP_TOP);
 
         finallyBuilder.accept(delegate); // finally to handle if no except handler catches
 
         tryEndGoto.arg = delegate.instructionList.size();
 
         PythonBytecodeInstruction finallyFromTryStartInstruction = new PythonBytecodeInstruction();
-        finallyFromTryStartInstruction.opcode = PythonBytecodeInstruction.OpCode.NOP;
+        finallyFromTryStartInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.NOP;
         finallyFromTryStartInstruction.offset = delegate.instructionList.size();
         finallyFromTryStartInstruction.isJumpTarget = true;
         delegate.instructionList.add(finallyFromTryStartInstruction);
@@ -93,7 +93,7 @@ public class ExceptBuilder {
     public PythonFunctionBuilder tryEnd() {
         if (tryEndGoto.arg == 0) {
             PythonBytecodeInstruction reraiseInstruction = new PythonBytecodeInstruction();
-            reraiseInstruction.opcode = PythonBytecodeInstruction.OpCode.RAISE_VARARGS;
+            reraiseInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS;
             reraiseInstruction.arg = 0;
             reraiseInstruction.offset = delegate.instructionList.size();
             reraiseInstruction.isJumpTarget = true;
@@ -101,7 +101,7 @@ public class ExceptBuilder {
 
             tryEndGoto.arg = delegate.instructionList.size();
             PythonBytecodeInstruction noopInstruction = new PythonBytecodeInstruction();
-            noopInstruction.opcode = PythonBytecodeInstruction.OpCode.NOP;
+            noopInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.NOP;
             noopInstruction.offset = delegate.instructionList.size();
             noopInstruction.isJumpTarget = true;
             delegate.instructionList.add(noopInstruction);

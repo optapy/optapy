@@ -8,14 +8,16 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.UnaryLambdaReference;
+import org.optaplanner.python.translator.types.errors.StopIteration;
 
 public class GlobalBuiltins {
     public static PythonLikeObject lookup(PythonInterpreter interpreter, String builtinName) {
         switch (builtinName) {
             case "len":
-                return new UnaryLambdaReference(a -> ((PythonLikeFunction)
-                        (a.__getType().__getAttributeOrError("__len__"))).__call__(List.of(a), Map.of()),
-                                                Map.of());
+                return new UnaryLambdaReference(
+                        a -> ((PythonLikeFunction) (a.__getType().__getAttributeOrError("__len__"))).__call__(List.of(a),
+                                Map.of()),
+                        Map.of());
             case "print":
                 return new UnaryLambdaReference(object -> {
                     interpreter.print(object);

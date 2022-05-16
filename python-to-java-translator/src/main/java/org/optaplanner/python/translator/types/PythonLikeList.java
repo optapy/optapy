@@ -14,7 +14,7 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     final List<PythonLikeObject> delegate;
     private int remainderToAdd;
 
-    private final static PythonLikeType LIST_TYPE = new PythonLikeType("list");
+    public final static PythonLikeType LIST_TYPE = new PythonLikeType("list");
 
     static {
         try {
@@ -33,7 +33,7 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
                     new JavaMethodReference(PythonLikeList.class.getMethod("count", PythonLikeObject.class),
                             Map.of("x", 1)));
             LIST_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonLikeList.class.getMethod("size"),
-                                  Map.of()));
+                    Map.of()));
             LIST_TYPE.__dir__.put("__add__",
                     new JavaMethodReference(PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class),
                             Map.of()));

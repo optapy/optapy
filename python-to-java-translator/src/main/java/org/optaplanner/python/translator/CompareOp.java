@@ -14,7 +14,7 @@ public enum CompareOp {
         this.id = id;
     }
 
-    static CompareOp getOp(int id) {
+    public static CompareOp getOp(int id) {
         for (CompareOp op : CompareOp.values()) {
             if (op.id == id) {
                 return op;

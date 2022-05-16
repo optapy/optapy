@@ -31,17 +31,17 @@ public class ExceptionImplementorTest {
                             .loadConstant(5)
                             .compare(CompareOp.LESS_THAN)
                             .ifTrue(block -> {
-                                block.loadConstant("Try").op(PythonBytecodeInstruction.OpCode.RETURN_VALUE);
+                                block.loadConstant("Try").op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
                             })
-                            .op(PythonBytecodeInstruction.OpCode.LOAD_ASSERTION_ERROR)
-                            .op(PythonBytecodeInstruction.OpCode.RAISE_VARARGS, 1);
+                            .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_ASSERTION_ERROR)
+                            .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
                 })
                 .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
-                    except.loadConstant("Assert").op(PythonBytecodeInstruction.OpCode.RETURN_VALUE);
+                    except.loadConstant("Assert").op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
                 })
                 .tryEnd()
                 .loadConstant(null)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -60,15 +60,15 @@ public class ExceptionImplementorTest {
                             .loadConstant(1)
                             .compare(CompareOp.EQUALS)
                             .ifTrue(block -> {
-                                block.op(PythonBytecodeInstruction.OpCode.LOAD_ASSERTION_ERROR)
-                                        .op(PythonBytecodeInstruction.OpCode.RAISE_VARARGS, 1);
+                                block.op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_ASSERTION_ERROR)
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
                             })
                             .loadParameter("item")
                             .loadConstant(2)
                             .compare(CompareOp.EQUALS)
                             .ifTrue(block -> {
                                 block.loadConstant(new StopIteration())
-                                        .op(PythonBytecodeInstruction.OpCode.RAISE_VARARGS, 1);
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
                             });
                 })
                 .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
@@ -80,7 +80,7 @@ public class ExceptionImplementorTest {
                 })
                 .tryEnd()
                 .loadConstant(1)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Class javaFunctionClass = translatePythonBytecodeToClass(pythonCompiledFunction, Function.class);

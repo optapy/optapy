@@ -101,7 +101,7 @@ public class ExceptionImplementor {
 
     /**
      * Creates a try...finally block. Python also treat catch blocks as finally blocks, which
-     * are handled via the {@link PythonBytecodeInstruction.OpCode#JUMP_IF_NOT_EXC_MATCH} instruction.
+     * are handled via the {@link PythonBytecodeInstruction.OpcodeIdentifier#JUMP_IF_NOT_EXC_MATCH} instruction.
      * {@code instruction.arg} is the difference in bytecode offset to the first catch/finally block.
      */
     public static void createTryFinallyBlock(MethodVisitor methodVisitor, String className,

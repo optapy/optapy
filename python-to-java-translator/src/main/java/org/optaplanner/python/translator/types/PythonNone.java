@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class PythonNone extends AbstractPythonLikeObject {
     public static final PythonNone INSTANCE;
-    private static final PythonLikeType NONE_TYPE = new PythonLikeType("NoneType");
+    public static final PythonLikeType NONE_TYPE = new PythonLikeType("NoneType");
 
     static {
         NONE_TYPE.__dir__.put("__bool__", new UnaryLambdaReference(self -> PythonBoolean.FALSE, Map.of()));

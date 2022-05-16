@@ -106,7 +106,7 @@ public class VariableImplementor {
 
     /**
      * Loads the cell indicated by the {@code instruction} argument onto the stack.
-     * This is used by {@link PythonBytecodeInstruction.OpCode#LOAD_CLOSURE} when creating a closure
+     * This is used by {@link PythonBytecodeInstruction.OpcodeIdentifier#LOAD_CLOSURE} when creating a closure
      * for a dependent function.
      */
     public static void createCell(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int cellIndex) {
@@ -139,7 +139,7 @@ public class VariableImplementor {
 
     /**
      * Loads the cell indicated by the {@code instruction} argument onto the stack.
-     * This is used by {@link PythonBytecodeInstruction.OpCode#LOAD_CLOSURE} when creating a closure
+     * This is used by {@link PythonBytecodeInstruction.OpcodeIdentifier#LOAD_CLOSURE} when creating a closure
      * for a dependent function.
      */
     public static void loadCell(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,

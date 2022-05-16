@@ -28,7 +28,7 @@ public class FunctionImplementorTest {
                 .getAttribute("concatToName")
                 .loadConstant(" is awesome!")
                 .callFunction(1)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -50,7 +50,7 @@ public class FunctionImplementorTest {
                 .loadConstant(3)
                 .loadConstant(List.of("third", "second"))
                 .callFunctionWithKeywords(3)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -69,7 +69,7 @@ public class FunctionImplementorTest {
                 .loadConstant(3)
                 .tuple(3)
                 .callFunctionUnpack(false)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -90,7 +90,7 @@ public class FunctionImplementorTest {
                 .loadConstant(List.of("third", "second"))
                 .constDict(2)
                 .callFunctionUnpack(true)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -107,7 +107,7 @@ public class FunctionImplementorTest {
                 .loadMethod("concatToName")
                 .loadConstant(" is awesome!")
                 .callMethod(1)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -123,7 +123,7 @@ public class FunctionImplementorTest {
                 .loadMethod("attributeFunction")
                 .loadConstant(" is awesome!")
                 .callMethod(1)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -137,7 +137,7 @@ public class FunctionImplementorTest {
     public void testMakeFunction() {
         PythonCompiledFunction dependentFunction = PythonFunctionBuilder.newFunction()
                 .loadFreeVariable("a")
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Class<?> dependentFunctionClass = translatePythonBytecodeToClass(dependentFunction, PythonLikeFunction.class);
@@ -145,17 +145,17 @@ public class FunctionImplementorTest {
         PythonCompiledFunction parentFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(0)
                 .storeCellVariable("a")
-                .op(PythonBytecodeInstruction.OpCode.LOAD_CLOSURE, 0)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_CLOSURE, 0)
                 .tuple(1)
                 .loadConstant(dependentFunctionClass)
                 .loadConstant("parent.sub")
-                .op(PythonBytecodeInstruction.OpCode.MAKE_FUNCTION, 8)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAKE_FUNCTION, 8)
                 .storeVariable("sub")
                 .loadConstant(1)
                 .storeCellVariable("a")
                 .loadVariable("sub")
                 .callFunction(0)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(parentFunction, Supplier.class);
@@ -168,9 +168,9 @@ public class FunctionImplementorTest {
                 .loadFreeVariable("sub1")
                 .loadFreeVariable("sub2")
                 .loadFreeVariable("parent")
-                .op(PythonBytecodeInstruction.OpCode.BINARY_ADD)
-                .op(PythonBytecodeInstruction.OpCode.BINARY_ADD)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Class<?> secondDependentFunctionClass =
@@ -182,20 +182,20 @@ public class FunctionImplementorTest {
                 .loadConstant(100)
                 .storeCellVariable("sub2")
                 .loadFreeVariable("parent")
-                .op(PythonBytecodeInstruction.OpCode.POP_TOP)
-                .op(PythonBytecodeInstruction.OpCode.LOAD_CLOSURE, 0)
-                .op(PythonBytecodeInstruction.OpCode.LOAD_CLOSURE, 1)
-                .op(PythonBytecodeInstruction.OpCode.LOAD_CLOSURE, 2)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.POP_TOP)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_CLOSURE, 0)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_CLOSURE, 1)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_CLOSURE, 2)
                 .tuple(3)
                 .loadConstant(secondDependentFunctionClass)
                 .loadConstant("parent.sub.sub")
-                .op(PythonBytecodeInstruction.OpCode.MAKE_FUNCTION, 8)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAKE_FUNCTION, 8)
                 .storeVariable("function")
                 .loadConstant(300)
                 .storeCellVariable("sub2")
                 .loadVariable("function")
                 .callFunction(0)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Class<?> firstDependentFunctionClass = translatePythonBytecodeToClass(firstDependentFunction, PythonLikeFunction.class);
@@ -203,17 +203,17 @@ public class FunctionImplementorTest {
         PythonCompiledFunction parentFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(10)
                 .storeCellVariable("parent")
-                .op(PythonBytecodeInstruction.OpCode.LOAD_CLOSURE, 0)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_CLOSURE, 0)
                 .tuple(1)
                 .loadConstant(firstDependentFunctionClass)
                 .loadConstant("parent.sub")
-                .op(PythonBytecodeInstruction.OpCode.MAKE_FUNCTION, 8)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAKE_FUNCTION, 8)
                 .storeVariable("sub")
                 .loadConstant(20)
                 .storeCellVariable("parent")
                 .loadVariable("sub")
                 .callFunction(0)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(parentFunction, Supplier.class);

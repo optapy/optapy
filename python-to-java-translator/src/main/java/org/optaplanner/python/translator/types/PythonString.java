@@ -5,13 +5,13 @@ import java.util.Map;
 public class PythonString extends AbstractPythonLikeObject {
     public final String value;
 
-    private final static PythonLikeType STRING_TYPE = new PythonLikeType("str");
+    public final static PythonLikeType STRING_TYPE = new PythonLikeType("str");
 
     static {
         try {
             PythonLikeComparable.setup(STRING_TYPE.__dir__);
             STRING_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonString.class.getMethod("length"),
-                                                                         Map.of()));
+                    Map.of()));
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }

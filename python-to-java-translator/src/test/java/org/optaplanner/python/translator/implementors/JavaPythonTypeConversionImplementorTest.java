@@ -20,7 +20,7 @@ public class JavaPythonTypeConversionImplementorTest {
     public void testLoadParameter() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a", "b")
                 .loadParameter("b")
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         BiFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
@@ -30,7 +30,7 @@ public class JavaPythonTypeConversionImplementorTest {
 
         pythonCompiledFunction = PythonFunctionBuilder.newFunction("a", "b")
                 .loadParameter("a")
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
@@ -42,7 +42,7 @@ public class JavaPythonTypeConversionImplementorTest {
     public void testLoadPrimitiveParameter() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a")
                 .loadParameter("a")
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         LongToIntFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, LongToIntFunction.class);
@@ -54,7 +54,7 @@ public class JavaPythonTypeConversionImplementorTest {
     public void testReturnBoolean() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(Boolean.TRUE)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Predicate javaFunction = translatePythonBytecode(pythonCompiledFunction, Predicate.class);
@@ -63,7 +63,7 @@ public class JavaPythonTypeConversionImplementorTest {
 
         pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(Boolean.FALSE)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, Predicate.class);
@@ -75,7 +75,7 @@ public class JavaPythonTypeConversionImplementorTest {
     public void testReturnVoid() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(null)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Consumer javaFunction = translatePythonBytecode(pythonCompiledFunction, Consumer.class);

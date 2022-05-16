@@ -2,7 +2,6 @@ package org.optaplanner.python.translator;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -12,29 +11,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.dag.FlowGraph;
 import org.optaplanner.python.translator.implementors.CollectionImplementor;
-import org.optaplanner.python.translator.implementors.DunderOperatorImplementor;
-import org.optaplanner.python.translator.implementors.ExceptionImplementor;
 import org.optaplanner.python.translator.implementors.FunctionImplementor;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
-import org.optaplanner.python.translator.implementors.JumpImplementor;
-import org.optaplanner.python.translator.implementors.ObjectImplementor;
-import org.optaplanner.python.translator.implementors.PythonBuiltinOperatorImplementor;
-import org.optaplanner.python.translator.implementors.PythonConstantsImplementor;
-import org.optaplanner.python.translator.implementors.StackManipulationImplementor;
-import org.optaplanner.python.translator.implementors.StringImplementor;
 import org.optaplanner.python.translator.implementors.VariableImplementor;
+import org.optaplanner.python.translator.opcodes.Opcode;
 import org.optaplanner.python.translator.types.PythonLikeDict;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
-import org.optaplanner.python.translator.types.PythonLikeList;
-import org.optaplanner.python.translator.types.PythonLikeSet;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonString;
 import org.slf4j.Logger;
@@ -143,9 +133,9 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             Class<T> javaFunctionalInterfaceType) {
         Class<T> compiledClass = translatePythonBytecodeToClass(pythonCompiledFunction, javaFunctionalInterfaceType);
         return FunctionImplementor.createInstance(new PythonLikeTuple(), new PythonLikeDict(),
-                                                  new PythonLikeTuple(), pythonCompiledFunction.closure,
-                                                  PythonString.valueOf(compiledClass.getName()),
-                                                  compiledClass, PythonInterpreter.DEFAULT);
+                new PythonLikeTuple(), pythonCompiledFunction.closure,
+                PythonString.valueOf(compiledClass.getName()),
+                compiledClass, PythonInterpreter.DEFAULT);
     }
 
     @SuppressWarnings("unchecked")
@@ -177,7 +167,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 exceptionNames);
 
         translatePythonBytecodeToMethod(functionalMethod, internalClassName, methodVisitor, pythonCompiledFunction,
-                isPythonLikeFunction);
+                isPythonLikeFunction, Integer.MAX_VALUE); // TODO: Use actual python version
         classWriter.visitEnd();
 
         writeClassOutput(classNameToBytecode, className, classWriter.toByteArray());
@@ -350,7 +340,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     }
 
     private static void translatePythonBytecodeToMethod(Method method, String className, MethodVisitor methodVisitor,
-            PythonCompiledFunction pythonCompiledFunction, boolean isPythonLikeFunction) {
+            PythonCompiledFunction pythonCompiledFunction, boolean isPythonLikeFunction, int pythonVersion) {
         for (Parameter parameter : method.getParameters()) {
             methodVisitor.visitParameter(parameter.getName(), 0);
         }
@@ -377,10 +367,52 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             VariableImplementor.setupFreeVariableCell(methodVisitor, className, localVariableHelper, i);
         }
 
-        Map<Integer, List<Runnable>> bytecodeIndexToArgumentorsMap = new HashMap<>();
+        List<Opcode> opcodeList = new ArrayList<>(pythonCompiledFunction.instructionList.size());
         for (PythonBytecodeInstruction instruction : pythonCompiledFunction.instructionList) {
-            translatePythonBytecodeInstruction(method, className, methodVisitor, pythonCompiledFunction, instruction,
-                    bytecodeCounterToLabelMap, bytecodeIndexToArgumentorsMap, localVariableHelper);
+            opcodeList.add(Opcode.lookupOpcodeForInstruction(instruction, pythonVersion));
+        }
+
+        Map<Integer, List<Runnable>> bytecodeIndexToArgumentorsMap = new HashMap<>();
+        FunctionMetadata functionMetadata = new FunctionMetadata();
+        functionMetadata.method = method;
+        functionMetadata.bytecodeCounterToCodeArgumenterList = bytecodeIndexToArgumentorsMap;
+        functionMetadata.bytecodeCounterToLabelMap = bytecodeCounterToLabelMap;
+        functionMetadata.methodVisitor = methodVisitor;
+        functionMetadata.pythonCompiledFunction = pythonCompiledFunction;
+        functionMetadata.className = className;
+
+        StackMetadata initialStackMetadata = new StackMetadata();
+        initialStackMetadata.stackTypes = new ArrayList<>();
+        initialStackMetadata.localVariableHelper = localVariableHelper;
+        initialStackMetadata.localVariableTypes = new ArrayList<>(localVariableHelper.getNumberOfLocalVariables());
+        initialStackMetadata.cellVariableTypes = new ArrayList<>(localVariableHelper.getNumberOfCells());
+
+        for (int i = 0; i < method.getParameterCount(); i++) {
+            initialStackMetadata.localVariableTypes.add(null); // TODO: Get type of parameter
+        }
+        for (int i = method.getParameterCount(); i < localVariableHelper.getNumberOfLocalVariables(); i++) {
+            initialStackMetadata.localVariableTypes.add(null);
+        }
+
+        for (int i = 0; i < localVariableHelper.getNumberOfCells(); i++) {
+            initialStackMetadata.cellVariableTypes.add(null);
+        }
+
+        FlowGraph flowGraph = FlowGraph.createFlowGraph(opcodeList);
+        List<StackMetadata> stackMetadataForOpcodeIndex =
+                flowGraph.getStackMetadataForOperations(functionMetadata, initialStackMetadata);
+
+        for (int i = 0; i < opcodeList.size(); i++) {
+            StackMetadata stackMetadata = stackMetadataForOpcodeIndex.get(i);
+            PythonBytecodeInstruction instruction = pythonCompiledFunction.instructionList.get(i);
+
+            if (instruction.isJumpTarget) {
+                Label label = bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset, offset -> new Label());
+                methodVisitor.visitLabel(label);
+            }
+
+            bytecodeIndexToArgumentorsMap.getOrDefault(instruction.offset, List.of()).forEach(Runnable::run);
+            opcodeList.get(i).implement(functionMetadata, stackMetadata);
         }
 
         methodVisitor.visitMaxs(-1, -1);
@@ -448,548 +480,5 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PrintStream.class),
                 "println", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Object.class)),
                 false);
-    }
-
-    private static void translatePythonBytecodeInstruction(Method method,
-            String className,
-            MethodVisitor methodVisitor,
-            PythonCompiledFunction pythonCompiledFunction,
-            PythonBytecodeInstruction instruction,
-            Map<Integer, Label> bytecodeCounterToLabelMap,
-            Map<Integer, List<Runnable>> bytecodeCounterToCodeArgumenterList,
-            LocalVariableHelper localVariableHelper) {
-        if (instruction.isJumpTarget) {
-            Label label = bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset, offset -> new Label());
-            methodVisitor.visitLabel(label);
-        }
-
-        bytecodeCounterToCodeArgumenterList.getOrDefault(instruction.offset, List.of()).forEach(Runnable::run);
-
-        BiConsumer<Integer, Runnable> bytecodeIndexArgumentorConsumer = (bytecodeIndex, runnable) -> {
-            bytecodeCounterToCodeArgumenterList
-                    .computeIfAbsent(bytecodeIndex, key -> new ArrayList<>()).add(runnable);
-        };
-
-        switch (instruction.opcode) {
-            // **************************************************
-            // Meta Operations
-            // **************************************************
-            case NOP: { // use brackets to scope local variables
-                methodVisitor.visitInsn(Opcodes.NOP);
-                break;
-            }
-
-            case EXTENDED_ARG: {
-                // Do nothing; this isn't really an opcode
-                break;
-            }
-
-            // **************************************************
-            // Stack Manipulation
-            // **************************************************
-            case POP_TOP: {
-                StackManipulationImplementor.popTOS(methodVisitor);
-                break;
-            }
-            case ROT_TWO: {
-                StackManipulationImplementor.swap(methodVisitor);
-                break;
-            }
-            case ROT_THREE: {
-                StackManipulationImplementor.rotateThree(methodVisitor);
-                break;
-            }
-            case ROT_FOUR: {
-                StackManipulationImplementor.rotateFour(methodVisitor, localVariableHelper);
-                break;
-            }
-            case DUP_TOP: {
-                StackManipulationImplementor.duplicateTOS(methodVisitor);
-                break;
-            }
-            case DUP_TOP_TWO: {
-                StackManipulationImplementor.duplicateTOSAndTOS1(methodVisitor);
-                break;
-            }
-
-            // **************************************************
-            // Object Operations
-            // **************************************************
-            case IS_OP: {
-                PythonBuiltinOperatorImplementor.isOperator(methodVisitor, instruction);
-                break;
-            }
-
-            case LOAD_ATTR: {
-                ObjectImplementor.getAttribute(methodVisitor, className, instruction);
-                break;
-            }
-            case STORE_ATTR: {
-                ObjectImplementor.setAttribute(methodVisitor, className, instruction, localVariableHelper);
-                break;
-            }
-            case DELETE_ATTR: {
-                ObjectImplementor.deleteAttribute(methodVisitor, className, instruction);
-                break;
-            }
-
-            // **************************************************
-            // Collection Access Operations
-            // **************************************************
-            case GET_ITER: {
-                DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.ITERATOR);
-                break;
-            }
-            case STORE_SUBSCR: {
-                CollectionImplementor.setItem(methodVisitor, localVariableHelper);
-                break;
-            }
-            case DEL_SUBSCR: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.DELETE_ITEM);
-                break;
-            }
-            case CONTAINS_OP: {
-                CollectionImplementor.containsOperator(methodVisitor, instruction);
-                break;
-            }
-            case UNPACK_SEQUENCE: {
-                CollectionImplementor.unpackSequence(methodVisitor, instruction.arg, localVariableHelper);
-                break;
-            }
-            case UNPACK_EX: {
-                CollectionImplementor.unpackSequenceWithTail(methodVisitor, instruction.arg, localVariableHelper);
-                break;
-            }
-
-            // **************************************************
-            // Collection Construction Operations
-            // **************************************************
-            case BUILD_SLICE:
-                break;
-
-            case BUILD_TUPLE: {
-                CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_LIST: {
-                CollectionImplementor.buildCollection(PythonLikeList.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_SET: {
-                CollectionImplementor.buildCollection(PythonLikeSet.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_MAP: {
-                CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, instruction.arg);
-                break;
-            }
-            case BUILD_CONST_KEY_MAP: {
-                CollectionImplementor.buildConstKeysMap(PythonLikeDict.class, methodVisitor, instruction.arg);
-                break;
-            }
-
-            // **************************************************
-            // Collection Edit Operations
-            // **************************************************
-            case LIST_TO_TUPLE: {
-                CollectionImplementor.convertListToTuple(methodVisitor);
-                break;
-            }
-
-            case SET_ADD:
-            case LIST_APPEND: {
-                // SET_ADD and LIST_APPEND have the same bytecode
-                CollectionImplementor.collectionAdd(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case MAP_ADD: {
-                CollectionImplementor.mapPut(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-
-            case LIST_EXTEND:
-            case SET_UPDATE: {
-                // LIST_EXTEND and SET_UPDATE have the same bytecode
-                CollectionImplementor.collectionAddAll(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case DICT_UPDATE: {
-                CollectionImplementor.mapPutAll(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case DICT_MERGE: {
-                CollectionImplementor.mapPutAllOnlyIfAllNewElseThrow(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-
-            // **************************************************
-            // Control Flow Operations
-            // **************************************************
-            case SETUP_WITH:
-                break;
-
-            case RETURN_VALUE: {
-                JavaPythonTypeConversionImplementor.returnValue(methodVisitor, method);
-                break;
-            }
-            case JUMP_FORWARD: {
-                JumpImplementor.jumpRelative(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case POP_JUMP_IF_TRUE: {
-                JumpImplementor.popAndJumpIfTrue(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case POP_JUMP_IF_FALSE: {
-                JumpImplementor.popAndJumpIfFalse(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case JUMP_IF_NOT_EXC_MATCH: {
-                JumpImplementor.popAndJumpIfExceptionDoesNotMatch(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case JUMP_IF_TRUE_OR_POP: {
-                JumpImplementor.jumpIfTrueElsePop(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case JUMP_IF_FALSE_OR_POP: {
-                JumpImplementor.jumpIfFalseElsePop(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case JUMP_ABSOLUTE: {
-                JumpImplementor.jumpAbsolute(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-            case FOR_ITER: {
-                CollectionImplementor.iterateIterator(methodVisitor, instruction, bytecodeCounterToLabelMap);
-                break;
-            }
-
-            // **************************************************
-            // Function Operations
-            // **************************************************
-            case CALL_FUNCTION: {
-                FunctionImplementor.callFunction(methodVisitor, instruction);
-                break;
-            }
-            case CALL_FUNCTION_KW: {
-                FunctionImplementor.callFunctionWithKeywords(methodVisitor, instruction);
-                break;
-            }
-            case CALL_FUNCTION_EX: {
-                FunctionImplementor.callFunctionUnpack(methodVisitor, instruction);
-                break;
-            }
-            case LOAD_METHOD: {
-                FunctionImplementor.loadMethod(methodVisitor, className, pythonCompiledFunction, instruction);
-                break;
-            }
-            case CALL_METHOD: {
-                FunctionImplementor.callMethod(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case MAKE_FUNCTION: {
-                FunctionImplementor.createFunction(methodVisitor, className, instruction, localVariableHelper);
-                break;
-            }
-
-            // **************************************************
-            // Variable Operations
-            // **************************************************
-            case LOAD_CONST: {
-                PythonConstantsImplementor.loadConstant(methodVisitor, className, instruction.arg);
-                break;
-            }
-
-            case LOAD_NAME:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case STORE_NAME:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case DELETE_NAME:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-
-            case LOAD_GLOBAL: {
-                VariableImplementor.loadGlobalVariable(methodVisitor, className, pythonCompiledFunction, instruction);
-                break;
-            }
-            case STORE_GLOBAL: {
-                VariableImplementor.storeInGlobalVariable(methodVisitor, className, pythonCompiledFunction, instruction);
-                break;
-            }
-            case DELETE_GLOBAL: {
-                VariableImplementor.deleteGlobalVariable(methodVisitor, className, pythonCompiledFunction, instruction);
-                break;
-            }
-
-            case LOAD_FAST: {
-                VariableImplementor.loadLocalVariable(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case STORE_FAST: {
-                VariableImplementor.storeInLocalVariable(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case DELETE_FAST: {
-                VariableImplementor.deleteLocalVariable(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-
-            case LOAD_CLOSURE: {
-                VariableImplementor.loadCell(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case LOAD_DEREF: {
-                VariableImplementor.loadCellVariable(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case STORE_DEREF: {
-                VariableImplementor.storeInCellVariable(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-            case DELETE_DEREF: {
-                VariableImplementor.deleteCellVariable(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-
-            case LOAD_CLASSDEREF:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-
-            // **************************************************
-            // Asynchronous Operations
-            // **************************************************
-            case GET_AWAITABLE:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case GET_AITER:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case GET_ANEXT:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case END_ASYNC_FOR:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case BEFORE_ASYNC_WITH:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case SETUP_ASYNC_WITH:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-
-            // **************************************************
-            // Generator Operations
-            // **************************************************
-            case YIELD_VALUE:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case YIELD_FROM:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case GET_YIELD_FROM_ITER:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-
-            // **************************************************
-            // Exception Handling Operations
-            // **************************************************
-            case LOAD_ASSERTION_ERROR: {
-                ExceptionImplementor.createAssertionError(methodVisitor);
-                break;
-            }
-            case POP_BLOCK: {
-                // Do nothing, since Java already popped the block for us
-                break;
-            }
-            case POP_EXCEPT: {
-                ExceptionImplementor.endExcept(methodVisitor, localVariableHelper);
-                break;
-            }
-            case WITH_EXCEPT_START: {
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            }
-            case RERAISE: {
-                ExceptionImplementor.reraise(methodVisitor);
-                break;
-            }
-            case SETUP_FINALLY: {
-                ExceptionImplementor.createTryFinallyBlock(methodVisitor, className, instruction, localVariableHelper,
-                        bytecodeCounterToLabelMap,
-                        bytecodeIndexArgumentorConsumer);
-                break;
-            }
-            case RAISE_VARARGS: {
-                ExceptionImplementor.raiseWithOptionalExceptionAndCause(methodVisitor, instruction, localVariableHelper);
-                break;
-            }
-
-            // **************************************************
-            // Import Operations
-            // **************************************************
-            case IMPORT_STAR:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case IMPORT_NAME:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-            case IMPORT_FROM:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-
-            // **************************************************
-            // String Operations
-            // **************************************************
-            case PRINT_EXPR: {
-                StringImplementor.print(methodVisitor, className);
-                break;
-            }
-
-            case FORMAT_VALUE: {
-                StringImplementor.formatValue(methodVisitor, instruction);
-                break;
-            }
-
-            case BUILD_STRING: {
-                StringImplementor.buildString(methodVisitor, instruction.arg);
-                break;
-            }
-
-            // **************************************************
-            // Class Operations
-            // **************************************************
-            case LOAD_BUILD_CLASS:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-
-            case SETUP_ANNOTATIONS:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-
-            // **************************************************
-            // Dunder Operations
-            // **************************************************
-            case COMPARE_OP: {
-                DunderOperatorImplementor.compareValues(methodVisitor, CompareOp.getOp(instruction.arg));
-                break;
-            }
-            case UNARY_POSITIVE: {
-                DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.POSITIVE);
-                break;
-            }
-            case UNARY_NEGATIVE: {
-                DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEGATIVE);
-                break;
-            }
-            case UNARY_NOT: {
-                DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
-                PythonBuiltinOperatorImplementor.performNotOnTOS(methodVisitor);
-                break;
-            }
-            case UNARY_INVERT: {
-                DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.INVERT);
-                break;
-            }
-
-            case BINARY_POWER: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.POWER);
-                break;
-            }
-            case BINARY_MULTIPLY: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.MULTIPLY);
-                break;
-            }
-            case BINARY_MATRIX_MULTIPLY: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.MATRIX_MULTIPLY);
-                break;
-            }
-            case BINARY_FLOOR_DIVIDE: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.FLOOR_DIVIDE);
-                break;
-            }
-            case BINARY_TRUE_DIVIDE: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.TRUE_DIVIDE);
-                break;
-            }
-            case BINARY_MODULO: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.MODULO);
-                break;
-            }
-            case BINARY_ADD: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.ADD);
-                break;
-            }
-            case BINARY_SUBTRACT: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.SUBTRACT);
-                break;
-            }
-            case BINARY_SUBSCR: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.GET_ITEM);
-                break;
-            }
-            case BINARY_LSHIFT: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.LSHIFT);
-                break;
-            }
-            case BINARY_RSHIFT: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.RSHIFT);
-                break;
-            }
-            case BINARY_AND: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.AND);
-                break;
-            }
-            case BINARY_XOR: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.XOR);
-                break;
-            }
-            case BINARY_OR: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.OR);
-                break;
-            }
-
-            // **************************************************
-            // In-place Dunder Operations
-            // **************************************************
-            case INPLACE_POWER: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_POWER);
-                break;
-            }
-            case INPLACE_MULTIPLY: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_MULTIPLY);
-                break;
-            }
-            case INPLACE_MATRIX_MULTIPLY: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_MATRIX_MULTIPLY);
-                break;
-            }
-            case INPLACE_FLOOR_DIVIDE: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_FLOOR_DIVIDE);
-                break;
-            }
-            case INPLACE_TRUE_DIVIDE: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_TRUE_DIVIDE);
-                break;
-            }
-            case INPLACE_MODULO: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_MODULO);
-                break;
-            }
-            case INPLACE_ADD: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_ADD);
-                break;
-            }
-            case INPLACE_SUBTRACT: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_SUBTRACT);
-                break;
-            }
-            case INPLACE_LSHIFT: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_LSHIFT);
-                break;
-            }
-            case INPLACE_RSHIFT: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_RSHIFT);
-                break;
-            }
-            case INPLACE_AND: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_AND);
-                break;
-            }
-            case INPLACE_XOR: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_XOR);
-                break;
-            }
-            case INPLACE_OR: {
-                DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.INPLACE_OR);
-                break;
-            }
-
-            default:
-                throw new UnsupportedOperationException("Opcode not implemented: " + instruction.opname);
-        }
     }
 }

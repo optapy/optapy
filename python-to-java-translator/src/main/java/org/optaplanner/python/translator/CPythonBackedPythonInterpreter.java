@@ -40,8 +40,9 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     public static void deleteAttributeOnPythonReference(OpaquePythonReference object, String attribute) {
         deleteAttributeOnPythonReferencePythonFunction.accept(object, attribute);
     }
+
     public static PythonLikeObject callPythonReference(OpaquePythonReference object, List<PythonLikeObject> positionalArguments,
-                                                            Map<PythonString, PythonLikeObject> keywordArguments) {
+            Map<PythonString, PythonLikeObject> keywordArguments) {
         return callPythonFunction.apply(object, positionalArguments, keywordArguments);
     }
 

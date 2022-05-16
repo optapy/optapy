@@ -79,6 +79,10 @@ public class LocalVariableHelper {
         return pythonBoundVariables + pythonFreeVariables;
     }
 
+    public int getNumberOfLocalVariables() {
+        return pythonCellVariablesStart - parameterSlotsEnd;
+    }
+
     public int newLocal() {
         int slot = pythonLocalVariablesSlotEnd + usedLocals;
         usedLocals++;

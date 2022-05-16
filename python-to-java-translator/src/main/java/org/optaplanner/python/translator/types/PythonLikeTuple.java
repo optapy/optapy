@@ -14,7 +14,7 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
     final List<PythonLikeObject> delegate;
     private int remainderToAdd;
 
-    private final static PythonLikeType TUPLE_TYPE = new PythonLikeType("tuple");
+    public final static PythonLikeType TUPLE_TYPE = new PythonLikeType("tuple");
 
     static {
         try {
@@ -24,13 +24,13 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
                     new JavaMethodReference(PythonLikeTuple.class.getMethod("count", PythonLikeObject.class),
                             Map.of("x", 1)));
             TUPLE_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonLikeTuple.class.getMethod("size"),
-                                                                        Map.of()));
+                    Map.of()));
             TUPLE_TYPE.__dir__.put("__add__",
                     new JavaMethodReference(PythonLikeTuple.class.getMethod("concatToNew", PythonLikeTuple.class),
                             Map.of()));
             TUPLE_TYPE.__dir__.put("__getitem__",
-                                   new JavaMethodReference(PythonLikeTuple.class.getMethod("get", int.class),
-                                                           Map.of()));
+                    new JavaMethodReference(PythonLikeTuple.class.getMethod("get", int.class),
+                            Map.of()));
             TUPLE_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeTuple.class.getMethod("iterator"),
                     Map.of()));
             TUPLE_TYPE.__dir__.put("__contains__",

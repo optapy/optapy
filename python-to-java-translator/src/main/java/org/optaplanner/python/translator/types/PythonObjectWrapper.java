@@ -26,8 +26,8 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
     @Override
     public PythonLikeObject __getAttributeOrNull(String attributeName) {
         return cachedAttributeMap.computeIfAbsent(attributeName,
-                                                  key -> CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
-                                                                                                                          attributeName));
+                key -> CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
+                        attributeName));
     }
 
     @Override
@@ -48,7 +48,8 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments, Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments) {
         return CPythonBackedPythonInterpreter.callPythonReference(pythonReference, positionalArguments, namedArguments);
     }
 

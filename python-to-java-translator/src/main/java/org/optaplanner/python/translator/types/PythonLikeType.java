@@ -5,8 +5,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -17,6 +19,7 @@ import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
 public class PythonLikeType implements PythonLikeObject,
         PythonLikeFunction {
     private static PythonLikeType BASE_TYPE; // Initialized in {@link #getBaseType()}
+    public final static PythonLikeType TYPE_TYPE = getTypeType();
     public final Map<String, PythonLikeObject> __dir__;
 
     private final String TYPE_NAME;
@@ -51,9 +54,9 @@ public class PythonLikeType implements PythonLikeObject,
      *
      * @return
      */
-    static PythonLikeType getBaseType() {
+    public static PythonLikeType getBaseType() {
         if (BASE_TYPE == null) {
-            BASE_TYPE = new PythonLikeType("type", Collections.emptyList());
+            BASE_TYPE = new PythonLikeType("object", Collections.emptyList());
             try {
                 BASE_TYPE.__dir__.put(PythonBinaryOperators.GET_ATTRIBUTE.getDunderMethod(),
                         new JavaMethodReference(
@@ -77,16 +80,15 @@ public class PythonLikeType implements PythonLikeObject,
                 BASE_TYPE.__dir__.put(PythonUnaryOperator.AS_STRING.getDunderMethod(),
                         new JavaMethodReference(Object.class.getMethod("toString"), Map.of()));
                 BASE_TYPE.__dir__.put(PythonBinaryOperators.EQUAL.getDunderMethod(),
-                                      new JavaMethodReference(Object.class.getMethod("equals", Object.class),
-                                                              Map.of()));
+                        new JavaMethodReference(Object.class.getMethod("equals", Object.class),
+                                Map.of()));
                 BASE_TYPE.__dir__.put(PythonBinaryOperators.NOT_EQUAL.getDunderMethod(),
-                                      new BinaryLambdaReference((a,b) -> ((PythonBoolean)(
-                                              ((PythonLikeFunction) (a.__getType()
-                                                      .__getAttributeOrError("__eq__")))
-                                                      .__call__(List.of(a, b), Map.of()))).not(),
-                                              Map.of()));
+                        new BinaryLambdaReference((a, b) -> ((PythonBoolean) (((PythonLikeFunction) (a.__getType()
+                                .__getAttributeOrError("__eq__")))
+                                        .__call__(List.of(a, b), Map.of()))).not(),
+                                Map.of()));
                 BASE_TYPE.__dir__.put(PythonUnaryOperator.HASH.getDunderMethod(),
-                                      new JavaMethodReference(Object.class.getMethod("hashCode"), Map.of()));
+                        new JavaMethodReference(Object.class.getMethod("hashCode"), Map.of()));
             } catch (NoSuchMethodException e) {
                 throw new IllegalStateException(e);
             }
@@ -94,8 +96,48 @@ public class PythonLikeType implements PythonLikeObject,
         return BASE_TYPE;
     }
 
+    public static PythonLikeType getTypeType() {
+        if (TYPE_TYPE != null) {
+            return TYPE_TYPE;
+        }
+        return new PythonLikeType("type");
+    }
+
+    public PythonLikeType unifyWith(PythonLikeType other) {
+        Optional<PythonLikeType> maybeCommonType = other.getAssignableTypesStream().filter(otherType -> {
+            if (otherType.isSubclassOf(this)) {
+                return true;
+            }
+            return this.isSubclassOf(otherType);
+        }).findAny();
+
+        if (maybeCommonType.isPresent() && maybeCommonType.get() != BASE_TYPE) {
+            PythonLikeType commonType = maybeCommonType.get();
+            if (commonType.isSubclassOf(this)) {
+                return this;
+            } else {
+                return commonType;
+            }
+        }
+
+        for (PythonLikeType parent : getParentList()) {
+            PythonLikeType parentUnification = parent.unifyWith(other);
+            if (parentUnification != BASE_TYPE) {
+                return parentUnification;
+            }
+        }
+        return BASE_TYPE;
+    }
+
     public boolean isSubclassOf(PythonLikeType type) {
         return isSubclassOf(type, new HashSet<>());
+    }
+
+    private Stream<PythonLikeType> getAssignableTypesStream() {
+        return Stream.concat(
+                Stream.of(this),
+                getParentList().stream()
+                        .flatMap(PythonLikeType::getAssignableTypesStream));
     }
 
     private boolean isSubclassOf(PythonLikeType type, Set<PythonLikeType> visited) {
@@ -150,7 +192,7 @@ public class PythonLikeType implements PythonLikeObject,
 
     @Override
     public PythonLikeType __getType() {
-        return BASE_TYPE;
+        return TYPE_TYPE;
     }
 
     public String getTypeName() {

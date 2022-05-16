@@ -129,18 +129,14 @@ def translate_python_bytecode_to_java_bytecode(python_function, java_function_ty
     instruction_list = ArrayList()
     for instruction in dis.get_instructions(python_function):
         java_instruction = PythonBytecodeInstruction()
-        java_instruction.opcode = PythonBytecodeInstruction.OpCode.valueOf(instruction.opname)
+        java_instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.valueOf(instruction.opname)
         java_instruction.opname = instruction.opname
         java_instruction.offset = JInt(instruction.offset // 2)
 
         if instruction.arg is not None:
             java_instruction.arg = JInt(instruction.arg)
-            java_instruction.argval = instruction.argval
-            java_instruction.argrepr = instruction.argrepr
         else:
             java_instruction.arg = JInt(0)
-            java_instruction.argval = None
-            java_instruction.argrepr = None
 
         if java_instruction.startsLine is not None:
             java_instruction.startsLine = JInt(instruction.starts_line)

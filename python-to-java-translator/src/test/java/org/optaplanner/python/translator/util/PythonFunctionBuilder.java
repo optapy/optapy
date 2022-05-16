@@ -9,6 +9,7 @@ import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
+import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 
 /**
@@ -44,7 +45,7 @@ public class PythonFunctionBuilder {
     /**
      * Constants used in the bytecode
      */
-    List<Object> co_consts = new ArrayList<>();
+    List<PythonLikeObject> co_consts = new ArrayList<>();
 
     int co_argcount = 0;
     int co_kwonlyargcount = 0;
@@ -85,10 +86,10 @@ public class PythonFunctionBuilder {
     }
 
     /**
-     * Perform the specified opcode with no argument; look at the {@link PythonBytecodeInstruction.OpCode} javadoc for
+     * Perform the specified opcode with no argument; look at the {@link PythonBytecodeInstruction.OpcodeIdentifier} javadoc for
      * information regarding the opcode.
      */
-    public PythonFunctionBuilder op(PythonBytecodeInstruction.OpCode opcode) {
+    public PythonFunctionBuilder op(PythonBytecodeInstruction.OpcodeIdentifier opcode) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
         instruction.opcode = opcode;
         instruction.offset = instructionList.size();
@@ -97,10 +98,10 @@ public class PythonFunctionBuilder {
     }
 
     /**
-     * Perform the specified opcode with an argument; look at the {@link PythonBytecodeInstruction.OpCode} javadoc for
+     * Perform the specified opcode with an argument; look at the {@link PythonBytecodeInstruction.OpcodeIdentifier} javadoc for
      * information regarding the opcode.
      */
-    public PythonFunctionBuilder op(PythonBytecodeInstruction.OpCode opcode, int arg) {
+    public PythonFunctionBuilder op(PythonBytecodeInstruction.OpcodeIdentifier opcode, int arg) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
         instruction.opcode = opcode;
         instruction.offset = instructionList.size();
@@ -118,7 +119,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder loop(Consumer<PythonFunctionBuilder> blockBuilder) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.FOR_ITER;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.FOR_ITER;
         instruction.offset = instructionList.size();
         instruction.isJumpTarget = true;
         instructionList.add(instruction);
@@ -126,16 +127,16 @@ public class PythonFunctionBuilder {
         blockBuilder.accept(this);
 
         PythonBytecodeInstruction jumpBackInstruction = new PythonBytecodeInstruction();
-        jumpBackInstruction.opcode = PythonBytecodeInstruction.OpCode.JUMP_ABSOLUTE;
+        jumpBackInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.JUMP_ABSOLUTE;
         jumpBackInstruction.offset = instructionList.size();
         jumpBackInstruction.arg = instruction.offset;
-        jumpBackInstruction.isJumpTarget = true;
+        jumpBackInstruction.isJumpTarget = false;
         instructionList.add(jumpBackInstruction);
 
         instruction.arg = instructionList.size() - instruction.offset;
 
         PythonBytecodeInstruction afterLoopInstruction = new PythonBytecodeInstruction();
-        afterLoopInstruction.opcode = PythonBytecodeInstruction.OpCode.NOP;
+        afterLoopInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.NOP;
         afterLoopInstruction.offset = instructionList.size();
         afterLoopInstruction.isJumpTarget = true;
         instructionList.add(afterLoopInstruction);
@@ -151,7 +152,7 @@ public class PythonFunctionBuilder {
      */
     public ExceptBuilder tryCode(Consumer<PythonFunctionBuilder> tryBlockBuilder) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.SETUP_FINALLY;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.SETUP_FINALLY;
         instruction.offset = instructionList.size();
         instructionList.add(instruction);
         int tryStart = instructionList.size();
@@ -161,7 +162,7 @@ public class PythonFunctionBuilder {
         instruction.arg = instructionList.size() - tryStart + 2;
 
         instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.JUMP_ABSOLUTE;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.JUMP_ABSOLUTE;
         instruction.offset = instructionList.size();
         instruction.arg = 0;
         instructionList.add(instruction);
@@ -177,14 +178,14 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder ifTrue(Consumer<PythonFunctionBuilder> blockBuilder) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.POP_JUMP_IF_FALSE; // Skip block if False (i.e. enter block if True)
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.POP_JUMP_IF_FALSE; // Skip block if False (i.e. enter block if True)
         instruction.offset = instructionList.size();
         instructionList.add(instruction);
 
         blockBuilder.accept(this);
 
         PythonBytecodeInstruction afterIfInstruction = new PythonBytecodeInstruction();
-        afterIfInstruction.opcode = PythonBytecodeInstruction.OpCode.NOP;
+        afterIfInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.NOP;
         afterIfInstruction.offset = instructionList.size();
         afterIfInstruction.isJumpTarget = true;
         instructionList.add(afterIfInstruction);
@@ -202,14 +203,14 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder ifFalse(Consumer<PythonFunctionBuilder> blockBuilder) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.POP_JUMP_IF_TRUE; // Skip block if True (i.e. enter block if False)
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.POP_JUMP_IF_TRUE; // Skip block if True (i.e. enter block if False)
         instruction.offset = instructionList.size();
         instructionList.add(instruction);
 
         blockBuilder.accept(this);
 
         PythonBytecodeInstruction afterIfInstruction = new PythonBytecodeInstruction();
-        afterIfInstruction.opcode = PythonBytecodeInstruction.OpCode.NOP;
+        afterIfInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.NOP;
         afterIfInstruction.offset = instructionList.size();
         afterIfInstruction.isJumpTarget = true;
         instructionList.add(afterIfInstruction);
@@ -227,14 +228,14 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder ifTruePopTop(Consumer<PythonFunctionBuilder> blockBuilder) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.JUMP_IF_FALSE_OR_POP; // Skip block if False (i.e. enter block if True)
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.JUMP_IF_FALSE_OR_POP; // Skip block if False (i.e. enter block if True)
         instruction.offset = instructionList.size();
         instructionList.add(instruction);
 
         blockBuilder.accept(this);
 
         PythonBytecodeInstruction afterIfInstruction = new PythonBytecodeInstruction();
-        afterIfInstruction.opcode = PythonBytecodeInstruction.OpCode.NOP;
+        afterIfInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.NOP;
         afterIfInstruction.offset = instructionList.size();
         afterIfInstruction.isJumpTarget = true;
         instructionList.add(afterIfInstruction);
@@ -252,14 +253,14 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder ifFalsePopTop(Consumer<PythonFunctionBuilder> blockBuilder) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.JUMP_IF_TRUE_OR_POP; // Skip block if True (i.e. enter block if False)
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.JUMP_IF_TRUE_OR_POP; // Skip block if True (i.e. enter block if False)
         instruction.offset = instructionList.size();
         instructionList.add(instruction);
 
         blockBuilder.accept(this);
 
         PythonBytecodeInstruction afterIfInstruction = new PythonBytecodeInstruction();
-        afterIfInstruction.opcode = PythonBytecodeInstruction.OpCode.NOP;
+        afterIfInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.NOP;
         afterIfInstruction.offset = instructionList.size();
         afterIfInstruction.isJumpTarget = true;
         instructionList.add(afterIfInstruction);
@@ -276,10 +277,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder list(int count) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.BUILD_LIST;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.BUILD_LIST;
         instruction.offset = instructionList.size();
         instruction.arg = count;
-        instruction.argval = count;
         instructionList.add(instruction);
         return this;
     }
@@ -291,10 +291,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder tuple(int count) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.BUILD_TUPLE;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.BUILD_TUPLE;
         instruction.offset = instructionList.size();
         instruction.arg = count;
-        instruction.argval = count;
         instructionList.add(instruction);
         return this;
     }
@@ -306,10 +305,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder dict(int count) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.BUILD_MAP;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.BUILD_MAP;
         instruction.offset = instructionList.size();
         instruction.arg = count;
-        instruction.argval = count;
         instructionList.add(instruction);
         return this;
     }
@@ -322,10 +320,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder constDict(int count) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.BUILD_CONST_KEY_MAP;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.BUILD_CONST_KEY_MAP;
         instruction.offset = instructionList.size();
         instruction.arg = count;
-        instruction.argval = count;
         instructionList.add(instruction);
         return this;
     }
@@ -337,10 +334,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder set(int count) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.BUILD_SET;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.BUILD_SET;
         instruction.offset = instructionList.size();
         instruction.arg = count;
-        instruction.argval = count;
         instructionList.add(instruction);
         return this;
     }
@@ -352,10 +348,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder callFunction(int argc) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.CALL_FUNCTION;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.CALL_FUNCTION;
         instruction.offset = instructionList.size();
         instruction.arg = argc;
-        instruction.argval = argc;
         instructionList.add(instruction);
         return this;
     }
@@ -369,10 +364,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder callFunctionWithKeywords(int argc) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.CALL_FUNCTION_KW;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.CALL_FUNCTION_KW;
         instruction.offset = instructionList.size();
         instruction.arg = argc;
-        instruction.argval = argc;
         instructionList.add(instruction);
         return this;
     }
@@ -385,10 +379,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder callFunctionUnpack(boolean hasKeywords) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.CALL_FUNCTION_EX;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.CALL_FUNCTION_EX;
         instruction.offset = instructionList.size();
         instruction.arg = (hasKeywords) ? 1 : 0;
-        instruction.argval = instruction.arg;
         instructionList.add(instruction);
         return this;
     }
@@ -401,7 +394,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder loadMethod(String methodName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.LOAD_METHOD;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.LOAD_METHOD;
         instruction.offset = instructionList.size();
 
         int methodIndex = co_names.indexOf(methodName);
@@ -411,7 +404,6 @@ public class PythonFunctionBuilder {
         }
 
         instruction.arg = methodIndex;
-        instruction.argval = methodIndex;
         instructionList.add(instruction);
         return this;
     }
@@ -423,10 +415,9 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder callMethod(int argc) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.CALL_METHOD;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.CALL_METHOD;
         instruction.offset = instructionList.size();
         instruction.arg = argc;
-        instruction.argval = argc;
         instructionList.add(instruction);
         return this;
     }
@@ -438,7 +429,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder getAttribute(String attributeName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.LOAD_ATTR;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.LOAD_ATTR;
         instruction.offset = instructionList.size();
 
         int attributeIndex = co_names.indexOf(attributeName);
@@ -448,7 +439,6 @@ public class PythonFunctionBuilder {
         }
 
         instruction.arg = attributeIndex;
-        instruction.argval = attributeIndex;
         instructionList.add(instruction);
         return this;
     }
@@ -462,7 +452,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder storeAttribute(String attributeName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.STORE_ATTR;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.STORE_ATTR;
         instruction.offset = instructionList.size();
 
         int attributeIndex = co_names.indexOf(attributeName);
@@ -472,7 +462,6 @@ public class PythonFunctionBuilder {
         }
 
         instruction.arg = attributeIndex;
-        instruction.argval = attributeIndex;
         instructionList.add(instruction);
         return this;
     }
@@ -484,10 +473,11 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder loadConstant(Object constant) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.LOAD_CONST;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.LOAD_CONST;
         instruction.offset = instructionList.size();
+        PythonLikeObject wrappedConstant = JavaPythonTypeConversionImplementor.wrapJavaObject(constant);
 
-        int index = co_consts.indexOf(constant);
+        int index = co_consts.indexOf(wrappedConstant);
         if (index == -1) {
             index = co_consts.size();
             co_consts.add(JavaPythonTypeConversionImplementor.wrapJavaObject(constant));
@@ -507,7 +497,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder loadParameter(String parameterName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.LOAD_FAST;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.LOAD_FAST;
         instruction.offset = instructionList.size();
         instruction.arg = co_varnames.indexOf(parameterName);
 
@@ -527,7 +517,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder loadVariable(String variableName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.LOAD_FAST;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.LOAD_FAST;
         instruction.offset = instructionList.size();
         instruction.arg = co_varnames.indexOf(variableName);
 
@@ -547,7 +537,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder storeVariable(String variableName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.STORE_FAST;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.STORE_FAST;
         instruction.offset = instructionList.size();
         instruction.arg = co_varnames.indexOf(variableName);
 
@@ -567,7 +557,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder loadCellVariable(String variableName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.LOAD_DEREF;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.LOAD_DEREF;
         instruction.offset = instructionList.size();
         instruction.arg = co_cellvars.indexOf(variableName);
 
@@ -588,7 +578,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder storeCellVariable(String variableName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.STORE_DEREF;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.STORE_DEREF;
         instruction.offset = instructionList.size();
         instruction.arg = co_cellvars.indexOf(variableName);
 
@@ -608,7 +598,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder loadFreeVariable(String variableName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.LOAD_DEREF;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.LOAD_DEREF;
         instruction.offset = instructionList.size();
         instruction.arg = co_freevars.indexOf(variableName);
 
@@ -628,7 +618,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder storeFreeVariable(String variableName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.STORE_DEREF;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.STORE_DEREF;
         instruction.offset = instructionList.size();
         instruction.arg = co_freevars.indexOf(variableName);
 
@@ -648,7 +638,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder loadGlobalVariable(String variableName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.LOAD_GLOBAL;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.LOAD_GLOBAL;
         instruction.offset = instructionList.size();
         instruction.arg = co_names.indexOf(variableName);
 
@@ -668,7 +658,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder storeGlobalVariable(String variableName) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.STORE_GLOBAL;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.STORE_GLOBAL;
         instruction.offset = instructionList.size();
         instruction.arg = co_names.indexOf(variableName);
 
@@ -688,7 +678,7 @@ public class PythonFunctionBuilder {
      */
     public PythonFunctionBuilder compare(CompareOp compareOp) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.opcode = PythonBytecodeInstruction.OpCode.COMPARE_OP;
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.COMPARE_OP;
         instruction.offset = instructionList.size();
         instruction.arg = compareOp.id;
 

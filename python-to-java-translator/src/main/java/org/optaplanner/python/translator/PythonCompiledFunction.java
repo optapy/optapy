@@ -38,7 +38,7 @@ public class PythonCompiledFunction {
     /**
      * List of constants used in bytecode
      */
-    public List<Object> co_constants;
+    public List<PythonLikeObject> co_constants;
 
     /**
      * The number of arguments the function takes

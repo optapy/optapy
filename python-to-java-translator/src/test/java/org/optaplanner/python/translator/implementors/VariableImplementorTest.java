@@ -24,12 +24,12 @@ public class VariableImplementorTest {
         PythonCompiledFunction setterCompiledFunction = PythonFunctionBuilder.newFunction("value")
                 .loadParameter("value")
                 .storeGlobalVariable("my_global")
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         PythonCompiledFunction getterCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadGlobalVariable("my_global")
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         AtomicReference<PythonLikeObject> myGlobalReference = new AtomicReference<>();

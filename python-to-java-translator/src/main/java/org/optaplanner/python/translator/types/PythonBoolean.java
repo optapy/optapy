@@ -7,7 +7,7 @@ public class PythonBoolean extends AbstractPythonLikeObject {
     public final static PythonBoolean TRUE;
     public final static PythonBoolean FALSE;
 
-    private final static PythonLikeType BOOLEAN_TYPE = new PythonLikeType("bool");
+    public final static PythonLikeType BOOLEAN_TYPE = new PythonLikeType("bool");
 
     static {
         PythonNumericOperations.setup(BOOLEAN_TYPE.__dir__);

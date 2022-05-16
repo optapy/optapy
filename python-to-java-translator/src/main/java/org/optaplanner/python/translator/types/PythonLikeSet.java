@@ -13,7 +13,7 @@ import org.optaplanner.python.translator.PythonLikeObject;
 public class PythonLikeSet extends AbstractPythonLikeObject implements Set<PythonLikeObject> {
     final Set<PythonLikeObject> delegate;
 
-    private final static PythonLikeType SET_TYPE = new PythonLikeType("set");
+    public final static PythonLikeType SET_TYPE = new PythonLikeType("set");
 
     static {
         try {
@@ -26,7 +26,7 @@ public class PythonLikeSet extends AbstractPythonLikeObject implements Set<Pytho
             SET_TYPE.__dir__.put("clear", new JavaMethodReference(List.class.getMethod("clear"), Map.of()));
             SET_TYPE.__dir__.put("copy", new JavaMethodReference(PythonLikeSet.class.getMethod("copy"), Map.of()));
             SET_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonLikeSet.class.getMethod("size"),
-                                                                     Map.of()));
+                    Map.of()));
             SET_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeSet.class.getMethod("iterator"),
                     Map.of()));
             SET_TYPE.__dir__.put("__contains__",

@@ -13,7 +13,7 @@ public class PythonLikeDict extends AbstractPythonLikeObject
         implements Map<PythonLikeObject, PythonLikeObject>, Iterable<PythonLikeObject> {
     final Map<PythonLikeObject, PythonLikeObject> delegate;
 
-    private final static PythonLikeType DICT_TYPE = new PythonLikeType("dict");
+    public final static PythonLikeType DICT_TYPE = new PythonLikeType("dict");
 
     static {
         try {

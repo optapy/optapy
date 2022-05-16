@@ -17,9 +17,9 @@ public class StackManipulationImplementorTest {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(1)
                 .loadConstant(2)
-                .op(PythonBytecodeInstruction.OpCode.ROT_TWO)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_TWO)
                 .tuple(2)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier<?> javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -33,9 +33,9 @@ public class StackManipulationImplementorTest {
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(3)
-                .op(PythonBytecodeInstruction.OpCode.ROT_THREE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_THREE)
                 .tuple(3)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier<?> javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -50,9 +50,9 @@ public class StackManipulationImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .loadConstant(4)
-                .op(PythonBytecodeInstruction.OpCode.ROT_FOUR)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_FOUR)
                 .tuple(4)
-                .op(PythonBytecodeInstruction.OpCode.RETURN_VALUE)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier<?> javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);

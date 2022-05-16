@@ -5,7 +5,7 @@ import java.math.BigInteger;
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
     final BigInteger value;
 
-    private final static PythonLikeType INT_TYPE = new PythonLikeType("int");
+    public final static PythonLikeType INT_TYPE = new PythonLikeType("int");
 
     static {
         PythonLikeComparable.setup(INT_TYPE.__dir__);
