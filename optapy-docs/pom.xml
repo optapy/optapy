@@ -29,7 +29,7 @@
     -->
     <source.document.name>.index.adoc</source.document.name>
 
-    <version.optapy>8.19.0a0</version.optapy>
+    <version.optapy>8.19.0a1</version.optapy>
   </properties>
 
   <build>
