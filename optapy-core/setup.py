@@ -106,7 +106,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/optapy/optapy',
     project_urls={
-        'OptaPy Homepage and Documentation': 'https://optapy.org',
+        'OptaPy Documentation': 'https://optapy.org',
         'OptaPlanner Homepage': 'https://www.optaplanner.org/',
     },
     classifiers=[
