@@ -14,9 +14,12 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
     private final OpaquePythonReference pythonReference;
     private final Map<String, PythonLikeObject> cachedAttributeMap;
 
+    private final CPythonType type;
+
     public PythonObjectWrapper(OpaquePythonReference pythonReference) {
         this.pythonReference = pythonReference;
         cachedAttributeMap = new HashMap<>();
+        type = CPythonType.lookupTypeOfPythonObject(pythonReference);
     }
 
     public OpaquePythonReference getWrappedObject() {
@@ -44,7 +47,7 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
 
     @Override
     public PythonLikeType __getType() {
-        return PYTHON_REFERENCE_TYPE;
+        return type;
     }
 
     @Override
@@ -84,5 +87,12 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
         PythonLikeFunction hash = (PythonLikeFunction) __getAttributeOrError("__hash__");
         PythonInteger result = (PythonInteger) hash.__call__(List.of(), Map.of());
         return result.value.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        PythonLikeFunction str = (PythonLikeFunction) __getAttributeOrError("__str__");
+        PythonString result = (PythonString) str.__call__(List.of(), Map.of());
+        return result.toString();
     }
 }

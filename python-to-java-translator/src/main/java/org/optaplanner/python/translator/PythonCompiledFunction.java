@@ -1,6 +1,7 @@
 package org.optaplanner.python.translator;
 
 import java.util.List;
+import java.util.Map;
 
 import org.optaplanner.python.translator.types.PythonLikeTuple;
 
@@ -14,6 +15,11 @@ public class PythonCompiledFunction {
      * The closure of the function
      */
     public PythonLikeTuple closure;
+
+    /**
+     * The globals of the function
+     */
+    public Map<String, PythonLikeObject> globalsMap;
 
     /**
      * List of all names used in the function

@@ -2,7 +2,9 @@ package org.optaplanner.python.translator.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.optaplanner.python.translator.CompareOp;
@@ -47,6 +49,8 @@ public class PythonFunctionBuilder {
      */
     List<PythonLikeObject> co_consts = new ArrayList<>();
 
+    Map<String, PythonLikeObject> globalsMap = new HashMap<>();
+
     int co_argcount = 0;
     int co_kwonlyargcount = 0;
 
@@ -75,6 +79,7 @@ public class PythonFunctionBuilder {
     public PythonCompiledFunction build() {
         PythonCompiledFunction out = new PythonCompiledFunction();
         out.instructionList = instructionList;
+        out.globalsMap = globalsMap;
         out.co_constants = co_consts;
         out.co_varnames = co_varnames;
         out.co_names = co_names;
@@ -628,6 +633,11 @@ public class PythonFunctionBuilder {
         }
 
         instructionList.add(instruction);
+        return this;
+    }
+
+    public PythonFunctionBuilder usingGlobalsMap(Map<String, PythonLikeObject> globalsMap) {
+        this.globalsMap = globalsMap;
         return this;
     }
 

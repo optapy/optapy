@@ -1,15 +1,17 @@
 package org.optaplanner.python.translator;
 
+import java.util.Map;
+
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
 
 public interface PythonInterpreter {
     PythonInterpreter DEFAULT = new CPythonBackedPythonInterpreter();
 
-    PythonLikeObject getGlobal(String name);
+    PythonLikeObject getGlobal(Map<String, PythonLikeObject> globalsMap, String name);
 
-    void setGlobal(String name, PythonLikeObject value);
+    void setGlobal(Map<String, PythonLikeObject> globalsMap, String name, PythonLikeObject value);
 
-    void deleteGlobal(String name);
+    void deleteGlobal(Map<String, PythonLikeObject> globalsMap, String name);
 
     void print(PythonLikeObject object);
 

@@ -14,4 +14,8 @@ public class PythonException extends PythonBaseException {
     public PythonException(PythonLikeType type) {
         super(type);
     }
+
+    public PythonException(PythonLikeType type, String message) {
+        super(type, message);
+    }
 }

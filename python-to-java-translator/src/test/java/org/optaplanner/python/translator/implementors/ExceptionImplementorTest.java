@@ -88,13 +88,13 @@ public class ExceptionImplementorTest {
         Map<String, PythonLikeObject> globalsMap = new HashMap<>();
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
 
-        Mockito.when(interpreter.getGlobal(Mockito.any()))
+        Mockito.when(interpreter.getGlobal(Mockito.any(), Mockito.any()))
                 .thenAnswer(invocationOnMock -> globalsMap.get(invocationOnMock.getArgument(0, String.class)));
         Mockito.doAnswer(invocationOnMock -> {
-            globalsMap.put(invocationOnMock.getArgument(0, String.class),
-                    invocationOnMock.getArgument(1, PythonLikeObject.class));
+            globalsMap.put(invocationOnMock.getArgument(1, String.class),
+                    invocationOnMock.getArgument(2, PythonLikeObject.class));
             return null;
-        }).when(interpreter).setGlobal(Mockito.any(), Mockito.any());
+        }).when(interpreter).setGlobal(Mockito.any(), Mockito.any(), Mockito.any());
 
         Function javaFunction = (Function) createInstance(javaFunctionClass, interpreter);
 

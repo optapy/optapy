@@ -19,6 +19,11 @@ public class PythonBaseException extends RuntimeException implements PythonLikeO
         this.type = type;
     }
 
+    public PythonBaseException(PythonLikeType type, String message) {
+        super(message);
+        this.type = type;
+    }
+
     /**
      * Python errors are supposed to be extremely low cost, to the point you are encouraged
      * to write code with try...except instead of if...then. See

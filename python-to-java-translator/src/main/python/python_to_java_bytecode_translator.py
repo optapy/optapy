@@ -2,6 +2,8 @@ import dis
 
 from jpype import JInt, JLong, JFloat, JBoolean, JProxy
 
+global_dict_to_instance = dict()
+
 def copy_iterable(iterable):
     from java.util import ArrayList
     if iterable is None:
@@ -16,7 +18,7 @@ def convert_to_java_python_like_object(value):
     from org.optaplanner.python.translator.types import OpaquePythonReference
     from org.optaplanner.python.translator import PythonLikeObject
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
-        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper
+        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper, CPythonType
     if isinstance(value, PythonLikeObject):
         return value
     elif value is None:
@@ -52,6 +54,8 @@ def convert_to_java_python_like_object(value):
         return out
     elif hasattr(value, '__optapy_java_class'):
         return JLong(id(value))
+    elif isinstance(value, type):
+        return CPythonType.getType(JProxy(OpaquePythonReference, inst=value, convert=True))
     else:
         return PythonObjectWrapper(JProxy(OpaquePythonReference, inst=value, convert=True))
     # TODO: Get compiled class corresponding to function / class bytecode
@@ -69,8 +73,10 @@ def unwrap_python_like_object(python_like_object):
         return out
     elif python_like_object is PythonNone.INSTANCE:
         return None
-    elif isinstance(python_like_object, (PythonBoolean, PythonInteger, PythonFloat, PythonString)):
+    elif isinstance(python_like_object, (PythonBoolean, PythonFloat, PythonString)):
         return python_like_object.getValue()
+    elif isinstance(python_like_object, PythonInteger):
+        return python_like_object.getValue().longValue()
     elif isinstance(python_like_object, (PythonLikeTuple, tuple)):
         out = []
         for item in python_like_object:
@@ -89,8 +95,7 @@ def unwrap_python_like_object(python_like_object):
     elif isinstance(python_like_object, Map):
         out = dict()
         for entry in python_like_object.entrySet():
-            out.put(unwrap_python_like_object(entry.getKey()),
-                    unwrap_python_like_object(entry.getValue()))
+            out[unwrap_python_like_object(entry.getKey())] = unwrap_python_like_object(entry.getValue())
         return out
     elif not isinstance(python_like_object, PythonLikeObject):
         return python_like_object
@@ -119,6 +124,24 @@ def copy_closure(closure):
             java_cell.cellValue = convert_to_java_python_like_object(cell.cell_contents)
             out.add(java_cell)
         return out
+
+
+def copy_globals(globals_dict):
+    global global_dict_to_instance
+    from java.util import HashMap
+
+    globals_dict_key = id(globals_dict)
+    if globals_dict_key in global_dict_to_instance:
+        out = global_dict_to_instance[globals_dict_key]
+    else:
+        out = HashMap()
+
+    global_dict_to_instance[globals_dict_key] = out
+    for key, value in globals_dict.items():
+        out.computeIfAbsent(key, lambda _: convert_to_java_python_like_object(value))
+
+    return out
+
 
 def translate_python_bytecode_to_java_bytecode(python_function, java_function_type):
     from java.util import ArrayList
@@ -154,6 +177,7 @@ def translate_python_bytecode_to_java_bytecode(python_function, java_function_ty
     python_compiled_function.co_argcount = python_function.__code__.co_argcount
     python_compiled_function.co_kwonlyargcount = python_function.__code__.co_kwonlyargcount
     python_compiled_function.closure = copy_closure(python_function.__closure__)
+    python_compiled_function.globalsMap = copy_globals(python_function.__globals__)
 
     return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(python_compiled_function,
                                                                           java_function_type)

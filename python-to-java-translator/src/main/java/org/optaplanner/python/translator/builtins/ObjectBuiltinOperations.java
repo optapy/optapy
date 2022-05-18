@@ -12,6 +12,7 @@ import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.errors.AttributeError;
 
 public class ObjectBuiltinOperations {
     public static PythonLikeObject getAttribute(PythonLikeObject object, String name) {
@@ -38,8 +39,7 @@ public class ObjectBuiltinOperations {
             return typeResult;
         }
 
-        // TODO: Raise AttributeError instead of NoSuchElementException
-        throw new NoSuchElementException("object '" + object + "' does not have attribute '" + name + "'");
+        throw new AttributeError("object '" + object + "' does not have attribute '" + name + "'");
     }
 
     public static void setAttribute(PythonLikeObject object, String name, PythonLikeObject value) {

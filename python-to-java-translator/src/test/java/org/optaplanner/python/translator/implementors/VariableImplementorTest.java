@@ -35,11 +35,11 @@ public class VariableImplementorTest {
         AtomicReference<PythonLikeObject> myGlobalReference = new AtomicReference<>();
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
 
-        Mockito.when(interpreter.getGlobal("my_global")).thenAnswer(invocationOnMock -> myGlobalReference.get());
+        Mockito.when(interpreter.getGlobal(Mockito.any(), Mockito.eq("my_global"))).thenAnswer(invocationOnMock -> myGlobalReference.get());
         Mockito.doAnswer(invocationOnMock -> {
-            myGlobalReference.set(invocationOnMock.getArgument(1, PythonLikeObject.class));
+            myGlobalReference.set(invocationOnMock.getArgument(2, PythonLikeObject.class));
             return null;
-        }).when(interpreter).setGlobal(Mockito.eq("my_global"), Mockito.any());
+        }).when(interpreter).setGlobal(Mockito.any(), Mockito.eq("my_global"), Mockito.any());
 
         Class<? extends Consumer> setterFunctionClass = translatePythonBytecodeToClass(setterCompiledFunction, Consumer.class);
         Class<? extends Supplier> getterFunctionClass = translatePythonBytecodeToClass(getterCompiledFunction, Supplier.class);
@@ -49,12 +49,12 @@ public class VariableImplementorTest {
 
         setter.accept("Value 1");
 
-        assertThat(interpreter.getGlobal("my_global")).isEqualTo(PythonString.valueOf("Value 1"));
+        Mockito.verify(interpreter).setGlobal(Mockito.any(), Mockito.eq("my_global"), Mockito.eq(PythonString.valueOf("Value 1")));
         assertThat(getter.get()).isEqualTo(PythonString.valueOf("Value 1"));
 
         setter.accept("Value 2");
 
-        assertThat(interpreter.getGlobal("my_global")).isEqualTo(PythonString.valueOf("Value 2"));
+        Mockito.verify(interpreter).setGlobal(Mockito.any(), Mockito.eq("my_global"), Mockito.eq(PythonString.valueOf("Value 2")));
         assertThat(getter.get()).isEqualTo(PythonString.valueOf("Value 2"));
     }
 }

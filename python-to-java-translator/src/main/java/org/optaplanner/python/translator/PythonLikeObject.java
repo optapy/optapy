@@ -3,6 +3,7 @@ package org.optaplanner.python.translator;
 import java.util.NoSuchElementException;
 
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.errors.AttributeError;
 
 /**
  * Represents an Object that can be interacted with like a Python Object.
@@ -16,7 +17,7 @@ public interface PythonLikeObject {
      *
      * @param attributeName Name of the attribute to get
      * @return The attribute of the object that corresponds with attributeName
-     * @throws NoSuchElementException if the attribute does not exist
+     * @throws AttributeError if the attribute does not exist
      */
     PythonLikeObject __getAttributeOrNull(String attributeName);
 
@@ -25,12 +26,12 @@ public interface PythonLikeObject {
      *
      * @param attributeName Name of the attribute to get
      * @return The attribute of the object that corresponds with attributeName
-     * @throws NoSuchElementException if the attribute does not exist
+     * @throws AttributeError if the attribute does not exist
      */
     default PythonLikeObject __getAttributeOrError(String attributeName) {
         PythonLikeObject out = this.__getAttributeOrNull(attributeName);
         if (out == null) {
-            throw new NoSuchElementException();
+            throw new AttributeError("object '" + this + "' does not have attribute '" + attributeName + "'");
         }
         return out;
     }

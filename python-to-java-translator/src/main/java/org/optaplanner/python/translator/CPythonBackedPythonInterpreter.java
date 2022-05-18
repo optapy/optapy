@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.optaplanner.python.translator.builtins.GlobalBuiltins;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
@@ -13,8 +14,11 @@ import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
 
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
-    Map<String, PythonLikeObject> globalsMap;
     PrintStream standardOutput;
+
+    public static Function<OpaquePythonReference, Number> lookupPythonReferenceIdPythonFunction;
+
+    public static Function<OpaquePythonReference, OpaquePythonReference> lookupPythonReferenceTypePythonFunction;
     public static BiFunction<OpaquePythonReference, String, PythonLikeObject> lookupAttributeOnPythonReferencePythonFunction;
     public static TriConsumer<OpaquePythonReference, String, Object> setAttributeOnPythonReferencePythonFunction;
     public static BiConsumer<OpaquePythonReference, String> deleteAttributeOnPythonReferencePythonFunction;
@@ -25,8 +29,15 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     }
 
     public CPythonBackedPythonInterpreter(PrintStream standardOutput) {
-        this.globalsMap = new HashMap<>();
         this.standardOutput = standardOutput;
+    }
+
+    public static Number getPythonReferenceId(OpaquePythonReference reference) {
+        return lookupPythonReferenceIdPythonFunction.apply(reference);
+    }
+
+    public static OpaquePythonReference getPythonReferenceType(OpaquePythonReference reference) {
+        return lookupPythonReferenceTypePythonFunction.apply(reference);
     }
 
     public static PythonLikeObject lookupAttributeOnPythonReference(OpaquePythonReference object, String attribute) {
@@ -47,7 +58,7 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     }
 
     @Override
-    public PythonLikeObject getGlobal(String name) {
+    public PythonLikeObject getGlobal(Map<String, PythonLikeObject> globalsMap, String name) {
         PythonLikeObject out = globalsMap.get(name);
         if (out == null) {
             return GlobalBuiltins.lookupOrError(this, name);
@@ -56,12 +67,12 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     }
 
     @Override
-    public void setGlobal(String name, PythonLikeObject value) {
+    public void setGlobal(Map<String, PythonLikeObject> globalsMap, String name, PythonLikeObject value) {
         globalsMap.put(name, value);
     }
 
     @Override
-    public void deleteGlobal(String name) {
+    public void deleteGlobal(Map<String, PythonLikeObject> globalsMap, String name) {
         globalsMap.remove(name);
     }
 

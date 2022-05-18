@@ -36,10 +36,27 @@ def init(*args, path: List[str] = None, include_translator_jars: bool = True):
     jpype.startJVM(*args, classpath=path, convertStrings=True)  # noqa
 
     from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
+    CPythonBackedPythonInterpreter.lookupPythonReferenceIdPythonFunction = GetPythonObjectId()
+    CPythonBackedPythonInterpreter.lookupPythonReferenceTypePythonFunction = GetPythonObjectType()
     CPythonBackedPythonInterpreter.lookupAttributeOnPythonReferencePythonFunction = GetAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.setAttributeOnPythonReferencePythonFunction = SetAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.deleteAttributeOnPythonReferencePythonFunction = DeleteAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.callPythonFunction = CallPythonFunction()
+
+
+@jpype.JImplements('java.util.function.Function', deferred=True)
+class GetPythonObjectId:
+    @jpype.JOverride()
+    def apply(self, python_object):
+        return id(python_object)
+
+
+@jpype.JImplements('java.util.function.Function', deferred=True)
+class GetPythonObjectType:
+    @jpype.JOverride()
+    def apply(self, python_object):
+        from org.optaplanner.python.translator.types import OpaquePythonReference
+        return jpype.JProxy(OpaquePythonReference, inst=type(python_object), convert=True)
 
 
 @jpype.JImplements('java.util.function.BiFunction', deferred=True)
@@ -47,6 +64,8 @@ class GetAttributeOnPythonObject:
     @jpype.JOverride()
     def apply(self, python_object, attribute_name):
         from .python_to_java_bytecode_translator import convert_to_java_python_like_object
+        if not hasattr(python_object, attribute_name):
+            return None
         out = getattr(python_object, attribute_name)
         return convert_to_java_python_like_object(out)
 
@@ -74,8 +93,13 @@ class CallPythonFunction:
         actual_keyword_args = unwrap_python_like_object(keyword_args_map)
         if actual_keyword_args is None:
             actual_keyword_args = dict()
-        out = python_object(*actual_vargs, **actual_keyword_args)
-        return convert_to_java_python_like_object(out)
+        try:
+            out = python_object(*actual_vargs, **actual_keyword_args)
+            return convert_to_java_python_like_object(out)
+        except Exception as e:
+            from org.optaplanner.python.translator.types.errors import CPythonException
+            print(e)
+            raise CPythonException(str(e))
 
 
 def ensure_init():

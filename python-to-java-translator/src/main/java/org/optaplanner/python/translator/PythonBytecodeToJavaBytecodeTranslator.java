@@ -43,6 +43,9 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
     public static final String VARIABLE_NAMES_STATIC_FIELD_NAME = "co_varnames";
 
+    public static final String GLOBALS_MAP_STATIC_FIELD_NAME = "__globals__";
+
+
     public static final String DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME = "__defaults__";
 
     public static final String DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME = "__kwdefaults__";
@@ -301,6 +304,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 NAMES_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
                 VARIABLE_NAMES_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
+                               GLOBALS_MAP_STATIC_FIELD_NAME, Type.getDescriptor(Map.class), null, null);
 
         // Instance fields
         classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
@@ -320,6 +325,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     private static void setStaticFields(Class<?> compiledClass, PythonCompiledFunction pythonCompiledFunction) {
         try {
             compiledClass.getField(CONSTANTS_STATIC_FIELD_NAME).set(null, pythonCompiledFunction.co_constants);
+            compiledClass.getField(GLOBALS_MAP_STATIC_FIELD_NAME).set(null, pythonCompiledFunction.globalsMap);
 
             // Need to convert co_names to python strings (used in __getattribute__)
             List<PythonString> pythonNameList = new ArrayList<>(pythonCompiledFunction.co_names.size());
