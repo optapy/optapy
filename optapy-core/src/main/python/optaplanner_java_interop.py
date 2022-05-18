@@ -403,6 +403,18 @@ def _optapy_error(item):
     raise AttributeError
 
 
+def __convert_if_proxy(arg):
+    from org.optaplanner.optapy import PythonComparable, PythonObject
+    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+    if isinstance(arg, (PythonComparable, PythonObject)):
+        return PythonWrapperGenerator.getPythonObject(arg)
+    return arg
+
+
+def _convert_args(args):
+    return tuple(map(lambda arg: __convert_if_proxy(arg), args))
+
+
 @JImplementationFor('org.optaplanner.optapy.PythonObject')
 class _PythonObject:
     """Maps a Java Python Object to a Python Python Object.
@@ -422,10 +434,13 @@ class _PythonObject:
     def __optapy_lookup(self, attribute, default_fun, *args, **kwargs):
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         item = PythonWrapperGenerator.getPythonObject(self)
+        args = _convert_args(args)
         if hasattr(type(item), attribute):
-            return getattr(type(item), attribute)(item, *args, **kwargs)
-        else:
-            return default_fun(item)
+            method = getattr(type(item), attribute)
+            if method is not None:
+                return method(item, *args, **kwargs)
+
+        return default_fun(item)
 
     # These are needed for Python bytecodes, which look directly at the type and ignore attribute shenanigans
     def __getattr__(self, name):
@@ -643,10 +658,13 @@ class _PythonComparable:
     def __optapy_lookup(self, attribute, default_fun, *args, **kwargs):
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         item = PythonWrapperGenerator.getPythonObject(self)
+        args = _convert_args(args)
         if hasattr(type(item), attribute):
-            return getattr(type(item), attribute)(item, *args, **kwargs)
-        else:
-            return default_fun(item)
+            method = getattr(type(item), attribute)
+            if method is not None:
+                return method(item, *args, **kwargs)
+
+        return default_fun(item)
 
     # These are needed for Python bytecodes, which look directly at the type and ignore attribute shenanigans
     def __getattr__(self, name):
