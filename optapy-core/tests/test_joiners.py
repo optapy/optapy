@@ -6,7 +6,6 @@ from org.optaplanner.core.api.score.stream.quad import QuadJoiner
 from org.optaplanner.core.api.score.stream.penta import PentaJoiner
 
 
-# These are tests for the workaround for https://github.com/jpype-project/jpype/issues/1016
 def test_equal_joiners_work():
     assert isinstance(Joiners.equal(), BiJoiner)
     assert isinstance(Joiners.equal(lambda a: a), BiJoiner)

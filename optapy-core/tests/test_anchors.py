@@ -71,9 +71,10 @@ class ChainedSolution:
 @optapy.constraint_provider
 def chained_constraints(constraint_factory):
     return [
-        constraint_factory.forEach(optapy.get_class(ChainedEntity))
+        constraint_factory.forEach(ChainedEntity)
                           .groupBy(lambda entity: entity.anchor, optapy.constraint.ConstraintCollectors.count())
-                          .reward('Maximize chain length', optapy.score.SimpleScore.ONE, lambda anchor, count: count * count)
+                          .reward('Maximize chain length', optapy.score.SimpleScore.ONE,
+                                  lambda anchor, count: count * count)
     ]
 
 
@@ -81,9 +82,9 @@ def test_chained():
     termination = optapy.config.solver.termination.TerminationConfig()
     termination.setBestScoreLimit('9')
     solver_config = optapy.config.solver.SolverConfig() \
-        .withSolutionClass(optapy.get_class(ChainedSolution)) \
-        .withEntityClasses(optapy.get_class(ChainedEntity)) \
-        .withConstraintProviderClass(optapy.get_class(chained_constraints)) \
+        .withSolutionClass(ChainedSolution) \
+        .withEntityClasses(ChainedEntity) \
+        .withConstraintProviderClass(chained_constraints) \
         .withTerminationConfig(termination)
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     solution = solver.solve(ChainedSolution(

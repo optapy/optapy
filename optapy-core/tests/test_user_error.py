@@ -103,3 +103,26 @@ def test_bad_return_type():
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     with pytest.raises(RuntimeError, match=r'An error occurred during solving. This can occur when.*'):
         solver.solve(problem)
+
+
+def test_non_proxied_class_passed():
+    class NonProxied:
+        pass
+
+    solver_config = optapy.config.solver.SolverConfig()
+    with pytest.raises(ValueError, match=re.escape(
+            f'Type {NonProxied} does not have a Java class proxy. Maybe annotate it with '
+            f'@problem_fact, @planning_entity, or @planning_solution?'
+    )):
+        solver_config.withSolutionClass(NonProxied)
+
+
+def test_non_proxied_function_passed():
+    def not_proxied():
+        pass
+
+    solver_config = optapy.config.solver.SolverConfig()
+    with pytest.raises(ValueError, match=re.escape(
+            f'Function {not_proxied} does not have a Java class proxy. Maybe annotate it with '
+            f'@constraint_provider?')):
+        solver_config.withConstraintProviderClass(not_proxied)

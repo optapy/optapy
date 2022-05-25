@@ -52,8 +52,8 @@ def test_easy_score_calculator():
     termination_config = optapy.config.solver.termination.TerminationConfig()
     termination_config.setBestScoreLimit('9')
     solver_config.withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses(optapy.get_class(Entity)) \
-        .withEasyScoreCalculatorClass(optapy.get_class(my_score_calculator)) \
+        .withEntityClasses(Entity) \
+        .withEasyScoreCalculatorClass(my_score_calculator) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution([Entity('A'), Entity('B'), Entity('C')], [1, 2, 3])
     solver = optapy.solver_factory_create(solver_config).buildSolver()
