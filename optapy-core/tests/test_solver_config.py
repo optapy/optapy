@@ -27,8 +27,8 @@ class Value:
 @optapy.constraint_provider
 def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
     return [
-        constraint_factory.forEach(optapy.get_class(Entity))
-            .join(optapy.get_class(Value),
+        constraint_factory.forEach(Entity)
+            .join(Value,
                   [optapy.constraint.Joiners.equal(lambda entity: entity.value,
                                                    lambda value: value.code)])
             .reward('Same as value', optapy.score.SimpleScore.ONE),

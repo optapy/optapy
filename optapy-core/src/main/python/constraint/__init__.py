@@ -114,9 +114,7 @@ class DefaultConstraintMatchTotal:
             raise ValueError(f'The ConstraintMatchTotal ({self}) could not remove the ConstraintMatch'
                              f'({constraint_match}) from its constraint_match_set ({self.constraint_match_set}).')
 
-# Workaround for https://github.com/jpype-project/jpype/issues/1016
-# TODO: Remove EVERYTHING below when https://github.com/jpype-project/jpype/issues/1016 is resolved
-#       and a new version of JPype is released
+# Below is needed so unknown Python objects can properly be proxied
 from jpype import JImplements, JOverride # noqa
 from ..jpype_type_conversions import PythonFunction as _PythonFunction, PythonBiFunction as _PythonBiFunction, \
     PythonTriFunction as _PythonTriFunction, PythonQuadFunction as _PythonQuadFunction,\
