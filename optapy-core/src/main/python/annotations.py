@@ -2,7 +2,8 @@ import jpype
 
 from .optaplanner_java_interop import ensure_init, _add_shallow_copy_to_class, _generate_planning_entity_class, \
     _generate_problem_fact_class, _generate_planning_solution_class, _generate_constraint_provider_class, \
-    _generate_easy_score_calculator_class, _generate_incremental_score_calculator_class, get_class
+    _generate_easy_score_calculator_class, _generate_incremental_score_calculator_class,\
+    _generate_variable_listener_class, get_class
 from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING, TypeVar
 
@@ -12,7 +13,8 @@ if TYPE_CHECKING:
     from org.optaplanner.core.api.score import Score as _Score
     from org.optaplanner.core.api.score.calculator import IncrementalScoreCalculator as _IncrementalScoreCalculator
     from org.optaplanner.core.api.domain.valuerange import ValueRange as _ValueRange
-    from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType as _PlanningVariableGraphType
+    from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType as _PlanningVariableGraphType, \
+        VariableListener as _VariableListener, PlanningVariableReference as _PlanningVariableReference
 
 """
 All OptaPlanner Python annotations work like this:
@@ -30,16 +32,6 @@ is called and used (which allows __getattr__ to work w/o casting to a Java Proxy
 """
 
 Solution_ = TypeVar('Solution_')
-
-
-def is_snake_case(the_function: Callable):
-    """
-    Try to determine the convenction used for getters/setters from function name
-    since the class is not available yet
-    :param the_function: the function
-    :return: True iff the_function name starts with get_, False otherwise
-    """
-    return the_function.__name__.startswith('get_')
 
 
 def planning_id(getter_function: Callable[[], Union[int, str]]) -> Callable[[], Union[int, str]]:
@@ -157,7 +149,7 @@ def planning_list_variable(variable_type: Type, value_range_provider_refs: List[
         from java.util import List as JavaList
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from org.optaplanner.core.api.domain.variable import PlanningListVariable as JavaPlanningListVariable
-        variable_getter_function.__optaplannerPlanningVariable = {
+        variable_getter_function.__optaplannerPlanningListVariable = {
             'annotationType': JavaPlanningListVariable,
             'valueRangeProviderRefs': value_range_provider_refs,
         }
@@ -168,6 +160,52 @@ def planning_list_variable(variable_type: Type, value_range_provider_refs: List[
         return variable_getter_function
 
     return planning_list_variable_function_wrapper
+
+
+def planning_variable_reference(variable_name: str, entity_class: Type = None) -> '_PlanningVariableReference':
+    """
+    Creates a reference to a planning variable (both genuine variables and shadow variables).
+
+    :param variable_name: The name of the variable
+    :param entity_class: The class the variable is on. If not specified, the current class will be use
+
+    :return: A PlanningVariableReference to that variable. Used in custom_shadow_variable decorators.
+    :rtype _PlanningVariableReference
+    """
+    ensure_init()
+    from typing import cast
+    from org.optaplanner.core.api.domain.variable import PlanningVariableReference as JavaPlanningVariableReference
+    return cast(JavaPlanningVariableReference, {
+        'annotationType': JavaPlanningVariableReference,
+        'variableName': variable_name,
+        'entityClass': entity_class
+    })
+
+
+def custom_shadow_variable(shadow_variable_type: Type, *,
+                           variable_listener_class: Type['_VariableListener'] = None,
+                           variable_listener_ref: '_PlanningVariableReference' = None,
+                           sources: List['_PlanningVariableReference'] = None) -> \
+        Callable[[], Any]:
+    """Specifies that a property is a custom shadow of 1 or more planning_variable's.
+
+    It is specified on a getter of a java bean property (or a field) of a planning_entity class.
+    """
+    ensure_init()
+    def custom_shadow_variable_function_mapper(custom_variable_getter_function: Callable[[], Any]):
+        ensure_init()
+        from org.optaplanner.core.api.domain.variable import CustomShadowVariable as JavaCustomShadowVariable
+
+        custom_variable_getter_function.__optaplannerCustomShadowVariable = {
+            'annotationType': JavaCustomShadowVariable,
+            'sources': sources,
+            'variableListenerClass': get_class(variable_listener_class),
+            'variableListenerRef': variable_listener_ref,
+        }
+        custom_variable_getter_function.__optapy_return = get_class(shadow_variable_type)
+        return custom_variable_getter_function
+
+    return custom_shadow_variable_function_mapper
 
 
 def index_shadow_variable(anchor_type: Type, source_variable_name: str) -> Callable[[Callable[[], Any]],
@@ -187,9 +225,7 @@ def index_shadow_variable(anchor_type: Type, source_variable_name: str) -> Calla
         ensure_init()
         from org.optaplanner.core.api.domain.variable import IndexShadowVariable as JavaIndexShadowVariable
         planning_variable_name = source_variable_name
-        if is_snake_case(index_getter_function):
-            planning_variable_name = f'_{planning_variable_name}'
-        index_getter_function.__optaplannerPlanningVariable = {
+        index_getter_function.__optaplannerIndexShadowVariable = {
             'annotationType': JavaIndexShadowVariable,
             'sourceVariableName': planning_variable_name,
         }
@@ -220,9 +256,7 @@ def anchor_shadow_variable(anchor_type: Type, source_variable_name: str) -> Call
         ensure_init()
         from org.optaplanner.core.api.domain.variable import AnchorShadowVariable as JavaAnchorShadowVariable
         planning_variable_name = source_variable_name
-        if is_snake_case(anchor_getter_function):
-            planning_variable_name = f'_{planning_variable_name}'
-        anchor_getter_function.__optaplannerPlanningVariable = {
+        anchor_getter_function.__optaplannerAnchorShadowVariable = {
             'annotationType': JavaAnchorShadowVariable,
             'sourceVariableName': planning_variable_name,
         }
@@ -266,9 +300,7 @@ def inverse_relation_shadow_variable(source_type: Type, source_variable_name: st
         if the_source_type is None:
             the_source_type = SelfType
         planning_variable_name = source_variable_name
-        if is_snake_case(inverse_relation_getter_function):
-            planning_variable_name = f'_{planning_variable_name}'
-        inverse_relation_getter_function.__optaplannerPlanningVariable = {
+        inverse_relation_getter_function.__optaplannerInverseRelationVariable = {
             'annotationType': JavaInverseRelationShadowVariable,
             'sourceVariableName': planning_variable_name,
         }
@@ -692,6 +724,117 @@ def incremental_score_calculator(incremental_score_calculator: Type['_Incrementa
     out = jpype.JImplements(base_interface)(incremental_score_calculator)
     out.__optapy_java_class = _generate_incremental_score_calculator_class(out, constraint_match_aware)
     return out
+
+
+def variable_listener(variable_listener_class: Type['_VariableListener'] = None, /, *,
+                      require_unique_entity_events: bool = False) -> Type['_VariableListener']:
+    """Changes shadow variables when a genuine planning variable changes.
+    Important: it must only change the shadow variable(s) for which it's configured!
+    It should never change a genuine variable or a problem fact.
+    It can change its shadow variable(s) on multiple entity instances
+    (for example: an arrival_time change affects all trailing entities too).
+
+    It is recommended that implementations be kept stateless.
+    If state must be implemented, implementations may need to override the default methods
+    resetWorkingSolution(score_director: ScoreDirector) and close().
+
+    The following methods must exist:
+
+    def beforeEntityAdded(score_director: ScoreDirector[Solution_], entity: Entity_);
+
+    def afterEntityAdded(score_director: ScoreDirector[Solution_], entity: Entity_);
+
+    def beforeEntityRemoved(score_director: ScoreDirector[Solution_], entity: Entity_);
+
+    def afterEntityRemoved(score_director: ScoreDirector[Solution_], entity: Entity_);
+
+    def beforeVariableChanged(score_director: ScoreDirector[Solution_], entity: Entity_);
+
+    def afterVariableChanged(score_director: ScoreDirector[Solution_], entity: Entity_);
+
+    If the implementation is stateful, then the following methods should also be defined:
+
+    def resetWorkingSolution(score_director: ScoreDirector)
+
+    def close()
+
+    :param require_unique_entity_events: Set to True to guarantee that each of the before/after methods will only be
+                                         called once per entity instance per operation type (add, change or remove).
+                                         When set to True, this has a slight performance loss.
+                                         When set to False, it's often easier to make the listener implementation
+                                         correct and fast.
+                                         Defaults to False
+
+    :type variable_listener_class: '_VariableListener'
+    :type require_unique_entity_events: bool
+    :rtype: Type
+    """
+    ensure_init()
+
+    def variable_listener_wrapper(the_variable_listener_class):
+        from org.optaplanner.core.api.domain.variable import VariableListener
+        methods = ['beforeEntityAdded',
+                   'afterEntityAdded',
+                   'beforeVariableChanged',
+                   'afterVariableChanged',
+                   'beforeEntityRemoved',
+                   'afterEntityRemoved']
+
+        base_interface = VariableListener
+
+        missing_method_list = []
+        for method in methods:
+            if not callable(getattr(the_variable_listener_class, method, None)):
+                missing_method_list.append(method)
+        if len(missing_method_list) != 0:
+            raise ValueError(f'The following required methods are missing from @variable_listener class '
+                             f'{the_variable_listener_class}: {missing_method_list}')
+        for method in methods:
+            method_on_class = getattr(the_variable_listener_class, method, None)
+            setattr(the_variable_listener_class, method, JOverride()(method_on_class))
+
+        method_on_class = getattr(the_variable_listener_class, 'requiresUniqueEntityEvents', None)
+        if method_on_class is None:
+            def class_requires_unique_entity_events(self):
+                return require_unique_entity_events
+
+            setattr(the_variable_listener_class, 'requiresUniqueEntityEvents',
+                    JOverride()(class_requires_unique_entity_events))
+        else:
+            setattr(the_variable_listener_class, 'requiresUniqueEntityEvents',
+                    JOverride()(method_on_class))
+
+
+        method_on_class = getattr(the_variable_listener_class, 'close', None)
+        if method_on_class is None:
+            def close(self):
+                pass
+
+            setattr(the_variable_listener_class, 'close',
+                    JOverride()(close))
+        else:
+            setattr(the_variable_listener_class, 'close',
+                    JOverride()(method_on_class))
+
+        method_on_class = getattr(the_variable_listener_class, 'resetWorkingSolution', None)
+        if method_on_class is None:
+            def reset_working_solution(self, score_director):
+                pass
+
+            setattr(the_variable_listener_class, 'resetWorkingSolution',
+                    JOverride()(reset_working_solution))
+        else:
+            setattr(the_variable_listener_class, 'resetWorkingSolution',
+                    JOverride()(method_on_class))
+
+        out = jpype.JImplements(base_interface)(the_variable_listener_class)
+        out.__optapy_java_class = _generate_variable_listener_class(out)
+        return out
+
+    if variable_listener_class:  # Called as @variable_listener
+        return variable_listener_wrapper(variable_listener_class)
+    else:  # Called as @variable_listener(require_unique_entity_events=True)
+        return variable_listener_wrapper
 
 
 def problem_change(problem_change_class: Type['_ProblemChange']) -> \
