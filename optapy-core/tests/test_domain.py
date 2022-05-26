@@ -29,8 +29,8 @@ def test_single_property():
         return [
             constraint_factory.forEach(Entity)
                               .join(Value,
-                                    [optapy.constraint.Joiners.equal(lambda entity: entity.value,
-                                                                     lambda value: value.code)])
+                                    optapy.constraint.Joiners.equal(lambda entity: entity.value,
+                                                                    lambda value: value.code))
                               .reward('Same as value', optapy.score.SimpleScore.ONE),
         ]
 
@@ -65,9 +65,9 @@ def test_single_property():
     solver_config = optapy.config.solver.SolverConfig()
     termination_config = optapy.config.solver.termination.TerminationConfig()
     termination_config.setBestScoreLimit('1')
-    solver_config.withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses(optapy.get_class(Entity)) \
-        .withConstraintProviderClass(optapy.get_class(my_constraints)) \
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution(Entity('A'), Value('1'), ['1', '2', '3'])
     solver = optapy.solver_factory_create(solver_config).buildSolver()
@@ -100,8 +100,8 @@ def test_tuple_group_by_key():
         return [
             constraint_factory.forEach(Entity)
                 .join(Value,
-                      [optapy.constraint.Joiners.equal(lambda entity: entity.value,
-                                                       lambda value: value.code)])
+                      optapy.constraint.Joiners.equal(lambda entity: entity.value,
+                                                      lambda value: value.code))
                 .groupBy(lambda entity, value: (0, value), optapy.constraint.ConstraintCollectors.countBi())
                 .reward('Same as value', optapy.score.SimpleScore.ONE, lambda _, count: count),
         ]
@@ -148,9 +148,9 @@ def test_tuple_group_by_key():
     solver_config = optapy.config.solver.SolverConfig()
     termination_config = optapy.config.solver.termination.TerminationConfig()
     termination_config.setBestScoreLimit(str(len(entity_list)))
-    solver_config.withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses(optapy.get_class(Entity)) \
-        .withConstraintProviderClass(optapy.get_class(my_constraints)) \
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
         .withTerminationConfig(termination_config)
 
     problem: Solution = Solution(entity_list,
@@ -192,18 +192,17 @@ def test_python_object():
         return [
             constraint_factory.forEach(Entity)
                 .join(Value,
-                      [optapy.constraint.Joiners.lessThanOrEqual(lambda entity: entity.value,
-                                                                 lambda value: value.code)])
+                      optapy.constraint.Joiners.lessThanOrEqual(lambda entity: entity.value,
+                                                                lambda value: value.code))
                 .reward('Same as value', optapy.score.SimpleScore.ONE),
             constraint_factory.forEach(Entity)
                 .groupBy(lambda entity: entity.value, optapy.constraint.ConstraintCollectors.count())
                 .reward('Entity have same value', optapy.score.SimpleScore.ONE, lambda value, count: count * count),
             constraint_factory.forEach(optapy.get_class(Entity))
                 .groupBy(lambda entity: (entity.code, entity.value))
-                .join(Entity, [
+                .join(Entity,
                     optapy.constraint.Joiners.equal(lambda pair: pair[0], lambda entity: entity.code),
-                    optapy.constraint.Joiners.equal(lambda pair: pair[1], lambda entity: entity.value)
-                ])
+                    optapy.constraint.Joiners.equal(lambda pair: pair[1], lambda entity: entity.value))
                 .reward('Entity for pair', optapy.score.SimpleScore.ONE),
         ]
 
@@ -264,14 +263,12 @@ def test_list_variable():
         def set_value(self, value):
             self.value = value
 
-
     def count_mismatches(entity):
         mismatches = 0
         for index in range(len(entity.value)):
             if entity.value[index] != index + 1:
                 mismatches += 1
         return mismatches
-
 
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):

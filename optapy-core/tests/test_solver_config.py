@@ -6,6 +6,7 @@ import optapy.score
 import optapy.config
 import optapy.constraint
 
+
 @optapy.planning_entity
 class Entity:
     def __init__(self, code, value=None):
@@ -19,20 +20,23 @@ class Entity:
     def set_value(self, value):
         self.value = value
 
+
 @optapy.problem_fact
 class Value:
     def __init__(self, code):
         self.code = code
+
 
 @optapy.constraint_provider
 def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
     return [
         constraint_factory.forEach(Entity)
             .join(Value,
-                  [optapy.constraint.Joiners.equal(lambda entity: entity.value,
-                                                   lambda value: value.code)])
+                  optapy.constraint.Joiners.equal(lambda entity: entity.value,
+                                                  lambda value: value.code))
             .reward('Same as value', optapy.score.SimpleScore.ONE),
     ]
+
 
 @optapy.planning_solution
 class Solution:

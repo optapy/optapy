@@ -63,7 +63,7 @@ def test_solve():
             constraint_factory.forEach(Entity)
                 .reward('Maximize Value', optapy.score.SimpleScore.ONE, lambda entity: entity.value.value),
             constraint_factory.forEachUniquePair(Entity,
-                                                 [optapy.constraint.Joiners.equal(lambda entity: entity.value.value)])
+                                                 optapy.constraint.Joiners.equal(lambda entity: entity.value.value))
                 .penalize('Same Value', optapy.score.SimpleScore.of(12)),
         ]
 
