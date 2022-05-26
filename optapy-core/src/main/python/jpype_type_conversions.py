@@ -80,7 +80,7 @@ class PythonToIntFunction:
 
     @JOverride
     def applyAsInt(self, argument):
-        return self.delegate(argument)
+        return JInt(self.delegate(argument))
 
 
 @JImplements('java.util.function.ToIntBiFunction', deferred=True)
@@ -90,7 +90,7 @@ class PythonToIntBiFunction:
 
     @JOverride
     def applyAsInt(self, argument1, argument2):
-        return self.delegate(argument1, argument2)
+        return JInt(self.delegate(argument1, argument2))
 
 
 @JImplements('org.optaplanner.core.api.function.ToIntTriFunction', deferred=True)
@@ -100,7 +100,7 @@ class PythonToIntTriFunction:
 
     @JOverride
     def applyAsInt(self, argument1, argument2, argument3):
-        return self.delegate(argument1, argument2, argument3)
+        return JInt(self.delegate(argument1, argument2, argument3))
 
 
 @JImplements('org.optaplanner.core.api.function.ToIntQuadFunction', deferred=True)
@@ -110,7 +110,7 @@ class PythonToIntQuadFunction:
 
     @JOverride
     def applyAsInt(self, argument1, argument2, argument3, argument4):
-        return self.delegate(argument1, argument2, argument3, argument4)
+        return JInt(self.delegate(argument1, argument2, argument3, argument4))
 
 
 @JImplements('org.optaplanner.core.api.function.ToIntPentaFunction', deferred=True)
@@ -120,7 +120,59 @@ class PythonToIntPentaFunction:
 
     @JOverride
     def applyAsInt(self, argument1, argument2, argument3, argument4, argument5):
+        return JInt(self.delegate(argument1, argument2, argument3, argument4, argument5))
+
+
+
+@JImplements('java.util.function.Predicate', deferred=True)
+class PythonPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument):
+        return self.delegate(argument)
+
+
+@JImplements('java.util.function.BiPredicate', deferred=True)
+class PythonBiPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2):
+        return self.delegate(argument1, argument2)
+
+
+@JImplements('org.optaplanner.core.api.function.TriPredicate', deferred=True)
+class PythonTriPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3):
+        return self.delegate(argument1, argument2, argument3)
+
+
+@JImplements('org.optaplanner.core.api.function.QuadPredicate', deferred=True)
+class PythonQuadPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3, argument4):
+        return self.delegate(argument1, argument2, argument3, argument4)
+
+
+@JImplements('org.optaplanner.core.api.function.PentaPredicate', deferred=True)
+class PythonPentaPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3, argument4, argument5):
         return self.delegate(argument1, argument2, argument3, argument4, argument5)
+
 
 # Function convertors
 def _has_java_class(item):
