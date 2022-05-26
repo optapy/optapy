@@ -16,10 +16,21 @@
     <java.module.name>org.optaplanner.optapy</java.module.name>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <version.ch.qos.logback>1.2.10</version.ch.qos.logback>
+    <version.io.quarkus.gizmo>1.0.11.Final</version.io.quarkus.gizmo>
 
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>2.22.2</version.surefire.plugin>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.quarkus.gizmo</groupId>
+        <artifactId>gizmo</artifactId>
+        <version>${version.io.quarkus.gizmo}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>

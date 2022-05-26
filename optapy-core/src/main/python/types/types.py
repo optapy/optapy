@@ -10,7 +10,8 @@ from ..score import *
 from ..constraint import *
 
 from org.optaplanner.core.api.domain.valuerange import ValueRangeFactory, CountableValueRange, ValueRange
-from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType
+from org.optaplanner.core.api.domain.variable import PlanningVariableGraphType, VariableListener
+from org.optaplanner.core.api.score.director import ScoreDirector
 from org.optaplanner.core.api.solver import Solver, SolverManager, SolverFactory, SolverJob, SolverStatus
 from org.optaplanner.core.api.solver.change import ProblemChangeDirector
 

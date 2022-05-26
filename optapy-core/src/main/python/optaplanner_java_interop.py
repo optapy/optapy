@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     # These imports require a JVM to be running, so only import if type checking
     from org.optaplanner.core.api.score.stream import Constraint as _Constraint, ConstraintFactory as _ConstraintFactory
     from org.optaplanner.core.api.score.calculator import IncrementalScoreCalculator as _IncrementalScoreCalculator
+    from org.optaplanner.core.api.domain.variable import VariableListener as _VariableListener
 
 Solution_ = TypeVar('Solution_')
 ProblemId_ = TypeVar('ProblemId_')
@@ -1111,5 +1112,19 @@ def _generate_incremental_score_calculator_class(incremental_score_calculator: T
         _compose_unique_class_name(class_identifier),
         JObject(PythonSupplier(lambda: incremental_score_calculator()),
                 Supplier), constraint_match_aware)
+    class_identifier_to_java_class_map[class_identifier] = out
+    return out
+
+
+def _generate_variable_listener_class(variable_listener: Type['_VariableListener']) -> JClass:
+    from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+    from java.util.function import Supplier
+    ensure_init()
+
+    class_identifier = _get_class_identifier_for_object(variable_listener)
+    out = PythonWrapperGenerator.defineVariableListenerClass(
+        _compose_unique_class_name(class_identifier),
+        JObject(PythonSupplier(lambda: variable_listener()),
+                Supplier))
     class_identifier_to_java_class_map[class_identifier] = out
     return out
