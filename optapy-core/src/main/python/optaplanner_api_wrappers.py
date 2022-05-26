@@ -3,6 +3,7 @@ import pathlib
 from jpype.types import *
 from jpype import JImplements, JImplementationFor, JOverride
 from typing import TypeVar, Generic, Callable, Union, TYPE_CHECKING
+from types import FunctionType
 from uuid import uuid1 as _uuid1
 from .optaplanner_java_interop import _setup_solver_run, _cleanup_solver_run, _unwrap_java_object, \
     solver_run_id_to_refs as _solver_run_id_to_refs, get_class, \
@@ -397,4 +398,3 @@ class _PythonSolver:
             raise RuntimeError(error_message) from e
         finally:
             _cleanup_solver_run(solver_run_id)
-

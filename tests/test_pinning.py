@@ -49,16 +49,16 @@ def test_pinning_filter():
     @optapy.constraint_provider
     def my_constraints(constraint_factory):
         return [
-            constraint_factory.forEach(optapy.get_class(Point))
+            constraint_factory.forEach(Point)
                               .penalize("Minimize Value", optapy.score.SimpleScore.ONE, lambda point: point.value)
         ]
 
     termination_config = optapy.config.solver.termination.TerminationConfig()
     termination_config.setUnimprovedSecondsSpentLimit(1)
     solver_config = optapy.config.solver.SolverConfig() \
-        .withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses(optapy.get_class(Point)) \
-        .withConstraintProviderClass(optapy.get_class(my_constraints)) \
+        .withSolutionClass(Solution) \
+        .withEntityClasses(Point) \
+        .withConstraintProviderClass(my_constraints) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution([0, 1, 2],
                                  [
@@ -69,6 +69,7 @@ def test_pinning_filter():
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     solution = solver.solve(problem)
     assert solution.get_score().getScore() == -2
+
 
 def test_planning_pin():
     @optapy.planning_entity
@@ -111,19 +112,20 @@ def test_planning_pin():
         def set_score(self, score):
             self.score = score
 
+
     @optapy.constraint_provider
     def my_constraints(constraint_factory):
         return [
-            constraint_factory.forEach(optapy.get_class(Point))
+            constraint_factory.forEach(Point)
                 .penalize("Minimize Value", optapy.score.SimpleScore.ONE, lambda point: point.value)
         ]
 
     termination_config = optapy.config.solver.termination.TerminationConfig()
     termination_config.setUnimprovedSecondsSpentLimit(1)
     solver_config = optapy.config.solver.SolverConfig() \
-        .withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses(optapy.get_class(Point)) \
-        .withConstraintProviderClass(optapy.get_class(my_constraints)) \
+        .withSolutionClass(Solution) \
+        .withEntityClasses(Point) \
+        .withConstraintProviderClass(my_constraints) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution([0, 1, 2],
                                  [

@@ -21,7 +21,7 @@ def test_solver_events():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(optapy.get_class(Entity))
+            constraint_factory.forEach(Entity)
                 .reward('Maximize value', optapy.score.SimpleScore.ONE, lambda entity: entity.value),
         ]
 
@@ -52,9 +52,9 @@ def test_solver_events():
     solver_config = optapy.config.solver.SolverConfig()
     termination_config = optapy.config.solver.termination.TerminationConfig()
     termination_config.setBestScoreLimit('6')
-    solver_config.withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses(optapy.get_class(Entity)) \
-        .withConstraintProviderClass(optapy.get_class(my_constraints)) \
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
         .withTerminationConfig(termination_config)
 
     problem: Solution = Solution([Entity('A'), Entity('B')], [1, 2, 3])

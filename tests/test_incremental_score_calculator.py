@@ -143,10 +143,10 @@ def test_constraint_match_disabled_incremental_score_calculator():
     solver_config = optapy.config.solver.SolverConfig()
     termination_config = optapy.config.solver.termination.TerminationConfig()
     termination_config.setBestScoreLimit('0')
-    solver_config.withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses(optapy.get_class(Queen)) \
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Queen) \
         .withScoreDirectorFactory(optapy.config.score.director.ScoreDirectorFactoryConfig() \
-                                  .withIncrementalScoreCalculatorClass(optapy.get_class(IncrementalScoreCalculator))) \
+                                  .withIncrementalScoreCalculatorClass(IncrementalScoreCalculator)) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution(4,
                                  [Queen('A', 0), Queen('B', 1), Queen('C', 2), Queen('D', 3)],
@@ -279,9 +279,9 @@ def test_constraint_match_enabled_incremental_score_calculator():
     termination_config = optapy.config.solver.termination.TerminationConfig()
     termination_config.setBestScoreLimit('0')
     solver_config.withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses(optapy.get_class(Queen)) \
+        .withEntityClasses(Queen) \
         .withScoreDirectorFactory(optapy.config.score.director.ScoreDirectorFactoryConfig() \
-                                  .withIncrementalScoreCalculatorClass(optapy.get_class(IncrementalScoreCalculator))) \
+                                  .withIncrementalScoreCalculatorClass(IncrementalScoreCalculator)) \
         .withTerminationConfig(termination_config)
     problem: Solution = Solution(4,
                                  [Queen('A', 0), Queen('B', 1), Queen('C', 2), Queen('D', 3)],

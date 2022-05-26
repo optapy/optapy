@@ -59,7 +59,7 @@ class InverseRelationSolution:
 @optapy.constraint_provider
 def inverse_relation_constraints(constraint_factory):
     return [
-        constraint_factory.forEach(optapy.get_class(InverseRelationValue))
+        constraint_factory.forEach(InverseRelationValue)
                           .filter(lambda value: len(value.entities) > 1)
                           .penalize('Only one entity per value', optapy.score.SimpleScore.ONE)
     ]
@@ -69,9 +69,9 @@ def test_inverse_relation():
     termination = optapy.config.solver.termination.TerminationConfig()
     termination.setBestScoreLimit('0')
     solver_config = optapy.config.solver.SolverConfig() \
-        .withSolutionClass(optapy.get_class(InverseRelationSolution)) \
-        .withEntityClasses(optapy.get_class(InverseRelationEntity), optapy.get_class(InverseRelationValue)) \
-        .withConstraintProviderClass(optapy.get_class(inverse_relation_constraints)) \
+        .withSolutionClass(InverseRelationSolution) \
+        .withEntityClasses(InverseRelationEntity, InverseRelationValue) \
+        .withConstraintProviderClass(inverse_relation_constraints) \
         .withTerminationConfig(termination)
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     solution = solver.solve(InverseRelationSolution(

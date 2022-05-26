@@ -25,7 +25,7 @@ class Entity:
 @optapy.constraint_provider
 def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
     return [
-        constraint_factory.forEach(optapy.get_class(Entity))
+        constraint_factory.forEach(Entity)
             .reward('Maximize Value', optapy.score.SimpleScore.ONE, lambda entity: entity.value),
     ]
 
@@ -55,9 +55,9 @@ class Solution:
 
 
 solver_config = optapy.config.solver.SolverConfig()
-solver_config.withSolutionClass(optapy.get_class(Solution)) \
-    .withEntityClasses(optapy.get_class(Entity)) \
-    .withConstraintProviderClass(optapy.get_class(my_constraints))
+solver_config.withSolutionClass(Solution) \
+    .withEntityClasses(Entity) \
+    .withConstraintProviderClass(my_constraints)
 
 
 def assert_score_manager(score_manager):

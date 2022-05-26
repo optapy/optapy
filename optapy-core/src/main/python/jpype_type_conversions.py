@@ -80,7 +80,7 @@ class PythonToIntFunction:
 
     @JOverride
     def applyAsInt(self, argument):
-        return self.delegate(argument)
+        return JInt(self.delegate(argument))
 
 
 @JImplements('java.util.function.ToIntBiFunction', deferred=True)
@@ -90,7 +90,7 @@ class PythonToIntBiFunction:
 
     @JOverride
     def applyAsInt(self, argument1, argument2):
-        return self.delegate(argument1, argument2)
+        return JInt(self.delegate(argument1, argument2))
 
 
 @JImplements('org.optaplanner.core.api.function.ToIntTriFunction', deferred=True)
@@ -100,7 +100,7 @@ class PythonToIntTriFunction:
 
     @JOverride
     def applyAsInt(self, argument1, argument2, argument3):
-        return self.delegate(argument1, argument2, argument3)
+        return JInt(self.delegate(argument1, argument2, argument3))
 
 
 @JImplements('org.optaplanner.core.api.function.ToIntQuadFunction', deferred=True)
@@ -110,7 +110,7 @@ class PythonToIntQuadFunction:
 
     @JOverride
     def applyAsInt(self, argument1, argument2, argument3, argument4):
-        return self.delegate(argument1, argument2, argument3, argument4)
+        return JInt(self.delegate(argument1, argument2, argument3, argument4))
 
 
 @JImplements('org.optaplanner.core.api.function.ToIntPentaFunction', deferred=True)
@@ -120,7 +120,59 @@ class PythonToIntPentaFunction:
 
     @JOverride
     def applyAsInt(self, argument1, argument2, argument3, argument4, argument5):
+        return JInt(self.delegate(argument1, argument2, argument3, argument4, argument5))
+
+
+
+@JImplements('java.util.function.Predicate', deferred=True)
+class PythonPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument):
+        return self.delegate(argument)
+
+
+@JImplements('java.util.function.BiPredicate', deferred=True)
+class PythonBiPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2):
+        return self.delegate(argument1, argument2)
+
+
+@JImplements('org.optaplanner.core.api.function.TriPredicate', deferred=True)
+class PythonTriPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3):
+        return self.delegate(argument1, argument2, argument3)
+
+
+@JImplements('org.optaplanner.core.api.function.QuadPredicate', deferred=True)
+class PythonQuadPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3, argument4):
+        return self.delegate(argument1, argument2, argument3, argument4)
+
+
+@JImplements('org.optaplanner.core.api.function.PentaPredicate', deferred=True)
+class PythonPentaPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3, argument4, argument5):
         return self.delegate(argument1, argument2, argument3, argument4, argument5)
+
 
 # Function convertors
 def _has_java_class(item):
@@ -143,29 +195,28 @@ def _convert_to_java_compatible_object(item):
     return PythonComparable(_proxy(item))
 
 
-@JConversion('java.util.function.Function', exact=FunctionType)
-def _convert_to_function(jcls, obj):
-    return PythonFunction(lambda a: _convert_to_java_compatible_object(obj(a)))
+@JConversion('java.lang.Class', exact=type)
+def _convert_type_to_class(jcls, type_obj):
+    from .optaplanner_java_interop import get_class
+    from java.lang import Object
+    out = get_class(type_obj)
+    if out == Object and type_obj != Object:
+        raise ValueError(f'Type {type_obj} does not have a Java class proxy. Maybe annotate it with '
+                         f'@problem_fact, @planning_entity, or @planning_solution?')
+
+    return out
 
 
-@JConversion('java.util.function.BiFunction', exact=FunctionType)
-def _convert_to_bi_function(jcls, obj):
-    return PythonBiFunction(lambda a, b: _convert_to_java_compatible_object(obj(a, b)))
+@JConversion('java.lang.Class', exact=FunctionType)
+def _convert_function_to_class(jcls, function_obj):
+    from .optaplanner_java_interop import get_class
+    from java.lang import Object
+    out = get_class(function_obj)
+    if out == Object and function_obj != Object:
+        raise ValueError(f'Function {function_obj} does not have a Java class proxy. Maybe annotate it with '
+                         f'@constraint_provider?')
 
-
-@JConversion('org.optaplanner.core.api.function.TriFunction', exact=FunctionType)
-def _convert_to_tri_function(jcls, obj):
-    return PythonTriFunction(lambda a, b, c: _convert_to_java_compatible_object(obj(a, b, c)))
-
-
-@JConversion('org.optaplanner.core.api.function.QuadFunction', exact=FunctionType)
-def _convert_to_quad_function(jcls, obj):
-    return PythonQuadFunction(lambda a, b, c, d: _convert_to_java_compatible_object(obj(a, b, c, d)))
-
-
-@JConversion('org.optaplanner.core.api.function.PentaFunction', exact=FunctionType)
-def _convert_to_quad_function(jcls, obj):
-    return PythonPentaFunction(lambda a, b, c, d, e: _convert_to_java_compatible_object(obj(a, b, c, d, e)))
+    return out
 
 
 @JConversion('java.util.function.ToIntFunction', exact=FunctionType)
