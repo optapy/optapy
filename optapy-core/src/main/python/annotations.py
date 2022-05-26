@@ -597,7 +597,12 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
     :rtype: Callable[[ConstraintFactory], List[Constraint]]
     """
     ensure_init()
-    constraint_provider_function.__optapy_java_class = _generate_constraint_provider_class(constraint_provider_function)
+    def wrapped_constraint_provider_function(constraint_factory: '_ConstraintFactory'):
+        from .constraint_stream import PythonConstraintFactory
+        return constraint_provider_function(PythonConstraintFactory(constraint_factory))
+
+    constraint_provider_function.__optapy_java_class = _generate_constraint_provider_class(constraint_provider_function,
+                                                                                           wrapped_constraint_provider_function)
     return constraint_provider_function
 
 
