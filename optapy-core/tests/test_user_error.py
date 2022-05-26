@@ -54,8 +54,8 @@ def my_constraints(constraint_factory):
 
 def test_non_planning_solution_being_passed_to_solve():
     solver_config = optapy.config.solver.SolverConfig()
-    solver_config.withSolutionClass(optapy.get_class(Solution)).withEntityClasses(optapy.get_class(Entity)) \
-        .withConstraintProviderClass(optapy.get_class(my_constraints))
+    solver_config.withSolutionClass(Solution).withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints)
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     with pytest.raises(ValueError, match=re.escape(
             f'A problem was not passed to solve (parameter problem was ({None})). Maybe '
@@ -82,7 +82,7 @@ def test_non_problem_fact_being_passed_to_problem_fact_collection():
 def test_none_passed_to_solve():
     solver_config = optapy.config.solver.SolverConfig()
     solver_config.withSolutionClass(optapy.get_class(Solution)).withEntityClasses(optapy.get_class(Entity)) \
-        .withConstraintProviderClass(optapy.get_class(my_constraints))
+        .withConstraintProviderClass(my_constraints)
     problem = 10
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     with pytest.raises(ValueError, match=re.escape(
@@ -95,8 +95,8 @@ def test_none_passed_to_solve():
 def test_bad_return_type():
     solver_config = optapy.config.solver.SolverConfig()
     solver_config.withSolutionClass(optapy.get_class(Solution)) \
-        .withEntityClasses([optapy.get_class(Entity)]) \
-        .withConstraintProviderClass(optapy.get_class(my_constraints)) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
         .withTerminationSpentLimit(optapy.types.Duration.ofSeconds(1))
 
     problem = Solution([Entity()], ['1', '2', '3'])
