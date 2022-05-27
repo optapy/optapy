@@ -2,6 +2,7 @@ package org.optaplanner.optapy;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -34,6 +35,7 @@ import org.optaplanner.core.api.domain.variable.CustomShadowVariable;
 import org.optaplanner.core.api.domain.variable.IndexShadowVariable;
 import org.optaplanner.core.api.domain.variable.InverseRelationShadowVariable;
 import org.optaplanner.core.api.domain.variable.PlanningVariable;
+import org.optaplanner.core.api.domain.variable.VariableListener;
 import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.core.api.score.calculator.ConstraintMatchAwareIncrementalScoreCalculator;
 import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
@@ -628,6 +630,34 @@ public class PythonWrapperGenerator {
             }
             return FieldDescriptor.of(firstParentClass, fieldName, fieldClass);
         }
+    }
+
+    /**
+     * Creates a class that looks like this:
+     *
+     * class PythonVariableListener implements VariableListener {
+     * public static Supplier&lt;VariableListener&gt; supplier;
+     * public final VariableListener delegate;
+     *
+     * public PythonVariableListener() {
+     * delegate = supplier.get();
+     * }
+     *
+     * public void afterVariableChange(scoreDirector, entity) {
+     *     delegate.afterVariableChange(scoreDirector, entity);
+     * }
+     * ...
+     * }
+     *
+     * @param className The simple name of the generated class
+     * @param variableListenerSupplier A supplier that returns a new instance of the variable listener on
+     *        each call
+     * @return never null
+     */
+    @SuppressWarnings("unused")
+    public static Class<?> defineVariableListenerClass(String className,
+                                                       Supplier<? extends VariableListener> variableListenerSupplier) {
+        return defineWrapperClass(className, VariableListener.class, variableListenerSupplier);
     }
 
     /*
@@ -1252,7 +1282,12 @@ public class PythonWrapperGenerator {
             }
         }
 
-        MethodCreator methodCreator = classCreator.getMethodCreator(methodName, actualReturnType);
+        String javaMethodName = methodName;
+        if (javaMethodName.startsWith("get_") && javaMethodName.length() >= 5) {
+            javaMethodName = "get" + Character.toUpperCase(javaMethodName.charAt(4)) + javaMethodName.substring(5);
+        }
+
+        MethodCreator methodCreator = classCreator.getMethodCreator(javaMethodName, actualReturnType);
         if (signature != null) {
             methodCreator.setSignature("()" + signature);
         }
@@ -1261,17 +1296,7 @@ public class PythonWrapperGenerator {
         for (Map<String, Object> annotation : annotations) {
             // The class representing the annotation is in the annotationType parameter.
             AnnotationCreator annotationCreator = methodCreator.addAnnotation((Class<?>) annotation.get("annotationType"));
-            for (Method method : ((Class<?>) annotation.get("annotationType")).getMethods()) {
-                if (method.getParameterCount() != 0
-                        || !method.getDeclaringClass().equals(annotation.get("annotationType"))) {
-                    // skip if the parameter is not from the actual annotation (toString, hashCode, etc.)
-                    continue;
-                }
-                Object annotationValue = annotation.get(method.getName());
-                if (annotationValue != null) {
-                    annotationCreator.addValue(method.getName(), annotationValue);
-                }
-            }
+            createAnnotation(annotationCreator, annotation);
         }
 
         // Getter is simply: return this.field
@@ -1280,7 +1305,8 @@ public class PythonWrapperGenerator {
         // Assumption: all getters have a setter
         if (methodName.startsWith("get")) {
             String setterMethodName = "set" + methodName.substring(3);
-            MethodCreator setterMethodCreator = classCreator.getMethodCreator(setterMethodName, void.class, actualReturnType);
+            String javaSetterMethodName = "set" + javaMethodName.substring(3);
+            MethodCreator setterMethodCreator = classCreator.getMethodCreator(javaSetterMethodName, void.class, actualReturnType);
             if (signature != null) {
                 setterMethodCreator.setSignature("(" + signature + ")V;");
             }
@@ -1333,5 +1359,51 @@ public class PythonWrapperGenerator {
             setterMethodCreator.returnValue(null);
         }
         return fieldDescriptor;
+    }
+
+    private static void createAnnotation(AnnotationCreator annotationCreator, Map<String, Object> annotation) {
+        Class<?> annotationType = (Class<?>) annotation.get("annotationType");
+        for (Method method : annotationType.getMethods()) {
+            if (method.getParameterCount() != 0
+                    || !method.getDeclaringClass().equals(annotation.get("annotationType"))) {
+                // skip if the parameter is not from the actual annotation (toString, hashCode, etc.)
+                continue;
+            }
+            Object annotationValue = convertAnnotationValue(annotation.get(method.getName()));
+
+            if (annotationValue != null) {
+                annotationCreator.addValue(method.getName(), annotationValue);
+            }
+        }
+    }
+
+    private static Object convertAnnotationValue(Object annotationValue) {
+        if (annotationValue == null) {
+            return null;
+        }
+        if (annotationValue.getClass().isArray()) {
+            int arrayLength = Array.getLength(annotationValue);
+            Object[] out = new Object[arrayLength];
+            for (int i = 0; i < out.length; i++) {
+                out[i] = convertAnnotationValue(Array.get(annotationValue, i));
+            }
+            return out;
+        }
+        if (annotationValue instanceof List) {
+            List<?> annotationValueList = (List<?>) annotationValue;
+            Object[] out = new Object[annotationValueList.size()];
+            for (int i = 0; i < out.length; i++) {
+                out[i] = convertAnnotationValue(annotationValueList.get(i));
+            }
+            return out;
+        } else if (annotationValue instanceof Map) {
+            Map<String, Object> nestedAnnotation = (Map<String, Object>) annotationValue;
+            Class<?> nestedAnnotationClass = (Class<?>) nestedAnnotation.get("annotationType");
+            AnnotationCreator nestedAnnotationValue = AnnotationCreator.of(nestedAnnotationClass.getName(), RetentionPolicy.RUNTIME);
+            createAnnotation(nestedAnnotationValue, nestedAnnotation);
+            return nestedAnnotationValue;
+        } else {
+            return annotationValue;
+        }
     }
 }

@@ -11,7 +11,18 @@
 
   <properties>
     <java.module.name>org.optaplanner.optapy</java.module.name>
+    <version.io.quarkus.gizmo>1.0.11.Final</version.io.quarkus.gizmo>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.quarkus.gizmo</groupId>
+        <artifactId>gizmo</artifactId>
+        <version>${version.io.quarkus.gizmo}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
