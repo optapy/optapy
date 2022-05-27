@@ -51,12 +51,12 @@ public class VariableImplementor {
                 PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className,
-                                     PythonBytecodeToJavaBytecodeTranslator.GLOBALS_MAP_STATIC_FIELD_NAME,
-                                     Type.getDescriptor(Map.class));
+                PythonBytecodeToJavaBytecodeTranslator.GLOBALS_MAP_STATIC_FIELD_NAME,
+                Type.getDescriptor(Map.class));
         methodVisitor.visitLdcInsn(globalName);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
                 "deleteGlobal", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Map.class),
-                                                         Type.getType(String.class)),
+                        Type.getType(String.class)),
                 true);
     }
 
@@ -73,13 +73,13 @@ public class VariableImplementor {
                 PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className,
-                                     PythonBytecodeToJavaBytecodeTranslator.GLOBALS_MAP_STATIC_FIELD_NAME,
-                                     Type.getDescriptor(Map.class));
+                PythonBytecodeToJavaBytecodeTranslator.GLOBALS_MAP_STATIC_FIELD_NAME,
+                Type.getDescriptor(Map.class));
         methodVisitor.visitLdcInsn(globalName);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
                 "getGlobal", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
-                                                      Type.getType(Map.class),
-                                                      Type.getType(String.class)),
+                        Type.getType(Map.class),
+                        Type.getType(String.class)),
                 true);
     }
 
@@ -97,15 +97,15 @@ public class VariableImplementor {
                 Type.getDescriptor(PythonInterpreter.class));
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className,
-                                     PythonBytecodeToJavaBytecodeTranslator.GLOBALS_MAP_STATIC_FIELD_NAME,
-                                     Type.getDescriptor(Map.class));
+                PythonBytecodeToJavaBytecodeTranslator.GLOBALS_MAP_STATIC_FIELD_NAME,
+                Type.getDescriptor(Map.class));
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitLdcInsn(globalName);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
                 "setGlobal", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Map.class),
-                                                      Type.getType(String.class),
-                                                      Type.getType(PythonLikeObject.class)),
+                        Type.getType(String.class),
+                        Type.getType(PythonLikeObject.class)),
                 true);
     }
 

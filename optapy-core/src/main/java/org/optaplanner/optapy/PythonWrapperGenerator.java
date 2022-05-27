@@ -292,7 +292,7 @@ public class PythonWrapperGenerator {
     static final TriFunction<OpaquePythonReference, String, Object, Object> NONE_PYTHON_SETTER = (a, b, c) -> null;
 
     private static <T> T wrapArray(Class<T> javaClass, OpaquePythonReference object, Number id, Map<Number, Object> map,
-                                   TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
+            TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
         // If the class is an array, we need to extract
         // its elements from the OpaquePythonReference
         if (Comparable.class.isAssignableFrom(javaClass.getComponentType()) ||
@@ -328,7 +328,8 @@ public class PythonWrapperGenerator {
         return (T) out;
     }
 
-    public static <T> T wrapCollection(OpaquePythonReference object, Number id, Map<Number, Object> map, TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
+    public static <T> T wrapCollection(OpaquePythonReference object, Number id, Map<Number, Object> map,
+            TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
         PythonList out = new PythonList(object, id, map, pythonSetter);
         map.put(id, out);
         return (T) out;
@@ -336,7 +337,7 @@ public class PythonWrapperGenerator {
 
     @SuppressWarnings("unchecked")
     public static <T> T wrap(Class<T> javaClass, OpaquePythonReference object, Map<Number, Object> map,
-                             TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
+            TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
         if (object == null) {
             return null;
         }
@@ -644,7 +645,7 @@ public class PythonWrapperGenerator {
      * }
      *
      * public void afterVariableChange(scoreDirector, entity) {
-     *     delegate.afterVariableChange(scoreDirector, entity);
+     * delegate.afterVariableChange(scoreDirector, entity);
      * }
      * ...
      * }
@@ -656,7 +657,7 @@ public class PythonWrapperGenerator {
      */
     @SuppressWarnings("unused")
     public static Class<?> defineVariableListenerClass(String className,
-                                                       Supplier<? extends VariableListener> variableListenerSupplier) {
+            Supplier<? extends VariableListener> variableListenerSupplier) {
         return defineWrapperClass(className, VariableListener.class, variableListenerSupplier);
     }
 
@@ -933,7 +934,7 @@ public class PythonWrapperGenerator {
 
                     methodCreator.invokeStaticMethod(
                             MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setValueOnPythonObject", void.class,
-                                                      OpaquePythonReference.class, String.class, Object.class),
+                                    OpaquePythonReference.class, String.class, Object.class),
                             methodCreator.readInstanceField(valueField, methodCreator.getThis()),
                             methodCreator.load(setterName),
                             methodCreator.readInstanceField(planningScoreField, thisObject));
@@ -1023,9 +1024,9 @@ public class PythonWrapperGenerator {
 
         PythonLikeType typeField;
         if (parentType != null) {
-            typeField = new PythonLikeType(clazz.getName(), List.of(parentType));
+            typeField = new PythonLikeType(clazz.getName(), (Class<? extends PythonLikeObject>) clazz, List.of(parentType));
         } else {
-            typeField = new PythonLikeType(clazz.getName());
+            typeField = new PythonLikeType(clazz.getName(), (Class<? extends PythonLikeObject>) clazz);
         }
 
         try {
@@ -1139,7 +1140,7 @@ public class PythonWrapperGenerator {
         if (parentClass != null) {
             methodCreator.invokeSpecialMethod(
                     MethodDescriptor.ofConstructor(parentClass, OpaquePythonReference.class, Number.class, Map.class,
-                                                   TriFunction.class),
+                            TriFunction.class),
                     methodCreator.getThis(), value, methodCreator.getMethodParam(1),
                     methodCreator.getMethodParam(2),
                     methodCreator.getMethodParam(3));
@@ -1198,9 +1199,10 @@ public class PythonWrapperGenerator {
                     }
                     methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(),
                             methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
-                                    "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class, TriFunction.class),
+                                    "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class,
+                                    TriFunction.class),
                                     actualClass, outResultHandle, methodCreator.getMethodParam(2),
-                                                             methodCreator.getMethodParam(3)));
+                                    methodCreator.getMethodParam(3)));
                 }
             } else {
                 // It a reference to the current class; need to be wrapped
@@ -1209,12 +1211,12 @@ public class PythonWrapperGenerator {
                         methodCreator.invokeStaticMethod(MethodDescriptor.ofMethod(PythonWrapperGenerator.class,
                                 "wrap", Object.class, Class.class, OpaquePythonReference.class, Map.class, TriFunction.class),
                                 actualClass, outResultHandle, methodCreator.getMethodParam(2),
-                                                         methodCreator.getMethodParam(3)));
+                                methodCreator.getMethodParam(3)));
             }
             // Put it into the map used by the python interpreter
             ResultHandle valueAsPythonLikeObject = methodCreator.invokeStaticMethod(
                     MethodDescriptor.ofMethod(JavaPythonTypeConversionImplementor.class, "wrapJavaObject",
-                                              PythonLikeObject.class, Object.class),
+                            PythonLikeObject.class, Object.class),
                     methodCreator.readInstanceField(fieldDescriptor, methodCreator.getThis()));
             String fieldName;
             if (methodName.startsWith("get_")) {
@@ -1223,10 +1225,10 @@ public class PythonWrapperGenerator {
                 fieldName = methodName.substring(3);
             }
             methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Map.class, "put", Object.class,
-                                                                          Object.class, Object.class),
-                                                methodCreator.readInstanceField(pythonLikeValueMapField, methodCreator.getThis()),
-                                                methodCreator.load(fieldName),
-                                                valueAsPythonLikeObject);
+                    Object.class, Object.class),
+                    methodCreator.readInstanceField(pythonLikeValueMapField, methodCreator.getThis()),
+                    methodCreator.load(fieldName),
+                    valueAsPythonLikeObject);
         }
         methodCreator.returnValue(methodCreator.getThis());
     }
@@ -1272,7 +1274,8 @@ public class PythonWrapperGenerator {
             } else if (PlanningVariable.class.isAssignableFrom(annotationType) ||
                     (InverseRelationShadowVariable.class.isAssignableFrom(annotationType) &&
                             actualReturnType instanceof Class &&
-                            !Collection.class.isAssignableFrom((Class<?>) actualReturnType)) ||
+                            !Collection.class.isAssignableFrom((Class<?>) actualReturnType))
+                    ||
                     IndexShadowVariable.class.isAssignableFrom(annotationType) ||
                     AnchorShadowVariable.class.isAssignableFrom(annotationType) ||
                     CustomShadowVariable.class.isAssignableFrom(annotationType)) {
@@ -1306,7 +1309,8 @@ public class PythonWrapperGenerator {
         if (methodName.startsWith("get")) {
             String setterMethodName = "set" + methodName.substring(3);
             String javaSetterMethodName = "set" + javaMethodName.substring(3);
-            MethodCreator setterMethodCreator = classCreator.getMethodCreator(javaSetterMethodName, void.class, actualReturnType);
+            MethodCreator setterMethodCreator =
+                    classCreator.getMethodCreator(javaSetterMethodName, void.class, actualReturnType);
             if (signature != null) {
                 setterMethodCreator.setSignature("(" + signature + ")V;");
             }
@@ -1316,7 +1320,8 @@ public class PythonWrapperGenerator {
                 if (PlanningVariable.class.isAssignableFrom(annotationType) ||
                         (InverseRelationShadowVariable.class.isAssignableFrom(annotationType) &&
                                 actualReturnType instanceof Class &&
-                                !Collection.class.isAssignableFrom((Class<?>) actualReturnType)) ||
+                                !Collection.class.isAssignableFrom((Class<?>) actualReturnType))
+                        ||
                         IndexShadowVariable.class.isAssignableFrom(annotationType) ||
                         AnchorShadowVariable.class.isAssignableFrom(annotationType) ||
                         CustomShadowVariable.class.isAssignableFrom(annotationType)) {
@@ -1349,7 +1354,7 @@ public class PythonWrapperGenerator {
             } else {
                 valueAsPythonLikeObject = setterMethodCreator.invokeStaticMethod(
                         MethodDescriptor.ofMethod(JavaPythonTypeConversionImplementor.class, "wrapJavaObject",
-                                                  PythonLikeObject.class, Object.class),
+                                PythonLikeObject.class, Object.class),
                         setterMethodCreator.getMethodParam(0));
             }
             setterMethodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Map.class, "put", Object.class,
@@ -1399,7 +1404,8 @@ public class PythonWrapperGenerator {
         } else if (annotationValue instanceof Map) {
             Map<String, Object> nestedAnnotation = (Map<String, Object>) annotationValue;
             Class<?> nestedAnnotationClass = (Class<?>) nestedAnnotation.get("annotationType");
-            AnnotationCreator nestedAnnotationValue = AnnotationCreator.of(nestedAnnotationClass.getName(), RetentionPolicy.RUNTIME);
+            AnnotationCreator nestedAnnotationValue =
+                    AnnotationCreator.of(nestedAnnotationClass.getName(), RetentionPolicy.RUNTIME);
             createAnnotation(nestedAnnotationValue, nestedAnnotation);
             return nestedAnnotationValue;
         } else {

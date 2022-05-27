@@ -5,7 +5,7 @@ import java.util.Map;
 public class PythonString extends AbstractPythonLikeObject {
     public final String value;
 
-    public final static PythonLikeType STRING_TYPE = new PythonLikeType("str");
+    public final static PythonLikeType STRING_TYPE = new PythonLikeType("str", PythonString.class);
 
     static {
         try {

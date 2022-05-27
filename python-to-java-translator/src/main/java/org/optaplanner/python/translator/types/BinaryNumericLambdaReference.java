@@ -32,15 +32,6 @@ public class BinaryNumericLambdaReference implements PythonLikeFunction {
         PythonLikeObject[] args = new PythonLikeObject[2];
         for (int i = 0; i < positionalArguments.size(); i++) {
             args[i] = positionalArguments.get(i);
-
-            // Yes, booleans in Python can be treated as number in Python (ex: True + True = 2)
-            if (args[i] instanceof PythonBoolean) {
-                if (((PythonBoolean) args[i]).getValue()) {
-                    args[i] = PythonInteger.valueOf(1L);
-                } else {
-                    args[i] = PythonInteger.valueOf(0L);
-                }
-            }
         }
 
         if (namedArguments != null) {

@@ -180,7 +180,7 @@ public class JavaPythonTypeConversionImplementor {
                 throw new IllegalArgumentException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
             }
             PythonBoolean pythonBoolean = (PythonBoolean) object;
-            return (T) (Boolean) pythonBoolean.getValue();
+            return (T) (Boolean) pythonBoolean.getBooleanValue();
         }
 
         if (type.equals(String.class)) {
@@ -254,7 +254,7 @@ public class JavaPythonTypeConversionImplementor {
         if (boolean.class.equals(returnType)) {
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonBoolean.class));
             wrapperClassName = Type.getInternalName(PythonBoolean.class);
-            methodName = "getValue";
+            methodName = "getBooleanValue";
             methodDescriptor = Type.getMethodDescriptor(Type.BOOLEAN_TYPE);
             returnOpcode = Opcodes.IRETURN;
         } else if (char.class.equals(returnType)) {

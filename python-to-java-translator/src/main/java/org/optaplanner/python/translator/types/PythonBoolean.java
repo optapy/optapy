@@ -1,31 +1,30 @@
 package org.optaplanner.python.translator.types;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class PythonBoolean extends AbstractPythonLikeObject {
+public class PythonBoolean extends PythonInteger {
     public final static PythonBoolean TRUE;
     public final static PythonBoolean FALSE;
 
-    public final static PythonLikeType BOOLEAN_TYPE = new PythonLikeType("bool");
+    public final static PythonLikeType BOOLEAN_TYPE = new PythonLikeType("bool", PythonBoolean.class, List.of(INT_TYPE));
 
     static {
-        PythonNumericOperations.setup(BOOLEAN_TYPE.__dir__);
         BOOLEAN_TYPE.__dir__.put("__bool__", new UnaryLambdaReference(self -> self, Map.of()));
-        BOOLEAN_TYPE.__dir__.remove("__format__"); // Bool uses object format, not number format
         TRUE = new PythonBoolean(true);
         FALSE = new PythonBoolean(false);
     }
 
-    private final boolean value;
+    private final boolean booleanValue;
 
-    private PythonBoolean(boolean value) {
-        super(BOOLEAN_TYPE);
-        this.value = value;
+    private PythonBoolean(boolean booleanValue) {
+        super(booleanValue ? 1L : 0L);
+        this.booleanValue = booleanValue;
     }
 
-    public boolean getValue() {
-        return value;
+    public boolean getBooleanValue() {
+        return booleanValue;
     }
 
     public PythonBoolean not() {
@@ -38,6 +37,11 @@ public class PythonBoolean extends AbstractPythonLikeObject {
 
     public static PythonBoolean valueOf(boolean result) {
         return (result) ? TRUE : FALSE;
+    }
+
+    @Override
+    public PythonLikeType __getType() {
+        return BOOLEAN_TYPE;
     }
 
     @Override
@@ -58,11 +62,11 @@ public class PythonBoolean extends AbstractPythonLikeObject {
             return false;
         }
         PythonBoolean that = (PythonBoolean) o;
-        return value == that.value;
+        return booleanValue == that.booleanValue;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(value);
+        return Objects.hash(booleanValue);
     }
 }

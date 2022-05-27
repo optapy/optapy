@@ -8,7 +8,6 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.UnaryLambdaReference;
-import org.optaplanner.python.translator.types.errors.StopIteration;
 
 public class GlobalBuiltins {
     public static PythonLikeObject lookup(PythonInterpreter interpreter, String builtinName) {

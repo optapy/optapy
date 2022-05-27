@@ -45,7 +45,6 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
     public static final String GLOBALS_MAP_STATIC_FIELD_NAME = "__globals__";
 
-
     public static final String DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME = "__defaults__";
 
     public static final String DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME = "__kwdefaults__";
@@ -305,7 +304,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
                 VARIABLE_NAMES_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
-                               GLOBALS_MAP_STATIC_FIELD_NAME, Type.getDescriptor(Map.class), null, null);
+                GLOBALS_MAP_STATIC_FIELD_NAME, Type.getDescriptor(Map.class), null, null);
 
         // Instance fields
         classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,

@@ -7,7 +7,7 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 
 public class PythonIterator extends AbstractPythonLikeObject implements Iterator {
-    public static final PythonLikeType ITERATOR_TYPE = new PythonLikeType("iterator");
+    public static final PythonLikeType ITERATOR_TYPE = new PythonLikeType("iterator", PythonIterator.class);
     private final Iterator delegate;
 
     static {

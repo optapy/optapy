@@ -17,8 +17,9 @@ public class PythonSolver {
         try {
             final boolean onlyUseJavaSettersForThisInstance = onlyUseJavaSetters;
             onlyUseJavaSetters = false;
-            return PythonWrapperGenerator.wrap(solutionClass, problem, new HashMap<>(), onlyUseJavaSettersForThisInstance?
-                    PythonWrapperGenerator.NONE_PYTHON_SETTER : PythonWrapperGenerator.pythonObjectIdAndAttributeSetter);
+            return PythonWrapperGenerator.wrap(solutionClass, problem, new HashMap<>(),
+                    onlyUseJavaSettersForThisInstance ? PythonWrapperGenerator.NONE_PYTHON_SETTER
+                            : PythonWrapperGenerator.pythonObjectIdAndAttributeSetter);
         } catch (Throwable t) {
             throw new OptaPyException("A problem occurred when wrapping the python problem (" +
                     PythonWrapperGenerator.getPythonObjectString(problem) +

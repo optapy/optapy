@@ -8,7 +8,7 @@ import org.optaplanner.python.translator.types.PythonLikeType;
  * TODO: Implement this
  */
 public class PythonTraceback extends AbstractPythonLikeObject {
-    public static final PythonLikeType TRACEBACK_TYPE = new PythonLikeType("traceback");
+    public static final PythonLikeType TRACEBACK_TYPE = new PythonLikeType("traceback", PythonTraceback.class);
 
     public PythonTraceback() {
         super(TRACEBACK_TYPE);

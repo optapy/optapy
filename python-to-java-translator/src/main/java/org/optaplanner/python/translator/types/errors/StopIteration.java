@@ -8,7 +8,8 @@ import org.optaplanner.python.translator.types.PythonLikeType;
  * Error thrown when a Python iterator has no more values to return.
  */
 public class StopIteration extends PythonException {
-    public static final PythonLikeType STOP_ITERATION_TYPE = new PythonLikeType("StopIteration", List.of(EXCEPTION_TYPE));
+    public static final PythonLikeType STOP_ITERATION_TYPE = new PythonLikeType("StopIteration",
+            StopIteration.class, List.of(EXCEPTION_TYPE));
 
     public StopIteration() {
         super(STOP_ITERATION_TYPE);

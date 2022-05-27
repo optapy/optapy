@@ -2,7 +2,12 @@ package org.optaplanner.python.translator.types;
 
 import java.math.BigInteger;
 
-public interface PythonNumber extends Comparable<PythonNumber> {
+import org.optaplanner.python.translator.PythonLikeObject;
+
+public interface PythonNumber extends Comparable<PythonNumber>, PythonLikeObject {
+
+    PythonLikeType NUMBER_TYPE = new PythonLikeType("number", PythonNumber.class);
+
     Number getValue();
 
     @Override

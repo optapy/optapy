@@ -80,7 +80,7 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     private TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter;
 
     public PythonList(OpaquePythonReference pythonListOpaqueReference, Number id, Map<Number, Object> idMap,
-                      TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
+            TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
         this.pythonListOpaqueReference = pythonListOpaqueReference;
         this.idMap = idMap;
         this.pythonSetter = pythonSetter;

@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.variable;
 
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -23,7 +25,11 @@ public class LoadConstantOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        PythonLikeObject constant = functionMetadata.pythonCompiledFunction.co_constants.get(instruction.arg);
+        PythonLikeType constantType = constant.__getType();
+
         PythonConstantsImplementor.loadConstant(functionMetadata.methodVisitor, functionMetadata.className,
                 instruction.arg);
+        functionMetadata.methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(constantType.getJavaClass()));
     }
 }

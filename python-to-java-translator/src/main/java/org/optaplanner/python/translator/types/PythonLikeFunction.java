@@ -9,7 +9,7 @@ import org.optaplanner.python.translator.builtins.FunctionBuiltinOperations;
 
 public interface PythonLikeFunction extends PythonLikeObject {
 
-    PythonLikeType FUNCTION_TYPE = new PythonLikeType("function", type -> {
+    PythonLikeType FUNCTION_TYPE = new PythonLikeType("function", PythonLikeFunction.class, type -> {
         try {
             type.__dir__.put(PythonTernaryOperators.GET.dunderMethod,
                     new JavaMethodReference(

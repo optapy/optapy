@@ -9,7 +9,8 @@ import org.optaplanner.python.translator.PythonLikeObject;
 
 public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction, Comparable<PythonObjectWrapper> {
 
-    private final static PythonLikeType PYTHON_REFERENCE_TYPE = new PythonLikeType("python-reference");
+    private final static PythonLikeType PYTHON_REFERENCE_TYPE =
+            new PythonLikeType("python-reference", PythonObjectWrapper.class);
 
     private final OpaquePythonReference pythonReference;
     private final Map<String, PythonLikeObject> cachedAttributeMap;
@@ -64,7 +65,7 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
 
         PythonLikeFunction lessThan = (PythonLikeFunction) __getAttributeOrError("__lt__");
         PythonBoolean result = (PythonBoolean) lessThan.__call__(List.of(other), Map.of());
-        if (result.getValue()) {
+        if (result.getBooleanValue()) {
             return -1;
         } else {
             return 1;
@@ -79,7 +80,7 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
         PythonObjectWrapper other = (PythonObjectWrapper) o;
         PythonLikeFunction equals = (PythonLikeFunction) __getAttributeOrError("__eq__");
         PythonBoolean result = (PythonBoolean) equals.__call__(List.of(other), Map.of());
-        return result.getValue();
+        return result.getBooleanValue();
     }
 
     @Override

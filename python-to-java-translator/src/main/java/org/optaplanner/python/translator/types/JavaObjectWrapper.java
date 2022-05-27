@@ -96,7 +96,7 @@ public class JavaObjectWrapper implements PythonLikeObject, Comparable<JavaObjec
     }
 
     public static PythonLikeType generatePythonTypeForClass(Class<?> objectClass) {
-        PythonLikeType out = new PythonLikeType(objectClass.getName());
+        PythonLikeType out = new PythonLikeType(objectClass.getName(), JavaObjectWrapper.class);
         getDeclaredMembersStream(objectClass)
                 .filter(member -> member instanceof Method)
                 .forEach(member -> {

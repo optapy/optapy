@@ -1,7 +1,5 @@
 package org.optaplanner.python.translator;
 
-import java.util.NoSuchElementException;
-
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.errors.AttributeError;
 

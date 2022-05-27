@@ -13,7 +13,7 @@ import org.optaplanner.python.translator.PythonLikeObject;
 public class PythonLikeSet extends AbstractPythonLikeObject implements Set<PythonLikeObject> {
     final Set<PythonLikeObject> delegate;
 
-    public final static PythonLikeType SET_TYPE = new PythonLikeType("set");
+    public final static PythonLikeType SET_TYPE = new PythonLikeType("set", PythonLikeSet.class);
 
     static {
         try {

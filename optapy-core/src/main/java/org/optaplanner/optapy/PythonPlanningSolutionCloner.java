@@ -21,8 +21,8 @@ public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
         PythonObject toClone = (PythonObject) o;
         TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter;
         try {
-            pythonSetter = (TriFunction<OpaquePythonReference, String, Object, Object>)
-                    toClone.getClass().getField(PythonWrapperGenerator.PYTHON_SETTER_FIELD_NAME).get(toClone);
+            pythonSetter = (TriFunction<OpaquePythonReference, String, Object, Object>) toClone.getClass()
+                    .getField(PythonWrapperGenerator.PYTHON_SETTER_FIELD_NAME).get(toClone);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new IllegalStateException(e);
         }
@@ -34,6 +34,6 @@ public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
 
         // Wrap the deep cloned OpaquePythonReference into a new PythonObject
         return PythonWrapperGenerator.wrap(o.getClass(), planningClone, toClone.get__optapy_reference_map(),
-                                           pythonSetter);
+                pythonSetter);
     }
 }

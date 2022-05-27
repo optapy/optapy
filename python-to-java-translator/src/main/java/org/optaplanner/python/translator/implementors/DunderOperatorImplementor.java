@@ -2,6 +2,7 @@ package org.optaplanner.python.translator.implementors;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -9,9 +10,12 @@ import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.PythonBinaryOperators;
+import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.types.PythonKnownFunctionType;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -20,6 +24,24 @@ import org.optaplanner.python.translator.types.PythonLikeType;
  * Implementations of opcodes that delegate to dunder/magic methods.
  */
 public class DunderOperatorImplementor {
+
+    public static void unaryOperator(MethodVisitor methodVisitor, StackMetadata stackMetadata, PythonUnaryOperator operator) {
+        PythonLikeType operand = Optional.ofNullable(stackMetadata.getTOSType()).orElseGet(PythonLikeType::getBaseType);
+
+        Optional<PythonKnownFunctionType> maybeKnownFunctionType = operand.getMethodType(operator.getDunderMethod());
+        if (maybeKnownFunctionType.isPresent()) {
+            PythonKnownFunctionType knownFunctionType = maybeKnownFunctionType.get();
+            Optional<PythonFunctionSignature> maybeFunctionSignature = knownFunctionType.getFunctionForParameters();
+            if (maybeFunctionSignature.isPresent()) {
+                PythonFunctionSignature functionSignature = maybeFunctionSignature.get();
+                functionSignature.getMethodDescriptor().callMethod(methodVisitor);
+            } else {
+                unaryOperator(methodVisitor, operator);
+            }
+        } else {
+            unaryOperator(methodVisitor, operator);
+        }
+    }
 
     /**
      * Performs a unary dunder operation on TOS. Generate codes that look like this:
@@ -66,6 +88,28 @@ public class DunderOperatorImplementor {
                         Type.getType(List.class),
                         Type.getType(Map.class)),
                 true);
+    }
+
+    public static void binaryOperator(MethodVisitor methodVisitor, StackMetadata stackMetadata,
+            PythonBinaryOperators operator) {
+        PythonLikeType leftOperand =
+                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(1)).orElseGet(PythonLikeType::getBaseType);
+        PythonLikeType rightOperand =
+                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(0)).orElseGet(PythonLikeType::getBaseType);
+
+        Optional<PythonKnownFunctionType> maybeKnownFunctionType = leftOperand.getMethodType(operator.getDunderMethod());
+        if (maybeKnownFunctionType.isPresent()) {
+            PythonKnownFunctionType knownFunctionType = maybeKnownFunctionType.get();
+            Optional<PythonFunctionSignature> maybeFunctionSignature = knownFunctionType.getFunctionForParameters(rightOperand);
+            if (maybeFunctionSignature.isPresent()) {
+                PythonFunctionSignature functionSignature = maybeFunctionSignature.get();
+                functionSignature.getMethodDescriptor().callMethod(methodVisitor);
+            } else {
+                binaryOperator(methodVisitor, operator);
+            }
+        } else {
+            binaryOperator(methodVisitor, operator);
+        }
     }
 
     /**
@@ -190,25 +234,25 @@ public class DunderOperatorImplementor {
      * Compares TOS and TOS1 via their dunder methods. {@code CompareOp} indicates the operation
      * to perform.
      */
-    public static void compareValues(MethodVisitor methodVisitor, CompareOp op) {
+    public static void compareValues(MethodVisitor methodVisitor, StackMetadata stackMetadata, CompareOp op) {
         switch (op) {
             case LESS_THAN:
-                binaryOperator(methodVisitor, PythonBinaryOperators.LESS_THAN);
+                binaryOperator(methodVisitor, stackMetadata, PythonBinaryOperators.LESS_THAN);
                 break;
             case LESS_THAN_OR_EQUALS:
-                binaryOperator(methodVisitor, PythonBinaryOperators.LESS_THAN_OR_EQUAL);
+                binaryOperator(methodVisitor, stackMetadata, PythonBinaryOperators.LESS_THAN_OR_EQUAL);
                 break;
             case EQUALS:
-                binaryOperator(methodVisitor, PythonBinaryOperators.EQUAL);
+                binaryOperator(methodVisitor, stackMetadata, PythonBinaryOperators.EQUAL);
                 break;
             case NOT_EQUALS:
-                binaryOperator(methodVisitor, PythonBinaryOperators.NOT_EQUAL);
+                binaryOperator(methodVisitor, stackMetadata, PythonBinaryOperators.NOT_EQUAL);
                 break;
             case GREATER_THAN:
-                binaryOperator(methodVisitor, PythonBinaryOperators.GREATER_THAN);
+                binaryOperator(methodVisitor, stackMetadata, PythonBinaryOperators.GREATER_THAN);
                 break;
             case GREATER_THAN_OR_EQUALS:
-                binaryOperator(methodVisitor, PythonBinaryOperators.GREATER_THAN_OR_EQUAL);
+                binaryOperator(methodVisitor, stackMetadata, PythonBinaryOperators.GREATER_THAN_OR_EQUAL);
                 break;
             default:
                 throw new IllegalStateException("Unhandled branch: " + op);

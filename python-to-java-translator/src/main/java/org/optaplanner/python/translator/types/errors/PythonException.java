@@ -9,7 +9,7 @@ import org.optaplanner.python.translator.types.PythonLikeType;
  */
 public class PythonException extends PythonBaseException {
     final static PythonLikeType EXCEPTION_TYPE =
-            new PythonLikeType("Exception", List.of(PythonBaseException.BASE_EXCEPTION_TYPE));
+            new PythonLikeType("Exception", PythonException.class, List.of(PythonBaseException.BASE_EXCEPTION_TYPE));
 
     public PythonException(PythonLikeType type) {
         super(type);

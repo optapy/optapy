@@ -1,5 +1,6 @@
 package org.optaplanner.python.translator.types;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,6 +12,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
+import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
@@ -23,25 +25,31 @@ public class PythonLikeType implements PythonLikeObject,
     public final Map<String, PythonLikeObject> __dir__;
 
     private final String TYPE_NAME;
+
+    private final Class<? extends PythonLikeObject> JAVA_CLASS;
     private final List<PythonLikeType> PARENT_TYPES;
+
+    private final Map<String, PythonKnownFunctionType> functionNameToKnownFunctionType;
 
     private final PythonLikeFunction constructor;
 
-    public PythonLikeType(String typeName) {
-        this(typeName, List.of(getBaseType()));
+    public PythonLikeType(String typeName, Class<? extends PythonLikeObject> javaClass) {
+        this(typeName, javaClass, List.of(getBaseType()));
     }
 
-    public PythonLikeType(String typeName, List<PythonLikeType> parents) {
+    public PythonLikeType(String typeName, Class<? extends PythonLikeObject> javaClass, List<PythonLikeType> parents) {
         TYPE_NAME = typeName;
+        JAVA_CLASS = javaClass;
         PARENT_TYPES = parents;
         constructor = (positional, keywords) -> {
             throw new UnsupportedOperationException("Cannot create instance of type (" + TYPE_NAME + ").");
         };
         __dir__ = new HashMap<>();
+        functionNameToKnownFunctionType = new HashMap<>();
     }
 
-    public PythonLikeType(String typeName, Consumer<PythonLikeType> initializer) {
-        this(typeName, List.of(getBaseType()));
+    public PythonLikeType(String typeName, Class<? extends PythonLikeObject> javaClass, Consumer<PythonLikeType> initializer) {
+        this(typeName, javaClass, List.of(getBaseType()));
         initializer.accept(this);
     }
 
@@ -50,13 +58,9 @@ public class PythonLikeType implements PythonLikeObject,
         return objectType.isSubclassOf(this);
     }
 
-    /**
-     *
-     * @return
-     */
     public static PythonLikeType getBaseType() {
         if (BASE_TYPE == null) {
-            BASE_TYPE = new PythonLikeType("object", Collections.emptyList());
+            BASE_TYPE = new PythonLikeType("object", PythonLikeObject.class, Collections.emptyList());
             try {
                 BASE_TYPE.__dir__.put(PythonBinaryOperators.GET_ATTRIBUTE.getDunderMethod(),
                         new JavaMethodReference(
@@ -100,7 +104,41 @@ public class PythonLikeType implements PythonLikeObject,
         if (TYPE_TYPE != null) {
             return TYPE_TYPE;
         }
-        return new PythonLikeType("type");
+        return new PythonLikeType("type", PythonLikeType.class);
+    }
+
+    public void addMethod(PythonUnaryOperator operator, PythonFunctionSignature method) {
+        addMethod(operator.getDunderMethod(), method);
+    }
+
+    public void addMethod(PythonBinaryOperators operator, PythonFunctionSignature method) {
+        addMethod(operator.getDunderMethod(), method);
+    }
+
+    public void addMethod(PythonTernaryOperators operator, PythonFunctionSignature method) {
+        addMethod(operator.getDunderMethod(), method);
+    }
+
+    public void addMethod(String methodName, PythonFunctionSignature method) {
+        PythonKnownFunctionType knownFunctionType = functionNameToKnownFunctionType.computeIfAbsent(methodName,
+                key -> new PythonKnownFunctionType(methodName, new ArrayList<>()));
+        knownFunctionType.getOverloadFunctionSignatureList().add(method);
+    }
+
+    public Optional<PythonKnownFunctionType> getMethodType(String methodName) {
+        PythonKnownFunctionType out = new PythonKnownFunctionType(methodName, new ArrayList<>());
+        getAssignableTypesStream().forEach(type -> {
+            PythonKnownFunctionType knownFunctionType = type.functionNameToKnownFunctionType.get(methodName);
+            if (knownFunctionType != null) {
+                out.getOverloadFunctionSignatureList().addAll(knownFunctionType.getOverloadFunctionSignatureList());
+            }
+        });
+
+        if (out.getOverloadFunctionSignatureList().isEmpty()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(out);
     }
 
     public PythonLikeType unifyWith(PythonLikeType other) {
@@ -137,7 +175,8 @@ public class PythonLikeType implements PythonLikeObject,
         return Stream.concat(
                 Stream.of(this),
                 getParentList().stream()
-                        .flatMap(PythonLikeType::getAssignableTypesStream));
+                        .flatMap(PythonLikeType::getAssignableTypesStream))
+                .distinct();
     }
 
     private boolean isSubclassOf(PythonLikeType type, Set<PythonLikeType> visited) {
@@ -197,6 +236,10 @@ public class PythonLikeType implements PythonLikeObject,
 
     public String getTypeName() {
         return TYPE_NAME;
+    }
+
+    public Class<? extends PythonLikeObject> getJavaClass() {
+        return JAVA_CLASS;
     }
 
     public List<PythonLikeType> getParentList() {

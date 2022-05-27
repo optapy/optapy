@@ -14,7 +14,7 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
     final List<PythonLikeObject> delegate;
     private int remainderToAdd;
 
-    public final static PythonLikeType TUPLE_TYPE = new PythonLikeType("tuple");
+    public final static PythonLikeType TUPLE_TYPE = new PythonLikeType("tuple", PythonLikeTuple.class);
 
     static {
         try {

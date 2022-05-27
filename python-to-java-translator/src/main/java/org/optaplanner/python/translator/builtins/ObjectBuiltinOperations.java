@@ -2,7 +2,6 @@ package org.optaplanner.python.translator.builtins;
 
 import java.util.Formatter;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;

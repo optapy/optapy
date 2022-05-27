@@ -15,7 +15,7 @@ public class PythonNumericOperations {
         // MATRIX_MULTIPLY("__matmul__"),
 
         var BOOL_CAST = new UnaryLambdaReference(
-                a -> PythonBoolean.valueOf(((PythonNumber) a).compareTo(PythonInteger.valueOf(0)) == 0),
+                a -> PythonBoolean.valueOf(((PythonNumber) a).compareTo(PythonInteger.valueOf(0)) != 0),
                 Map.of());
         var INT_CAST = new UnaryNumericLambdaReference(self -> self, Double::longValue);
         var FLOAT_CAST = new UnaryNumericLambdaReference(BigInteger::doubleValue, Double::doubleValue);
@@ -54,8 +54,9 @@ public class PythonNumericOperations {
 
         // Casts
         dict.put("__bool__", BOOL_CAST);
-        dict.put("__index__", INT_CAST);
+        dict.put("__int__", INT_CAST);
         dict.put("__float__", FLOAT_CAST);
+        dict.put("__index__", INT_CAST);
 
         // Format
         dict.put("__format__", FORMAT);
@@ -68,7 +69,6 @@ public class PythonNumericOperations {
         // Binary Operations
         dict.put("__pow__", POW);
         dict.put("__mul__", MUL);
-        // dict.put("__matmul__", ?);
         dict.put("__floordiv__", FLOOR_DIVIDE);
         dict.put("__truediv__", TRUE_DIVIDE);
         dict.put("__mod__", MODULO);
@@ -83,7 +83,6 @@ public class PythonNumericOperations {
         // Numbers don't support in-place modification in Python, so it reuses add / etc.
         dict.put("__ipow__", POW);
         dict.put("__imul__", MUL);
-        // dict.put("__imatmul__");
         dict.put("__ifloordiv__", FLOOR_DIVIDE);
         dict.put("__itruediv__", TRUE_DIVIDE);
         dict.put("__imod__", MODULO);

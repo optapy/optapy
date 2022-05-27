@@ -23,7 +23,8 @@ public class NotOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        DunderOperatorImplementor.unaryOperator(functionMetadata.methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        DunderOperatorImplementor.unaryOperator(functionMetadata.methodVisitor, stackMetadata,
+                PythonUnaryOperator.AS_BOOLEAN);
         PythonBuiltinOperatorImplementor.performNotOnTOS(functionMetadata.methodVisitor);
     }
 }

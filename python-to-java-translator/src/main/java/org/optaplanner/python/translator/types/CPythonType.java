@@ -17,22 +17,22 @@ public class CPythonType extends PythonLikeType {
     private static String getTypeName(OpaquePythonReference pythonReference) {
         return ((PythonString) CPythonBackedPythonInterpreter
                 .lookupAttributeOnPythonReference(pythonReference, "__name__"))
-                .getValue();
+                        .getValue();
     }
 
     public static CPythonType lookupTypeOfPythonObject(OpaquePythonReference reference) {
         OpaquePythonReference type = CPythonBackedPythonInterpreter.getPythonReferenceType(reference);
         return cpythonTypeMap.computeIfAbsent(CPythonBackedPythonInterpreter.getPythonReferenceId(type),
-                                              key -> new CPythonType(type));
+                key -> new CPythonType(type));
     }
 
     public static CPythonType getType(OpaquePythonReference typeReference) {
         return cpythonTypeMap.computeIfAbsent(CPythonBackedPythonInterpreter.getPythonReferenceId(typeReference),
-                                              key -> new CPythonType(typeReference));
+                key -> new CPythonType(typeReference));
     }
 
     private CPythonType(OpaquePythonReference pythonReference) {
-        super(getTypeName(pythonReference));
+        super(getTypeName(pythonReference), PythonObjectWrapper.class);
         this.pythonReference = pythonReference;
         this.cachedAttributeMap = new HashMap<>();
     }
@@ -40,8 +40,8 @@ public class CPythonType extends PythonLikeType {
     @Override
     public PythonLikeObject __getAttributeOrNull(String attributeName) {
         return cachedAttributeMap.computeIfAbsent(attributeName,
-                                                  key -> CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
-                                                                                                                         attributeName));
+                key -> CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
+                        attributeName));
     }
 
     @Override
@@ -63,7 +63,7 @@ public class CPythonType extends PythonLikeType {
 
     @Override
     public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-                                     Map<PythonString, PythonLikeObject> namedArguments) {
+            Map<PythonString, PythonLikeObject> namedArguments) {
         return CPythonBackedPythonInterpreter.callPythonReference(pythonReference, positionalArguments, namedArguments);
     }
 }

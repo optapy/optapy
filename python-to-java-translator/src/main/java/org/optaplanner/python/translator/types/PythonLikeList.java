@@ -14,7 +14,7 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     final List<PythonLikeObject> delegate;
     private int remainderToAdd;
 
-    public final static PythonLikeType LIST_TYPE = new PythonLikeType("list");
+    public final static PythonLikeType LIST_TYPE = new PythonLikeType("list", PythonLikeList.class);
 
     static {
         try {
