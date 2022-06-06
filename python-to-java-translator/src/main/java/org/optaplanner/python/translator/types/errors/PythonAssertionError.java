@@ -7,7 +7,8 @@ import org.optaplanner.python.translator.types.PythonLikeType;
 public class PythonAssertionError extends PythonException {
     public static final PythonLikeType ASSERTION_ERROR_TYPE = new PythonLikeType("AssertionError",
             PythonAssertionError.class,
-            List.of(EXCEPTION_TYPE));
+            List.of(EXCEPTION_TYPE)),
+            $TYPE = ASSERTION_ERROR_TYPE;
 
     public PythonAssertionError() {
         super(ASSERTION_ERROR_TYPE);

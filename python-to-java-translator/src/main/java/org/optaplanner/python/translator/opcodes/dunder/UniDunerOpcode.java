@@ -7,6 +7,7 @@ import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.DunderOperatorImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.types.PythonKnownFunctionType;
@@ -23,9 +24,9 @@ public class UniDunerOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
+            StackMetadata stackMetadata) {
         PythonLikeType operand =
-                Optional.ofNullable(stackTypesBeforeInstruction.getTOSType()).orElseGet(PythonLikeType::getBaseType);
+                Optional.ofNullable(stackMetadata.getTOSType()).orElseGet(PythonLikeType::getBaseType);
 
         Optional<PythonKnownFunctionType> maybeKnownFunctionType = operand.getMethodType(operator.getDunderMethod());
         if (maybeKnownFunctionType.isPresent()) {
@@ -33,11 +34,13 @@ public class UniDunerOpcode extends AbstractOpcode {
             Optional<PythonFunctionSignature> maybeFunctionSignature = knownFunctionType.getFunctionForParameters();
             if (maybeFunctionSignature.isPresent()) {
                 PythonFunctionSignature functionSignature = maybeFunctionSignature.get();
-                return stackTypesBeforeInstruction.pop().push(functionSignature.getReturnType());
+                return stackMetadata.pop().push(ValueSourceInfo.of(this, functionSignature.getReturnType(),
+                        stackMetadata.getValueSourcesUpToStackIndex(1)));
             }
         }
 
-        return stackTypesBeforeInstruction.pop().push(PythonLikeType.getBaseType());
+        return stackMetadata.pop()
+                .push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(), stackMetadata.getValueSourcesUpToStackIndex(1)));
     }
 
     @Override

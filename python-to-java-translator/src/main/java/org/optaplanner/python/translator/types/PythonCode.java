@@ -5,7 +5,8 @@ package org.optaplanner.python.translator.types;
  * since code can be accessed like a {@code PythonLikeObject}
  */
 public class PythonCode extends AbstractPythonLikeObject {
-    public static final PythonLikeType CODE_TYPE = new PythonLikeType("code", PythonCode.class);
+    public static final PythonLikeType CODE_TYPE = new PythonLikeType("code", PythonCode.class),
+            $TYPE = CODE_TYPE;;
 
     /**
      * The class of the function that implement the code

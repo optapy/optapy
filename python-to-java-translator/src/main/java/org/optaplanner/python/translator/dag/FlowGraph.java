@@ -6,11 +6,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.opcodes.Opcode;
+import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.errors.PythonBaseException;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
@@ -24,6 +27,8 @@ public class FlowGraph {
 
     Map<IndexBranchPair, JumpSource> opcodeIndexToJumpSourceMap;
 
+    List<StackMetadata> stackMetadataForOperations;
+
     private FlowGraph(BasicBlock initialBlock, List<BasicBlock> basicBlockList,
             Map<BasicBlock, List<BasicBlock>> basicBlockToSourcesMap,
             Map<BasicBlock, List<JumpSource>> basicBlockToJumpSourcesMap,
@@ -35,7 +40,25 @@ public class FlowGraph {
         this.opcodeIndexToJumpSourceMap = opcodeIndexToJumpSourceMap;
     }
 
-    public static FlowGraph createFlowGraph(List<Opcode> opcodeList) {
+    public List<StackMetadata> getStackMetadataForOperations() {
+        return stackMetadataForOperations;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends Opcode> void visitOperations(Class<T> opcodeClass, BiConsumer<? super T, StackMetadata> visitor) {
+        for (BasicBlock basicBlock : basicBlockList) {
+            for (Opcode opcode : basicBlock.getBlockOpcodeList()) {
+                if (opcodeClass.isAssignableFrom(opcode.getClass())) {
+                    StackMetadata stackMetadata = stackMetadataForOperations.get(opcode.getBytecodeIndex());
+                    visitor.accept((T) opcode, stackMetadata);
+                }
+            }
+        }
+    }
+
+    public static FlowGraph createFlowGraph(FunctionMetadata functionMetadata,
+            StackMetadata initialStackMetadata,
+            List<Opcode> opcodeList) {
         List<Integer> leaderIndexList = new ArrayList<>();
         boolean wasPreviousInstructionGoto = true; // True so first instruction get added as a leader
         for (int i = 0; i < opcodeList.size(); i++) {
@@ -84,16 +107,19 @@ public class FlowGraph {
             }
         }
 
-        return new FlowGraph(initialBlock, basicBlockList, basicBlockToSourcesMap, basicBlockToJumpSourcesMap,
+        FlowGraph out = new FlowGraph(initialBlock, basicBlockList, basicBlockToSourcesMap, basicBlockToJumpSourcesMap,
                 opcodeIndexToJumpSourceMap);
+        out.computeStackMetadataForOperations(functionMetadata, initialStackMetadata);
+        return out;
     }
 
-    public List<StackMetadata> getStackMetadataForOperations(FunctionMetadata functionMetadata,
+    private void computeStackMetadataForOperations(FunctionMetadata functionMetadata,
             StackMetadata initialStackMetadata) {
         Map<Integer, StackMetadata> opcodeIndexToStackMetadata = new HashMap<>();
-        final StackMetadata exceptionStackMetadata = initialStackMetadata.push(PythonTraceback.TRACEBACK_TYPE)
-                .push(PythonBaseException.BASE_EXCEPTION_TYPE)
-                .push(PythonLikeType.TYPE_TYPE);
+        final StackMetadata exceptionStackMetadata =
+                initialStackMetadata.push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonTraceback.TRACEBACK_TYPE))
+                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonBaseException.BASE_EXCEPTION_TYPE))
+                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeType.getTypeType()));
         opcodeIndexToStackMetadata.put(0, initialStackMetadata);
 
         for (BasicBlock basicBlock : basicBlockList) {
@@ -148,7 +174,7 @@ public class FlowGraph {
             }
         } while (hasChanged);
 
-        return opcodeIndexToStackMetadata
+        stackMetadataForOperations = opcodeIndexToStackMetadata
                 .entrySet()
                 .stream()
                 .sorted(Map.Entry.comparingByKey())

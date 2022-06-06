@@ -14,8 +14,8 @@ public class PopOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
-        return stackTypesBeforeInstruction.pop();
+            StackMetadata stackMetadata) {
+        return stackMetadata.pop();
     }
 
     @Override

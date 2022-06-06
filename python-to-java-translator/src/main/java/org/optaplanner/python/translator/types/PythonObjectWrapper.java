@@ -10,7 +10,8 @@ import org.optaplanner.python.translator.PythonLikeObject;
 public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction, Comparable<PythonObjectWrapper> {
 
     private final static PythonLikeType PYTHON_REFERENCE_TYPE =
-            new PythonLikeType("python-reference", PythonObjectWrapper.class);
+            new PythonLikeType("python-reference", PythonObjectWrapper.class),
+            $TYPE = PYTHON_REFERENCE_TYPE;
 
     private final OpaquePythonReference pythonReference;
     private final Map<String, PythonLikeObject> cachedAttributeMap;

@@ -9,7 +9,8 @@ import org.optaplanner.python.translator.PythonLikeObject;
  * since cells are stored in a tuple via BUILD_TUPLE and thus need to be a {@link PythonLikeObject}.
  */
 public class PythonCell extends AbstractPythonLikeObject {
-    public static final PythonLikeType CELL_TYPE = new PythonLikeType("cell", PythonCell.class);
+    public static final PythonLikeType CELL_TYPE = new PythonLikeType("cell", PythonCell.class),
+            $TYPE = CELL_TYPE;
 
     /**
      * The value the cell stores.

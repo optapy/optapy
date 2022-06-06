@@ -13,6 +13,7 @@ import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.python.translator.types.PythonLikeType;
 
 /**
  * A builder for Python bytecode.
@@ -51,6 +52,8 @@ public class PythonFunctionBuilder {
 
     Map<String, PythonLikeObject> globalsMap = new HashMap<>();
 
+    Map<String, PythonLikeType> typeAnnotations = new HashMap<>();
+
     int co_argcount = 0;
     int co_kwonlyargcount = 0;
 
@@ -79,6 +82,7 @@ public class PythonFunctionBuilder {
     public PythonCompiledFunction build() {
         PythonCompiledFunction out = new PythonCompiledFunction();
         out.instructionList = instructionList;
+        out.typeAnnotations = typeAnnotations;
         out.globalsMap = globalsMap;
         out.co_constants = co_consts;
         out.co_varnames = co_varnames;

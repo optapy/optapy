@@ -3,6 +3,7 @@ package org.optaplanner.python.translator.opcodes.string;
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.StringImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.types.PythonString;
@@ -15,8 +16,10 @@ public class BuildStringOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
-        return stackTypesBeforeInstruction.pop(instruction.arg).push(PythonString.STRING_TYPE);
+            StackMetadata stackMetadata) {
+        return stackMetadata.pop(instruction.arg).push(
+                ValueSourceInfo.of(this, PythonString.STRING_TYPE,
+                        stackMetadata.getValueSourcesUpToStackIndex(instruction.arg)));
     }
 
     @Override

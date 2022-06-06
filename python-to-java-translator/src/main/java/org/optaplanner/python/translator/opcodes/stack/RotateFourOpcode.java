@@ -14,16 +14,16 @@ public class RotateFourOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
-        return stackTypesBeforeInstruction
+            StackMetadata stackMetadata) {
+        return stackMetadata
                 .pop()
                 .pop()
                 .pop()
                 .pop()
-                .push(stackTypesBeforeInstruction.getTypeAtStackIndex(0))
-                .push(stackTypesBeforeInstruction.getTypeAtStackIndex(3))
-                .push(stackTypesBeforeInstruction.getTypeAtStackIndex(2))
-                .push(stackTypesBeforeInstruction.getTypeAtStackIndex(1));
+                .push(stackMetadata.getValueSourceForStackIndex(0))
+                .push(stackMetadata.getValueSourceForStackIndex(3))
+                .push(stackMetadata.getValueSourceForStackIndex(2))
+                .push(stackMetadata.getValueSourceForStackIndex(1));
     }
 
     @Override

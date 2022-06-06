@@ -99,6 +99,14 @@ public class MethodDescriptor {
         return Objects.hash(declaringClassInternalName, methodName, methodDescriptor);
     }
 
+    public Type getReturnType() {
+        return Type.getReturnType(methodDescriptor);
+    }
+
+    public Type[] getParameterTypes() {
+        return Type.getArgumentTypes(methodDescriptor);
+    }
+
     public enum MethodType {
         VIRTUAL(Opcodes.INVOKEVIRTUAL),
         STATIC(Opcodes.INVOKESTATIC),

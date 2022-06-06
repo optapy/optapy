@@ -4,6 +4,7 @@ import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.DunderOperatorImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.types.PythonBoolean;
@@ -16,8 +17,9 @@ public class CompareOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
-        return stackTypesBeforeInstruction.pop(2).push(PythonBoolean.BOOLEAN_TYPE);
+            StackMetadata stackMetadata) {
+        return stackMetadata.pop(2).push(ValueSourceInfo.of(this, PythonBoolean.BOOLEAN_TYPE,
+                stackMetadata.getValueSourcesUpToStackIndex(2)));
     }
 
     @Override

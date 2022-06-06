@@ -8,8 +8,9 @@ import org.optaplanner.python.translator.types.PythonLikeType;
  * Python class for general exceptions. Equivalent to Java's {@link RuntimeException}
  */
 public class PythonException extends PythonBaseException {
-    final static PythonLikeType EXCEPTION_TYPE =
-            new PythonLikeType("Exception", PythonException.class, List.of(PythonBaseException.BASE_EXCEPTION_TYPE));
+    final public static PythonLikeType EXCEPTION_TYPE =
+            new PythonLikeType("Exception", PythonException.class, List.of(PythonBaseException.BASE_EXCEPTION_TYPE)),
+            $TYPE = EXCEPTION_TYPE;
 
     public PythonException(PythonLikeType type) {
         super(type);

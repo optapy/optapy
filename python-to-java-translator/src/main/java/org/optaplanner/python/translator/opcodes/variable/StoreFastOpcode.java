@@ -14,7 +14,7 @@ public class StoreFastOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop().setLocalVariableType(instruction.arg, stackMetadata.getTOSType());
+        return stackMetadata.pop().setLocalVariableValueSource(instruction.arg, stackMetadata.getTOSValueSource());
     }
 
     @Override

@@ -4,6 +4,7 @@ import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.VariableImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.types.CPythonType;
@@ -18,7 +19,7 @@ public class LoadGlobalOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.push(PythonLikeType.getBaseType());
+        return stackMetadata.push(ValueSourceInfo.of(this, PythonLikeType.getBaseType()));
     }
 
     @Override

@@ -9,7 +9,8 @@ import org.optaplanner.python.translator.types.PythonLikeType;
  * Python base class for all exceptions. Equivalent to Java's {@link Throwable}.
  */
 public class PythonBaseException extends RuntimeException implements PythonLikeObject {
-    final public static PythonLikeType BASE_EXCEPTION_TYPE = new PythonLikeType("BaseException", PythonBaseException.class);
+    final public static PythonLikeType BASE_EXCEPTION_TYPE = new PythonLikeType("BaseException", PythonBaseException.class),
+            $TYPE = BASE_EXCEPTION_TYPE;
 
     Map<String, PythonLikeObject> dict;
 

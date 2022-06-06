@@ -16,8 +16,8 @@ public class DupTwoOpcode extends AbstractOpcode {
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
             StackMetadata stackTypesBeforeInstruction) {
         return stackTypesBeforeInstruction
-                .push(stackTypesBeforeInstruction.getTypeAtStackIndex(1))
-                .push(stackTypesBeforeInstruction.getTypeAtStackIndex(0));
+                .push(stackTypesBeforeInstruction.getValueSourceForStackIndex(1))
+                .push(stackTypesBeforeInstruction.getValueSourceForStackIndex(0));
     }
 
     @Override

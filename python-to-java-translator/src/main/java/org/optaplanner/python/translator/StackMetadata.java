@@ -9,11 +9,33 @@ import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class StackMetadata {
     public LocalVariableHelper localVariableHelper;
-    public List<PythonLikeType> stackTypes;
+    public List<ValueSourceInfo> stackValueSources;
 
-    public List<PythonLikeType> localVariableTypes;
+    public List<ValueSourceInfo> localVariableValueSources;
 
-    public List<PythonLikeType> cellVariableTypes;
+    public List<ValueSourceInfo> cellVariableValueSources;
+
+    /**
+     * Returns the value source for the given stack index (stack index is how many
+     * elements below TOS (i.e. 0 is TOS, 1 is TOS1)).
+     *
+     * @param index The stack index (how many elements below TOS)
+     * @return The type at the given stack index
+     */
+    public ValueSourceInfo getValueSourceForStackIndex(int index) {
+        return stackValueSources.get(stackValueSources.size() - index - 1);
+    }
+
+    /**
+     * Returns the value sources up to (and not including) the given stack index (stack index is how many
+     * elements below TOS (i.e. 0 is TOS, 1 is TOS1)).
+     *
+     * @param index The stack index (how many elements below TOS)
+     * @return The value sources up to (and not including) the given stack index
+     */
+    public List<ValueSourceInfo> getValueSourcesUpToStackIndex(int index) {
+        return stackValueSources.subList(stackValueSources.size() - index, stackValueSources.size());
+    }
 
     /**
      * Returns the type at the given stack index (stack index is how many
@@ -23,7 +45,21 @@ public class StackMetadata {
      * @return The type at the given stack index
      */
     public PythonLikeType getTypeAtStackIndex(int index) {
-        return stackTypes.get(stackTypes.size() - index - 1);
+        ValueSourceInfo valueSourceInfo = stackValueSources.get(stackValueSources.size() - index - 1);
+        if (valueSourceInfo != null) {
+            return valueSourceInfo.valueType;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the value source for the local variable in slot {@code index}
+     *
+     * @param index The slot
+     * @return The type for the local variable in the given slot
+     */
+    public ValueSourceInfo getLocalVariableValueSource(int index) {
+        return localVariableValueSources.get(index);
     }
 
     /**
@@ -33,7 +69,21 @@ public class StackMetadata {
      * @return The type for the local variable in the given slot
      */
     public PythonLikeType getLocalVariableType(int index) {
-        return localVariableTypes.get(index);
+        ValueSourceInfo valueSourceInfo = localVariableValueSources.get(index);
+        if (valueSourceInfo != null) {
+            return valueSourceInfo.valueType;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the value source for the cell variable in slot {@code index}
+     *
+     * @param index The slot
+     * @return The type for the cell variable in the given slot
+     */
+    public ValueSourceInfo getCellVariableValueSource(int index) {
+        return cellVariableValueSources.get(index);
     }
 
     /**
@@ -43,47 +93,57 @@ public class StackMetadata {
      * @return The type for the cell variable in the given slot
      */
     public PythonLikeType getCellVariableType(int index) {
-        return cellVariableTypes.get(index);
+        ValueSourceInfo valueSourceInfo = cellVariableValueSources.get(index);
+        if (valueSourceInfo != null) {
+            return valueSourceInfo.valueType;
+        }
+        return null;
     }
 
     public PythonLikeType getTOSType() {
         return getTypeAtStackIndex(0);
     }
 
+    public ValueSourceInfo getTOSValueSource() {
+        return getValueSourceForStackIndex(0);
+    }
+
     public StackMetadata copy() {
         StackMetadata out = new StackMetadata();
         out.localVariableHelper = localVariableHelper;
-        out.stackTypes = new ArrayList<>(stackTypes);
-        out.localVariableTypes = new ArrayList<>(localVariableTypes);
-        out.cellVariableTypes = new ArrayList<>(cellVariableTypes);
+        out.stackValueSources = new ArrayList<>(stackValueSources);
+        out.localVariableValueSources = new ArrayList<>(localVariableValueSources);
+        out.cellVariableValueSources = new ArrayList<>(cellVariableValueSources);
         return out;
     }
 
     public StackMetadata unifyWith(StackMetadata other) {
         StackMetadata out = copy();
-        if (out.stackTypes.size() != other.stackTypes.size() ||
-                out.localVariableTypes.size() != other.localVariableTypes.size() ||
-                out.cellVariableTypes.size() != other.cellVariableTypes.size()) {
+        if (out.stackValueSources.size() != other.stackValueSources.size() ||
+                out.localVariableValueSources.size() != other.localVariableValueSources.size() ||
+                out.cellVariableValueSources.size() != other.cellVariableValueSources.size()) {
             throw new IllegalArgumentException("Impossible State: Bytecode stack metadata size does not match when " +
                     "unifying (" + this + ") with (" + other + ")");
         }
 
-        for (int i = 0; i < out.stackTypes.size(); i++) {
-            out.stackTypes.set(i, unifyTypes(stackTypes.get(i), other.stackTypes.get(i)));
+        for (int i = 0; i < out.stackValueSources.size(); i++) {
+            out.stackValueSources.set(i, unifyTypes(stackValueSources.get(i), other.stackValueSources.get(i)));
         }
 
-        for (int i = 0; i < out.localVariableTypes.size(); i++) {
-            out.localVariableTypes.set(i, unifyTypes(localVariableTypes.get(i), other.localVariableTypes.get(i)));
+        for (int i = 0; i < out.localVariableValueSources.size(); i++) {
+            out.localVariableValueSources.set(i,
+                    unifyTypes(localVariableValueSources.get(i), other.localVariableValueSources.get(i)));
         }
 
-        for (int i = 0; i < out.cellVariableTypes.size(); i++) {
-            out.cellVariableTypes.set(i, unifyTypes(cellVariableTypes.get(i), other.cellVariableTypes.get(i)));
+        for (int i = 0; i < out.cellVariableValueSources.size(); i++) {
+            out.cellVariableValueSources.set(i,
+                    unifyTypes(cellVariableValueSources.get(i), other.cellVariableValueSources.get(i)));
         }
 
         return out;
     }
 
-    private static PythonLikeType unifyTypes(PythonLikeType a, PythonLikeType b) {
+    private static ValueSourceInfo unifyTypes(ValueSourceInfo a, ValueSourceInfo b) {
         if (Objects.equals(a, b)) {
             return a;
         }
@@ -105,9 +165,9 @@ public class StackMetadata {
      *
      * @param type The type to push to TOS
      */
-    public StackMetadata push(PythonLikeType type) {
+    public StackMetadata push(ValueSourceInfo type) {
         StackMetadata out = copy();
-        out.stackTypes.add(type);
+        out.stackValueSources.add(type);
         return out;
     }
 
@@ -117,9 +177,9 @@ public class StackMetadata {
      *
      * @param types The types to push to TOS
      */
-    public StackMetadata push(PythonLikeType... types) {
+    public StackMetadata push(ValueSourceInfo... types) {
         StackMetadata out = copy();
-        out.stackTypes.addAll(Arrays.asList(types));
+        out.stackValueSources.addAll(Arrays.asList(types));
         return out;
     }
 
@@ -129,10 +189,10 @@ public class StackMetadata {
      *
      * @param types The stack types.
      */
-    public StackMetadata stack(PythonLikeType... types) {
+    public StackMetadata stack(ValueSourceInfo... types) {
         StackMetadata out = copy();
-        out.stackTypes.clear();
-        out.stackTypes.addAll(Arrays.asList(types));
+        out.stackValueSources.clear();
+        out.stackValueSources.addAll(Arrays.asList(types));
         return out;
     }
 
@@ -141,7 +201,7 @@ public class StackMetadata {
      */
     public StackMetadata pop() {
         StackMetadata out = copy();
-        out.stackTypes.remove(stackTypes.size() - 1);
+        out.stackValueSources.remove(stackValueSources.size() - 1);
         return out;
     }
 
@@ -150,7 +210,7 @@ public class StackMetadata {
      */
     public StackMetadata pop(int count) {
         StackMetadata out = copy();
-        out.stackTypes.subList(stackTypes.size() - count, stackTypes.size()).clear();
+        out.stackValueSources.subList(stackValueSources.size() - count, stackValueSources.size()).clear();
         return out;
     }
 
@@ -158,9 +218,9 @@ public class StackMetadata {
      * Return a new StackMetadata with the local variable in slot {@code index} type set to
      * {@code type}.
      */
-    public StackMetadata setLocalVariableType(int index, PythonLikeType type) {
+    public StackMetadata setLocalVariableValueSource(int index, ValueSourceInfo type) {
         StackMetadata out = copy();
-        out.localVariableTypes.set(index, type);
+        out.localVariableValueSources.set(index, type);
         return out;
     }
 
@@ -168,15 +228,15 @@ public class StackMetadata {
      * Return a new StackMetadata with the given local types. Throws {@link IllegalArgumentException} if
      * types.length != localVariableTypes.size().
      */
-    public StackMetadata locals(PythonLikeType... types) {
-        if (types.length != localVariableTypes.size()) {
+    public StackMetadata locals(ValueSourceInfo... types) {
+        if (types.length != localVariableValueSources.size()) {
             throw new IllegalArgumentException(
-                    "Length mismatch: expected an array with {" + localVariableTypes.size() + "} elements but got " +
+                    "Length mismatch: expected an array with {" + localVariableValueSources.size() + "} elements but got " +
                             "{" + Arrays.toString(types) + "}");
         }
         StackMetadata out = copy();
         for (int i = 0; i < types.length; i++) {
-            out.localVariableTypes.set(i, types[i]);
+            out.localVariableValueSources.set(i, types[i]);
         }
         return out;
     }
@@ -185,15 +245,15 @@ public class StackMetadata {
      * Return a new StackMetadata with the cell variable in slot {@code index} type set to
      * {@code type}.
      */
-    public StackMetadata setCellVariableType(int index, PythonLikeType type) {
+    public StackMetadata setCellVariableValueSource(int index, ValueSourceInfo type) {
         StackMetadata out = copy();
-        out.cellVariableTypes.set(index, type);
+        out.cellVariableValueSources.set(index, type);
         return out;
     }
 
     public String toString() {
-        return "StackMetadata { stack: " + stackTypes.toString() + "; locals: " + localVariableTypes.toString() +
-                "; cells: " + cellVariableTypes.toString() + "; }";
+        return "StackMetadata { stack: " + stackValueSources.toString() + "; locals: " + localVariableValueSources.toString() +
+                "; cells: " + cellVariableValueSources.toString() + "; }";
     }
 
     @Override
@@ -205,12 +265,13 @@ public class StackMetadata {
             return false;
         }
         StackMetadata that = (StackMetadata) o;
-        return stackTypes.equals(that.stackTypes) && localVariableTypes.equals(that.localVariableTypes)
-                && cellVariableTypes.equals(that.cellVariableTypes);
+        return stackValueSources.equals(that.stackValueSources)
+                && localVariableValueSources.equals(that.localVariableValueSources)
+                && cellVariableValueSources.equals(that.cellVariableValueSources);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(stackTypes, localVariableTypes, cellVariableTypes);
+        return Objects.hash(stackValueSources, localVariableValueSources, cellVariableValueSources);
     }
 }

@@ -14,8 +14,8 @@ public class NopOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
-        return stackTypesBeforeInstruction.copy();
+            StackMetadata stackMetadata) {
+        return stackMetadata.copy();
     }
 
     @Override

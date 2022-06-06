@@ -3,6 +3,7 @@ package org.optaplanner.python.translator.opcodes.function;
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.FunctionImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
@@ -15,7 +16,9 @@ public class MakeFunctionOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop(2 + Integer.bitCount(instruction.arg)).push(PythonLikeFunction.FUNCTION_TYPE);
+        return stackMetadata.pop(2 + Integer.bitCount(instruction.arg))
+                .push(ValueSourceInfo.of(this, PythonLikeFunction.FUNCTION_TYPE,
+                        stackMetadata.getValueSourcesUpToStackIndex(2 + Integer.bitCount(instruction.arg))));
     }
 
     @Override

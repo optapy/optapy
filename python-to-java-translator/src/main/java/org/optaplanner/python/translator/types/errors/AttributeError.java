@@ -5,8 +5,9 @@ import java.util.List;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class AttributeError extends PythonException {
-    final static PythonLikeType ATTRIBUTE_ERROR_TYPE =
-            new PythonLikeType("AttributeError", AttributeError.class, List.of(PythonException.EXCEPTION_TYPE));
+    public final static PythonLikeType ATTRIBUTE_ERROR_TYPE =
+            new PythonLikeType("AttributeError", AttributeError.class, List.of(PythonException.EXCEPTION_TYPE)),
+            $TYPE = ATTRIBUTE_ERROR_TYPE;
 
     public AttributeError() {
         super(ATTRIBUTE_ERROR_TYPE);

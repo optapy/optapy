@@ -92,10 +92,14 @@ public class JavaObjectWrapper implements PythonLikeObject, Comparable<JavaObjec
         this.objectClass = wrappedObject.getClass();
         this.attributeNameToMemberListMap =
                 classToAttributeNameToMemberListMap.computeIfAbsent(objectClass, JavaObjectWrapper::getAllFields);
-        this.type = classToPythonTypeMap.computeIfAbsent(objectClass, JavaObjectWrapper::generatePythonTypeForClass);
+        this.type = getPythonTypeForClass(objectClass);
     }
 
-    public static PythonLikeType generatePythonTypeForClass(Class<?> objectClass) {
+    public static PythonLikeType getPythonTypeForClass(Class<?> objectClass) {
+        return classToPythonTypeMap.computeIfAbsent(objectClass, JavaObjectWrapper::generatePythonTypeForClass);
+    }
+
+    private static PythonLikeType generatePythonTypeForClass(Class<?> objectClass) {
         PythonLikeType out = new PythonLikeType(objectClass.getName(), JavaObjectWrapper.class);
         getDeclaredMembersStream(objectClass)
                 .filter(member -> member instanceof Method)

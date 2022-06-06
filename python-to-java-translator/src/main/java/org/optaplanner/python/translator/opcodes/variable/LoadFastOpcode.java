@@ -14,7 +14,7 @@ public class LoadFastOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.push(stackMetadata.getLocalVariableType(instruction.arg));
+        return stackMetadata.push(stackMetadata.getLocalVariableValueSource(instruction.arg));
     }
 
     @Override

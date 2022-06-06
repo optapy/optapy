@@ -1,11 +1,12 @@
 package org.optaplanner.python.translator;
 
-import java.lang.reflect.Parameter;
 import java.util.Arrays;
+
+import org.objectweb.asm.Type;
 
 public class LocalVariableHelper {
 
-    public final Parameter[] parameters;
+    public final Type[] parameters;
     public final int parameterSlotsEnd;
     public final int pythonCellVariablesStart;
     public final int pythonFreeVariablesStart;
@@ -17,11 +18,11 @@ public class LocalVariableHelper {
     public final int currentExceptionVariableSlot;
     int usedLocals;
 
-    public LocalVariableHelper(Parameter[] parameters, PythonCompiledFunction compiledFunction) {
+    public LocalVariableHelper(Type[] parameters, PythonCompiledFunction compiledFunction) {
         this.parameters = parameters;
         int slotsUsedByParameters = 1;
-        for (Parameter parameter : parameters) {
-            if (parameter.getType().equals(long.class) || parameter.getType().equals(double.class)) {
+        for (Type parameter : parameters) {
+            if (parameter.equals(Type.LONG_TYPE) || parameter.equals(Type.DOUBLE_TYPE)) {
                 slotsUsedByParameters += 2;
             } else {
                 slotsUsedByParameters += 1;
@@ -46,7 +47,7 @@ public class LocalVariableHelper {
         }
         int slotsUsedByParameters = 1;
         for (int i = 0; i < parameterIndex; i++) {
-            if (parameters[i].getType().equals(long.class) || parameters[i].getType().equals(double.class)) {
+            if (parameters[i].equals(Type.LONG_TYPE) || parameters[i].equals(Type.DOUBLE_TYPE)) {
                 slotsUsedByParameters += 2;
             } else {
                 slotsUsedByParameters += 1;

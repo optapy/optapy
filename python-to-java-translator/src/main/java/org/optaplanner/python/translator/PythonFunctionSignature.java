@@ -1,6 +1,7 @@
 package org.optaplanner.python.translator;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -15,6 +16,13 @@ public class PythonFunctionSignature {
             PythonLikeType returnType, PythonLikeType... parameterTypes) {
         this.returnType = returnType;
         this.parameterTypes = parameterTypes;
+        this.methodDescriptor = methodDescriptor;
+    }
+
+    public PythonFunctionSignature(MethodDescriptor methodDescriptor,
+            PythonLikeType returnType, List<PythonLikeType> parameterTypeList) {
+        this.returnType = returnType;
+        this.parameterTypes = parameterTypeList.toArray(new PythonLikeType[0]);
         this.methodDescriptor = methodDescriptor;
     }
 

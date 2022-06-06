@@ -1,9 +1,13 @@
 package org.optaplanner.python.translator;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
+import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class PythonCompiledFunction {
     /**
@@ -20,6 +24,12 @@ public class PythonCompiledFunction {
      * The globals of the function
      */
     public Map<String, PythonLikeObject> globalsMap;
+
+    /**
+     * Type annotations for the parameters and return.
+     * (return is stored under the "return" key).
+     */
+    public Map<String, PythonLikeType> typeAnnotations;
 
     /**
      * List of all names used in the function
@@ -55,4 +65,31 @@ public class PythonCompiledFunction {
      * The number of keyword only arguments the function takes
      */
     public int co_kwonlyargcount;
+
+    public List<PythonLikeType> getParameterTypes() {
+        List<PythonLikeType> out = new ArrayList<>(co_argcount);
+        PythonLikeType defaultType = PythonLikeType.getBaseType();
+
+        for (int i = 0; i < co_argcount; i++) {
+            String parameterName = co_varnames.get(i);
+            out.add(typeAnnotations.getOrDefault(parameterName, defaultType));
+        }
+        return out;
+    }
+
+    public Optional<PythonLikeType> getReturnType() {
+        return Optional.ofNullable(typeAnnotations.get("return"));
+    }
+
+    public String getAsmMethodDescriptorString() {
+        Type returnType = Type.getType('L' + getReturnType().map(PythonLikeType::getJavaTypeInternalName)
+                .orElseGet(() -> PythonLikeType.getBaseType().getJavaTypeInternalName()) + ';');
+        List<PythonLikeType> parameterPythonTypeList = getParameterTypes();
+        Type[] parameterTypes = new Type[co_argcount];
+
+        for (int i = 0; i < co_argcount; i++) {
+            parameterTypes[i] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
+        }
+        return Type.getMethodDescriptor(returnType, parameterTypes);
+    }
 }

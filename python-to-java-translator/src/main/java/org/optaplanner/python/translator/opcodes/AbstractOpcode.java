@@ -13,6 +13,10 @@ public abstract class AbstractOpcode implements Opcode {
         this.instruction = instruction;
     }
 
+    public PythonBytecodeInstruction getInstruction() {
+        return instruction;
+    }
+
     @Override
     public int getBytecodeIndex() {
         return instruction.offset;

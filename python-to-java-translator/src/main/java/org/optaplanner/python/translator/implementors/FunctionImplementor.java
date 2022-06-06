@@ -316,6 +316,7 @@ public class FunctionImplementor {
         if (positionalArguments.size() + namedArguments.size() + defaultPositionalArguments.size()
                 + defaultNamedArguments.size() < totalArgCount) {
             // TODO: explain missing positional/named arguments
+            System.out.println(positionalArguments);
             throw new IllegalArgumentException();
         }
 

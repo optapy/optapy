@@ -4,6 +4,7 @@ import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.DunderOperatorImplementor;
 import org.optaplanner.python.translator.implementors.PythonBuiltinOperatorImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
@@ -17,8 +18,9 @@ public class NotOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
-        return stackTypesBeforeInstruction.pop().push(PythonBoolean.BOOLEAN_TYPE);
+            StackMetadata stackMetadata) {
+        return stackMetadata.pop().push(ValueSourceInfo.of(this, PythonBoolean.BOOLEAN_TYPE,
+                stackMetadata.getValueSourcesUpToStackIndex(1)));
     }
 
     @Override

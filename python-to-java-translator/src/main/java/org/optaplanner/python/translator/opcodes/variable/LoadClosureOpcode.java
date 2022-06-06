@@ -3,6 +3,7 @@ package org.optaplanner.python.translator.opcodes.variable;
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.VariableImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.types.PythonCell;
@@ -15,7 +16,7 @@ public class LoadClosureOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.push(PythonCell.CELL_TYPE);
+        return stackMetadata.push(ValueSourceInfo.of(this, PythonCell.CELL_TYPE));
     }
 
     @Override

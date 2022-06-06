@@ -14,7 +14,7 @@ public class LoadDerefOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.push(stackMetadata.getCellVariableType(instruction.arg));
+        return stackMetadata.push(stackMetadata.getCellVariableValueSource(instruction.arg));
     }
 
     @Override

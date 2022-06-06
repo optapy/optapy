@@ -14,7 +14,7 @@ public class DeleteDerefOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.setCellVariableType(instruction.arg, null);
+        return stackMetadata.setCellVariableValueSource(instruction.arg, null);
     }
 
     @Override

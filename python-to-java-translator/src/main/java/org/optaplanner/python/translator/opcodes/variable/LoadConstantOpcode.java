@@ -1,11 +1,11 @@
 package org.optaplanner.python.translator.opcodes.variable;
 
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.PythonConstantsImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -20,7 +20,7 @@ public class LoadConstantOpcode extends AbstractOpcode {
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
         PythonLikeObject constant = functionMetadata.pythonCompiledFunction.co_constants.get(instruction.arg);
         PythonLikeType constantType = constant.__getType();
-        return stackMetadata.push(constantType);
+        return stackMetadata.push(ValueSourceInfo.of(this, constantType));
     }
 
     @Override
@@ -30,6 +30,6 @@ public class LoadConstantOpcode extends AbstractOpcode {
 
         PythonConstantsImplementor.loadConstant(functionMetadata.methodVisitor, functionMetadata.className,
                 instruction.arg);
-        functionMetadata.methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(constantType.getJavaClass()));
+        functionMetadata.methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, constantType.getJavaTypeInternalName());
     }
 }

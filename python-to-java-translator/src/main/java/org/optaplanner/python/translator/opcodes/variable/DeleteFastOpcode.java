@@ -14,7 +14,7 @@ public class DeleteFastOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.setLocalVariableType(instruction.arg, null);
+        return stackMetadata.setLocalVariableValueSource(instruction.arg, null);
     }
 
     @Override

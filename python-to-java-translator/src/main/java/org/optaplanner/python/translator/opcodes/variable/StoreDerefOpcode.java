@@ -14,7 +14,7 @@ public class StoreDerefOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop().setCellVariableType(instruction.arg, stackMetadata.getTOSType());
+        return stackMetadata.pop().setCellVariableValueSource(instruction.arg, stackMetadata.getTOSValueSource());
     }
 
     @Override

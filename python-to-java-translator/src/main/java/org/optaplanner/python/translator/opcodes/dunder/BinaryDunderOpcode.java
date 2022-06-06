@@ -7,6 +7,7 @@ import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.DunderOperatorImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.types.PythonKnownFunctionType;
@@ -23,11 +24,11 @@ public class BinaryDunderOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
+            StackMetadata stackMetadata) {
         PythonLikeType leftOperand =
-                Optional.ofNullable(stackTypesBeforeInstruction.getTypeAtStackIndex(1)).orElseGet(PythonLikeType::getBaseType);
+                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(1)).orElseGet(PythonLikeType::getBaseType);
         PythonLikeType rightOperand =
-                Optional.ofNullable(stackTypesBeforeInstruction.getTypeAtStackIndex(0)).orElseGet(PythonLikeType::getBaseType);
+                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(0)).orElseGet(PythonLikeType::getBaseType);
 
         Optional<PythonKnownFunctionType> maybeKnownFunctionType = leftOperand.getMethodType(operator.getDunderMethod());
         if (maybeKnownFunctionType.isPresent()) {
@@ -35,12 +36,14 @@ public class BinaryDunderOpcode extends AbstractOpcode {
             Optional<PythonFunctionSignature> maybeFunctionSignature = knownFunctionType.getFunctionForParameters(rightOperand);
             if (maybeFunctionSignature.isPresent()) {
                 PythonFunctionSignature functionSignature = maybeFunctionSignature.get();
-                return stackTypesBeforeInstruction.pop().pop().push(functionSignature.getReturnType());
+                return stackMetadata.pop().pop().push(ValueSourceInfo.of(this, functionSignature.getReturnType(),
+                        stackMetadata.getValueSourcesUpToStackIndex(2)));
             }
         }
 
         // TODO: Right dunder method
-        return stackTypesBeforeInstruction.pop().pop().push(PythonLikeType.getBaseType());
+        return stackMetadata.pop().pop()
+                .push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(), stackMetadata.getValueSourcesUpToStackIndex(2)));
     }
 
     @Override

@@ -14,8 +14,8 @@ public class DupOpcode extends AbstractOpcode {
 
     @Override
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
-            StackMetadata stackTypesBeforeInstruction) {
-        return stackTypesBeforeInstruction.push(stackTypesBeforeInstruction.getTOSType());
+            StackMetadata stackMetadata) {
+        return stackMetadata.push(stackMetadata.getTOSValueSource());
     }
 
     @Override
