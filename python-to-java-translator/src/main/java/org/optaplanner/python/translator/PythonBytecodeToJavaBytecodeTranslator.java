@@ -65,7 +65,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
      * A custom classloader that looks for the class in
      * classNameToBytecode
      */
-    static ClassLoader asmClassLoader = new ClassLoader() {
+    public static ClassLoader asmClassLoader = new ClassLoader() {
         // getName() is an abstract method in Java 11 but not in Java 8
         public String getName() {
             return "OptaPlanner Gizmo Python Bytecode ClassLoader";
@@ -370,7 +370,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
         for (Type type : method.getParameterTypes()) {
             try {
-                Class<?> typeClass = Class.forName(type.getClassName());
+                Class<?> typeClass = Class.forName(type.getClassName(), false, asmClassLoader);
                 initialStackMetadata.localVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
                         JavaPythonTypeConversionImplementor.getPythonLikeType(typeClass)));
             } catch (ClassNotFoundException e) {
@@ -384,7 +384,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
         if (isVirtual) {
             try {
-                Class<?> typeClass = Class.forName(method.getParameterTypes()[0].getClassName());
+                Class<?> typeClass = Class.forName(method.getParameterTypes()[0].getClassName(), false, asmClassLoader);
                 initialStackMetadata.localVariableValueSources.set(0, ValueSourceInfo.of(new SelfOpcodeWithoutSource(),
                         JavaPythonTypeConversionImplementor.getPythonLikeType(typeClass)));
             } catch (ClassNotFoundException e) {

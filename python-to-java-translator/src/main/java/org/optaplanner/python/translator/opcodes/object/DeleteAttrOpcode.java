@@ -19,6 +19,7 @@ public class DeleteAttrOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        ObjectImplementor.deleteAttribute(functionMetadata.methodVisitor, functionMetadata.className, instruction);
+        ObjectImplementor.deleteAttribute(functionMetadata, functionMetadata.methodVisitor, functionMetadata.className,
+                stackMetadata, instruction);
     }
 }

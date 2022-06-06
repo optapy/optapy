@@ -12,6 +12,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.MethodDescriptor;
+import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.JavaObjectWrapper;
@@ -429,12 +430,25 @@ public class JavaPythonTypeConversionImplementor {
                     valueOfDescriptor, false);
             methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
         } else {
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(JavaPythonTypeConversionImplementor.class),
-                    "wrapJavaObject",
-                    Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(Object.class)),
-                    false);
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
+            try {
+                Class<?> typeClass = Class.forName(parameterType.getClassName(), false,
+                        PythonBytecodeToJavaBytecodeTranslator.asmClassLoader);
+                if (!PythonLikeObject.class.isAssignableFrom(typeClass)) {
+                    methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
+                    methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC,
+                            Type.getInternalName(JavaPythonTypeConversionImplementor.class),
+                            "wrapJavaObject",
+                            Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(Object.class)),
+                            false);
+                    methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
+                } else {
+                    methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
+                    methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
+                }
+            } catch (ClassNotFoundException e) {
+                methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
+                methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
+            }
         }
     }
 }

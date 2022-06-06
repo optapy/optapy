@@ -10,12 +10,14 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.PythonCode;
 import org.optaplanner.python.translator.types.PythonLikeDict;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
@@ -34,8 +36,9 @@ public class FunctionImplementor {
      * TOS will be used as the first argument (self) by CALL_METHOD when calling the unbound method.
      * Otherwise, NULL and the object return by the attribute lookup are pushed.
      */
-    public static void loadMethod(MethodVisitor methodVisitor, String className, PythonCompiledFunction function,
-            PythonBytecodeInstruction instruction) {
+    public static void loadMethod(FunctionMetadata functionMetadata, MethodVisitor methodVisitor, String className,
+            PythonCompiledFunction function,
+            StackMetadata stackMetadata, PythonBytecodeInstruction instruction) {
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                 "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
@@ -55,7 +58,7 @@ public class FunctionImplementor {
         // TOS is null; type does not have attribute; do normal attribute lookup
         // Stack is object, null
         methodVisitor.visitInsn(Opcodes.POP);
-        ObjectImplementor.getAttribute(methodVisitor, className, instruction);
+        ObjectImplementor.getAttribute(functionMetadata, methodVisitor, className, stackMetadata, instruction);
 
         // Stack is method
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);

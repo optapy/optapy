@@ -81,8 +81,12 @@ public class PythonClassTranslator {
         for (String attributeName : instanceAttributeSet) {
             // TODO: If __annotations__ is not null, use the type from the dict instead of PythonLikeObject
             PythonLikeType type = PythonLikeType.getBaseType();
+            String javaFieldTypeDescriptor = 'L' + type.getJavaTypeInternalName() + ';';
             attributeNameToTypeMap.put(attributeName, type);
-            classWriter.visitField(Modifier.PUBLIC, attributeName, 'L' + type.getJavaTypeInternalName() + ';', null, null);
+            classWriter.visitField(Modifier.PUBLIC, attributeName, javaFieldTypeDescriptor, null, null);
+            FieldDescriptor fieldDescriptor = new FieldDescriptor(attributeName, internalClassName,
+                    javaFieldTypeDescriptor, type);
+            pythonLikeType.addInstanceField(fieldDescriptor);
         }
 
         MethodVisitor methodVisitor =

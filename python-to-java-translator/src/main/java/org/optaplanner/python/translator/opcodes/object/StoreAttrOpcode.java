@@ -19,7 +19,8 @@ public class StoreAttrOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        ObjectImplementor.setAttribute(functionMetadata.methodVisitor, functionMetadata.className, instruction,
-                stackMetadata.localVariableHelper);
+        ObjectImplementor.setAttribute(functionMetadata, functionMetadata.methodVisitor, functionMetadata.className,
+                stackMetadata,
+                instruction, stackMetadata.localVariableHelper);
     }
 }

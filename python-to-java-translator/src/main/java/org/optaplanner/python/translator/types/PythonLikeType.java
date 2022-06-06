@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.FieldDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -32,7 +33,7 @@ public class PythonLikeType implements PythonLikeObject,
 
     private final Map<String, PythonKnownFunctionType> functionNameToKnownFunctionType;
 
-    private final Map<String, PythonLikeType> instanceFieldToTypeMap;
+    private final Map<String, FieldDescriptor> instanceFieldToFieldDescriptorMap;
 
     private PythonLikeFunction constructor;
 
@@ -49,7 +50,7 @@ public class PythonLikeType implements PythonLikeObject,
         };
         __dir__ = new HashMap<>();
         functionNameToKnownFunctionType = new HashMap<>();
-        instanceFieldToTypeMap = new HashMap<>();
+        instanceFieldToFieldDescriptorMap = new HashMap<>();
     }
 
     public PythonLikeType(String typeName, String javaTypeInternalName, List<PythonLikeType> parents) {
@@ -61,7 +62,7 @@ public class PythonLikeType implements PythonLikeObject,
         };
         __dir__ = new HashMap<>();
         functionNameToKnownFunctionType = new HashMap<>();
-        instanceFieldToTypeMap = new HashMap<>();
+        instanceFieldToFieldDescriptorMap = new HashMap<>();
     }
 
     public PythonLikeType(String typeName, Class<? extends PythonLikeObject> javaClass, Consumer<PythonLikeType> initializer) {
@@ -163,29 +164,29 @@ public class PythonLikeType implements PythonLikeObject,
         return Optional.of(out);
     }
 
-    public Optional<PythonLikeType> getInstanceFieldType(String fieldName) {
-        return getAssignableTypesStream().map(PythonLikeType::getInstanceFieldToTypeMap)
+    public Optional<FieldDescriptor> getInstanceFieldDescriptor(String fieldName) {
+        return getAssignableTypesStream().map(PythonLikeType::getInstanceFieldToFieldDescriptorMap)
                 .filter(map -> map.containsKey(fieldName))
                 .map(map -> map.get(fieldName))
                 .findAny();
     }
 
-    public void addInstanceField(String fieldName, PythonLikeType fieldType) {
-        Optional<PythonLikeType> maybeExistingField = getInstanceFieldType(fieldName);
+    public void addInstanceField(FieldDescriptor fieldDescriptor) {
+        Optional<FieldDescriptor> maybeExistingField = getInstanceFieldDescriptor(fieldDescriptor.getFieldName());
         if (maybeExistingField.isPresent()) {
-            PythonLikeType existingFieldType = maybeExistingField.get();
-            if (!fieldType.isSubclassOf(existingFieldType)) {
-                throw new IllegalStateException("Field (" + fieldName + ") already exist with type (" +
-                        existingFieldType + ") which is not assignable from (" + fieldType + ").");
+            PythonLikeType existingFieldType = maybeExistingField.get().getFieldPythonLikeType();
+            if (!fieldDescriptor.getFieldPythonLikeType().isSubclassOf(existingFieldType)) {
+                throw new IllegalStateException("Field (" + fieldDescriptor.getFieldName() + ") already exist with type (" +
+                        existingFieldType + ") which is not assignable from (" + fieldDescriptor.getFieldPythonLikeType()
+                        + ").");
             }
         } else {
-            instanceFieldToTypeMap.put(fieldName, fieldType);
+            instanceFieldToFieldDescriptorMap.put(fieldDescriptor.getFieldName(), fieldDescriptor);
         }
-
     }
 
-    private Map<String, PythonLikeType> getInstanceFieldToTypeMap() {
-        return instanceFieldToTypeMap;
+    private Map<String, FieldDescriptor> getInstanceFieldToFieldDescriptorMap() {
+        return instanceFieldToFieldDescriptorMap;
     }
 
     public PythonLikeType unifyWith(PythonLikeType other) {
