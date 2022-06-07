@@ -49,7 +49,7 @@ def convert_to_java_python_like_object(value):
     from org.optaplanner.python.translator import PythonLikeObject
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
         PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper, CPythonType, \
-        OpaquePythonReference
+        OpaquePythonReference, OptaPyObjectReference
 
     global type_to_compiled_java_class
 
@@ -87,7 +87,7 @@ def convert_to_java_python_like_object(value):
                     convert_to_java_python_like_object(map_value))
         return out
     elif hasattr(value, '__optapy_java_class'):
-        return JLong(id(value))
+        return OptaPyObjectReference(JLong(id(value)))
     elif isinstance(value, type):
         if value in type_to_compiled_java_class:
             return type_to_compiled_java_class[value]
@@ -134,6 +134,8 @@ def unwrap_python_like_object(python_like_object):
         for entry in python_like_object.entrySet():
             out[unwrap_python_like_object(entry.getKey())] = unwrap_python_like_object(entry.getValue())
         return out
+    elif hasattr(python_like_object, 'get__optapy_Id'):
+        return python_like_object.get__optapy_Id()
     elif not isinstance(python_like_object, PythonLikeObject):
         return python_like_object
     else:
@@ -170,7 +172,7 @@ def copy_type_annotations(annotations_dict):
     global type_to_compiled_java_class
 
     out = HashMap()
-    for name, value in annotations_dict:
+    for name, value in annotations_dict.items():
         if not isinstance(name, str):
             continue
         if isinstance(value, (type, str)):
@@ -258,11 +260,17 @@ def get_function_bytecode_object(python_function):
     return python_compiled_function
 
 
-def translate_python_bytecode_to_java_bytecode(python_function, java_function_type):
+def translate_python_bytecode_to_java_bytecode(python_function, java_function_type, *type_args):
     from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
     python_compiled_function = get_function_bytecode_object(python_function)
-    return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(python_compiled_function,
-                                                                          java_function_type)
+
+    if len(type_args) == 0:
+        return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(python_compiled_function,
+                                                                              java_function_type)
+    else:
+        return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(python_compiled_function,
+                                                                              java_function_type,
+                                                                              copy_iterable(type_args))
 
 
 class MethodTypeHelper:
@@ -279,6 +287,11 @@ __CLASS_METHOD_TYPE = type(MethodTypeHelper.__dict__['class_method_type'])
 __STATIC_METHOD_TYPE = type(MethodTypeHelper.__dict__['static_method_type'])
 
 
+def force_update_type(python_type, java_type):
+    global type_to_compiled_java_class
+    type_to_compiled_java_class[python_type] = java_type
+
+
 def translate_python_class_to_java_class(python_class):
     from java.util import ArrayList, HashMap
     from org.optaplanner.python.translator import PythonCompiledClass, PythonClassTranslator # noqa
@@ -288,8 +301,14 @@ def translate_python_class_to_java_class(python_class):
 
     init_type_to_compiled_java_class()
 
+    if python_class in type_to_compiled_java_class:
+        return type_to_compiled_java_class[python_class]
+
+    type_to_compiled_java_class[python_class] = None
     methods = inspect.getmembers(python_class, predicate=inspect.isfunction)
+    methods = [method for method in methods if method[0] in python_class.__dict__]
     static_attributes = inspect.getmembers(python_class, predicate=lambda member: not inspect.isfunction(member))
+    static_attributes = [attribute for attribute in static_attributes if attribute[0] in python_class.__dict__]
     static_methods = [method for method in methods if isinstance(method[1], __STATIC_METHOD_TYPE)]
     class_methods = [method for method in methods if isinstance(method[1], __CLASS_METHOD_TYPE)]
     instance_methods = [method for method in methods if method not in static_methods and method not in class_methods]
@@ -330,4 +349,6 @@ def translate_python_class_to_java_class(python_class):
     python_compiled_class.classFunctionNameToPythonBytecode = class_method_map
     python_compiled_class.staticAttributeNameToObject = static_attributes_map
 
-    return PythonClassTranslator.translatePythonClass(python_compiled_class)
+    out = PythonClassTranslator.translatePythonClass(python_compiled_class)
+    type_to_compiled_java_class[python_class] = out
+    return out

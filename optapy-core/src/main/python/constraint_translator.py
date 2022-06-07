@@ -91,24 +91,27 @@ class PythonPentaPredicate:
         return self.delegate(argument1, argument2, argument3, argument4, argument5)
 
 
-def function_cast(function):
+def function_cast(function, *type_args):
     global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(function).parameters)
+    if len(type_args) != arg_count:
+        raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
     if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import Function, BiFunction
         from org.optaplanner.core.api.function import TriFunction, QuadFunction, PentaFunction
+        from org.optaplanner.python.translator import PythonLikeObject
 
         try:
             if arg_count == 1:
-                return translate_python_bytecode_to_java_bytecode(function, Function)
+                return translate_python_bytecode_to_java_bytecode(function, Function, *type_args, PythonLikeObject)
             elif arg_count == 2:
-                return translate_python_bytecode_to_java_bytecode(function, BiFunction)
+                return translate_python_bytecode_to_java_bytecode(function, BiFunction, *type_args, PythonLikeObject)
             elif arg_count == 3:
-                return translate_python_bytecode_to_java_bytecode(function, TriFunction)
+                return translate_python_bytecode_to_java_bytecode(function, TriFunction, *type_args, PythonLikeObject)
             elif arg_count == 4:
-                return translate_python_bytecode_to_java_bytecode(function, QuadFunction)
+                return translate_python_bytecode_to_java_bytecode(function, QuadFunction, *type_args, PythonLikeObject)
             elif arg_count == 5:
-                return translate_python_bytecode_to_java_bytecode(function, PentaFunction)
+                return translate_python_bytecode_to_java_bytecode(function, PentaFunction, *type_args, PythonLikeObject)
         except:  # noqa
             if function_bytecode_translation is BytecodeTranslation.FORCE:
                 raise
@@ -134,23 +137,25 @@ def default_function_cast(function, arg_count):
         raise ValueError
 
 
-def predicate_cast(predicate):
+def predicate_cast(predicate, *type_args):
     global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(predicate).parameters)
+    if len(type_args) != arg_count:
+        raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
     if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import Predicate, BiPredicate
         from org.optaplanner.core.api.function import TriPredicate, QuadPredicate, PentaPredicate
         try:
             if arg_count == 1:
-                return translate_python_bytecode_to_java_bytecode(predicate, Predicate)
+                return translate_python_bytecode_to_java_bytecode(predicate, Predicate, *type_args)
             elif arg_count == 2:
-                return translate_python_bytecode_to_java_bytecode(predicate, BiPredicate)
+                return translate_python_bytecode_to_java_bytecode(predicate, BiPredicate, *type_args)
             elif arg_count == 3:
-                return translate_python_bytecode_to_java_bytecode(predicate, TriPredicate)
+                return translate_python_bytecode_to_java_bytecode(predicate, TriPredicate, *type_args)
             elif arg_count == 4:
-                return translate_python_bytecode_to_java_bytecode(predicate, QuadPredicate)
+                return translate_python_bytecode_to_java_bytecode(predicate, QuadPredicate, *type_args)
             elif arg_count == 5:
-                return translate_python_bytecode_to_java_bytecode(predicate, PentaPredicate)
+                return translate_python_bytecode_to_java_bytecode(predicate, PentaPredicate, *type_args)
         except:  # noqa
             if function_bytecode_translation is BytecodeTranslation.FORCE:
                 raise
@@ -176,22 +181,24 @@ def default_predicate_cast(predicate, arg_count):
         raise ValueError
 
 
-def to_int_function_cast(function):
+def to_int_function_cast(function, *type_args):
     global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(function).parameters)
+    if len(type_args) != arg_count:
+        raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
     if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import ToIntFunction, ToIntBiFunction
         from org.optaplanner.core.api.function import ToIntTriFunction, ToIntQuadFunction
 
         try:
             if arg_count == 1:
-                return translate_python_bytecode_to_java_bytecode(function, ToIntFunction)
+                return translate_python_bytecode_to_java_bytecode(function, ToIntFunction, *type_args)
             elif arg_count == 2:
-                return translate_python_bytecode_to_java_bytecode(function, ToIntBiFunction)
+                return translate_python_bytecode_to_java_bytecode(function, ToIntBiFunction, *type_args)
             elif arg_count == 3:
-                return translate_python_bytecode_to_java_bytecode(function, ToIntTriFunction)
+                return translate_python_bytecode_to_java_bytecode(function, ToIntTriFunction, *type_args)
             elif arg_count == 4:
-                return translate_python_bytecode_to_java_bytecode(function, ToIntQuadFunction)
+                return translate_python_bytecode_to_java_bytecode(function, ToIntQuadFunction, *type_args)
         except:  # noqa
             if function_bytecode_translation is BytecodeTranslation.FORCE:
                 raise
@@ -213,6 +220,41 @@ def default_to_int_function_cast(function, arg_count):
         return PythonToIntQuadFunction(lambda a, b, c, d: _convert_to_java_compatible_object(function(a, b, c, d)))
     else:
         raise ValueError
+
+
+@dataclasses.dataclass
+class SamePropertyUniJoiner:
+    joiner_creator: Callable
+    join_function: Callable
+
+
+@dataclasses.dataclass
+class PropertyJoiner:
+    joiner_creator: Callable
+    left_join_function: Callable
+    right_join_function: Callable
+
+
+@dataclasses.dataclass
+class SameOverlappingPropertyUniJoiner:
+    joiner_creator: Callable
+    start_function: Callable
+    end_function: Callable
+
+
+@dataclasses.dataclass
+class OverlappingPropertyJoiner:
+    joiner_creator: Callable
+    left_start_function: Callable
+    left_end_function: Callable
+    right_start_function: Callable
+    right_end_function: Callable
+
+
+@dataclasses.dataclass
+class FilteringJoiner:
+    joiner_creator: Callable
+    filter_function: Callable
 
 
 def extract_joiners(joiner_tuple, *stream_types):
@@ -242,7 +284,33 @@ def extract_joiners(joiner_tuple, *stream_types):
         raise ValueError
 
     for i in range(array_size):
-        output_array[i] = (array_type) @ (joiner_tuple[i])
+        joiner_info = joiner_tuple[i]
+        created_joiner = None
+        if isinstance(joiner_info, SamePropertyUniJoiner):
+            property_function = function_cast(joiner_info.join_function, stream_types[0])
+            created_joiner = joiner_info.joiner_creator(property_function)
+        elif isinstance(joiner_info, PropertyJoiner):
+            left_property_function = function_cast(joiner_info.left_join_function, stream_types[:-1])
+            right_property_function = function_cast(joiner_info.right_join_function, stream_types[-1])
+            created_joiner = joiner_info.joiner_creator(left_property_function, right_property_function)
+        elif isinstance(joiner_info, SameOverlappingPropertyUniJoiner):
+            start_function = function_cast(joiner_info.start_function, stream_types[0])
+            end_function = function_cast(joiner_info.end_function, stream_types[0])
+            created_joiner = joiner_info.joiner_creator(start_function, end_function)
+        elif isinstance(joiner_info, OverlappingPropertyJoiner):
+            left_start_function = function_cast(joiner_info.left_start_function, stream_types[:-1])
+            left_end_function = function_cast(joiner_info.left_end_function, stream_types[:-1])
+            right_start_function = function_cast(joiner_info.right_start_function, stream_types[-1])
+            right_end_function = function_cast(joiner_info.right_end_function, stream_types[-1])
+            created_joiner = joiner_info.joiner_creator(left_start_function, left_end_function,
+                                                        right_start_function, right_end_function)
+        elif isinstance(joiner_info, FilteringJoiner):
+            filter_function = predicate_cast(joiner_info.filter_function, stream_types)
+            created_joiner = joiner_info.joiner_creator(filter_function)
+        else:
+            raise ValueError(f'Invalid Joiner: {joiner_info}. Create Joiners via optapy.constraint.Joiners.')
+
+        output_array[i] = array_type @ created_joiner
 
     return output_array
 
@@ -342,7 +410,7 @@ def perform_group_by(delegate, package, group_by_args, *type_arguments):
     actual_group_by_args = []
     for i in range(len(group_by_args)):
         if callable(group_by_args[i]):
-            actual_group_by_args.append(function_cast(group_by_args[i]))
+            actual_group_by_args.append(function_cast(group_by_args[i], *type_arguments))
         else:
             actual_group_by_args.append(group_by_args[i])
 
@@ -374,7 +442,7 @@ class PythonUniConstraintStream:
         self.a_type = a_type
 
     def filter(self, predicate) -> 'PythonUniConstraintStream':
-        translated_predicate = predicate_cast(predicate)
+        translated_predicate = predicate_cast(predicate, self.a_type)
         return PythonUniConstraintStream(self.delegate.filter(translated_predicate), self.package, self.a_type)
 
     def join(self, unistream_or_type, *joiners: List['BiJoiner']) -> 'PythonBiConstraintStream':
@@ -451,12 +519,12 @@ class PythonUniConstraintStream:
         return perform_group_by(self.delegate, self.package, args, self.a_type)
 
     def map(self, mapping_function) -> 'PythonUniConstraintStream':
-        translated_function = function_cast(mapping_function)
+        translated_function = function_cast(mapping_function, self.a_type)
         return PythonUniConstraintStream(self.delegate.map(translated_function), self.package,
                                          JClass('java.lang.Object'))
 
     def flattenLast(self, flattening_function) -> 'PythonUniConstraintStream':
-        translated_function = function_cast(flattening_function)
+        translated_function = function_cast(flattening_function, self.a_type)
         return PythonUniConstraintStream(self.delegate.flattenLast(translated_function), self.package,
                                          JClass('java.lang.Object'))
 
@@ -470,7 +538,8 @@ class PythonUniConstraintStream:
                                           constraint_info.score)
         else:
             return self.delegate.penalize(constraint_info.constraint_package, constraint_info.constraint_name,
-                                          constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                          constraint_info.score,
+                                          to_int_function_cast(constraint_info.impact_function, self.a_type))
 
     def penalizeLong(self, *args):
         raise NotImplementedError
@@ -494,7 +563,8 @@ class PythonUniConstraintStream:
                                         constraint_info.score)
         else:
             return self.delegate.reward(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type))
 
     def rewardLong(self, *args):
         raise NotImplementedError
@@ -512,7 +582,8 @@ class PythonUniConstraintStream:
                                         constraint_info.score)
         else:
             return self.delegate.impact(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type))
 
     def impactLong(self, *args):
         raise NotImplementedError
@@ -537,7 +608,7 @@ class PythonBiConstraintStream:
         self.b_type = b_type
 
     def filter(self, predicate) -> 'PythonBiConstraintStream':
-        translated_predicate = predicate_cast(predicate)
+        translated_predicate = predicate_cast(predicate, self.a_type, self.b_type)
         return PythonBiConstraintStream(self.delegate.filter(translated_predicate), self.package, self.a_type,
                                         self.b_type)
 
@@ -621,11 +692,11 @@ class PythonBiConstraintStream:
         return perform_group_by(self.delegate, self.package, args, self.a_type, self.b_type)
 
     def map(self, mapping_function) -> 'PythonUniConstraintStream':
-        translated_function = function_cast(mapping_function)
+        translated_function = function_cast(mapping_function, self.a_type, self.b_type)
         return PythonUniConstraintStream(self.delegate.map(translated_function), self.package, JClass('java.lang.Object'))
 
     def flattenLast(self, flattening_function) -> 'PythonBiConstraintStream':
-        translated_function = function_cast(flattening_function)
+        translated_function = function_cast(flattening_function, self.b_type)
         return PythonBiConstraintStream(self.delegate.flattenLast(translated_function), self.package,
                                         self.a_type, JClass('java.lang.Object'))
 
@@ -639,7 +710,9 @@ class PythonBiConstraintStream:
                                           constraint_info.score)
         else:
             return self.delegate.penalize(constraint_info.constraint_package, constraint_info.constraint_name,
-                                          constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                          constraint_info.score,
+                                          to_int_function_cast(constraint_info.impact_function, self.a_type,
+                                                               self.b_type))
 
     def penalizeLong(self, *args):
         raise NotImplementedError
@@ -663,7 +736,8 @@ class PythonBiConstraintStream:
                                         constraint_info.score)
         else:
             return self.delegate.reward(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type))
 
     def rewardLong(self, *args):
         raise NotImplementedError
@@ -681,7 +755,8 @@ class PythonBiConstraintStream:
                                         constraint_info.score)
         else:
             return self.delegate.impact(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type))
 
     def impactLong(self, *args):
         raise NotImplementedError
@@ -708,7 +783,7 @@ class PythonTriConstraintStream:
         self.c_type = c_type
 
     def filter(self, predicate) -> 'PythonTriConstraintStream':
-        translated_predicate = predicate_cast(predicate)
+        translated_predicate = predicate_cast(predicate, self.a_type, self.b_type, self.c_type)
         return PythonTriConstraintStream(self.delegate.filter(translated_predicate), self.package, self.a_type,
                                          self.b_type, self.c_type)
 
@@ -804,12 +879,12 @@ class PythonTriConstraintStream:
         return perform_group_by(self.delegate, self.package, args, self.a_type, self.b_type, self.c_type)
 
     def map(self, mapping_function) -> 'PythonUniConstraintStream':
-        translated_function = function_cast(mapping_function)
+        translated_function = function_cast(mapping_function, self.a_type, self.b_type, self.c_type)
         return PythonUniConstraintStream(self.delegate.map(translated_function), self.package,
                                          JClass('java.lang.Object'))
 
     def flattenLast(self, flattening_function) -> 'PythonTriConstraintStream':
-        translated_function = function_cast(flattening_function)
+        translated_function = function_cast(flattening_function, self.c_type)
         return PythonTriConstraintStream(self.delegate.flattenLast(translated_function), self.package,
                                          self.a_type, self.b_type, JClass('java.lang.Object'))
 
@@ -824,7 +899,10 @@ class PythonTriConstraintStream:
                                           constraint_info.score)
         else:
             return self.delegate.penalize(constraint_info.constraint_package, constraint_info.constraint_name,
-                                          constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                          constraint_info.score,
+                                          to_int_function_cast(constraint_info.impact_function, self.a_type,
+                                                               self.b_type,
+                                                               self.c_type))
 
     def penalizeLong(self, *args):
         raise NotImplementedError
@@ -848,7 +926,9 @@ class PythonTriConstraintStream:
                                         constraint_info.score)
         else:
             return self.delegate.reward(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type,
+                                                             self.c_type))
 
     def rewardLong(self, *args):
         raise NotImplementedError
@@ -866,7 +946,9 @@ class PythonTriConstraintStream:
                                         constraint_info.score)
         else:
             return self.delegate.impact(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type,
+                                                             self.c_type))
 
     def impactLong(self, *args):
         raise NotImplementedError
@@ -896,7 +978,7 @@ class PythonQuadConstraintStream:
         self.d_type = d_type
 
     def filter(self, predicate) -> 'PythonQuadConstraintStream':
-        translated_predicate = predicate_cast(predicate)
+        translated_predicate = predicate_cast(predicate, self.a_type, self.b_type, self.c_type, self.d_type)
         return PythonQuadConstraintStream(self.delegate.filter(translated_predicate), self.package, self.a_type,
                                           self.b_type, self.c_type, self.d_type)
 
@@ -991,12 +1073,12 @@ class PythonQuadConstraintStream:
         return perform_group_by(self.delegate, self.package, args, self.a_type, self.b_type, self.c_type, self.d_type)
 
     def map(self, mapping_function) -> 'PythonUniConstraintStream':
-        translated_function = function_cast(mapping_function)
+        translated_function = function_cast(mapping_function, self.a_type, self.b_type, self.c_type, self.d_type)
         return PythonUniConstraintStream(self.delegate.map(translated_function), self.package,
                                          JClass('java.lang.Object'))
 
     def flattenLast(self, flattening_function) -> 'PythonQuadConstraintStream':
-        translated_function = function_cast(flattening_function)
+        translated_function = function_cast(flattening_function, self.d_type)
         return PythonQuadConstraintStream(self.delegate.flattenLast(translated_function), self.package,
                                           self.a_type, self.b_type, self.c_type, JClass('java.lang.Object'))
 
@@ -1011,7 +1093,9 @@ class PythonQuadConstraintStream:
                                           constraint_info.score)
         else:
             return self.delegate.penalize(constraint_info.constraint_package, constraint_info.constraint_name,
-                                          constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                          constraint_info.score,
+                                          to_int_function_cast(constraint_info.impact_function, self.a_type,
+                                                               self.b_type, self.c_type, self.d_type))
 
     def penalizeLong(self, *args):
         raise NotImplementedError
@@ -1035,7 +1119,9 @@ class PythonQuadConstraintStream:
                                         constraint_info.score)
         else:
             return self.delegate.reward(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type,
+                                                             self.c_type, self.d_type))
 
     def rewardLong(self, *args):
         raise NotImplementedError
@@ -1053,7 +1139,9 @@ class PythonQuadConstraintStream:
                                         constraint_info.score)
         else:
             return self.delegate.impact(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type,
+                                                             self.c_type, self.d_type))
 
     def impactLong(self, *args):
         raise NotImplementedError

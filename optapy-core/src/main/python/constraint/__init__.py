@@ -118,16 +118,27 @@ class DefaultConstraintMatchTotal:
 
 class _JoinersWrapper:
     def __getattr__(self, item):
+        from ..constraint_translator import PropertyJoiner, SamePropertyUniJoiner,\
+            OverlappingPropertyJoiner, SameOverlappingPropertyUniJoiner, FilteringJoiner
         is_filtering = item == 'filtering'
+        is_overlapping = item == 'overlapping'
         java_method = getattr(JavaJoiners, item)
 
         def function_wrapper(*args):
-            cast_function = function_cast
             if is_filtering:
-                cast_function = predicate_cast
-
-            cast_args = tuple(map(lambda arg: cast_function(arg), args))
-            return java_method(*cast_args)
+                return FilteringJoiner(java_method, args[0])
+            elif is_overlapping:
+                if len(args) == 2:
+                    return SameOverlappingPropertyUniJoiner(java_method, args[0], args[1])
+                else:
+                    return OverlappingPropertyJoiner(java_method, args[0], args[1], args[2], args[3])
+            else:
+                if len(args) == 0:
+                    return SamePropertyUniJoiner(java_method, lambda a: a)
+                if len(args) == 1:
+                    return SamePropertyUniJoiner(java_method, args[0])
+                else:
+                    return PropertyJoiner(java_method, args[0], args[1])
 
         return function_wrapper
 

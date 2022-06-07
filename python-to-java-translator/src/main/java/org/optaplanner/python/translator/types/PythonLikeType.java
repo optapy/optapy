@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.FieldDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
+import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
@@ -28,7 +29,7 @@ public class PythonLikeType implements PythonLikeObject,
 
     private final String TYPE_NAME;
 
-    private final String JAVA_TYPE_SIGNATURE;
+    private final String JAVA_TYPE_INTERNAL_NAME;
     private final List<PythonLikeType> PARENT_TYPES;
 
     private final Map<String, PythonKnownFunctionType> functionNameToKnownFunctionType;
@@ -43,7 +44,7 @@ public class PythonLikeType implements PythonLikeObject,
 
     public PythonLikeType(String typeName, Class<? extends PythonLikeObject> javaClass, List<PythonLikeType> parents) {
         TYPE_NAME = typeName;
-        JAVA_TYPE_SIGNATURE = Type.getInternalName(javaClass);
+        JAVA_TYPE_INTERNAL_NAME = Type.getInternalName(javaClass);
         PARENT_TYPES = parents;
         constructor = (positional, keywords) -> {
             throw new UnsupportedOperationException("Cannot create instance of type (" + TYPE_NAME + ").");
@@ -55,7 +56,7 @@ public class PythonLikeType implements PythonLikeObject,
 
     public PythonLikeType(String typeName, String javaTypeInternalName, List<PythonLikeType> parents) {
         TYPE_NAME = typeName;
-        JAVA_TYPE_SIGNATURE = javaTypeInternalName;
+        JAVA_TYPE_INTERNAL_NAME = javaTypeInternalName;
         PARENT_TYPES = parents;
         constructor = (positional, keywords) -> {
             throw new UnsupportedOperationException("Cannot create instance of type (" + TYPE_NAME + ").");
@@ -77,7 +78,7 @@ public class PythonLikeType implements PythonLikeObject,
 
     public static PythonLikeType getBaseType() {
         if (BASE_TYPE == null) {
-            BASE_TYPE = new PythonLikeType("object", PythonLikeObject.class, Collections.emptyList());
+            BASE_TYPE = new PythonLikeType("base-object", PythonLikeObject.class, Collections.emptyList());
             try {
                 BASE_TYPE.__dir__.put(PythonBinaryOperators.GET_ATTRIBUTE.getDunderMethod(),
                         new JavaMethodReference(
@@ -287,7 +288,20 @@ public class PythonLikeType implements PythonLikeObject,
     }
 
     public String getJavaTypeInternalName() {
-        return JAVA_TYPE_SIGNATURE;
+        return JAVA_TYPE_INTERNAL_NAME;
+    }
+
+    /**
+     * DO NOT CALL THIS METHOD WHEN GENERATING BYTECODE, SINCE THE CLASS MAY NOT EXIST YET.
+     */
+    public Class<?> getJavaClass() {
+        try {
+            return Class.forName(JAVA_TYPE_INTERNAL_NAME.replace('/', '.'), true,
+                    PythonBytecodeToJavaBytecodeTranslator.asmClassLoader);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Unable to find class " + JAVA_TYPE_INTERNAL_NAME.replace('/', '.') +
+                    ". Maybe use getJavaTypeInternalName instead?");
+        }
     }
 
     public List<PythonLikeType> getParentList() {

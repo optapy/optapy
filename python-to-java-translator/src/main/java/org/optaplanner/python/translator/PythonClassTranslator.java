@@ -16,11 +16,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -56,8 +57,18 @@ public class PythonClassTranslator {
         String internalClassName = className.replace('.', '/');
         generatedClassId++;
 
+        List<PythonLikeType> superTypeList = new ArrayList<>(pythonCompiledClass.superclassList.size());
+        for (int i = 0; i < pythonCompiledClass.superclassList.size(); i++) {
+            if (pythonCompiledClass.superclassList.get(i) == PythonLikeType.getBaseType()) {
+                superTypeList.add(AbstractPythonLikeObject.OBJECT_TYPE);
+            } else {
+                superTypeList.add(pythonCompiledClass.superclassList.get(i));
+            }
+        }
+
         PythonLikeType pythonLikeType = new PythonLikeType(pythonCompiledClass.className, internalClassName,
-                pythonCompiledClass.superclassList);
+                superTypeList);
+        PythonLikeType superClassType = superTypeList.get(0);
         Set<String> instanceAttributeSet = new HashSet<>();
         pythonCompiledClass.instanceFunctionNameToPythonBytecode.values().forEach(instanceMethod -> {
             instanceAttributeSet.addAll(getReferencedSelfAttributes(instanceMethod));
@@ -66,7 +77,8 @@ public class PythonClassTranslator {
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 
         classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null,
-                Type.getInternalName(AbstractPythonLikeObject.class), null);
+                superClassType.getJavaTypeInternalName(), null);
+
         pythonCompiledClass.staticAttributeNameToObject.forEach(pythonLikeType::__setAttribute);
 
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, TYPE_FIELD_NAME, Type.getDescriptor(PythonLikeType.class),
@@ -89,6 +101,7 @@ public class PythonClassTranslator {
             pythonLikeType.addInstanceField(fieldDescriptor);
         }
 
+        // No args constructor for creating instance of this class
         MethodVisitor methodVisitor =
                 classWriter.visitMethod(Modifier.PUBLIC, "<init>", Type.getMethodDescriptor(Type.VOID_TYPE),
                         null, null);
@@ -96,7 +109,7 @@ public class PythonClassTranslator {
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, internalClassName, TYPE_FIELD_NAME,
                 Type.getDescriptor(PythonLikeType.class));
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(AbstractPythonLikeObject.class), "<init>",
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, superClassType.getJavaTypeInternalName(), "<init>",
                 Type.getMethodDescriptor(Type.VOID_TYPE,
                         Type.getType(PythonLikeType.class)),
                 false);
@@ -105,13 +118,32 @@ public class PythonClassTranslator {
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
 
-        createGetAttribute(classWriter, internalClassName, Type.getInternalName(AbstractPythonLikeObject.class),
+        // type arg constructor for creating subclass of this class
+        methodVisitor =
+                classWriter.visitMethod(Modifier.PUBLIC, "<init>", Type.getMethodDescriptor(Type.VOID_TYPE,
+                        Type.getType(PythonLikeType.class)),
+                        null, null);
+        methodVisitor.visitParameter("subclassType", 0);
+
+        methodVisitor.visitCode();
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, superClassType.getJavaTypeInternalName(), "<init>",
+                Type.getMethodDescriptor(Type.VOID_TYPE,
+                        Type.getType(PythonLikeType.class)),
+                false);
+        methodVisitor.visitInsn(Opcodes.RETURN);
+
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+
+        createGetAttribute(classWriter, internalClassName, superClassType.getJavaTypeInternalName(),
                 instanceAttributeSet,
                 attributeNameToTypeMap);
-        createSetAttribute(classWriter, internalClassName, Type.getInternalName(AbstractPythonLikeObject.class),
+        createSetAttribute(classWriter, internalClassName, superClassType.getJavaTypeInternalName(),
                 instanceAttributeSet,
                 attributeNameToTypeMap);
-        createDeleteAttribute(classWriter, internalClassName, Type.getInternalName(AbstractPythonLikeObject.class),
+        createDeleteAttribute(classWriter, internalClassName, superClassType.getJavaTypeInternalName(),
                 instanceAttributeSet,
                 attributeNameToTypeMap);
 
@@ -329,7 +361,7 @@ public class PythonClassTranslator {
         String javaMethodDescriptor = Type.getMethodDescriptor(returnType, javaParameterTypes);
         MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, methodName, javaMethodDescriptor, null, null);
 
-        createMethodBody(internalClassName, methodName, interfaceDeclaration.methodDescriptor, function,
+        createMethodBody(internalClassName, methodName, javaParameterTypes, interfaceDeclaration.methodDescriptor, function,
                 interfaceDeclaration.interfaceName, interfaceDescriptor, methodVisitor);
 
         pythonLikeType.addMethod(methodName,
@@ -348,7 +380,13 @@ public class PythonClassTranslator {
         MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC | Modifier.STATIC, methodName,
                 function.getAsmMethodDescriptorString(), null, null);
 
-        createMethodBody(internalClassName, methodName, interfaceDeclaration.methodDescriptor, function,
+        List<PythonLikeType> parameterPythonTypeList = function.getParameterTypes();
+        Type[] javaParameterTypes = new Type[function.co_argcount];
+
+        for (int i = 0; i < function.co_argcount; i++) {
+            javaParameterTypes[i] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
+        }
+        createMethodBody(internalClassName, methodName, javaParameterTypes, interfaceDeclaration.methodDescriptor, function,
                 interfaceDeclaration.interfaceName, interfaceDescriptor, methodVisitor);
 
         pythonLikeType.addMethod(methodName,
@@ -358,11 +396,12 @@ public class PythonClassTranslator {
                         function.getParameterTypes()));
     }
 
-    private static void createMethodBody(String internalClassName, String methodName, String methodDescriptorString,
+    private static void createMethodBody(String internalClassName, String methodName, Type[] javaParameterTypes,
+            String methodDescriptorString,
             PythonCompiledFunction function, String interfaceInternalName, String interfaceDescriptor,
             MethodVisitor methodVisitor) {
-        for (PythonLikeType parameterType : function.getParameterTypes()) {
-            methodVisitor.visitParameter(null, 0);
+        for (int i = 0; i < javaParameterTypes.length; i++) {
+            methodVisitor.visitParameter("parameter" + i, 0);
         }
         methodVisitor.visitCode();
 
@@ -387,6 +426,8 @@ public class PythonClassTranslator {
                         Type.getType(String.class)),
                 null, null);
 
+        methodVisitor.visitParameter("attribute", 0);
+
         methodVisitor.visitCode();
 
         createFieldSwitch(methodVisitor, instanceAttributes, 2, field -> {
@@ -402,7 +443,7 @@ public class PythonClassTranslator {
                             Type.getType(String.class)),
                     false);
             methodVisitor.visitInsn(Opcodes.ARETURN);
-        });
+        }, true);
 
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
@@ -417,6 +458,9 @@ public class PythonClassTranslator {
                         Type.getType(PythonLikeObject.class)),
                 null, null);
 
+        methodVisitor.visitParameter("attribute", 0);
+        methodVisitor.visitParameter("value", 0);
+
         methodVisitor.visitCode();
 
         createFieldSwitch(methodVisitor, instanceAttributes, 3, field -> {
@@ -425,15 +469,6 @@ public class PythonClassTranslator {
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldToType.get(field).getJavaTypeInternalName());
             methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, field,
                     'L' + fieldToType.get(field).getJavaTypeInternalName() + ';');
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(AbstractPythonLikeObject.class),
-                    "__setAttribute",
-                    Type.getMethodDescriptor(Type.VOID_TYPE,
-                            Type.getType(String.class),
-                            Type.getType(PythonLikeObject.class)),
-                    false);
             methodVisitor.visitInsn(Opcodes.RETURN);
         }, () -> {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -445,7 +480,7 @@ public class PythonClassTranslator {
                             Type.getType(PythonLikeObject.class)),
                     false);
             methodVisitor.visitInsn(Opcodes.RETURN);
-        });
+        }, true);
 
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
@@ -459,6 +494,8 @@ public class PythonClassTranslator {
                         Type.getType(String.class)),
                 null, null);
 
+        methodVisitor.visitParameter("attribute", 0);
+
         methodVisitor.visitCode();
 
         createFieldSwitch(methodVisitor, instanceAttributes, 2, field -> {
@@ -466,13 +503,6 @@ public class PythonClassTranslator {
             methodVisitor.visitInsn(Opcodes.ACONST_NULL);
             methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, field,
                     'L' + fieldToType.get(field).getJavaTypeInternalName() + ';');
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(AbstractPythonLikeObject.class),
-                    "__deleteAttribute",
-                    Type.getMethodDescriptor(Type.VOID_TYPE,
-                            Type.getType(String.class)),
-                    false);
             methodVisitor.visitInsn(Opcodes.RETURN);
         }, () -> {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -482,20 +512,21 @@ public class PythonClassTranslator {
                             Type.getType(String.class)),
                     false);
             methodVisitor.visitInsn(Opcodes.RETURN);
-        });
+        }, true);
 
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
     }
 
     public static void createFieldSwitch(MethodVisitor methodVisitor, Collection<String> fieldNames,
-            int switchVariable, Consumer<String> caseWritter, Runnable defaultCase) {
+            int switchVariable, Consumer<String> caseWriter, Runnable defaultCase, boolean doesEachCaseReturnEarly) {
         if (fieldNames.isEmpty()) {
             defaultCase.run();
             return;
         }
 
-        LinkedHashMap<Integer, List<String>> hashCodeToMatchingFieldList = new LinkedHashMap<>();
+        // keys in lookup switch MUST be sorted
+        SortedMap<Integer, List<String>> hashCodeToMatchingFieldList = new TreeMap<>();
         for (String fieldName : fieldNames) {
             hashCodeToMatchingFieldList.computeIfAbsent(fieldName.hashCode(), hash -> new ArrayList<>()).add(fieldName);
         }
@@ -513,44 +544,49 @@ public class PythonClassTranslator {
         }
 
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Object.class), "hashCode",
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(String.class), "hashCode",
                 Type.getMethodDescriptor(Type.INT_TYPE), false);
         Map<Integer, String> switchVariableValueToField = new HashMap<>();
 
         Label endOfKeySwitch = new Label();
-        Label defaultHandler = new Label();
 
-        methodVisitor.visitLookupSwitchInsn(defaultHandler, keys, hashCodeLabels);
+        methodVisitor.visitLdcInsn(-1);
+        methodVisitor.visitVarInsn(Opcodes.ISTORE, switchVariable);
+
+        methodVisitor.visitLookupSwitchInsn(endOfKeySwitch, keys, hashCodeLabels);
 
         int totalEntries = 0;
         for (int i = 0; i < keys.length; i++) {
             methodVisitor.visitLabel(hashCodeLabels[i]);
             List<String> matchingFields = hashCodeToMatchingFieldList.get(keys[i]);
 
-            Label ifFailedLabel = new Label();
-            for (String field : matchingFields) {
-                methodVisitor.visitLabel(ifFailedLabel);
-                methodVisitor.visitLdcInsn(field);
+            for (int fieldIndex = 0; fieldIndex < matchingFields.size(); fieldIndex++) {
+                String field = matchingFields.get(fieldIndex);
+                Label ifDoesNotMatchLabel = new Label();
+
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
-                methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Object.class), "equals",
+                methodVisitor.visitLdcInsn(field);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(String.class), "equals",
                         Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)), false);
-                methodVisitor.visitJumpInsn(Opcodes.IFEQ, ifFailedLabel);
+                if (fieldIndex != matchingFields.size() - 1) {
+                    methodVisitor.visitJumpInsn(Opcodes.IFEQ, ifDoesNotMatchLabel);
+                } else {
+                    methodVisitor.visitJumpInsn(Opcodes.IFEQ, endOfKeySwitch);
+                }
                 methodVisitor.visitLdcInsn(totalEntries);
                 methodVisitor.visitVarInsn(Opcodes.ISTORE, switchVariable);
-                methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfKeySwitch);
+                if (fieldIndex != matchingFields.size() - 1) {
+                    methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfKeySwitch);
+                    methodVisitor.visitLabel(ifDoesNotMatchLabel);
+                }
 
                 switchVariableValueToField.put(totalEntries, field);
-                ifFailedLabel = new Label();
                 totalEntries++;
             }
-            methodVisitor.visitLabel(ifFailedLabel);
-            methodVisitor.visitLdcInsn(-1);
-            methodVisitor.visitVarInsn(Opcodes.ISTORE, switchVariable);
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfKeySwitch);
+            if (totalEntries != fieldNames.size()) {
+                methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfKeySwitch);
+            }
         }
-        methodVisitor.visitLabel(defaultHandler);
-        methodVisitor.visitLdcInsn(-1);
-        methodVisitor.visitVarInsn(Opcodes.ISTORE, switchVariable);
         methodVisitor.visitLabel(endOfKeySwitch);
 
         Label missingField = new Label();
@@ -566,12 +602,16 @@ public class PythonClassTranslator {
         for (int i = 0; i < totalEntries; i++) {
             methodVisitor.visitLabel(fieldHandlerLabels[i]);
             String field = switchVariableValueToField.get(i);
-            caseWritter.accept(field);
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfFieldsSwitch);
+            caseWriter.accept(field);
+            if (!doesEachCaseReturnEarly) {
+                methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfFieldsSwitch);
+            }
         }
         methodVisitor.visitLabel(missingField);
         defaultCase.run();
-        methodVisitor.visitLabel(endOfFieldsSwitch);
+        if (!doesEachCaseReturnEarly) {
+            methodVisitor.visitLabel(endOfFieldsSwitch);
+        }
     }
 
     public static InterfaceDeclaration getInterfaceForFunctionSignature(FunctionSignature functionSignature) {

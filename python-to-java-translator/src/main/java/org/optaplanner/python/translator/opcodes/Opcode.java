@@ -91,6 +91,9 @@ public interface Opcode {
                 .or(() -> StackManipulationOpcodes.lookupOpcodeForInstruction(instruction, pythonVersion))
                 .or(() -> StringOpcodes.lookupOpcodeForInstruction(instruction, pythonVersion))
                 .or(() -> VariableOpcodes.lookupOpcodeForInstruction(instruction, pythonVersion))
-                .orElseThrow();
+                .orElseThrow(() -> new UnsupportedOperationException(
+                        "Could not find implementation for Opcode " + instruction.opcode +
+                                " for Python version " + pythonVersion +
+                                " (cause by instruction: " + instruction + ")."));
     }
 }

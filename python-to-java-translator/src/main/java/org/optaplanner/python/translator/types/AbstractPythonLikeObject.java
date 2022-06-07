@@ -6,6 +6,9 @@ import java.util.Map;
 import org.optaplanner.python.translator.PythonLikeObject;
 
 public abstract class AbstractPythonLikeObject implements PythonLikeObject {
+
+    public static final PythonLikeType OBJECT_TYPE = new PythonLikeType("object", AbstractPythonLikeObject.class);
+
     private final PythonLikeType __type__;
     private final Map<String, PythonLikeObject> __dir__;
 
