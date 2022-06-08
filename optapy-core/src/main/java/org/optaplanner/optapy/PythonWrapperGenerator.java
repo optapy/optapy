@@ -182,6 +182,37 @@ public class PythonWrapperGenerator {
         return unwrapOptaPyReferences(object.get__optapy_reference_map(), out);
     }
 
+    public static void updateVariableFromPythonObject(PythonObject object, String variableName)
+            throws IllegalAccessException, InvocationTargetException {
+        Object newValue;
+        try {
+            newValue = getValueFromPythonObject(object.get__optapy_Id(), "get_" + variableName);
+        } catch (OptaPyException e1) {
+            try {
+                newValue = getValueFromPythonObject(object.get__optapy_Id(),
+                        "get" + Character.toUpperCase(variableName.charAt(0)) + variableName.substring(1));
+            } catch (OptaPyException e2) {
+                throw new IllegalArgumentException(
+                        "Unable to find variable (" + variableName + ") on entity (" + object + ").");
+            }
+        }
+        String javaSetter = "set" + Character.toUpperCase(variableName.charAt(0)) + variableName.substring(1);
+
+        for (Method method : object.getClass().getMethods()) {
+            if (method.getName().equals(javaSetter)) {
+                // Need to check if (numeric) value is compatible with method parameter
+                // (in particular, newValue will be a Long if it is integral, but if the Method
+                //  expects an Integer it will throw an exception)
+                if (newValue != null && method.getParameterTypes()[0].equals(Integer.class) && !(newValue instanceof Integer)) {
+                    newValue = ((Number) newValue).intValue();
+                }
+                method.invoke(object, newValue);
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Unable to find variable (" + variableName + ") on entity (" + object + ").");
+    }
+
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static PythonLikeObject unwrapOptaPyReferences(Map<Number, Object> referenceMap, Object toUnwrap) {
         if (toUnwrap instanceof OptaPyObjectReference) {

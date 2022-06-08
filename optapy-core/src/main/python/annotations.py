@@ -814,6 +814,16 @@ def variable_listener(variable_listener_class: Type['_VariableListener'] = None,
                              f'{the_variable_listener_class}: {missing_method_list}')
         for method in methods:
             method_on_class = getattr(the_variable_listener_class, method, None)
+
+            if method.startswith('after'):
+                # Use method_on_class as a default argument to force early binding
+                # (Otherwise, it will be the same method for all wrappers)
+                def wrapper_method(self, score_director, entity, original_method=method_on_class):
+                    score_director.getWorkingSolution().forceUpdate()
+                    original_method(self, score_director, entity)
+
+                method_on_class = wrapper_method
+
             setattr(the_variable_listener_class, method, JOverride()(method_on_class))
 
         method_on_class = getattr(the_variable_listener_class, 'requiresUniqueEntityEvents', None)

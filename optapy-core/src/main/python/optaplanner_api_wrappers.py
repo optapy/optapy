@@ -279,6 +279,14 @@ class _PythonProblemChangeDirector:
         self._java_removeProblemFact(_wrap_object(problemFact, instance_map, update_function), problemFactConsumer)
 
 
+@JImplementationFor('org.optaplanner.core.api.score.director.ScoreDirector')
+class _PythonScoreDirector:
+    @JOverride(sticky=True, rename='_java_afterVariableChanged')
+    def afterVariableChanged(self, entity, variable_name):
+        entity._optapy_change_variable(variable_name)
+        self._java_afterVariableChanged(entity, variable_name)
+
+
 def solver_config_create_from_xml_file(solver_config_path: pathlib.Path) -> '_SolverConfig':
     """Loads a SolverConfig from the given file.
 

@@ -452,6 +452,12 @@ class _PythonObject:
     def __jclass_init__(self):
         pass
 
+
+    def _optapy_change_variable(self, variable_name):
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+        PythonWrapperGenerator.updateVariableFromPythonObject(self, variable_name)
+
+
     def __optapy_lookup(self, attribute, default_fun, *args, **kwargs):
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         item = PythonWrapperGenerator.getPythonObject(self)
