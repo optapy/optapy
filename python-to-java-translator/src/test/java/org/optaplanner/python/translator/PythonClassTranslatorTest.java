@@ -50,9 +50,12 @@ public class PythonClassTranslatorTest {
         Class<?> generatedClass = PythonBytecodeToJavaBytecodeTranslator.asmClassLoader.loadClass(
                 classType.getJavaTypeInternalName().replace('/', '.'));
 
-        assertThat(generatedClass).hasPublicFields("get_age", "age");
-        assertThat(generatedClass).hasPublicMethods("__init__", "get_age");
-        assertThat(generatedClass.getMethod("get_age").getParameterTypes()).isEmpty();
+        assertThat(generatedClass).hasPublicFields(PythonClassTranslator.getJavaMethodName("get_age"),
+                PythonClassTranslator.getJavaFieldName("age"));
+        assertThat(generatedClass).hasPublicMethods(
+                PythonClassTranslator.getJavaMethodName("__init__"),
+                PythonClassTranslator.getJavaMethodName("get_age"));
+        assertThat(generatedClass.getMethod(PythonClassTranslator.getJavaMethodName("get_age")).getParameterTypes()).isEmpty();
 
         PythonLikeObject classObject = classType.__call__(List.of(PythonInteger.valueOf(10)), Map.of());
         PythonLikeFunction getAgeFunction = (PythonLikeFunction) ObjectBuiltinOperations.getAttribute(classObject, "get_age");

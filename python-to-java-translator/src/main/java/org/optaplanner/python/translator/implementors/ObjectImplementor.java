@@ -32,7 +32,7 @@ public class ObjectImplementor {
             FieldDescriptor fieldDescriptor = maybeFieldDescriptor.get();
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldDescriptor.getDeclaringClassInternalName());
             methodVisitor.visitFieldInsn(Opcodes.GETFIELD, fieldDescriptor.getDeclaringClassInternalName(),
-                    fieldDescriptor.getFieldName(),
+                    fieldDescriptor.getJavaFieldName(),
                     fieldDescriptor.getJavaFieldTypeDescriptor());
         } else {
             PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
@@ -54,7 +54,7 @@ public class ObjectImplementor {
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldDescriptor.getDeclaringClassInternalName());
             methodVisitor.visitInsn(Opcodes.ACONST_NULL);
             methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, fieldDescriptor.getDeclaringClassInternalName(),
-                    fieldDescriptor.getFieldName(),
+                    fieldDescriptor.getJavaFieldName(),
                     fieldDescriptor.getJavaFieldTypeDescriptor());
         } else {
             PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
@@ -76,7 +76,7 @@ public class ObjectImplementor {
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldDescriptor.getDeclaringClassInternalName());
             StackManipulationImplementor.swap(methodVisitor);
             methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, fieldDescriptor.getDeclaringClassInternalName(),
-                    fieldDescriptor.getFieldName(),
+                    fieldDescriptor.getJavaFieldName(),
                     fieldDescriptor.getJavaFieldTypeDescriptor());
         } else {
             StackManipulationImplementor.swap(methodVisitor);

@@ -290,7 +290,7 @@ def extract_joiners(joiner_tuple, *stream_types):
             property_function = function_cast(joiner_info.join_function, stream_types[0])
             created_joiner = joiner_info.joiner_creator(property_function)
         elif isinstance(joiner_info, PropertyJoiner):
-            left_property_function = function_cast(joiner_info.left_join_function, stream_types[:-1])
+            left_property_function = function_cast(joiner_info.left_join_function, *stream_types[:-1])
             right_property_function = function_cast(joiner_info.right_join_function, stream_types[-1])
             created_joiner = joiner_info.joiner_creator(left_property_function, right_property_function)
         elif isinstance(joiner_info, SameOverlappingPropertyUniJoiner):
@@ -298,14 +298,14 @@ def extract_joiners(joiner_tuple, *stream_types):
             end_function = function_cast(joiner_info.end_function, stream_types[0])
             created_joiner = joiner_info.joiner_creator(start_function, end_function)
         elif isinstance(joiner_info, OverlappingPropertyJoiner):
-            left_start_function = function_cast(joiner_info.left_start_function, stream_types[:-1])
-            left_end_function = function_cast(joiner_info.left_end_function, stream_types[:-1])
+            left_start_function = function_cast(joiner_info.left_start_function, *stream_types[:-1])
+            left_end_function = function_cast(joiner_info.left_end_function, *stream_types[:-1])
             right_start_function = function_cast(joiner_info.right_start_function, stream_types[-1])
             right_end_function = function_cast(joiner_info.right_end_function, stream_types[-1])
             created_joiner = joiner_info.joiner_creator(left_start_function, left_end_function,
                                                         right_start_function, right_end_function)
         elif isinstance(joiner_info, FilteringJoiner):
-            filter_function = predicate_cast(joiner_info.filter_function, stream_types)
+            filter_function = predicate_cast(joiner_info.filter_function, *stream_types)
             created_joiner = joiner_info.joiner_creator(filter_function)
         else:
             raise ValueError(f'Invalid Joiner: {joiner_info}. Create Joiners via optapy.constraint.Joiners.')

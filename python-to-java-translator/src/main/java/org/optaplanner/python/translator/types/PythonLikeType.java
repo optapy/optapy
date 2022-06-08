@@ -173,16 +173,17 @@ public class PythonLikeType implements PythonLikeObject,
     }
 
     public void addInstanceField(FieldDescriptor fieldDescriptor) {
-        Optional<FieldDescriptor> maybeExistingField = getInstanceFieldDescriptor(fieldDescriptor.getFieldName());
+        Optional<FieldDescriptor> maybeExistingField = getInstanceFieldDescriptor(fieldDescriptor.getPythonFieldName());
         if (maybeExistingField.isPresent()) {
             PythonLikeType existingFieldType = maybeExistingField.get().getFieldPythonLikeType();
             if (!fieldDescriptor.getFieldPythonLikeType().isSubclassOf(existingFieldType)) {
-                throw new IllegalStateException("Field (" + fieldDescriptor.getFieldName() + ") already exist with type (" +
+                throw new IllegalStateException("Field (" + fieldDescriptor.getPythonFieldName() + ") already exist with type ("
+                        +
                         existingFieldType + ") which is not assignable from (" + fieldDescriptor.getFieldPythonLikeType()
                         + ").");
             }
         } else {
-            instanceFieldToFieldDescriptorMap.put(fieldDescriptor.getFieldName(), fieldDescriptor);
+            instanceFieldToFieldDescriptorMap.put(fieldDescriptor.getPythonFieldName(), fieldDescriptor);
         }
     }
 

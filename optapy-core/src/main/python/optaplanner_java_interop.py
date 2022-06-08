@@ -412,9 +412,7 @@ def ensure_init():
 def set_class_output_directory(path: pathlib.Path):
     ensure_init()
 
-    from org.optaplanner.optapy import PythonWrapperGenerator # noqa
     from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
-    PythonWrapperGenerator.classOutputRootPath = path
     PythonBytecodeToJavaBytecodeTranslator.classOutputRootPath = path
 
 
@@ -1030,49 +1028,53 @@ def _does_class_define_eq_or_hashcode(python_class):
 def _generate_problem_fact_class(python_class):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+    from javapython import translate_python_class_to_java_class, force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
-    parent_class = None
+    parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
     has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
-    if len(python_class.__bases__) == 1 and hasattr(python_class.__bases__[0], '__optapy_java_class'):
-        parent_class = get_class(python_class.__bases__[0])
 
     out = PythonWrapperGenerator.defineProblemFactClass(_compose_unique_class_name(class_identifier),
                                                         parent_class,
                                                         has_eq_and_hashcode,
                                                         optaplanner_annotations)
     class_identifier_to_java_class_map[class_identifier] = out
+    force_update_type(python_class, out.getField('$TYPE').get(None))
     return out
 
 
 def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[str, Any]):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+    from javapython import translate_python_class_to_java_class, force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
-    parent_class = None
+    parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
     has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
-    if len(python_class.__bases__) == 1 and hasattr(python_class.__bases__[0], '__optapy_java_class'):
-        parent_class = get_class(python_class.__bases__[0])
     out = PythonWrapperGenerator.definePlanningEntityClass(_compose_unique_class_name(class_identifier),
                                                            parent_class,
                                                            has_eq_and_hashcode,
                                                            optaplanner_annotations,
                                                            _to_java_map(annotation_data))
     class_identifier_to_java_class_map[class_identifier] = out
+    force_update_type(python_class, out.getField('$TYPE').get(None))
     return out
 
 
 def _generate_planning_solution_class(python_class: Type) -> JClass:
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
+    from javapython import translate_python_class_to_java_class, force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
+    parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
     has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
     out = PythonWrapperGenerator.definePlanningSolutionClass(_compose_unique_class_name(class_identifier),
+                                                             parent_class,
                                                              has_eq_and_hashcode,
                                                              optaplanner_annotations)
     class_identifier_to_java_class_map[class_identifier] = out
+    force_update_type(python_class, out.getField('$TYPE').get(None))
     return out
 
 

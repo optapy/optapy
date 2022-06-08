@@ -6,22 +6,30 @@ import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class FieldDescriptor {
 
-    final String fieldName;
+    final String pythonFieldName;
+
+    final String javaFieldName;
 
     final String declaringClassInternalName;
     final String javaFieldTypeDescriptor;
     final PythonLikeType fieldPythonLikeType;
 
-    public FieldDescriptor(String fieldName, String declaringClassInternalName, String javaFieldTypeDescriptor,
+    public FieldDescriptor(String pythonFieldName, String javaFieldName,
+            String declaringClassInternalName, String javaFieldTypeDescriptor,
             PythonLikeType fieldPythonLikeType) {
-        this.fieldName = fieldName;
+        this.pythonFieldName = pythonFieldName;
+        this.javaFieldName = javaFieldName;
         this.declaringClassInternalName = declaringClassInternalName;
         this.javaFieldTypeDescriptor = javaFieldTypeDescriptor;
         this.fieldPythonLikeType = fieldPythonLikeType;
     }
 
-    public String getFieldName() {
-        return fieldName;
+    public String getPythonFieldName() {
+        return pythonFieldName;
+    }
+
+    public String getJavaFieldName() {
+        return javaFieldName;
     }
 
     public String getDeclaringClassInternalName() {
@@ -45,20 +53,23 @@ public class FieldDescriptor {
             return false;
         }
         FieldDescriptor that = (FieldDescriptor) o;
-        return fieldName.equals(that.fieldName) && declaringClassInternalName.equals(that.declaringClassInternalName)
+        return pythonFieldName.equals(that.pythonFieldName) && javaFieldName.equals(that.javaFieldName)
+                && declaringClassInternalName.equals(that.declaringClassInternalName)
                 && javaFieldTypeDescriptor.equals(that.javaFieldTypeDescriptor)
                 && fieldPythonLikeType.equals(that.fieldPythonLikeType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(fieldName, declaringClassInternalName, javaFieldTypeDescriptor, fieldPythonLikeType);
+        return Objects.hash(pythonFieldName, javaFieldName, declaringClassInternalName, javaFieldTypeDescriptor,
+                fieldPythonLikeType);
     }
 
     @Override
     public String toString() {
         return "FieldDescriptor{" +
-                "fieldName='" + fieldName + '\'' +
+                "pythonFieldName='" + pythonFieldName + '\'' +
+                ", javaFieldName='" + javaFieldName + '\'' +
                 ", declaringClassInternalName='" + declaringClassInternalName + '\'' +
                 ", javaFieldTypeDescriptor='" + javaFieldTypeDescriptor + '\'' +
                 ", fieldPythonLikeType=" + fieldPythonLikeType +

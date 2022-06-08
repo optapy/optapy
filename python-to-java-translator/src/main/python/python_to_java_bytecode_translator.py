@@ -342,6 +342,8 @@ def translate_python_class_to_java_class(python_class):
         static_attributes_map.put(attribute[0], convert_to_java_python_like_object(attribute[1]))
 
     python_compiled_class = PythonCompiledClass()
+    python_compiled_class.binaryType = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class,
+                                                                  convert=True))
     python_compiled_class.className = python_class.__name__
     python_compiled_class.superclassList = superclass_list
     python_compiled_class.instanceFunctionNameToPythonBytecode = instance_method_map

@@ -31,6 +31,9 @@ class InverseRelationValue:
     def get_entities(self):
         return self.entities
 
+    def set_entities(self, entities):
+        self.entities = entities
+
 
 @optapy.planning_solution
 class InverseRelationSolution:

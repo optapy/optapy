@@ -2,7 +2,7 @@ package org.optaplanner.python.translator.types;
 
 import java.util.Map;
 
-public class PythonString extends AbstractPythonLikeObject {
+public class PythonString extends AbstractPythonLikeObject implements Comparable<PythonString> {
     public final String value;
 
     public final static PythonLikeType STRING_TYPE = new PythonLikeType("str", PythonString.class);
@@ -53,5 +53,10 @@ public class PythonString extends AbstractPythonLikeObject {
 
     public int length() {
         return value.length();
+    }
+
+    @Override
+    public int compareTo(PythonString pythonString) {
+        return value.compareTo(pythonString.value);
     }
 }

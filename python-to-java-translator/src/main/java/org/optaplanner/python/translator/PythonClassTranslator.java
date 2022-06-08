@@ -14,6 +14,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -71,7 +72,14 @@ public class PythonClassTranslator {
         PythonLikeType superClassType = superTypeList.get(0);
         Set<String> instanceAttributeSet = new HashSet<>();
         pythonCompiledClass.instanceFunctionNameToPythonBytecode.values().forEach(instanceMethod -> {
-            instanceAttributeSet.addAll(getReferencedSelfAttributes(instanceMethod));
+            try {
+                instanceAttributeSet.addAll(getReferencedSelfAttributes(instanceMethod));
+            } catch (UnsupportedOperationException e) {
+                // silently ignore unsupported operations
+            } catch (Exception e) {
+                System.out.println("WARNING: Ignoring exception");
+                e.printStackTrace();
+            }
         });
 
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
@@ -95,9 +103,10 @@ public class PythonClassTranslator {
             PythonLikeType type = PythonLikeType.getBaseType();
             String javaFieldTypeDescriptor = 'L' + type.getJavaTypeInternalName() + ';';
             attributeNameToTypeMap.put(attributeName, type);
-            classWriter.visitField(Modifier.PUBLIC, attributeName, javaFieldTypeDescriptor, null, null);
-            FieldDescriptor fieldDescriptor = new FieldDescriptor(attributeName, internalClassName,
-                    javaFieldTypeDescriptor, type);
+            classWriter.visitField(Modifier.PUBLIC, getJavaFieldName(attributeName), javaFieldTypeDescriptor, null, null);
+            FieldDescriptor fieldDescriptor =
+                    new FieldDescriptor(attributeName, getJavaFieldName(attributeName), internalClassName,
+                            javaFieldTypeDescriptor, type);
             pythonLikeType.addInstanceField(fieldDescriptor);
         }
 
@@ -184,21 +193,24 @@ public class PythonClassTranslator {
                 .entrySet()) {
             InterfaceDeclaration interfaceDeclaration =
                     getInterfaceForInstancePythonFunction(internalClassName, instanceMethodEntry.getValue());
-            createBytecodeForMethodAndSetOnClass(className, pythonLikeType, generatedClass, instanceMethodEntry,
+            createBytecodeForMethodAndSetOnClass(className, pythonLikeType, pythonCompiledClass.binaryType, generatedClass,
+                    instanceMethodEntry,
                     interfaceDeclaration, true);
         }
 
         for (Map.Entry<String, PythonCompiledFunction> staticMethodEntry : pythonCompiledClass.staticFunctionNameToPythonBytecode
                 .entrySet()) {
             InterfaceDeclaration interfaceDeclaration = getInterfaceForPythonFunction(staticMethodEntry.getValue());
-            createBytecodeForMethodAndSetOnClass(className, pythonLikeType, generatedClass, staticMethodEntry,
+            createBytecodeForMethodAndSetOnClass(className, pythonLikeType, pythonCompiledClass.binaryType, generatedClass,
+                    staticMethodEntry,
                     interfaceDeclaration, false);
         }
 
         for (Map.Entry<String, PythonCompiledFunction> classMethodEntry : pythonCompiledClass.classFunctionNameToPythonBytecode
                 .entrySet()) {
             InterfaceDeclaration interfaceDeclaration = getInterfaceForPythonFunction(classMethodEntry.getValue());
-            createBytecodeForMethodAndSetOnClass(className, pythonLikeType, generatedClass, classMethodEntry,
+            createBytecodeForMethodAndSetOnClass(className, pythonLikeType, pythonCompiledClass.binaryType, generatedClass,
+                    classMethodEntry,
                     interfaceDeclaration, false);
         }
 
@@ -210,30 +222,158 @@ public class PythonClassTranslator {
         return pythonLikeType;
     }
 
+    public static String getJavaFieldName(String pythonFieldName) {
+        return "$field$" + pythonFieldName;
+    }
+
+    public static String getPythonFieldName(String javaFieldName) {
+        return javaFieldName.substring("$field$".length());
+    }
+
+    public static String getJavaMethodName(String pythonMethodName) {
+        return "$method$" + pythonMethodName;
+    }
+
+    public static String getPythonMethodName(String javaMethodName) {
+        return javaMethodName.substring("$method$".length());
+    }
+
     private static void createBytecodeForMethodAndSetOnClass(String className, PythonLikeType pythonLikeType,
-            Class<? extends PythonLikeObject> generatedClass, Map.Entry<String, PythonCompiledFunction> methodEntry,
+            PythonLikeType cPythonType,
+            Class<? extends PythonLikeObject> generatedClass,
+            Map.Entry<String, PythonCompiledFunction> methodEntry,
             InterfaceDeclaration interfaceDeclaration,
             boolean isVirtual) {
-        Class<?> functionClass = translatePythonBytecodeToClass(methodEntry.getValue(),
-                new MethodDescriptor(interfaceDeclaration.interfaceName,
-                        MethodDescriptor.MethodType.INTERFACE, "invoke",
-                        interfaceDeclaration.methodDescriptor),
-                isVirtual);
-        try {
-            Object functionInstance = createInstance(functionClass, PythonInterpreter.DEFAULT);
+        Class<?> functionClass;
+        Object functionInstance;
 
+        try {
+            functionClass = translatePythonBytecodeToClass(methodEntry.getValue(),
+                    new MethodDescriptor(interfaceDeclaration.interfaceName,
+                            MethodDescriptor.MethodType.INTERFACE, "invoke",
+                            interfaceDeclaration.methodDescriptor),
+                    isVirtual);
+            functionInstance = createInstance(functionClass, PythonInterpreter.DEFAULT);
+        } catch (Exception e) {
+            functionClass = createPythonWrapperMethod(methodEntry.getKey(), methodEntry.getValue(),
+                    interfaceDeclaration, isVirtual);
+            try {
+                functionInstance = functionClass.getConstructor(PythonLikeType.class).newInstance(cPythonType);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException ex) {
+                throw new IllegalStateException(
+                        "Cannot create instance of Python native wrapper despite it being just generated", ex);
+            }
+        }
+
+        try {
             // TODO: Default value directory
             GeneratedFunctionMethodReference instanceMethodReference = new GeneratedFunctionMethodReference(functionInstance,
                     functionClass.getMethods()[0],
                     Map.of());
 
-            generatedClass.getField(methodEntry.getKey())
+            generatedClass.getField(getJavaMethodName(methodEntry.getKey()))
                     .set(null, functionInstance);
             pythonLikeType.__setAttribute(methodEntry.getKey(), instanceMethodReference);
         } catch (IllegalAccessException | NoSuchFieldException e) {
             throw new IllegalStateException("Impossible State: could not access method (" + methodEntry.getKey()
                     + ") static field for generated class ("
                     + className + ").", e);
+        }
+    }
+
+    private static Class<?> createPythonWrapperMethod(String methodName, PythonCompiledFunction pythonCompiledFunction,
+            InterfaceDeclaration interfaceDeclaration, boolean isVirtual) {
+        String className = "org.optaplanner.optapy.generated." + "class" + generatedClassId + ".GeneratedClass";
+        String internalClassName = className.replace('.', '/');
+        generatedClassId++;
+
+        ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+
+        classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null,
+                Type.getInternalName(Object.class), new String[] { interfaceDeclaration.interfaceName });
+
+        classWriter.visitField(Modifier.PUBLIC | Modifier.FINAL, "$binaryType", Type.getDescriptor(PythonLikeType.class),
+                null, null);
+
+        // Constructor that takes a PythonLikeType
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "<init>",
+                Type.getMethodDescriptor(Type.VOID_TYPE,
+                        Type.getType(PythonLikeType.class)),
+                null, null);
+
+        methodVisitor.visitCode();
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>",
+                Type.getMethodDescriptor(Type.VOID_TYPE), false);
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName, "$binaryType",
+                Type.getDescriptor(PythonLikeType.class));
+
+        methodVisitor.visitInsn(Opcodes.RETURN);
+
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+
+        // Interface method
+        methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "invoke", interfaceDeclaration.methodDescriptor,
+                null, null);
+
+        for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
+            methodVisitor.visitParameter("parameter" + i, 0);
+        }
+
+        methodVisitor.visitCode();
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, "$binaryType",
+                Type.getDescriptor(PythonLikeType.class));
+        methodVisitor.visitLdcInsn(methodName);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getAttributeOrError",
+                Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(String.class)),
+                true);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeFunction.class));
+
+        methodVisitor.visitLdcInsn(pythonCompiledFunction.co_argcount);
+        methodVisitor.visitTypeInsn(Opcodes.ANEWARRAY, Type.getInternalName(Object.class));
+        for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitLdcInsn(i);
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, i + 1);
+            methodVisitor.visitInsn(Opcodes.AASTORE);
+        }
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Arrays.class), "asList",
+                Type.getMethodDescriptor(Type.getType(List.class), Type.getType(Object[].class)),
+                false);
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                Type.getMethodDescriptor(Type.getType(Map.class)),
+                false);
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class), "__call__",
+                Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(List.class),
+                        Type.getType(Map.class)),
+                true);
+
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                Type.getReturnType(interfaceDeclaration.methodDescriptor).getInternalName());
+        methodVisitor.visitInsn(Opcodes.ARETURN);
+
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+
+        classWriter.visitEnd();
+
+        writeClassOutput(classNameToBytecode, className, classWriter.toByteArray());
+
+        try {
+            return asmClassLoader.loadClass(className);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Cannot load class " + className + " despite it being just generated", e);
         }
     }
 
@@ -319,7 +459,7 @@ public class PythonClassTranslator {
 
         String initMethodDescriptor = Type.getMethodDescriptor(returnType, parameterTypes);
 
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, classInternalName, "__init__",
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, classInternalName, getJavaMethodName("__init__"),
                 initMethodDescriptor, false);
 
         methodVisitor.visitInsn(Opcodes.POP);
@@ -348,7 +488,9 @@ public class PythonClassTranslator {
             String methodName, PythonCompiledFunction function) {
         InterfaceDeclaration interfaceDeclaration = getInterfaceForInstancePythonFunction(internalClassName, function);
         String interfaceDescriptor = 'L' + interfaceDeclaration.interfaceName + ';';
-        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, methodName, interfaceDescriptor,
+        String javaMethodName = getJavaMethodName(methodName);
+
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, javaMethodName, interfaceDescriptor,
                 null, null);
         Type returnType = Type.getType('L' + function.getReturnType().map(PythonLikeType::getJavaTypeInternalName)
                 .orElseGet(() -> getPythonReturnTypeOfFunction(function, true).getJavaTypeInternalName()) + ';');
@@ -359,14 +501,15 @@ public class PythonClassTranslator {
             javaParameterTypes[i - 1] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
         }
         String javaMethodDescriptor = Type.getMethodDescriptor(returnType, javaParameterTypes);
-        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, methodName, javaMethodDescriptor, null, null);
+        MethodVisitor methodVisitor =
+                classWriter.visitMethod(Modifier.PUBLIC, javaMethodName, javaMethodDescriptor, null, null);
 
-        createMethodBody(internalClassName, methodName, javaParameterTypes, interfaceDeclaration.methodDescriptor, function,
+        createMethodBody(internalClassName, javaMethodName, javaParameterTypes, interfaceDeclaration.methodDescriptor, function,
                 interfaceDeclaration.interfaceName, interfaceDescriptor, methodVisitor);
 
         pythonLikeType.addMethod(methodName,
                 new PythonFunctionSignature(new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.VIRTUAL,
-                        methodName, javaMethodDescriptor),
+                        javaMethodName, javaMethodDescriptor),
                         function.getReturnType().orElse(PythonLikeType.getBaseType()),
                         function.getParameterTypes().subList(1, function.getParameterTypes().size())));
     }
@@ -375,9 +518,11 @@ public class PythonClassTranslator {
             String methodName, PythonCompiledFunction function) {
         InterfaceDeclaration interfaceDeclaration = getInterfaceForPythonFunction(function);
         String interfaceDescriptor = 'L' + interfaceDeclaration.interfaceName + ';';
-        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, methodName, interfaceDescriptor,
+        String javaMethodName = getJavaMethodName(methodName);
+
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, javaMethodName, interfaceDescriptor,
                 null, null);
-        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC | Modifier.STATIC, methodName,
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC | Modifier.STATIC, javaMethodName,
                 function.getAsmMethodDescriptorString(), null, null);
 
         List<PythonLikeType> parameterPythonTypeList = function.getParameterTypes();
@@ -386,17 +531,17 @@ public class PythonClassTranslator {
         for (int i = 0; i < function.co_argcount; i++) {
             javaParameterTypes[i] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
         }
-        createMethodBody(internalClassName, methodName, javaParameterTypes, interfaceDeclaration.methodDescriptor, function,
+        createMethodBody(internalClassName, javaMethodName, javaParameterTypes, interfaceDeclaration.methodDescriptor, function,
                 interfaceDeclaration.interfaceName, interfaceDescriptor, methodVisitor);
 
         pythonLikeType.addMethod(methodName,
                 new PythonFunctionSignature(new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.STATIC,
-                        methodName, function.getAsmMethodDescriptorString()),
+                        javaMethodName, function.getAsmMethodDescriptorString()),
                         function.getReturnType().orElse(PythonLikeType.getBaseType()),
                         function.getParameterTypes()));
     }
 
-    private static void createMethodBody(String internalClassName, String methodName, Type[] javaParameterTypes,
+    private static void createMethodBody(String internalClassName, String javaMethodName, Type[] javaParameterTypes,
             String methodDescriptorString,
             PythonCompiledFunction function, String interfaceInternalName, String interfaceDescriptor,
             MethodVisitor methodVisitor) {
@@ -405,7 +550,7 @@ public class PythonClassTranslator {
         }
         methodVisitor.visitCode();
 
-        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, internalClassName, methodName, interfaceDescriptor);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, internalClassName, javaMethodName, interfaceDescriptor);
         for (int i = 0; i < function.co_argcount; i++) {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, i);
         }
@@ -432,7 +577,7 @@ public class PythonClassTranslator {
 
         createFieldSwitch(methodVisitor, instanceAttributes, 2, field -> {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-            methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, field,
+            methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, getJavaFieldName(field),
                     'L' + fieldToType.get(field).getJavaTypeInternalName() + ';');
             methodVisitor.visitInsn(Opcodes.ARETURN);
         }, () -> {
@@ -467,7 +612,7 @@ public class PythonClassTranslator {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldToType.get(field).getJavaTypeInternalName());
-            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, field,
+            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, getJavaFieldName(field),
                     'L' + fieldToType.get(field).getJavaTypeInternalName() + ';');
             methodVisitor.visitInsn(Opcodes.RETURN);
         }, () -> {
@@ -501,7 +646,7 @@ public class PythonClassTranslator {
         createFieldSwitch(methodVisitor, instanceAttributes, 2, field -> {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
             methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, field,
+            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, getJavaFieldName(field),
                     'L' + fieldToType.get(field).getJavaTypeInternalName() + ';');
             methodVisitor.visitInsn(Opcodes.RETURN);
         }, () -> {
@@ -744,16 +889,25 @@ public class PythonClassTranslator {
 
     public static PythonLikeType getPythonReturnTypeOfFunction(PythonCompiledFunction pythonCompiledFunction,
             boolean isVirtual) {
-        FlowGraph flowGraph = createFlowGraph(pythonCompiledFunction, isVirtual);
+        try {
+            FlowGraph flowGraph = createFlowGraph(pythonCompiledFunction, isVirtual);
 
-        List<PythonLikeType> possibleReturnTypeList = new ArrayList<>();
-        flowGraph.visitOperations(ReturnValueOpcode.class, (opcode, stackMetadata) -> {
-            possibleReturnTypeList.add(stackMetadata.getTOSType());
-        });
+            List<PythonLikeType> possibleReturnTypeList = new ArrayList<>();
+            flowGraph.visitOperations(ReturnValueOpcode.class, (opcode, stackMetadata) -> {
+                possibleReturnTypeList.add(stackMetadata.getTOSType());
+            });
 
-        return possibleReturnTypeList.stream()
-                .reduce(PythonLikeType::unifyWith)
-                .orElse(PythonNone.NONE_TYPE);
+            return possibleReturnTypeList.stream()
+                    .reduce(PythonLikeType::unifyWith)
+                    .orElse(PythonNone.NONE_TYPE);
+        } catch (UnsupportedOperationException e) {
+            // Return the base type if we encounter any unsupported operations
+            return PythonLikeType.getBaseType();
+        } catch (Exception e) {
+            System.out.println("WARNING: Ignoring exception");
+            e.printStackTrace();
+            return PythonLikeType.getBaseType();
+        }
     }
 
     public static class InterfaceDeclaration {
