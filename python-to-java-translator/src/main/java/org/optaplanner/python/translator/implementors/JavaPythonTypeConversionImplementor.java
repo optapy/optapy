@@ -15,6 +15,7 @@ import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.JavaObjectWrapper;
 import org.optaplanner.python.translator.types.OpaqueJavaReference;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
@@ -287,7 +288,7 @@ public class JavaPythonTypeConversionImplementor {
      *
      * @param method The method that is being implemented.
      */
-    public static void returnValue(MethodVisitor methodVisitor, MethodDescriptor method) {
+    public static void returnValue(MethodVisitor methodVisitor, MethodDescriptor method, StackMetadata stackMetadata) {
         Type returnAsmType = method.getReturnType();
 
         if (Type.VOID_TYPE.equals(returnAsmType)) {
@@ -365,6 +366,23 @@ public class JavaPythonTypeConversionImplementor {
                     false);
             methodVisitor.visitInsn(returnOpcode);
             return;
+        }
+
+        try {
+            Class<?> returnTypeClass =
+                    Class.forName(returnAsmType.getClassName(), true, PythonBytecodeToJavaBytecodeTranslator.asmClassLoader);
+
+            if (stackMetadata.getTOSType() == null) {
+                throw new IllegalStateException("Cannot return a deleted or undefined value");
+            }
+            Class<?> tosTypeClass = stackMetadata.getTOSType().getJavaClass();
+            if (returnTypeClass.isAssignableFrom(tosTypeClass)) {
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, returnAsmType.getInternalName());
+                methodVisitor.visitInsn(Opcodes.ARETURN);
+                return;
+            }
+        } catch (ClassNotFoundException e) {
+            // Do nothing; default case is below
         }
 
         methodVisitor.visitLdcInsn(returnAsmType);

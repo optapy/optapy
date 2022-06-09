@@ -31,6 +31,6 @@ public class ReturnValueOpcode extends AbstractControlFlowOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        JavaPythonTypeConversionImplementor.returnValue(functionMetadata.methodVisitor, functionMetadata.method);
+        JavaPythonTypeConversionImplementor.returnValue(functionMetadata.methodVisitor, functionMetadata.method, stackMetadata);
     }
 }

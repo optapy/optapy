@@ -293,16 +293,11 @@ public class PythonLikeType implements PythonLikeObject,
     }
 
     /**
-     * DO NOT CALL THIS METHOD WHEN GENERATING BYTECODE, SINCE THE CLASS MAY NOT EXIST YET.
+     * Return the Java class corresponding to this type, if it exists. Throws {@link ClassNotFoundException} otherwise.
      */
-    public Class<?> getJavaClass() {
-        try {
-            return Class.forName(JAVA_TYPE_INTERNAL_NAME.replace('/', '.'), true,
-                    PythonBytecodeToJavaBytecodeTranslator.asmClassLoader);
-        } catch (ClassNotFoundException e) {
-            throw new IllegalStateException("Unable to find class " + JAVA_TYPE_INTERNAL_NAME.replace('/', '.') +
-                    ". Maybe use getJavaTypeInternalName instead?");
-        }
+    public Class<?> getJavaClass() throws ClassNotFoundException {
+        return Class.forName(JAVA_TYPE_INTERNAL_NAME.replace('/', '.'), true,
+                PythonBytecodeToJavaBytecodeTranslator.asmClassLoader);
     }
 
     public List<PythonLikeType> getParentList() {

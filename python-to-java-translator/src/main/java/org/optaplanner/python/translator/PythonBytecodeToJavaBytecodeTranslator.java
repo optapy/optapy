@@ -472,8 +472,15 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
         }
 
-        for (int i = 0; i < localVariableHelper.getNumberOfCells(); i++) {
+        for (int i = 0; i < localVariableHelper.getNumberOfBoundCells(); i++) {
+            // Bound variables are not initialized by default
             initialStackMetadata.cellVariableValueSources.add(null);
+        }
+
+        for (int i = 0; i < localVariableHelper.getNumberOfFreeCells(); i++) {
+            // Free variables are assumed initialized
+            initialStackMetadata.cellVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
+                    PythonLikeType.getBaseType()));
         }
 
         return initialStackMetadata;
