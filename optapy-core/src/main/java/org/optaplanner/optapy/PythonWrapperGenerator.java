@@ -295,7 +295,7 @@ public class PythonWrapperGenerator {
     static final String PYTHON_BINDING_FIELD_NAME = "__optaplannerPythonValue";
     static final String REFERENCE_MAP_FIELD_NAME = "__optaplannerReferenceMap";
 
-    static final String PYTHON_SETTER_FIELD_NAME = "__optaplannerPythonSetter";
+    static final String PYTHON_SETTER_FIELD_NAME = "_optaplannerPythonSetter";
 
     static final String PYTHON_LIKE_VALUE_MAP_FIELD_NAME = "__optaplannerPythonLikeValueCacheMap";
     static final String PYTHON_LIKE_TYPE_FIELD_NAME = "$TYPE";

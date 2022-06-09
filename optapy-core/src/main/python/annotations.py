@@ -898,8 +898,10 @@ def problem_change(problem_change_class: Type['_ProblemChange']) -> \
         solution.forceUpdate()
 
         problem_change_director._set_instance_map(run_id, solution.get__optapy_reference_map())
-        problem_change_director._set_update_function(run_id, solution.__optaplannerPythonSetter)
+        problem_change_director._set_update_function(run_id, solution._optaplannerPythonSetter)
+
         class_doChange(self, solution, problem_change_director)
+
         problem_change_director._unset_instance_map(run_id)
         problem_change_director._unset_update_function(run_id)
 
