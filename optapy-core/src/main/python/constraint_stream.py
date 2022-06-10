@@ -305,7 +305,14 @@ class PythonUniConstraintStream:
                                          JClass('java.lang.Object'))
 
     def flattenLast(self, flattening_function) -> 'PythonUniConstraintStream':
-        translated_function = function_cast(flattening_function)
+        def wrapped_function(last_item):
+            from java.util import ArrayList
+            items = flattening_function(last_item)
+            out = ArrayList(len(items))
+            for item in items:
+                out.add(item)
+            return out
+        translated_function = function_cast(wrapped_function)
         return PythonUniConstraintStream(self.delegate.flattenLast(translated_function), self.package,
                                          JClass('java.lang.Object'))
 
@@ -474,7 +481,15 @@ class PythonBiConstraintStream:
         return PythonUniConstraintStream(self.delegate.map(translated_function), self.package, JClass('java.lang.Object'))
 
     def flattenLast(self, flattening_function) -> 'PythonBiConstraintStream':
-        translated_function = function_cast(flattening_function)
+        def wrapped_function(last_item):
+            from java.util import ArrayList
+            items = flattening_function(last_item)
+            out = ArrayList(len(items))
+            for item in items:
+                out.add(item)
+            return out
+
+        translated_function = function_cast(wrapped_function)
         return PythonBiConstraintStream(self.delegate.flattenLast(translated_function), self.package,
                                         self.a_type, JClass('java.lang.Object'))
 
@@ -658,7 +673,14 @@ class PythonTriConstraintStream:
                                          JClass('java.lang.Object'))
 
     def flattenLast(self, flattening_function) -> 'PythonTriConstraintStream':
-        translated_function = function_cast(flattening_function)
+        def wrapped_function(last_item):
+            from java.util import ArrayList
+            items = flattening_function(last_item)
+            out = ArrayList(len(items))
+            for item in items:
+                out.add(item)
+            return out
+        translated_function = function_cast(wrapped_function)
         return PythonTriConstraintStream(self.delegate.flattenLast(translated_function), self.package,
                                          self.a_type, self.b_type, JClass('java.lang.Object'))
 
@@ -845,7 +867,14 @@ class PythonQuadConstraintStream:
                                          JClass('java.lang.Object'))
 
     def flattenLast(self, flattening_function) -> 'PythonQuadConstraintStream':
-        translated_function = function_cast(flattening_function)
+        def wrapped_function(last_item):
+            from java.util import ArrayList
+            items = flattening_function(last_item)
+            out = ArrayList(len(items))
+            for item in items:
+                out.add(item)
+            return out
+        translated_function = function_cast(wrapped_function)
         return PythonQuadConstraintStream(self.delegate.flattenLast(translated_function), self.package,
                                           self.a_type, self.b_type, self.c_type, JClass('java.lang.Object'))
 

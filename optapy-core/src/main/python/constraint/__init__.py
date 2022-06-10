@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING
 ensure_init()
 
 Joiners = None
-from org.optaplanner.core.api.score.stream import Joiners as JavaJoiners, ConstraintCollectors, Constraint, ConstraintFactory  # noqa
+from org.optaplanner.core.api.score.stream import Joiners as JavaJoiners, \
+    ConstraintCollectors as JavaConstraintCollectors, Constraint, ConstraintFactory  # noqa
 from org.optaplanner.core.api.score.constraint import ConstraintMatch, ConstraintMatchTotal
 from org.optaplanner.core.api.score import Score as _Score
 
 if TYPE_CHECKING:
     Joiners = JavaJoiners
+    ConstraintCollectors = JavaConstraintCollectors
 
 
 # Cannot import DefaultConstraintMatchTotal as it is in impl
@@ -116,88 +118,38 @@ class DefaultConstraintMatchTotal:
 
 # Below is needed so unknown Python objects can properly be proxied
 from jpype import JImplements, JOverride # noqa
-from ..jpype_type_conversions import PythonFunction as _PythonFunction, PythonBiFunction as _PythonBiFunction, \
-    PythonTriFunction as _PythonTriFunction, PythonQuadFunction as _PythonQuadFunction,\
-    PythonPentaFunction as _PythonPentaFunction # noqa
+from ..constraint_stream import function_cast as _cast, predicate_cast as _filtering_cast, \
+    to_int_function_cast as _int_function_cast
 
 
-# Also need Predicates wrappers for filtering
-@JImplements('java.util.function.Predicate', deferred=True)
-class _PythonPredicate:
+@JImplements('java.util.Comparator', deferred=True)
+class _PythonComparator:
     def __init__(self, delegate):
         self.delegate = delegate
 
     @JOverride
-    def test(self, argument):
-        return self.delegate(argument)
+    def compare(self, a, b):
+        return self.delegate(a, b)
 
 
-@JImplements('java.util.function.BiPredicate', deferred=True)
-class _PythonBiPredicate:
+@JImplements('java.util.function.BinaryOperator', deferred=True)
+class _PythonBinaryOperator:
     def __init__(self, delegate):
         self.delegate = delegate
 
     @JOverride
-    def test(self, argument1, argument2):
-        return self.delegate(argument1, argument2)
+    def apply(self, a, b):
+        return self.delegate(a, b)
 
 
-@JImplements('org.optaplanner.core.api.function.TriPredicate', deferred=True)
-class _PythonTriPredicate:
+@JImplements('java.util.function.IntFunction', deferred=True)
+class _PythonIntFunction:
     def __init__(self, delegate):
         self.delegate = delegate
 
     @JOverride
-    def test(self, argument1, argument2, argument3):
-        return self.delegate(argument1, argument2, argument3)
-
-
-@JImplements('org.optaplanner.core.api.function.QuadPredicate', deferred=True)
-class _PythonQuadPredicate:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def test(self, argument1, argument2, argument3, argument4):
-        return self.delegate(argument1, argument2, argument3, argument4)
-
-
-@JImplements('org.optaplanner.core.api.function.PentaPredicate', deferred=True)
-class _PythonPentaPredicate:
-    def __init__(self, delegate):
-        self.delegate = delegate
-
-    @JOverride
-    def test(self, argument1, argument2, argument3, argument4, argument5):
-        return self.delegate(argument1, argument2, argument3, argument4, argument5)
-
-
-def _cast(function):
-    arg_count = len(inspect.signature(function).parameters)
-    if arg_count == 1:
-        return _PythonFunction(lambda a: _convert_to_java_compatible_object(function(a)))
-    elif arg_count == 2:
-        return _PythonBiFunction(lambda a, b: _convert_to_java_compatible_object(function(a, b)))
-    elif arg_count == 3:
-        return _PythonTriFunction(lambda a, b, c: _convert_to_java_compatible_object(function(a, b, c)))
-    elif arg_count == 4:
-        return _PythonQuadFunction(lambda a, b, c, d: _convert_to_java_compatible_object(function(a, b, c, d)))
-    elif arg_count == 5:
-        return _PythonPentaFunction(lambda a, b, c, d, e: _convert_to_java_compatible_object(function(a, b, c, d, e)))
-
-
-def _filtering_cast(predicate):
-    arg_count = len(inspect.signature(predicate).parameters)
-    if arg_count == 1:
-        return _PythonPredicate(predicate)
-    elif arg_count == 2:
-        return _PythonBiPredicate(predicate)
-    elif arg_count == 3:
-        return _PythonTriPredicate(predicate)
-    elif arg_count == 4:
-        return _PythonQuadPredicate(predicate)
-    elif arg_count == 5:
-        return _PythonPentaPredicate(predicate)
+    def apply(self, a):
+        return self.delegate(a)
 
 
 class _JoinersWrapper:
@@ -216,5 +168,131 @@ class _JoinersWrapper:
         return function_wrapper
 
 
+class _ConstraintCollectorsWrapper:
+    @staticmethod
+    def average(group_value_mapping):
+        return JavaConstraintCollectors.average(_int_function_cast(group_value_mapping))
+
+    @staticmethod
+    def compose(*args):
+        if len(args) < 3:  # Need at least two collectors + 1 compose function
+            raise ValueError
+        collectors = args[:-1]
+        compose_function = args[-1]
+        compose_args = (*collectors, _cast(compose_function))
+        return JavaConstraintCollectors.compose(*compose_args)
+
+    @staticmethod
+    def conditionally(predicate, delegate):
+        return JavaConstraintCollectors.conditionally(_filtering_cast(predicate), delegate)
+
+    @staticmethod
+    def count():
+        return JavaConstraintCollectors.count()
+
+    @staticmethod
+    def countBi():
+        return JavaConstraintCollectors.countBi()
+
+    @staticmethod
+    def countTri():
+        return JavaConstraintCollectors.countTri()
+
+    @staticmethod
+    def countQuad():
+        return JavaConstraintCollectors.countQuad()
+
+    @staticmethod
+    def countDistinct(function=None):
+        if function is None:
+            return JavaConstraintCollectors.countDistinct()
+        else:
+            return JavaConstraintCollectors.countDistinct(_cast(function)) # noqa
+
+    @staticmethod
+    def max(function=None, comparator=None):
+        if function is None and comparator is None:
+            return JavaConstraintCollectors.max()
+        elif function is not None and comparator is None:
+            return JavaConstraintCollectors.max(_cast(function)) # noqa
+        elif function is None and comparator is not None:
+            return JavaConstraintCollectors.max(_PythonComparator(comparator)) # noqa
+        else:
+            return JavaConstraintCollectors.max(_cast(function), _PythonComparator(comparator)) # noqa
+
+    @staticmethod
+    def min(function=None, comparator=None):
+        if function is None and comparator is None:
+            return JavaConstraintCollectors.min()
+        elif function is not None and comparator is None:
+            return JavaConstraintCollectors.min(_cast(function)) # noqa
+        elif function is None and comparator is not None:
+            return JavaConstraintCollectors.min(_PythonComparator(comparator)) # noqa
+        else:
+            return JavaConstraintCollectors.min(_cast(function), _PythonComparator(comparator)) # noqa
+
+    @staticmethod
+    def sum(function, zero=None, adder=None, subtractor=None):
+        if zero is None and adder is None and subtractor is None:
+            return JavaConstraintCollectors.sum(_int_function_cast(function))
+        elif zero is not None and adder is not None and subtractor is not None:
+            return JavaConstraintCollectors.sum(_cast(function), zero, # noqa
+                                                _PythonBinaryOperator(adder), _PythonBinaryOperator(subtractor))
+        else:
+            raise ValueError
+
+    @staticmethod
+    def toList(group_value_mapping=None):
+        if group_value_mapping is None:
+            return JavaConstraintCollectors.toList()
+        else:
+            return JavaConstraintCollectors.toList(_cast(group_value_mapping)) # noqa
+
+    @staticmethod
+    def toSet(group_value_mapping=None):
+        if group_value_mapping is None:
+            return JavaConstraintCollectors.toSet()
+        else:
+            return JavaConstraintCollectors.toSet(_cast(group_value_mapping)) # noqa
+
+    @staticmethod
+    def toSortedSet(group_value_mapping=None, comparator=None):
+        if group_value_mapping is None and comparator is None:
+            return JavaConstraintCollectors.toSortedSet()
+        elif group_value_mapping is not None and comparator is None:
+            return JavaConstraintCollectors.toSortedSet(_cast(group_value_mapping))
+
+    @staticmethod
+    def toMap(key_mapper, value_mapper, merge_function_or_set_creator=None):
+        if merge_function_or_set_creator is None:
+            return JavaConstraintCollectors.toMap(_cast(key_mapper), _cast(value_mapper))
+
+        arg_count = len(inspect.signature(merge_function_or_set_creator).parameters)
+        if arg_count == 1:  # set_creator
+            return JavaConstraintCollectors.toMap(_cast(key_mapper), _cast(value_mapper), # noqa
+                                                  _PythonIntFunction(merge_function_or_set_creator))
+        elif arg_count == 2:  # merge_function
+            return JavaConstraintCollectors.toMap(_cast(key_mapper), _cast(value_mapper), # noqa
+                                                  _PythonBinaryOperator(merge_function_or_set_creator))
+        else:
+            raise ValueError
+
+    @staticmethod
+    def toSortedMap(key_mapper, value_mapper, merge_function_or_set_creator=None):
+        if merge_function_or_set_creator is None:
+            return JavaConstraintCollectors.toSortedMap(_cast(key_mapper), _cast(value_mapper))
+
+        arg_count = len(inspect.signature(merge_function_or_set_creator).parameters)
+        if arg_count == 1:  # set_creator
+            return JavaConstraintCollectors.toSortedMap(_cast(key_mapper), _cast(value_mapper), # noqa
+                                                        _PythonIntFunction(merge_function_or_set_creator))
+        elif arg_count == 2:  # merge_function
+            return JavaConstraintCollectors.toSortedMap(_cast(key_mapper), _cast(value_mapper), # noqa
+                                                        _PythonBinaryOperator(merge_function_or_set_creator))
+        else:
+            raise ValueError
+
+
 if not TYPE_CHECKING:
     Joiners = _JoinersWrapper()
+    ConstraintCollectors = _ConstraintCollectorsWrapper
