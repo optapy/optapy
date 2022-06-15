@@ -10,9 +10,9 @@ public class PythonLikeComparable {
     final static BinaryLambdaReference __LE__ =
             new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(((Comparable) a).compareTo(b) <= 0), Map.of());
     final static BinaryLambdaReference __EQ__ =
-            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(((Comparable) a).compareTo(b) == 0), Map.of());
+            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(a.equals(b)), Map.of());
     final static BinaryLambdaReference __NE__ =
-            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(((Comparable) a).compareTo(b) != 0), Map.of());
+            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(!a.equals(b)), Map.of());
     final static BinaryLambdaReference __GE__ =
             new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(((Comparable) a).compareTo(b) >= 0), Map.of());
     final static BinaryLambdaReference __GT__ =

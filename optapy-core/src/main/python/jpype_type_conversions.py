@@ -219,31 +219,6 @@ def _convert_function_to_class(jcls, function_obj):
     return out
 
 
-@JConversion('java.util.function.ToIntFunction', exact=FunctionType)
-def _convert_to_int_function(jcls, obj):
-    return PythonToIntFunction(lambda a: JInt(obj(a)))
-
-
-@JConversion('java.util.function.ToIntBiFunction', exact=FunctionType)
-def _convert_to_int_bi_function(jcls, obj):
-    return PythonToIntBiFunction(lambda a, b: JInt(obj(a, b)))
-
-
-@JConversion('org.optaplanner.core.api.function.ToIntTriFunction', exact=FunctionType)
-def _convert_to_int_tri_function(jcls, obj):
-    return PythonToIntTriFunction(lambda a, b, c: JInt(obj(a, b, c)))
-
-
-@JConversion('org.optaplanner.core.api.function.ToIntQuadFunction', exact=FunctionType)
-def _convert_to_int_quad_function(jcls, obj):
-    return PythonToIntQuadFunction(lambda a, b, c, d: JInt(obj(a, b, c, d)))
-
-
-@JConversion('org.optaplanner.core.api.function.ToIntPentaFunction', exact=FunctionType)
-def _convert_to_int_quad_function(jcls, obj):
-    return PythonToIntPentaFunction(lambda a, b, c, d, e: JInt(obj(a, b, c, d, e)))
-
-
 # Jpype convert int to primitive, but not to their wrappers, so add implicit conversion to wrappers
 @JConversion('java.lang.Integer', exact=int)
 def _convert_to_integer(jcls, obj):

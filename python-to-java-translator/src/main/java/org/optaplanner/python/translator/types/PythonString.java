@@ -1,6 +1,13 @@
 package org.optaplanner.python.translator.types;
 
+import java.lang.reflect.Method;
+import java.math.BigInteger;
 import java.util.Map;
+
+import org.optaplanner.python.translator.MethodDescriptor;
+import org.optaplanner.python.translator.PythonBinaryOperators;
+import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonUnaryOperator;
 
 public class PythonString extends AbstractPythonLikeObject implements Comparable<PythonString> {
     public final String value;
@@ -12,6 +19,20 @@ public class PythonString extends AbstractPythonLikeObject implements Comparable
             PythonLikeComparable.setup(STRING_TYPE.__dir__);
             STRING_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonString.class.getMethod("length"),
                     Map.of()));
+            STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, new PythonFunctionSignature(
+                    new MethodDescriptor(PythonString.class.getMethod("getCharAt", PythonInteger.class)),
+                    STRING_TYPE, PythonInteger.INT_TYPE
+            ));
+            STRING_TYPE.__dir__.put(PythonBinaryOperators.GET_ITEM.getDunderMethod(),
+                                    new JavaMethodReference(PythonString.class.getMethod("getCharAt", PythonInteger.class),
+                                                            Map.of()));
+            STRING_TYPE.addMethod(PythonUnaryOperator.ITERATOR, new PythonFunctionSignature(
+                    new MethodDescriptor(PythonString.class.getMethod("getIterator")),
+                    PythonIterator.ITERATOR_TYPE
+            ));
+            STRING_TYPE.__dir__.put(PythonUnaryOperator.ITERATOR.getDunderMethod(),
+                                    new JavaMethodReference(PythonString.class.getMethod("getIterator"),
+                                                            Map.of()));
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
@@ -53,6 +74,18 @@ public class PythonString extends AbstractPythonLikeObject implements Comparable
 
     public int length() {
         return value.length();
+    }
+
+    public PythonString getCharAt(PythonInteger position) {
+        if (position.value.compareTo(BigInteger.valueOf(value.length())) >= 0) {
+            throw new IndexOutOfBoundsException("position " + position + " larger than string length " + value.length());
+        }
+        return new PythonString(Character.toString(value.charAt(position.value.intValue())));
+    }
+
+    public PythonIterator getIterator() {
+        return new PythonIterator(value.chars().mapToObj(charVal -> new PythonString(Character.toString(charVal)))
+                                          .iterator());
     }
 
     @Override

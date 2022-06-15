@@ -25,7 +25,7 @@ class Entity:
 @optapy.constraint_provider
 def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
     return [
-        constraint_factory.forEach(Entity)
+        constraint_factory.for_each(Entity)
             .reward('Maximize Value', optapy.score.SimpleScore.ONE, lambda entity: entity.value),
     ]
 

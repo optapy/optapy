@@ -100,7 +100,7 @@ public class JavaPythonTypeConversionImplementor {
             PythonLikeDict out = new PythonLikeDict();
             Set<Map.Entry<?, ?>> entrySet = ((Map) object).entrySet();
             for (Map.Entry<?, ?> entry : entrySet) {
-                out.put(wrapJavaObject(entry.getKey()), wrapJavaObject(entry.getKey()));
+                out.put(wrapJavaObject(entry.getKey()), wrapJavaObject(entry.getValue()));
             }
             return out;
         }

@@ -17,6 +17,24 @@ public class GlobalBuiltins {
                         a -> ((PythonLikeFunction) (a.__getType().__getAttributeOrError("__len__"))).__call__(List.of(a),
                                 Map.of()),
                         Map.of());
+            case "iter":
+                return new UnaryLambdaReference(
+                        a -> ((PythonLikeFunction) (a.__getType().__getAttributeOrError("__iter__"))).__call__(List.of(a),
+                                                                                                                           Map.of()),
+                        Map.of()
+                );
+            case "next":
+                return new UnaryLambdaReference(
+                        a -> ((PythonLikeFunction) (a.__getType().__getAttributeOrError("__next__"))).__call__(List.of(a),
+                                                                                                                           Map.of()),
+                        Map.of()
+                );
+            case "int":
+                return new UnaryLambdaReference(
+                        a -> ((PythonLikeFunction) (a.__getType().__getAttributeOrError("__int__"))).__call__(List.of(a),
+                                                                                                                          Map.of()),
+                        Map.of()
+                );
             case "print":
                 return new UnaryLambdaReference(object -> {
                     interpreter.print(object);

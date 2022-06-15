@@ -6,7 +6,7 @@ from .optaplanner_java_interop import ensure_init, _add_shallow_copy_to_class, _
     _generate_variable_listener_class, get_class
 from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING, TypeVar
-from .constraint_translator import BytecodeTranslation
+from .constraint_stream import BytecodeTranslation
 
 if TYPE_CHECKING:
     from org.optaplanner.core.api.solver.change import ProblemChange as _ProblemChange
@@ -637,20 +637,20 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
 
     def constraint_provider_wrapper(function):
         def wrapped_constraint_provider(constraint_factory):
-            from . import constraint_translator
+            from . import constraint_stream
             from org.optaplanner.optapy import PythonSolver
             try:
-                constraint_translator.convert_to_java = function_bytecode_translation
-                out = function(constraint_translator.PythonConstraintFactory(constraint_factory,
-                                                                             function_bytecode_translation))
+                constraint_stream.convert_to_java = function_bytecode_translation
+                out = function(constraint_stream.PythonConstraintFactory(constraint_factory,
+                                                                         function_bytecode_translation))
                 if function_bytecode_translation is not BytecodeTranslation.NONE:
-                    PythonSolver.onlyUseJavaSetters = constraint_translator.all_translated_successfully
+                    PythonSolver.onlyUseJavaSetters = constraint_stream.all_translated_successfully
                 else:
                     PythonSolver.onlyUseJavaSetters = False
                 return out
             finally:
-                constraint_translator.convert_to_java = BytecodeTranslation.IF_POSSIBLE
-                constraint_translator.all_translated_successfully = True
+                constraint_stream.convert_to_java = BytecodeTranslation.IF_POSSIBLE
+                constraint_stream.all_translated_successfully = True
         wrapped_constraint_provider.__optapy_java_class = _generate_constraint_provider_class(function,
                                                                                               wrapped_constraint_provider)
         return wrapped_constraint_provider

@@ -57,13 +57,13 @@ def test_solve():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
+            constraint_factory.for_each(Entity)
                 .filter(get_lock)
                 .reward('Wait for lock', optapy.score.SimpleScore.ONE),
-            constraint_factory.forEach(Entity)
+            constraint_factory.for_each(Entity)
                 .reward('Maximize Value', optapy.score.SimpleScore.ONE, lambda entity: entity.value.value),
-            constraint_factory.forEachUniquePair(Entity,
-                                                 optapy.constraint.Joiners.equal(lambda entity: entity.value.value))
+            constraint_factory.for_each_unique_pair(Entity,
+                                                    optapy.constraint.Joiners.equal(lambda entity: entity.value.value))
                 .penalize('Same Value', optapy.score.SimpleScore.of(12)),
         ]
 
