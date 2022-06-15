@@ -21,7 +21,7 @@ def test_solver_events():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
+            constraint_factory.for_each(Entity)
                 .reward('Maximize value', optapy.score.SimpleScore.ONE, lambda entity: entity.value),
         ]
 

@@ -27,7 +27,7 @@ def test_single_property():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
+            constraint_factory.for_each(Entity)
                               .join(Value,
                                     optapy.constraint.Joiners.equal(lambda entity: entity.value,
                                                                     lambda value: value.code))
@@ -98,11 +98,11 @@ def test_tuple_group_by_key():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
+            constraint_factory.for_each(Entity)
                 .join(Value,
                       optapy.constraint.Joiners.equal(lambda entity: entity.value,
                                                       lambda value: value.code))
-                .groupBy(lambda entity, value: (0, value), optapy.constraint.ConstraintCollectors.countBi())
+                .group_by(lambda entity, value: (0, value), optapy.constraint.ConstraintCollectors.count_bi())
                 .reward('Same as value', optapy.score.SimpleScore.ONE, lambda _, count: count),
         ]
 
@@ -190,19 +190,19 @@ def test_python_object():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
+            constraint_factory.for_each(Entity)
                 .join(Value,
-                      optapy.constraint.Joiners.lessThanOrEqual(lambda entity: entity.value,
-                                                                lambda value: value.code))
+                      optapy.constraint.Joiners.less_than_or_equal(lambda entity: entity.value,
+                                                                   lambda value: value.code))
                 .reward('Same as value', optapy.score.SimpleScore.ONE),
-            constraint_factory.forEach(Entity)
-                .groupBy(lambda entity: entity.value, optapy.constraint.ConstraintCollectors.count())
+            constraint_factory.for_each(Entity)
+                .group_by(lambda entity: entity.value, optapy.constraint.ConstraintCollectors.count())
                 .reward('Entity have same value', optapy.score.SimpleScore.ONE, lambda value, count: count * count),
-            constraint_factory.forEach(optapy.get_class(Entity))
-                .groupBy(lambda entity: (entity.code, entity.value))
+            constraint_factory.for_each(Entity)
+                .group_by(lambda entity: (entity.code, entity.value))
                 .join(Entity,
-                    optapy.constraint.Joiners.equal(lambda pair: pair[0], lambda entity: entity.code),
-                    optapy.constraint.Joiners.equal(lambda pair: pair[1], lambda entity: entity.value))
+                      optapy.constraint.Joiners.equal(lambda pair: pair[0], lambda entity: entity.code),
+                      optapy.constraint.Joiners.equal(lambda pair: pair[1], lambda entity: entity.value))
                 .reward('Entity for pair', optapy.score.SimpleScore.ONE),
         ]
 
@@ -273,7 +273,7 @@ def test_list_variable():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(optapy.get_class(Entity))
+            constraint_factory.for_each(Entity)
                 .filter(lambda entity: any(entity.value[index] != index + 1 for index in range(len(entity.value))))
                 .penalize('Value is not the same as index', optapy.score.SimpleScore.ONE, count_mismatches),
         ]

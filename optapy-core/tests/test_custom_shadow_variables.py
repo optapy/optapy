@@ -58,7 +58,7 @@ def test_custom_shadow_variable():
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(MyPlanningEntity)
+            constraint_factory.for_each(MyPlanningEntity)
                 .filter(lambda entity: entity.value * 2 == entity.value_squared)
                 .reward('Double value is value squared', optapy.score.SimpleScore.ONE)
         ]

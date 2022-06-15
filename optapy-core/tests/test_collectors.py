@@ -65,8 +65,8 @@ def test_min():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-                .groupBy(optapy.constraint.ConstraintCollectors.min(lambda entity: entity.value.number))
+            constraint_factory.for_each(Entity)
+                .group_by(optapy.constraint.ConstraintCollectors.min(lambda entity: entity.value.number))
                 .reward('Min value', optapy.score.SimpleScore.ONE, lambda min_value: min_value)
         ]
 
@@ -97,8 +97,8 @@ def test_max():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.max(lambda entity: entity.value.number))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.max(lambda entity: entity.value.number))
             .reward('Max value', optapy.score.SimpleScore.ONE, lambda max_value: max_value)
         ]
 
@@ -129,8 +129,8 @@ def test_sum():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.sum(lambda entity: entity.value.number))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.sum(lambda entity: entity.value.number))
             .reward('Sum value', optapy.score.SimpleScore.ONE, lambda sum_value: sum_value)
         ]
 
@@ -161,8 +161,8 @@ def test_average():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.average(lambda entity: entity.value.number))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.average(lambda entity: entity.value.number))
             .reward('Average value', optapy.score.SimpleScore.ONE, lambda average_value: int(10 * average_value))
         ]
 
@@ -193,9 +193,9 @@ def test_count():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
+            constraint_factory.for_each(Entity)
                 .filter(lambda entity: entity.code[0] == 'A')
-                .groupBy(optapy.constraint.ConstraintCollectors.count())
+                .group_by(optapy.constraint.ConstraintCollectors.count())
                 .reward('Count value', optapy.score.SimpleScore.ONE, lambda count: count)
         ]
 
@@ -220,8 +220,8 @@ def test_count_distinct():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.countDistinct(lambda entity: entity.value))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.count_distinct(lambda entity: entity.value))
             .reward('Count distinct value', optapy.score.SimpleScore.ONE, lambda count: count)
         ]
 
@@ -252,8 +252,8 @@ def test_to_list():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.toList(lambda entity: entity.value))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.to_list(lambda entity: entity.value))
             .reward('list size', optapy.score.SimpleScore.ONE, lambda values: len(values))
         ]
 
@@ -284,8 +284,8 @@ def test_to_set():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.toSet(lambda entity: entity.value))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.to_set(lambda entity: entity.value))
             .reward('set size', optapy.score.SimpleScore.ONE, lambda values: len(values))
         ]
 
@@ -316,8 +316,8 @@ def test_to_map():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.toMap(lambda entity: entity.code, lambda entity: entity.value.number))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.to_map(lambda entity: entity.code, lambda entity: entity.value.number))
             .filter(lambda entity_map: next(iter(entity_map['A'])) == 1)
             .reward('map at B', optapy.score.SimpleScore.ONE, lambda entity_map: next(iter(entity_map['B'])))
         ]
@@ -349,8 +349,8 @@ def test_to_sorted_set():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.toSortedSet(lambda entity: entity.value.number))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.to_sorted_set(lambda entity: entity.value.number))
             .reward('min', optapy.score.SimpleScore.ONE, lambda values: next(iter(values)))
         ]
 
@@ -381,8 +381,8 @@ def test_to_sorted_map():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.toMap(lambda entity: entity.code, lambda entity: entity.value.number))
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.to_sorted_map(lambda entity: entity.code, lambda entity: entity.value.number))
             .filter(lambda entity_map: next(iter(entity_map['B'])) == 1)
             .reward('map at A', optapy.score.SimpleScore.ONE, lambda entity_map: next(iter(entity_map['A'])))
         ]
@@ -418,8 +418,8 @@ def test_conditionally():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.conditionally(lambda entity: entity.code[0] == 'A',
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.conditionally(lambda entity: entity.code[0] == 'A',
                                                                           optapy.constraint.ConstraintCollectors.count()))
             .reward('Conditionally count value', optapy.score.SimpleScore.ONE, lambda count: count)
         ]
@@ -445,8 +445,8 @@ def test_compose():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
-            .groupBy(optapy.constraint.ConstraintCollectors.compose(
+            constraint_factory.for_each(Entity)
+            .group_by(optapy.constraint.ConstraintCollectors.compose(
                 optapy.constraint.ConstraintCollectors.min(lambda entity: entity.value.number),
                 optapy.constraint.ConstraintCollectors.max(lambda entity: entity.value.number),
                 lambda a,b: (a,b)
@@ -482,9 +482,9 @@ def test_flatten_last():
     @optapy.constraint_provider
     def define_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
-            constraint_factory.forEach(Entity)
+            constraint_factory.for_each(Entity)
             .map(lambda entity: (1, 2, 3))
-            .flattenLast(lambda the_tuple: the_tuple)
+            .flatten_last(lambda the_tuple: the_tuple)
             .reward('Count', optapy.score.SimpleScore.ONE)
         ]
 

@@ -30,7 +30,7 @@ class Value:
 @optapy.constraint_provider
 def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
     return [
-        constraint_factory.forEach(Entity)
+        constraint_factory.for_each(Entity)
             .join(Value,
                   optapy.constraint.Joiners.equal(lambda entity: entity.value,
                                                   lambda value: value.code))
