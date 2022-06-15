@@ -1,25 +1,25 @@
 from ..optaplanner_java_interop import ensure_init
-from ..jpype_type_conversions import _convert_to_java_compatible_object
 import jpype.imports  # noqa
-from jpype import JImplements as _JImplements, JOverride as _JOverride, JObject as _JObject
+from jpype import JImplements, JOverride
 import inspect
-from typing import TYPE_CHECKING
 
 ensure_init()
 
-Joiners = None
 from org.optaplanner.core.api.score.stream import Joiners as JavaJoiners, \
-    ConstraintCollectors as JavaConstraintCollectors, Constraint, ConstraintFactory  # noqa
+    ConstraintCollectors as JavaConstraintCollectors, Constraint  # noqa
 from org.optaplanner.core.api.score.constraint import ConstraintMatch, ConstraintMatchTotal
 from org.optaplanner.core.api.score import Score as _Score
-
-if TYPE_CHECKING:
-    Joiners = JavaJoiners
-    ConstraintCollectors = JavaConstraintCollectors
+from ..constraint_stream import PythonConstraintFactory as ConstraintFactory
+from org.optaplanner.core.api.score.stream.uni import UniConstraintCollector
+from org.optaplanner.core.api.score.stream.bi import BiJoiner, BiConstraintCollector
+from org.optaplanner.core.api.score.stream.tri import TriJoiner, TriConstraintCollector
+from org.optaplanner.core.api.score.stream.quad import QuadJoiner, QuadConstraintCollector
+from org.optaplanner.core.api.score.stream.penta import PentaJoiner
+from typing import List, Set, Dict, Callable, overload, TypeVar, Any
 
 
 # Cannot import DefaultConstraintMatchTotal as it is in impl
-@_JImplements(ConstraintMatchTotal)
+@JImplements(ConstraintMatchTotal)
 class DefaultConstraintMatchTotal:
     """
     A default implementation of ConstraintMatchTotal that can be used in a constraint match aware
@@ -37,31 +37,31 @@ class DefaultConstraintMatchTotal:
         else:
             self.score = None
 
-    @_JOverride
+    @JOverride
     def getConstraintPackage(self):
         return self.constraint_package
 
-    @_JOverride
+    @JOverride
     def getConstraintName(self):
         return self.constraint_name
 
-    @_JOverride
+    @JOverride
     def getConstraintWeight(self):
         return self.constraint_weight
 
-    @_JOverride
+    @JOverride
     def getConstraintMatchSet(self):
         return self.constraint_match_set
 
-    @_JOverride
+    @JOverride
     def getScore(self):
         return self.score
 
-    @_JOverride
+    @JOverride
     def getConstraintId(self):
         return self.constraint_id
 
-    @_JOverride
+    @JOverride
     def compareTo(self, other: 'DefaultConstraintMatchTotal'):
         if self.constraint_id == other.constraint_id:
             return 0
@@ -76,7 +76,7 @@ class DefaultConstraintMatchTotal:
     def __gt__(self, other):
         return self.constraint_id > other.constraint_id
 
-    @_JOverride
+    @JOverride
     def equals(self, other):
         if self is other:
             return True
@@ -88,14 +88,14 @@ class DefaultConstraintMatchTotal:
     def __eq__(self, other):
         return self.constraint_id == other.constraint_id
 
-    @_JOverride
+    @JOverride
     def hashCode(self):
         return hash(self.constraint_id)
 
     def __hash__(self):
         return hash(self.constraint_id)
 
-    @_JOverride
+    @JOverride
     def toString(self):
         return f'{self.constraint_id}={self.score}'
 
@@ -117,7 +117,6 @@ class DefaultConstraintMatchTotal:
                              f'({constraint_match}) from its constraint_match_set ({self.constraint_match_set}).')
 
 # Below is needed so unknown Python objects can properly be proxied
-from jpype import JImplements, JOverride # noqa
 from ..constraint_stream import function_cast as _cast, predicate_cast as _filtering_cast, \
     to_int_function_cast as _int_function_cast
 
@@ -152,29 +151,452 @@ class _PythonIntFunction:
         return self.delegate(a)
 
 
-class _JoinersWrapper:
-    def __getattr__(self, item):
-        is_filtering = item == 'filtering'
-        java_method = getattr(JavaJoiners, item)
+class Joiners:
+    #  Method parameter type variables
+    A = TypeVar('A')
+    B = TypeVar('B')
+    C = TypeVar('C')
+    D = TypeVar('D')
+    E = TypeVar('E')
 
-        def function_wrapper(*args):
-            cast_function = _cast
-            if is_filtering:
-                cast_function = _filtering_cast
+    #  Method return type variables
+    A_ = TypeVar('A_')
+    B_ = TypeVar('B_')
+    C_ = TypeVar('C_')
+    D_ = TypeVar('D_')
+    E_ = TypeVar('E_')
 
-            cast_args = tuple(map(lambda arg: cast_function(arg), args))
-            return java_method(*cast_args)
+    @staticmethod
+    def __call_comparison_java_joiner(java_joiner, mapping_or_left_mapping, right_mapping):
+        if mapping_or_left_mapping is None and right_mapping is None:
+            raise ValueError
+        elif mapping_or_left_mapping is not None and right_mapping is None:
+            return java_joiner(_cast(mapping_or_left_mapping))
+        elif mapping_or_left_mapping is not None and right_mapping is not None:
+            return java_joiner(_cast(mapping_or_left_mapping), _cast(right_mapping))
+        else:
+            raise ValueError
 
-        return function_wrapper
+    @overload  # noqa
+    @staticmethod
+    def equal() -> 'BiJoiner[A,A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def equal(property_mapping: Callable[[A], A_]) -> 'BiJoiner[A,A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def equal(left_mapping: Callable[[A], A_], right_mapping: Callable[[B], B_]) -> 'BiJoiner[A,B]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def equal(left_mapping: Callable[[A, B], A_], right_mapping: Callable[[C], B_]) -> 'TriJoiner[A,B,C]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def equal(left_mapping: Callable[[A, B, C], A_], right_mapping: Callable[[D], B_]) -> 'QuadJoiner[A,B,C,D]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def equal(left_mapping: Callable[[A, B, C, D], A_], right_mapping: Callable[[E], B_]) -> 'PentaJoiner[A,B,C,D,E]':
+        ...
+
+    @staticmethod
+    def equal(mapping_or_left_mapping=None, right_mapping=None):
+        """Joins every A and B that share a property.
+
+        :return:
+        """
+        if mapping_or_left_mapping is None and right_mapping is None:
+            return JavaJoiners.equal()
+        return Joiners.__call_comparison_java_joiner(JavaJoiners.equal, mapping_or_left_mapping, right_mapping)
+
+    @overload  # noqa
+    @staticmethod
+    def filtering(predicate: Callable[[A, B], bool]) -> 'BiJoiner[A,B]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def filtering(predicate: Callable[[A, B, C], bool]) -> 'TriJoiner[A,B,C]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def filtering(predicate: Callable[[A, B, C, D], bool]) -> 'QuadJoiner[A,B,C,D]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def filtering(predicate: Callable[[A, B, C, D, E], bool]) -> 'QuadJoiner[A,B,C,D,E]':
+        ...
+
+    @staticmethod
+    def filtering(predicate):
+        """Applies a filter to the joined tuple
+
+        :param predicate: the filter to apply
+
+        :return:
+        """
+        return JavaJoiners.filtering(_filtering_cast(predicate))
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than(property_mapping: Callable[[A], A_]) -> 'BiJoiner[A,A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than(left_mapping: Callable[[A], A_], right_mapping: Callable[[B], B_]) -> 'BiJoiner[A,B]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than(left_mapping: Callable[[A, B], A_], right_mapping: Callable[[C], B_]) -> 'TriJoiner[A,B,C]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than(left_mapping: Callable[[A, B, C], A_], right_mapping: Callable[[D], B_]) -> 'QuadJoiner[A,B,C,D]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than(left_mapping: Callable[[A, B, C, D], A_], right_mapping: Callable[[E], B_]) ->\
+            'PentaJoiner[A,B,C,D,E]':
+        ...
+
+    @staticmethod
+    def greater_than(mapping_or_left_mapping, right_mapping=None):
+        """Joins every A and B where a value of property on A is greater than the value of a property on B.
+
+        :return:
+        """
+        return Joiners.__call_comparison_java_joiner(JavaJoiners.greaterThan, mapping_or_left_mapping,
+                                                     right_mapping)
+
+    greaterThan = greater_than
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than_or_equal(property_mapping: Callable[[A], A_]) -> 'BiJoiner[A,A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than_or_equal(left_mapping: Callable[[A], A_], right_mapping: Callable[[B], B_]) -> 'BiJoiner[A,B]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than_or_equal(left_mapping: Callable[[A, B], A_], right_mapping: Callable[[C], B_]) ->\
+            'TriJoiner[A,B,C]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than_or_equal(left_mapping: Callable[[A, B, C], A_], right_mapping: Callable[[D], B_]) ->\
+            'QuadJoiner[A,B,C,D]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def greater_than_or_equal(left_mapping: Callable[[A, B, C, D], A_], right_mapping: Callable[[E], B_]) ->\
+            'PentaJoiner[A,B,C,D,E]':
+        ...
+
+    @staticmethod
+    def greater_than_or_equal(mapping_or_left_mapping, right_mapping=None):
+        """Joins every A and B where a value of property on A is greater than or equal to the value of a property on B.
+
+        :return:
+        """
+        return Joiners.__call_comparison_java_joiner(JavaJoiners.greaterThanOrEqual, mapping_or_left_mapping,
+                                                     right_mapping)
+
+    greaterThanOrEqual = greater_than_or_equal
+
+    @overload  # noqa
+    @staticmethod
+    def less_than(property_mapping: Callable[[A], A_]) -> 'BiJoiner[A,A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def less_than(left_mapping: Callable[[A], A_], right_mapping: Callable[[B], B_]) -> 'BiJoiner[A,B]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def less_than(left_mapping: Callable[[A, B], A_], right_mapping: Callable[[C], B_]) -> 'TriJoiner[A,B,C]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def less_than(left_mapping: Callable[[A, B, C], A_], right_mapping: Callable[[D], B_]) -> 'QuadJoiner[A,B,C,D]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def less_than(left_mapping: Callable[[A, B, C, D], A_], right_mapping: Callable[[E], B_]) ->\
+            'PentaJoiner[A,B,C,D,E]':
+        ...
+
+    @staticmethod
+    def less_than(mapping_or_left_mapping, right_mapping=None):
+        """Joins every A and B where a value of property on A is less than the value of a property on B.
+
+        :return:
+        """
+        return Joiners.__call_comparison_java_joiner(JavaJoiners.lessThan, mapping_or_left_mapping, right_mapping)
+
+    lessThan = less_than
+
+    @overload  # noqa
+    @staticmethod
+    def less_than_or_equal(property_mapping: Callable[[A], A_]) -> 'BiJoiner[A,A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def less_than_or_equal(left_mapping: Callable[[A], A_], right_mapping: Callable[[B], B_]) -> 'BiJoiner[A,B]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def less_than_or_equal(left_mapping: Callable[[A, B], A_], right_mapping: Callable[[C], B_]) -> 'TriJoiner[A,B,C]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def less_than_or_equal(left_mapping: Callable[[A, B, C], A_], right_mapping: Callable[[D], B_]) ->\
+            'QuadJoiner[A,B,C,D]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def less_than_or_equal(left_mapping: Callable[[A, B, C, D], A_], right_mapping: Callable[[E], B_]) ->\
+            'PentaJoiner[A,B,C,D,E]':
+        ...
+
+    @staticmethod
+    def less_than_or_equal(mapping_or_left_mapping, right_mapping=None):
+        """Joins every A and B where a value of property on A is less than or equal to the value of a property on B.
+
+        :return:
+        """
+        return Joiners.__call_comparison_java_joiner(JavaJoiners.lessThanOrEqual, mapping_or_left_mapping,
+                                                     right_mapping)
+
+    lessThanOrEqual = less_than_or_equal
+
+    @overload  # noqa
+    @staticmethod
+    def overlapping(start_mapping: Callable[[A], A_], end_mapping: Callable[[A], A_]) -> 'BiJoiner[A,A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def overlapping(left_start_mapping: Callable[[A], A_], left_end_mapping: Callable[[A], A_],
+                    right_start_mapping: Callable[[B], A_], right_end_mapping: Callable[[B], A_]) -> 'BiJoiner[A,B]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def overlapping(left_start_mapping: Callable[[A, B], A_], left_end_mapping: Callable[[A, B], A_],
+                    right_start_mapping: Callable[[C], A_], right_end_mapping: Callable[[C], A_]) -> 'TriJoiner[A,B,C]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def overlapping(left_start_mapping: Callable[[A, B, C], A_], left_end_mapping: Callable[[A, B, C], A_],
+                    right_start_mapping: Callable[[D], A_], right_end_mapping: Callable[[D], A_]) ->\
+            'QuadJoiner[A,B,C,D]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def overlapping(left_start_mapping: Callable[[A, B, C, D], A_], left_end_mapping: Callable[[A, B, C, D], A_],
+                    right_start_mapping: Callable[[E], A_], right_end_mapping: Callable[[E], A_]) ->\
+            'PentaJoiner[A,B,C,D]':
+        ...
+
+    @staticmethod
+    def overlapping(start_mapping_or_left_start_mapping, end_mapping_or_left_end_mapping,
+                    right_start_mapping=None, right_end_mapping=None):
+        """Joins every A and B that overlap for an interval which is specified by a start and end property on both A and
+        B.
+
+        :return:
+        """
+        if start_mapping_or_left_start_mapping is None or end_mapping_or_left_end_mapping is None:
+            raise ValueError
+        if right_start_mapping is None and right_end_mapping is None:
+            return JavaJoiners.overlapping(_cast(start_mapping_or_left_start_mapping),
+                                           _cast(end_mapping_or_left_end_mapping))
+        elif right_start_mapping is not None and right_end_mapping is not None:
+            return JavaJoiners.overlapping(_cast(start_mapping_or_left_start_mapping),
+                                           _cast(end_mapping_or_left_end_mapping),
+                                           _cast(right_start_mapping),
+                                           _cast(right_end_mapping))
+        else:
+            raise ValueError
 
 
-class _ConstraintCollectorsWrapper:
+class ConstraintCollectors:
+    #  Method parameter type variables
+    A = TypeVar('A')
+    B = TypeVar('B')
+    C = TypeVar('C')
+    D = TypeVar('D')
+    E = TypeVar('E')
+
+    #  Method return type variables
+    A_ = TypeVar('A_')
+    B_ = TypeVar('B_')
+    C_ = TypeVar('C_')
+    D_ = TypeVar('D_')
+    E_ = TypeVar('E_')
+
+    @overload  # noqa
+    @staticmethod
+    def average(group_value_mapping: Callable[[A], int]) -> 'UniConstraintCollector[A, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def average(group_value_mapping: Callable[[A, B], int]) -> 'BiConstraintCollector[A, B, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def average(group_value_mapping: Callable[[A, B, C], int]) -> 'TriConstraintCollector[A, B, C, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def average(group_value_mapping: Callable[[A, B, C, D], int]) -> 'QuadConstraintCollector[A, B, C, D, Any, int]':
+        ...
+
     @staticmethod
     def average(group_value_mapping):
+        """Returns a collector that calculates an average of an int property of the elements that are being grouped.
+
+        :param group_value_mapping:
+
+        :return:
+        """
         return JavaConstraintCollectors.average(_int_function_cast(group_value_mapping))
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'UniConstraintCollector[A, Any, A_]',
+                sub_collector_2: 'UniConstraintCollector[A, Any, B_]',
+                compose_function: Callable[[A_, B_], C_]) -> 'UniConstraintCollector[A, Any, C_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'UniConstraintCollector[A, Any, A_]',
+                sub_collector_2: 'UniConstraintCollector[A, Any, B_]',
+                sub_collector_3: 'UniConstraintCollector[A, Any, C_]',
+                compose_function: Callable[[A_, B_, C_], D_]) -> 'UniConstraintCollector[A, Any, D_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'UniConstraintCollector[A, Any, A_]',
+                sub_collector_2: 'UniConstraintCollector[A, Any, B_]',
+                sub_collector_3: 'UniConstraintCollector[A, Any, C_]',
+                sub_collector_4: 'UniConstraintCollector[A, Any, D_]',
+                compose_function: Callable[[A_, B_, C_, D_], E_]) -> 'UniConstraintCollector[A, Any, E_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'BiConstraintCollector[A, B, Any, A_]',
+                sub_collector_2: 'BiConstraintCollector[A, B, Any, B_]',
+                compose_function: Callable[[A_, B_], C_]) -> 'BiConstraintCollector[A, B, Any, C_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'BiConstraintCollector[A, B, Any, A_]',
+                sub_collector_2: 'BiConstraintCollector[A, B, Any, B_]',
+                sub_collector_3: 'BiConstraintCollector[A, B, Any, C_]',
+                compose_function: Callable[[A_, B_, C_], D_]) -> 'BiConstraintCollector[A, B, Any, D_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'BiConstraintCollector[A, B, Any, A_]',
+                sub_collector_2: 'BiConstraintCollector[A, B, Any, B_]',
+                sub_collector_3: 'BiConstraintCollector[A, B, Any, C_]',
+                sub_collector_4: 'BiConstraintCollector[A, B, Any, D_]',
+                compose_function: Callable[[A_, B_, C_, D_], E_]) -> 'BiConstraintCollector[A, B, Any, E_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'TriConstraintCollector[A, B, C, Any, A_]',
+                sub_collector_2: 'TriConstraintCollector[A, B, C, Any, B_]',
+                compose_function: Callable[[A_, B_], C_]) -> 'TriConstraintCollector[A, B, C, Any, C_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'TriConstraintCollector[A, B, C, Any, A_]',
+                sub_collector_2: 'TriConstraintCollector[A, B, C, Any, B_]',
+                sub_collector_3: 'TriConstraintCollector[A, B, C, Any, C_]',
+                compose_function: Callable[[A_, B_, C_], D_]) -> 'TriConstraintCollector[A, B, C, Any, D_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'TriConstraintCollector[A, B, C, Any, A_]',
+                sub_collector_2: 'TriConstraintCollector[A, B, C, Any, B_]',
+                sub_collector_3: 'TriConstraintCollector[A, B, C, Any, C_]',
+                sub_collector_4: 'TriConstraintCollector[A, B, C, Any, D_]',
+                compose_function: Callable[[A_, B_, C_, D_], E_]) -> 'TriConstraintCollector[A, B, C, Any, E_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'QuadConstraintCollector[A, B, C, D, Any, A_]',
+                sub_collector_2: 'QuadConstraintCollector[A, B, C, D, Any, B_]',
+                compose_function: Callable[[A_, B_], C_]) -> 'QuadConstraintCollector[A, B, C, D, Any, C_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'QuadConstraintCollector[A, B, C, D, Any, A_]',
+                sub_collector_2: 'QuadConstraintCollector[A, B, C, D, Any, B_]',
+                sub_collector_3: 'QuadConstraintCollector[A, B, C, D, Any, C_]',
+                compose_function: Callable[[A_, B_, C_], D_]) -> 'QuadConstraintCollector[A, B, C, D, Any, D_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def compose(sub_collector_1: 'QuadConstraintCollector[A, B, C, D, Any, A_]',
+                sub_collector_2: 'QuadConstraintCollector[A, B, C, D, Any, B_]',
+                sub_collector_3: 'QuadConstraintCollector[A, B, C, D, Any, C_]',
+                sub_collector_4: 'QuadConstraintCollector[A, B, C, D, Any, D_]',
+                compose_function: Callable[[A_, B_, C_, D_], E_]) -> 'QuadConstraintCollector[A, B, C, D, Any, E_]':
+        ...
 
     @staticmethod
     def compose(*args):
+        """Returns a constraint collector the result of which is a composition of other constraint collectors.
+
+        :return:
+        """
         if len(args) < 3:  # Need at least two collectors + 1 compose function
             raise ValueError
         collectors = args[:-1]
@@ -182,35 +604,182 @@ class _ConstraintCollectorsWrapper:
         compose_args = (*collectors, _cast(compose_function))
         return JavaConstraintCollectors.compose(*compose_args)
 
+    @overload  # noqa
+    @staticmethod
+    def conditionally(predicate: Callable[[A], bool], delegate: 'UniConstraintCollector[A, Any, A_]') ->\
+            'UniConstraintCollector[A, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def conditionally(predicate: Callable[[A, B], bool],
+                      delegate: 'BiConstraintCollector[A, B, Any, A_]') -> 'BiConstraintCollector[A, B, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def conditionally(predicate: Callable[[A, B, C], bool],
+                      delegate: 'TriConstraintCollector[A, B, C, Any, A_]') ->\
+            'TriConstraintCollector[A, B, C, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def conditionally(predicate: Callable[[A, B, C, D], bool],
+                      delegate: 'QuadConstraintCollector[A, B, C, D, Any, A_]') ->\
+            'QuadConstraintCollector[A, B, C, D, Any, A_]':
+        ...
+
     @staticmethod
     def conditionally(predicate, delegate):
+        """Returns a collector that delegates to the underlying collector if and only if the input tuple meets the given
+        condition.
+
+        :param predicate:
+
+        :param delegate:
+
+        :return:
+        """
         return JavaConstraintCollectors.conditionally(_filtering_cast(predicate), delegate)
 
     @staticmethod
-    def count():
+    def count() -> 'UniConstraintCollector[A, Any, int]':
+        """Returns a collector that counts the number of elements that are being grouped.
+
+        :return:
+        """
         return JavaConstraintCollectors.count()
 
     @staticmethod
-    def countBi():
+    def count_bi() -> 'BiConstraintCollector[A, B, Any, int]':
+        """Returns a collector that counts the number of elements that are being grouped.
+
+        :return:
+        """
         return JavaConstraintCollectors.countBi()
 
+    countBi = count_bi
+
     @staticmethod
-    def countTri():
+    def count_tri() -> 'TriConstraintCollector[A, B, C, Any, int]':
+        """Returns a collector that counts the number of elements that are being grouped.
+
+        :return:
+        """
         return JavaConstraintCollectors.countTri()
 
-    @staticmethod
-    def countQuad():
-        return JavaConstraintCollectors.countQuad()
+    countTri = count_tri
 
     @staticmethod
-    def countDistinct(function=None):
+    def count_quad() -> 'QuadConstraintCollector[A, B, C, D, Any, int]':
+        """Returns a collector that counts the number of elements that are being grouped.
+
+        :return:
+        """
+        return JavaConstraintCollectors.countQuad()
+
+    countQuad = count_quad
+
+    @overload  # noqa
+    @staticmethod
+    def count_distinct() -> 'UniConstraintCollector[A, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def count_distinct(group_value_mapping: Callable[[A], int]) -> 'UniConstraintCollector[A, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def count_distinct(group_value_mapping: Callable[[A, B], int]) -> 'BiConstraintCollector[A, B, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def count_distinct(group_value_mapping: Callable[[A, B, C], int]) -> 'TriConstraintCollector[A, B, C, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def count_distinct(group_value_mapping: Callable[[A, B, C, D], int]) ->\
+            'QuadConstraintCollector[A, B, C, D, Any, int]':
+        ...
+
+    @staticmethod
+    def count_distinct(function=None):
+        """Returns a collector that counts the number of unique elements that are being grouped.
+
+        :return:
+        """
         if function is None:
             return JavaConstraintCollectors.countDistinct()
         else:
             return JavaConstraintCollectors.countDistinct(_cast(function)) # noqa
 
+    countDistinct = count_distinct
+
+    @overload  # noqa
+    @staticmethod
+    def max() -> 'UniConstraintCollector[A, Any, A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(group_value_mapping: Callable[[A], A_]) -> 'UniConstraintCollector[A, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(comparator: Callable[[A, A], int]) -> 'UniConstraintCollector[A, Any, A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(group_value_mapping: Callable[[A], A_], comparator: Callable[[A_, A_], int]) ->\
+            'UniConstraintCollector[A, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(group_value_mapping: Callable[[A, B], A_]) -> 'BiConstraintCollector[A, B, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(group_value_mapping: Callable[[A, B], A_], comparator: Callable[[A_, A_], int]) ->\
+            'BiConstraintCollector[A, B, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(group_value_mapping: Callable[[A, B, C], A_]) -> 'TriConstraintCollector[A, B, C, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(group_value_mapping: Callable[[A, B, C], A_], comparator: Callable[[A_, A_], int]) ->\
+            'TriConstraintCollector[A, B, C, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(group_value_mapping: Callable[[A, B, C, D], A_]) -> 'QuadConstraintCollector[A, B, C, D, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def max(group_value_mapping: Callable[[A, B, C, D], A_], comparator: Callable[[A_, A_], int]) ->\
+            'QuadConstraintCollector[A, B, C, D, Any, A_]':
+        ...
+
     @staticmethod
     def max(function=None, comparator=None):
+        """Returns a collector that finds a maximum value in a group of Comparable elements.
+
+        :return:
+        """
         if function is None and comparator is None:
             return JavaConstraintCollectors.max()
         elif function is not None and comparator is None:
@@ -220,8 +789,66 @@ class _ConstraintCollectorsWrapper:
         else:
             return JavaConstraintCollectors.max(_cast(function), _PythonComparator(comparator)) # noqa
 
+    @overload  # noqa
+    @staticmethod
+    def min() -> 'UniConstraintCollector[A, Any, A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(group_value_mapping: Callable[[A], A_]) -> 'UniConstraintCollector[A, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(comparator: Callable[[A, A], int]) -> 'UniConstraintCollector[A, Any, A]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(group_value_mapping: Callable[[A], A_], comparator: Callable[[A_, A_], int]) ->\
+            'UniConstraintCollector[A, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(group_value_mapping: Callable[[A, B], A_]) -> 'BiConstraintCollector[A, B, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(group_value_mapping: Callable[[A, B], A_], comparator: Callable[[A_, A_], int]) ->\
+            'BiConstraintCollector[A, B, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(group_value_mapping: Callable[[A, B, C], A_]) -> 'TriConstraintCollector[A, B, C, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(group_value_mapping: Callable[[A, B, C], A_], comparator: Callable[[A_, A_], int]) ->\
+            'TriConstraintCollector[A, B, C, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(group_value_mapping: Callable[[A, B, C, D], A_]) -> 'QuadConstraintCollector[A, B, C, D, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def min(group_value_mapping: Callable[[A, B, C, D], A_], comparator: Callable[[A_, A_], int]) ->\
+            'QuadConstraintCollector[A, B, C, D, Any, A_]':
+        ...
+
     @staticmethod
     def min(function=None, comparator=None):
+        """Returns a collector that finds a minimum value in a group of Comparable elements.
+
+        :return:
+        """
         if function is None and comparator is None:
             return JavaConstraintCollectors.min()
         elif function is not None and comparator is None:
@@ -231,8 +858,61 @@ class _ConstraintCollectorsWrapper:
         else:
             return JavaConstraintCollectors.min(_cast(function), _PythonComparator(comparator)) # noqa
 
+    @overload  # noqa
+    @staticmethod
+    def sum(function: Callable[[A], int]) -> 'UniConstraintCollector[A, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def sum(function: Callable[[A, B], int]) -> 'BiConstraintCollector[A, B, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def sum(function: Callable[[A, B, C], int]) -> 'TriConstraintCollector[A, B, C, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def sum(function: Callable[[A, B, C, D], int]) -> 'QuadConstraintCollector[A, B, C, D, Any, int]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def sum(function: Callable[[A], A_], zero: A_, adder: Callable[[A_, A_], A_], subtractor: Callable[[A_, A_], A_]) \
+            -> 'UniConstraintCollector[A, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def sum(function: Callable[[A, B], A_], zero: A_, adder: Callable[[A_, A_], A_],
+            subtractor: Callable[[A_, A_], A_]) \
+            -> 'BiConstraintCollector[A, B, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def sum(function: Callable[[A, B, C], A_], zero: A_, adder: Callable[[A_, A_], A_],
+            subtractor: Callable[[A_, A_], A_]) \
+            -> 'TriConstraintCollector[A, B, C, Any, A_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def sum(function: Callable[[A, B, C, D], A_], zero: A_, adder: Callable[[A_, A_], A_],
+            subtractor: Callable[[A_, A_], A_]) \
+            -> 'QuadConstraintCollector[A, B, C, D, Any, A_]':
+        ...
+
     @staticmethod
     def sum(function, zero=None, adder=None, subtractor=None):
+        """Returns a collector that sums an int property of the elements that are being grouped.
+
+        :param function:
+
+        :return:
+        """
         if zero is None and adder is None and subtractor is None:
             return JavaConstraintCollectors.sum(_int_function_cast(function))
         elif zero is not None and adder is not None and subtractor is not None:
@@ -241,29 +921,237 @@ class _ConstraintCollectorsWrapper:
         else:
             raise ValueError
 
+    @overload  # noqa
     @staticmethod
-    def toList(group_value_mapping=None):
+    def to_list() -> 'UniConstraintCollector[A, Any, List[A]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_list(group_value_mapping: Callable[[A], A_]) -> 'UniConstraintCollector[A, Any, List[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_list(group_value_mapping: Callable[[A, B], A_]) -> 'BiConstraintCollector[A, B, Any, List[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_list(group_value_mapping: Callable[[A, B, C], A_]) -> 'TriConstraintCollector[A, B, C, Any, List[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_list(group_value_mapping: Callable[[A, B, C, D], A_]) ->\
+            'QuadConstraintCollector[A, B, C, D, Any, List[A_]]':
+        ...
+
+    @staticmethod
+    def to_list(group_value_mapping=None):
+        """Creates constraint collector that returns List of the given element type.
+
+        :return:
+        """
         if group_value_mapping is None:
             return JavaConstraintCollectors.toList()
         else:
             return JavaConstraintCollectors.toList(_cast(group_value_mapping)) # noqa
 
+    toList = to_list
+
+    @overload  # noqa
     @staticmethod
-    def toSet(group_value_mapping=None):
+    def to_set() -> 'UniConstraintCollector[A, Any, Set[A]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_set(group_value_mapping: Callable[[A], A_]) -> 'UniConstraintCollector[A, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_set(group_value_mapping: Callable[[A, B], A_]) -> 'BiConstraintCollector[A, B, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_set(group_value_mapping: Callable[[A, B, C], A_]) -> 'TriConstraintCollector[A, B, C, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_set(group_value_mapping: Callable[[A, B, C, D], A_]) -> 'QuadConstraintCollector[A, B, C, D, Any, Set[A_]]':
+        ...
+
+    @staticmethod
+    def to_set(group_value_mapping=None):
+        """Creates constraint collector that returns Set of the same element type as the ConstraintStream.
+
+        :return:
+        """
         if group_value_mapping is None:
             return JavaConstraintCollectors.toSet()
         else:
             return JavaConstraintCollectors.toSet(_cast(group_value_mapping)) # noqa
 
+    toSet = to_set
+
+    @overload  # noqa
     @staticmethod
-    def toSortedSet(group_value_mapping=None, comparator=None):
+    def to_sorted_set() -> 'UniConstraintCollector[A, Any, Set[A]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(group_value_mapping: Callable[[A], A_]) -> 'UniConstraintCollector[A, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(comparator: Callable[[A, A], int]) -> 'UniConstraintCollector[A, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(group_value_mapping: Callable[[A], A_], comparator: Callable[[A_, A_], int]) ->\
+            'UniConstraintCollector[A, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(group_value_mapping: Callable[[A, B], A_]) -> 'BiConstraintCollector[A, B, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(group_value_mapping: Callable[[A, B], A_], comparator: Callable[[A_, A_], int]) ->\
+            'BiConstraintCollector[A, B, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(group_value_mapping: Callable[[A, B, C], A_]) -> 'TriConstraintCollector[A, B, C, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(group_value_mapping: Callable[[A, B, C], A_], comparator: Callable[[A_, A_], int]) ->\
+            'TriConstraintCollector[A, B, C, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(group_value_mapping: Callable[[A, B, C, D], A_]) ->\
+            'QuadConstraintCollector[A, B, C, D, Any, Set[A_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_set(group_value_mapping: Callable[[A, B, C, D], A_], comparator: Callable[[A_, A_], int]) ->\
+            'QuadConstraintCollector[A, B, C, D, Any, Set[A_]]':
+        ...
+
+    @staticmethod
+    def to_sorted_set(group_value_mapping=None, comparator=None):
+        """Creates constraint collector that returns SortedSet of the same element type as the ConstraintStream.
+
+        :return:
+        """
         if group_value_mapping is None and comparator is None:
             return JavaConstraintCollectors.toSortedSet()
         elif group_value_mapping is not None and comparator is None:
             return JavaConstraintCollectors.toSortedSet(_cast(group_value_mapping))
 
+    toSortedSet = to_sorted_set
+
+    @overload  # noqa
     @staticmethod
-    def toMap(key_mapper, value_mapper, merge_function_or_set_creator=None):
+    def to_map(key_mapper: Callable[[A], A_], value_mapper: Callable[[A], B_]) ->\
+            'UniConstraintCollector[A, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A], A_], value_mapper: Callable[[A], B_],
+               merge_function: Callable[[B_, B_], B_]) -> \
+            'UniConstraintCollector[A, Any, Dict[A_, B_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A], A_], value_mapper: Callable[[A], B_],
+               set_creator: Callable[[int], Set[B_]]) -> \
+            'UniConstraintCollector[A, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B], A_], value_mapper: Callable[[A, B], B_]) ->\
+            'BiConstraintCollector[A, B, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B], A_], value_mapper: Callable[[A, B], B_],
+               merge_function: Callable[[B_, B_], B_]) -> \
+            'BiConstraintCollector[A, B, Any, Dict[A_, B_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B], A_], value_mapper: Callable[[A, B], B_],
+               set_creator: Callable[[int], Set[B_]]) -> \
+            'BiConstraintCollector[A, B, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B, C], A_], value_mapper: Callable[[A, B, C], B_]) ->\
+            'TriConstraintCollector[A, B, C, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B, C], A_], value_mapper: Callable[[A, B, C], B_],
+               merge_function: Callable[[B_, B_], B_]) -> \
+            'TriConstraintCollector[A, B, C, Any, Dict[A_, B_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B, C], A_], value_mapper: Callable[[A, B, C], B_],
+               set_creator: Callable[[int], Set[B_]]) -> \
+            'TriConstraintCollector[A, B, C, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B, C, D], A_], value_mapper: Callable[[A, B, C, D], B_]) ->\
+            'QuadConstraintCollector[A, B, C, D, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B, C, D], A_], value_mapper: Callable[[A, B, C], B_],
+               merge_function: Callable[[B_, B_], B_]) -> \
+            'QuadConstraintCollector[A, B, C, D, Any, Dict[A_, B_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_map(key_mapper: Callable[[A, B, C, D], A_], value_mapper: Callable[[A, B], B_],
+               set_creator: Callable[[int], Set[B_]]) -> \
+            'QuadConstraintCollector[A, B, C, D, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @staticmethod
+    def to_map(key_mapper, value_mapper, merge_function_or_set_creator=None):
+        """Creates a constraint collector that returns a Map with given keys and values consisting of a Set of mappings.
+
+        :return:
+        """
         if merge_function_or_set_creator is None:
             return JavaConstraintCollectors.toMap(_cast(key_mapper), _cast(value_mapper))
 
@@ -277,8 +1165,95 @@ class _ConstraintCollectorsWrapper:
         else:
             raise ValueError
 
+    toMap = to_map
+
+    @overload  # noqa
     @staticmethod
-    def toSortedMap(key_mapper, value_mapper, merge_function_or_set_creator=None):
+    def to_sorted_map(key_mapper: Callable[[A], A_], value_mapper: Callable[[A], B_]) ->\
+            'UniConstraintCollector[A, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A], A_], value_mapper: Callable[[A], B_],
+                      merge_function: Callable[[B_, B_], B_]) -> \
+            'UniConstraintCollector[A, Any, Dict[A_, B_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A], A_], value_mapper: Callable[[A], B_],
+                      set_creator: Callable[[int], Set[B_]]) -> \
+            'UniConstraintCollector[A, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B], A_], value_mapper: Callable[[A, B], B_]) ->\
+            'BiConstraintCollector[A, B, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B], A_], value_mapper: Callable[[A, B], B_],
+                      merge_function: Callable[[B_, B_], B_]) -> \
+            'BiConstraintCollector[A, B, Any, Dict[A_, B_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B], A_], value_mapper: Callable[[A, B], B_],
+                      set_creator: Callable[[int], Set[B_]]) -> \
+            'BiConstraintCollector[A, B, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B, C], A_], value_mapper: Callable[[A, B, C], B_]) ->\
+            'TriConstraintCollector[A, B, C, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B, C], A_], value_mapper: Callable[[A, B, C], B_],
+                      merge_function: Callable[[B_, B_], B_]) -> \
+            'TriConstraintCollector[A, B, C, Any, Dict[A_, B_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B, C], A_], value_mapper: Callable[[A, B, C], B_],
+                      set_creator: Callable[[int], Set[B_]]) -> \
+            'TriConstraintCollector[A, B, C, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B, C, D], A_], value_mapper: Callable[[A, B, C, D], B_]) ->\
+            'QuadConstraintCollector[A, B, C, D, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B, C, D], A_], value_mapper: Callable[[A, B, C], B_],
+                      merge_function: Callable[[B_, B_], B_]) -> \
+            'QuadConstraintCollector[A, B, C, D, Any, Dict[A_, B_]]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_sorted_map(key_mapper: Callable[[A, B, C, D], A_], value_mapper: Callable[[A, B], B_],
+                      set_creator: Callable[[int], Set[B_]]) -> \
+            'QuadConstraintCollector[A, B, C, D, Any, Dict[A_, Set[B_]]]':
+        ...
+
+    @staticmethod
+    def to_sorted_map(key_mapper, value_mapper, merge_function_or_set_creator=None):
+        """Creates a constraint collector that returns a SortedMap with given keys and values consisting of a Set of
+        mappings.
+
+        :return:
+        """
         if merge_function_or_set_creator is None:
             return JavaConstraintCollectors.toSortedMap(_cast(key_mapper), _cast(value_mapper))
 
@@ -292,7 +1267,4 @@ class _ConstraintCollectorsWrapper:
         else:
             raise ValueError
 
-
-if not TYPE_CHECKING:
-    Joiners = _JoinersWrapper()
-    ConstraintCollectors = _ConstraintCollectorsWrapper
+    toSortedMap = to_sorted_map
