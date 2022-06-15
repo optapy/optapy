@@ -9,7 +9,9 @@ from org.optaplanner.core.api.score.stream import Joiners as JavaJoiners, \
     ConstraintCollectors as JavaConstraintCollectors, Constraint  # noqa
 from org.optaplanner.core.api.score.constraint import ConstraintMatch, ConstraintMatchTotal
 from org.optaplanner.core.api.score import Score as _Score
-from ..constraint_stream import PythonConstraintFactory as ConstraintFactory
+from ..constraint_stream import PythonConstraintFactory as ConstraintFactory, \
+    PythonUniConstraintStream as UniConstraintStream, PythonBiConstraintStream as BiConstraintStream, \
+    PythonTriConstraintStream as TriConstraintStream, PythonQuadConstraintStream as QuadConstraintStream
 from org.optaplanner.core.api.score.stream.uni import UniConstraintCollector
 from org.optaplanner.core.api.score.stream.bi import BiJoiner, BiConstraintCollector
 from org.optaplanner.core.api.score.stream.tri import TriJoiner, TriConstraintCollector
@@ -167,7 +169,7 @@ class Joiners:
     E_ = TypeVar('E_')
 
     @staticmethod
-    def __call_comparison_java_joiner(java_joiner, mapping_or_left_mapping, right_mapping):
+    def _call_comparison_java_joiner(java_joiner, mapping_or_left_mapping, right_mapping):
         if mapping_or_left_mapping is None and right_mapping is None:
             raise ValueError
         elif mapping_or_left_mapping is not None and right_mapping is None:
@@ -215,7 +217,7 @@ class Joiners:
         """
         if mapping_or_left_mapping is None and right_mapping is None:
             return JavaJoiners.equal()
-        return Joiners.__call_comparison_java_joiner(JavaJoiners.equal, mapping_or_left_mapping, right_mapping)
+        return Joiners._call_comparison_java_joiner(JavaJoiners.equal, mapping_or_left_mapping, right_mapping)
 
     @overload  # noqa
     @staticmethod
@@ -279,8 +281,8 @@ class Joiners:
 
         :return:
         """
-        return Joiners.__call_comparison_java_joiner(JavaJoiners.greaterThan, mapping_or_left_mapping,
-                                                     right_mapping)
+        return Joiners._call_comparison_java_joiner(JavaJoiners.greaterThan, mapping_or_left_mapping,
+                                                    right_mapping)
 
     greaterThan = greater_than
 
@@ -318,8 +320,8 @@ class Joiners:
 
         :return:
         """
-        return Joiners.__call_comparison_java_joiner(JavaJoiners.greaterThanOrEqual, mapping_or_left_mapping,
-                                                     right_mapping)
+        return Joiners._call_comparison_java_joiner(JavaJoiners.greaterThanOrEqual, mapping_or_left_mapping,
+                                                    right_mapping)
 
     greaterThanOrEqual = greater_than_or_equal
 
@@ -355,7 +357,7 @@ class Joiners:
 
         :return:
         """
-        return Joiners.__call_comparison_java_joiner(JavaJoiners.lessThan, mapping_or_left_mapping, right_mapping)
+        return Joiners._call_comparison_java_joiner(JavaJoiners.lessThan, mapping_or_left_mapping, right_mapping)
 
     lessThan = less_than
 
@@ -392,8 +394,8 @@ class Joiners:
 
         :return:
         """
-        return Joiners.__call_comparison_java_joiner(JavaJoiners.lessThanOrEqual, mapping_or_left_mapping,
-                                                     right_mapping)
+        return Joiners._call_comparison_java_joiner(JavaJoiners.lessThanOrEqual, mapping_or_left_mapping,
+                                                    right_mapping)
 
     lessThanOrEqual = less_than_or_equal
 
@@ -920,6 +922,50 @@ class ConstraintCollectors:
                                                 _PythonBinaryOperator(adder), _PythonBinaryOperator(subtractor))
         else:
             raise ValueError
+
+    @overload  # noqa
+    @staticmethod
+    def to_collection(collection_creator: Callable[[int], B_]) -> 'UniConstraintCollector[A, Any, B_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_collection(group_value_mapping: Callable[[A], A_], collection_creator: Callable[[int], B_]) ->\
+            'UniConstraintCollector[A, Any, B_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_collection(group_value_mapping: Callable[[A, B], A_], collection_creator: Callable[[int], B_]) ->\
+            'BiConstraintCollector[A, B, Any, B_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_collection(group_value_mapping: Callable[[A, B, C], A_], collection_creator: Callable[[int], B_]) ->\
+            'TriConstraintCollector[A, B, C, Any, B_]':
+        ...
+
+    @overload  # noqa
+    @staticmethod
+    def to_collection(group_value_mapping: Callable[[A, B, C, D], A_], collection_creator: Callable[[int], B_]) -> \
+            'QuadConstraintCollector[A, B, C, D, Any, B_]':
+        ...
+
+    @staticmethod
+    def to_collection(group_value_mapping_or_collection_creator, collection_creator=None):
+        """Deprecated; use to_list, to_set or to_sorted_set instead
+
+        :return:
+        """
+        if collection_creator is None:
+            return JavaConstraintCollectors.toCollection(
+                _PythonIntFunction(group_value_mapping_or_collection_creator))  # noqa
+        else:
+            return JavaConstraintCollectors.toCollection(_cast(group_value_mapping_or_collection_creator),  # noqa
+                                                         _PythonIntFunction(collection_creator))
+
+    toCollection = to_collection
 
     @overload  # noqa
     @staticmethod
