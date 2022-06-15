@@ -686,27 +686,27 @@ class PythonUniConstraintStream(Generic[A]):
                                           constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def penalize_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeLong = penalize_long
 
     def penalize_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeBigDecimal = penalize_big_decimal
 
     def penalize_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurable = penalize_configurable
 
     def penalize_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurableLong = penalize_configurable_long
 
     def penalize_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurableBigDecimal = penalize_configurable_big_decimal
 
@@ -760,27 +760,27 @@ class PythonUniConstraintStream(Generic[A]):
                                         constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def reward_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardLong = reward_long
 
     def reward_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardBigDecimal = reward_big_decimal
 
     def reward_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurable = reward_configurable
 
     def reward_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurableLong = reward_configurable_long
 
     def reward_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurableBigDecimal = reward_configurable_big_decimal
 
@@ -836,27 +836,27 @@ class PythonUniConstraintStream(Generic[A]):
                                         constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def impact_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactLong = impact_long
 
     def impact_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactBigDecimal = impact_big_decimal
 
     def impact_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurable = impact_configurable
 
     def impact_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurableLong = impact_configurable_long
 
     def impact_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurableBigDecimal = impact_configurable_big_decimal
 
@@ -1209,27 +1209,27 @@ class PythonBiConstraintStream(Generic[A, B]):
                                           constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def penalize_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeLong = penalize_long
 
     def penalize_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeBigDecimal = penalize_big_decimal
 
     def penalize_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurable = penalize_configurable
 
     def penalize_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurableLong = penalize_configurable_long
 
     def penalize_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurableBigDecimal = penalize_configurable_big_decimal
 
@@ -1284,27 +1284,27 @@ class PythonBiConstraintStream(Generic[A, B]):
                                         constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def reward_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardLong = reward_long
 
     def reward_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardBigDecimal = reward_big_decimal
 
     def reward_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurable = reward_configurable
 
     def reward_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurableLong = reward_configurable_long
 
     def reward_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurableBigDecimal = reward_configurable_big_decimal
 
@@ -1361,27 +1361,27 @@ class PythonBiConstraintStream(Generic[A, B]):
                                         constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def impact_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactLong = impact_long
 
     def impact_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactBigDecimal = impact_big_decimal
 
     def impact_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurable = impact_configurable
 
     def impact_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurableLong = impact_configurable_long
 
     def impact_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurableBigDecimal = impact_configurable_big_decimal
 
@@ -1750,27 +1750,27 @@ class PythonTriConstraintStream(Generic[A, B, C]):
                                           constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def penalize_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeLong = penalize_long
 
     def penalize_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeBigDecimal = penalize_big_decimal
 
     def penalize_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurable = penalize_configurable
 
     def penalize_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurableLong = penalize_configurable_long
 
     def penalize_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurableBigDecimal = penalize_configurable_big_decimal
 
@@ -1825,27 +1825,27 @@ class PythonTriConstraintStream(Generic[A, B, C]):
                                         constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def reward_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardLong = reward_long
 
     def reward_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardBigDecimal = reward_big_decimal
 
     def reward_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurable = reward_configurable
 
     def reward_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurableLong = reward_configurable_long
 
     def reward_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurableBigDecimal = reward_configurable_big_decimal
 
@@ -1902,27 +1902,27 @@ class PythonTriConstraintStream(Generic[A, B, C]):
                                         constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def impact_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactLong = impact_long
 
     def impact_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactBigDecimal = impact_big_decimal
 
     def impact_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurable = impact_configurable
 
     def impact_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurableLong = impact_configurable_long
 
     def impact_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurableBigDecimal = impact_configurable_big_decimal
 
@@ -2277,27 +2277,27 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
                                           constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def penalize_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeLong = penalize_long
 
     def penalize_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeBigDecimal = penalize_big_decimal
 
     def penalize_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurable = penalize_configurable
 
     def penalize_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurableLong = penalize_configurable_long
 
     def penalize_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     penalizeConfigurableBigDecimal = penalize_configurable_big_decimal
 
@@ -2352,27 +2352,27 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
                                         constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def reward_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardLong = reward_long
 
     def reward_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardBigDecimal = reward_big_decimal
 
     def reward_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurable = reward_configurable
 
     def reward_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurableLong = reward_configurable_long
 
     def reward_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     rewardConfigurableBigDecimal = reward_configurable_big_decimal
 
@@ -2429,26 +2429,26 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
                                         constraint_info.score, to_int_function_cast(constraint_info.impact_function))
 
     def impact_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactLong = impact_long
 
     def impact_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactBigDecimal = impact_big_decimal
 
     def impact_configurable(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurable = impact_configurable
 
     def impact_configurable_long(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurableLong = impact_configurable_long
 
     def impact_configurable_big_decimal(self, *args) -> 'Constraint':
-        ...
+        raise NotImplementedError
 
     impactConfigurableBigDecimal = impact_configurable_big_decimal
