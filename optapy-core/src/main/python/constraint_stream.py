@@ -299,6 +299,11 @@ class PythonUniConstraintStream(Generic[A]):
         self.package = package
         self.a_type = a_type
 
+    def get_constraint_factory(self):
+        return PythonConstraintFactory(self.delegate.getConstraintFactory())
+
+    getConstraintFactory = get_constraint_factory
+
     def filter(self, predicate: Callable[[A], bool]) -> 'PythonUniConstraintStream[A]':
         """Exhaustively test each fact against the predicate and match if the predicate returns True.
 
@@ -683,17 +688,27 @@ class PythonUniConstraintStream(Generic[A]):
     def penalize_long(self, *args) -> 'Constraint':
         ...
 
+    penalizeLong = penalize_long
+
     def penalize_big_decimal(self, *args) -> 'Constraint':
         ...
+
+    penalizeBigDecimal = penalize_big_decimal
 
     def penalize_configurable(self, *args) -> 'Constraint':
         ...
 
+    penalizeConfigurable = penalize_configurable
+
     def penalize_configurable_long(self, *args) -> 'Constraint':
         ...
 
+    penalizeConfigurableLong = penalize_configurable_long
+
     def penalize_configurable_big_decimal(self, *args) -> 'Constraint':
         ...
+
+    penalizeConfigurableBigDecimal = penalize_configurable_big_decimal
 
     @overload
     def reward(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -747,11 +762,27 @@ class PythonUniConstraintStream(Generic[A]):
     def reward_long(self, *args) -> 'Constraint':
         ...
 
+    rewardLong = reward_long
+
     def reward_big_decimal(self, *args) -> 'Constraint':
         ...
 
+    rewardBigDecimal = reward_big_decimal
+
     def reward_configurable(self, *args) -> 'Constraint':
         ...
+
+    rewardConfigurable = reward_configurable
+
+    def reward_configurable_long(self, *args) -> 'Constraint':
+        ...
+
+    rewardConfigurableLong = reward_configurable_long
+
+    def reward_configurable_big_decimal(self, *args) -> 'Constraint':
+        ...
+
+    rewardConfigurableBigDecimal = reward_configurable_big_decimal
 
     @overload
     def impact(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -807,11 +838,27 @@ class PythonUniConstraintStream(Generic[A]):
     def impact_long(self, *args) -> 'Constraint':
         ...
 
+    impactLong = impact_long
+
     def impact_big_decimal(self, *args) -> 'Constraint':
         ...
 
+    impactBigDecimal = impact_big_decimal
+
     def impact_configurable(self, *args) -> 'Constraint':
         ...
+
+    impactConfigurable = impact_configurable
+
+    def impact_configurable_long(self, *args) -> 'Constraint':
+        ...
+
+    impactConfigurableLong = impact_configurable_long
+
+    def impact_configurable_big_decimal(self, *args) -> 'Constraint':
+        ...
+
+    impactConfigurableBigDecimal = impact_configurable_big_decimal
 
 
 class PythonBiConstraintStream(Generic[A, B]):
@@ -830,6 +877,11 @@ class PythonBiConstraintStream(Generic[A, B]):
         self.package = package
         self.a_type = a_type
         self.b_type = b_type
+
+    def get_constraint_factory(self):
+        return PythonConstraintFactory(self.delegate.getConstraintFactory())
+
+    getConstraintFactory = get_constraint_factory
 
     def filter(self, predicate: Callable[[A,B], bool]) -> 'PythonBiConstraintStream[A,B]':
         """Exhaustively test each fact against the predicate and match if the predicate returns True.
@@ -1159,17 +1211,27 @@ class PythonBiConstraintStream(Generic[A, B]):
     def penalize_long(self, *args) -> 'Constraint':
         ...
 
+    penalizeLong = penalize_long
+
     def penalize_big_decimal(self, *args) -> 'Constraint':
         ...
+
+    penalizeBigDecimal = penalize_big_decimal
 
     def penalize_configurable(self, *args) -> 'Constraint':
         ...
 
+    penalizeConfigurable = penalize_configurable
+
     def penalize_configurable_long(self, *args) -> 'Constraint':
         ...
 
+    penalizeConfigurableLong = penalize_configurable_long
+
     def penalize_configurable_big_decimal(self, *args) -> 'Constraint':
         ...
+
+    penalizeConfigurableBigDecimal = penalize_configurable_big_decimal
 
     @overload
     def reward(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -1224,11 +1286,27 @@ class PythonBiConstraintStream(Generic[A, B]):
     def reward_long(self, *args) -> 'Constraint':
         ...
 
+    rewardLong = reward_long
+
     def reward_big_decimal(self, *args) -> 'Constraint':
         ...
 
+    rewardBigDecimal = reward_big_decimal
+
     def reward_configurable(self, *args) -> 'Constraint':
         ...
+
+    rewardConfigurable = reward_configurable
+
+    def reward_configurable_long(self, *args) -> 'Constraint':
+        ...
+
+    rewardConfigurableLong = reward_configurable_long
+
+    def reward_configurable_big_decimal(self, *args) -> 'Constraint':
+        ...
+
+    rewardConfigurableBigDecimal = reward_configurable_big_decimal
 
     @overload
     def impact(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -1285,11 +1363,27 @@ class PythonBiConstraintStream(Generic[A, B]):
     def impact_long(self, *args) -> 'Constraint':
         ...
 
+    impactLong = impact_long
+
     def impact_big_decimal(self, *args) -> 'Constraint':
         ...
 
+    impactBigDecimal = impact_big_decimal
+
     def impact_configurable(self, *args) -> 'Constraint':
         ...
+
+    impactConfigurable = impact_configurable
+
+    def impact_configurable_long(self, *args) -> 'Constraint':
+        ...
+
+    impactConfigurableLong = impact_configurable_long
+
+    def impact_configurable_big_decimal(self, *args) -> 'Constraint':
+        ...
+
+    impactConfigurableBigDecimal = impact_configurable_big_decimal
 
 
 class PythonTriConstraintStream(Generic[A, B, C]):
@@ -1311,6 +1405,11 @@ class PythonTriConstraintStream(Generic[A, B, C]):
         self.a_type = a_type
         self.b_type = b_type
         self.c_type = c_type
+
+    def get_constraint_factory(self):
+        return PythonConstraintFactory(self.delegate.getConstraintFactory())
+
+    getConstraintFactory = get_constraint_factory
 
     def filter(self, predicate: Callable[[A, B, C], bool]) -> 'PythonTriConstraintStream[A,B,C]':
         """Exhaustively test each fact against the predicate and match if the predicate returns True.
@@ -1653,17 +1752,27 @@ class PythonTriConstraintStream(Generic[A, B, C]):
     def penalize_long(self, *args) -> 'Constraint':
         ...
 
+    penalizeLong = penalize_long
+
     def penalize_big_decimal(self, *args) -> 'Constraint':
         ...
+
+    penalizeBigDecimal = penalize_big_decimal
 
     def penalize_configurable(self, *args) -> 'Constraint':
         ...
 
+    penalizeConfigurable = penalize_configurable
+
     def penalize_configurable_long(self, *args) -> 'Constraint':
         ...
 
+    penalizeConfigurableLong = penalize_configurable_long
+
     def penalize_configurable_big_decimal(self, *args) -> 'Constraint':
         ...
+
+    penalizeConfigurableBigDecimal = penalize_configurable_big_decimal
 
     @overload
     def reward(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -1718,11 +1827,27 @@ class PythonTriConstraintStream(Generic[A, B, C]):
     def reward_long(self, *args) -> 'Constraint':
         ...
 
+    rewardLong = reward_long
+
     def reward_big_decimal(self, *args) -> 'Constraint':
         ...
 
+    rewardBigDecimal = reward_big_decimal
+
     def reward_configurable(self, *args) -> 'Constraint':
         ...
+
+    rewardConfigurable = reward_configurable
+
+    def reward_configurable_long(self, *args) -> 'Constraint':
+        ...
+
+    rewardConfigurableLong = reward_configurable_long
+
+    def reward_configurable_big_decimal(self, *args) -> 'Constraint':
+        ...
+
+    rewardConfigurableBigDecimal = reward_configurable_big_decimal
 
     @overload
     def impact(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -1779,11 +1904,27 @@ class PythonTriConstraintStream(Generic[A, B, C]):
     def impact_long(self, *args) -> 'Constraint':
         ...
 
+    impactLong = impact_long
+
     def impact_big_decimal(self, *args) -> 'Constraint':
         ...
 
+    impactBigDecimal = impact_big_decimal
+
     def impact_configurable(self, *args) -> 'Constraint':
         ...
+
+    impactConfigurable = impact_configurable
+
+    def impact_configurable_long(self, *args) -> 'Constraint':
+        ...
+
+    impactConfigurableLong = impact_configurable_long
+
+    def impact_configurable_big_decimal(self, *args) -> 'Constraint':
+        ...
+
+    impactConfigurableBigDecimal = impact_configurable_big_decimal
 
 
 class PythonQuadConstraintStream(Generic[A, B, C, D]):
@@ -1807,6 +1948,11 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
         self.b_type = b_type
         self.c_type = c_type
         self.d_type = d_type
+
+    def get_constraint_factory(self):
+        return PythonConstraintFactory(self.delegate.getConstraintFactory())
+
+    getConstraintFactory = get_constraint_factory
 
     def filter(self, predicate: Callable[[A,B,C,D], bool]) -> 'PythonQuadConstraintStream[A,B,C,D]':
         """Exhaustively test each fact against the predicate and match if the predicate returns True.
@@ -2133,17 +2279,27 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
     def penalize_long(self, *args) -> 'Constraint':
         ...
 
+    penalizeLong = penalize_long
+
     def penalize_big_decimal(self, *args) -> 'Constraint':
         ...
+
+    penalizeBigDecimal = penalize_big_decimal
 
     def penalize_configurable(self, *args) -> 'Constraint':
         ...
 
+    penalizeConfigurable = penalize_configurable
+
     def penalize_configurable_long(self, *args) -> 'Constraint':
         ...
 
+    penalizeConfigurableLong = penalize_configurable_long
+
     def penalize_configurable_big_decimal(self, *args) -> 'Constraint':
         ...
+
+    penalizeConfigurableBigDecimal = penalize_configurable_big_decimal
 
     @overload
     def reward(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -2198,11 +2354,27 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
     def reward_long(self, *args) -> 'Constraint':
         ...
 
+    rewardLong = reward_long
+
     def reward_big_decimal(self, *args) -> 'Constraint':
         ...
 
+    rewardBigDecimal = reward_big_decimal
+
     def reward_configurable(self, *args) -> 'Constraint':
         ...
+
+    rewardConfigurable = reward_configurable
+
+    def reward_configurable_long(self, *args) -> 'Constraint':
+        ...
+
+    rewardConfigurableLong = reward_configurable_long
+
+    def reward_configurable_big_decimal(self, *args) -> 'Constraint':
+        ...
+
+    rewardConfigurableBigDecimal = reward_configurable_big_decimal
 
     @overload
     def impact(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -2259,8 +2431,24 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
     def impact_long(self, *args) -> 'Constraint':
         ...
 
+    impactLong = impact_long
+
     def impact_big_decimal(self, *args) -> 'Constraint':
         ...
 
+    impactBigDecimal = impact_big_decimal
+
     def impact_configurable(self, *args) -> 'Constraint':
         ...
+
+    impactConfigurable = impact_configurable
+
+    def impact_configurable_long(self, *args) -> 'Constraint':
+        ...
+
+    impactConfigurableLong = impact_configurable_long
+
+    def impact_configurable_big_decimal(self, *args) -> 'Constraint':
+        ...
+
+    impactConfigurableBigDecimal = impact_configurable_big_decimal
