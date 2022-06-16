@@ -164,8 +164,6 @@ The `source_variable_name` property is the name of the chained variable on the s
 [[customVariableListener]]
 == Custom `VariableListener`
 
-Custom variable listeners are not supported in OptaPy, but will be in a future version.
-////
 To update a shadow variable, OptaPy uses a ``VariableListener``.
 To define a custom shadow variable, write a custom ``VariableListener``:
 implement the interface and annotate it on the shadow variable that needs to change.
@@ -263,14 +261,11 @@ To planning clone a shadow variable, add `@deep_planning_clone` annotation:
     def get_used_man_hours_per_day_map(self):
         ...
 ----
-////
+
 
 [[variableListenerTriggeringOrder]]
 == VariableListener triggering order
 
-This section will be added when custom variable listeners are supported in OptaPy.
-////
-TODO: Uncomment when custom shadow variables are supported
 All shadow variables are triggered by a ``VariableListener``, regardless if it's a built-in or a custom shadow variable.
 The genuine and shadow variables form a graph, that determines the order in which the ``afterEntityAdded()``, `afterVariableChanged()` and `afterEntityRemoved()` methods are called:
 
@@ -306,4 +301,3 @@ class StartTimeUpdatingVariableListener:
 
     ...
 ----
-////
