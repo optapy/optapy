@@ -4,7 +4,7 @@
    height="600"
    id="svg2"
    version="1.1"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
    sodipodi:docname="constraintStreamJustification.svg"
    inkscape:export-filename="constraintStreamJustification.png"
    inkscape:export-xdpi="96"
@@ -216,6 +216,8 @@
      d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
      id="path5767" />
 </marker>
+
+
 
 
 
@@ -577,8 +579,8 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="1.7606959"
-     inkscape:cx="412.62095"
-     inkscape:cy="253.59291"
+     inkscape:cx="231.72656"
+     inkscape:cy="254.72883"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="true"
@@ -607,7 +609,9 @@
      inkscape:snap-object-midpoints="true"
      inkscape:snap-global="true"
      inkscape:document-rotation="0"
-     inkscape:pagecheckerboard="0">
+     inkscape:pagecheckerboard="0"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        empspacing="10"
        visible="true"
@@ -698,9 +702,9 @@
            width="240.30208"
            id="rect2679" /></flowRegion><flowPara
          id="flowPara2683"
-         style="font-size:18.6667px;line-height:1.25;text-align:start;text-anchor:start">forEach(get_class(<flowSpan
+         style="font-size:18.6667px;line-height:1.25;text-align:start;text-anchor:start">for_each(<flowSpan
    style="font-size:18.6667px;fill:#4e9a06"
-   id="flowSpan2695">Shift</flowSpan>))</flowPara></flowRoot>
+   id="flowSpan2695">Shift</flowSpan>)</flowPara></flowRoot>
     <g
        id="g1604"
        transform="translate(-399.439,-220)"
@@ -1119,8 +1123,8 @@
     <path
        inkscape:connector-curvature="0"
        id="path396"
-       d="m 220.33566,592.36218 h 19.32869"
-       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:0.717922;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 140.10363,592.36218 H 238.2015"
+       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:1.61736;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        sodipodi:nodetypes="cc" />
     <flowRoot
        transform="translate(249.79492,427.44425)"

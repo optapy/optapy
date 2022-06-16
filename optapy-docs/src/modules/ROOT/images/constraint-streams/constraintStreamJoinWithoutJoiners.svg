@@ -4,7 +4,7 @@
    height="600"
    id="svg2"
    version="1.1"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
    sodipodi:docname="constraintStreamJoinWithoutJoiners.svg"
    inkscape:export-filename="constraintStreamJoinWithoutJoiners.png"
    inkscape:export-xdpi="96"
@@ -171,6 +171,8 @@
      d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
      id="path5767" />
 </marker>
+
+
 
 
 
@@ -483,10 +485,10 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="2.58"
-     inkscape:cx="395.93023"
-     inkscape:cy="326.93798"
+     inkscape:cx="272.48062"
+     inkscape:cy="327.71318"
      inkscape:document-units="px"
-     inkscape:current-layer="layer2"
+     inkscape:current-layer="layer4"
      showgrid="true"
      width="800px"
      borderlayer="true"
@@ -513,7 +515,9 @@
      inkscape:snap-object-midpoints="true"
      inkscape:snap-global="true"
      inkscape:document-rotation="0"
-     inkscape:pagecheckerboard="0">
+     inkscape:pagecheckerboard="0"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        empspacing="10"
        visible="true"
@@ -853,17 +857,13 @@
            width="200.00002"
            id="rect2679" /></flowRegion><flowPara
          id="flowPara2683"
-         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">forEach(<flowSpan
-   style="font-size:16px"
-   id="flowSpan357883">get_class(</flowSpan><flowSpan
-   style="fill:#4e9a06;font-size:16px"
-   id="flowSpan2695">Shift</flowSpan><flowSpan
-   style="font-size:16px"
-   id="flowSpan357885">)</flowSpan>)</flowPara></flowRoot>
+         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#4e9a06"
+   id="flowSpan2695">Shift</flowSpan>)</flowPara></flowRoot>
     <path
        id="path2729"
-       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:0.828247px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 233.48453,586.06074 -15.97749,-0.003 m 15.97749,0.003 c 5.9263,0 1.64948,30 9.00847,30"
+       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:1.53127px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 212.86513,584.86905 -52.55846,-0.003 m 52.55846,0.003 c 19.49475,0 5.42602,31.17226 29.63365,31.17226"
        inkscape:connector-curvature="0" />
   </g>
   <g
@@ -960,16 +960,12 @@
            y="152.09956"
            style="font-size:21.3333px;text-align:start;text-anchor:start" /></flowRegion><flowPara
          style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start"
-         id="flowPara2691">forEach(<flowSpan
-   style="font-size:14.66666667px"
-   id="flowSpan370739">get_class(</flowSpan><flowSpan
-   style="fill:#204a87;font-size:14.66666667px"
-   id="flowSpan2697">DayOff</flowSpan><flowSpan
-   style="font-size:14.66666667px"
-   id="flowSpan370741">)</flowSpan>)</flowPara></flowRoot>
+         id="flowPara2691">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#204a87"
+   id="flowSpan2697">DayOff</flowSpan>)</flowPara></flowRoot>
     <path
-       style="display:inline;fill:none;stroke:#204a87;stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
-       d="m 229.361,193.70117 c 8.639,0 2.40451,-30 13.132,-30"
+       style="display:inline;fill:none;stroke:#204a87;stroke-width:2.09446px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+       d="m 185.52384,194.87844 c 37.11766,0 10.33103,-30.63004 56.42193,-30.63004"
        id="path2723"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
@@ -2028,13 +2024,13 @@
    style="fill:#4e9a06"
    id="flowSpan3660">shift</flowSpan>, <flowSpan
    style="fill:#204a87"
-   id="flowSpan3668">dayOff:</flowSpan></flowSpan></flowPara><flowPara
+   id="flowSpan3668">day_off:</flowSpan></flowSpan></flowPara><flowPara
          style="font-size:16px;line-height:1.25;text-align:start;text-anchor:start"
          id="flowPara2753">    <flowSpan
    style="fill:#4e9a06"
    id="flowSpan3662">shift</flowSpan>.date == <flowSpan
    style="fill:#204a87"
-   id="flowSpan3666">dayOff</flowSpan>.date</flowPara><flowPara
+   id="flowSpan3666">day_off</flowSpan>.date</flowPara><flowPara
          style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start"
          id="flowPara2759"><flowSpan
            style="font-size:16px"
@@ -2048,12 +2044,12 @@
    style="font-size:16px"
    id="flowSpan2791">          == <flowSpan
    style="fill:#204a87"
-   id="flowSpan3670">dayOff</flowSpan>.employee</flowSpan>)</flowPara></flowRoot>
+   id="flowSpan3670">day_off</flowSpan>.employee</flowSpan>)</flowPara></flowRoot>
     <path
        inkscape:connector-curvature="0"
        id="path2793"
-       d="m 617.55912,163.70117 h 54.986"
-       style="display:inline;fill:none;stroke:#5c3566;stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+       d="m 624.39703,163.70117 h 48.20971"
+       style="display:inline;fill:none;stroke:#5c3566;stroke-width:0.936356px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
        sodipodi:nodetypes="cc" />
     <flowRoot
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.3333px;line-height:0.01%;font-family:'Liberation Sans';-inkscape-font-specification:'Liberation Sans, Normal';text-align:start;writing-mode:lr-tb;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:none"

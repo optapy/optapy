@@ -4,7 +4,7 @@
    height="600"
    id="svg2"
    version="1.1"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
    sodipodi:docname="constraintStreamGroupBy.svg"
    inkscape:export-filename="constraintStreamGroupBy.png"
    inkscape:export-xdpi="96"
@@ -171,6 +171,8 @@
      d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
      id="path5767" />
 </marker>
+
+
 
 
 
@@ -488,10 +490,10 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="2.58"
-     inkscape:cx="296.31783"
-     inkscape:cy="275"
+     inkscape:cx="172.86822"
+     inkscape:cy="275.77519"
      inkscape:document-units="px"
-     inkscape:current-layer="layer3"
+     inkscape:current-layer="layer2"
      showgrid="true"
      width="800px"
      borderlayer="true"
@@ -518,7 +520,9 @@
      inkscape:snap-object-midpoints="true"
      inkscape:snap-global="true"
      inkscape:document-rotation="0"
-     inkscape:pagecheckerboard="0">
+     inkscape:pagecheckerboard="0"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        empspacing="10"
        visible="true"
@@ -579,7 +583,7 @@
            y="220.00005"
            style="font-size:37.33333206px;text-align:center;text-anchor:middle" /></flowRegion><flowPara
          id="flowPara3847"
-         style="font-size:37.3333px;line-height:1.25">ConstraintStream: groupBy()</flowPara></flowRoot>
+         style="font-size:37.3333px;line-height:1.25">ConstraintStream: group_by()</flowPara></flowRoot>
     <flowRoot
        transform="translate(-19.999997,372.36182)"
        xml:space="preserve"
@@ -609,13 +613,9 @@
            width="200.00002"
            id="rect2679" /></flowRegion><flowPara
          id="flowPara2683"
-         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">forEach(<flowSpan
-   style="font-size:16px"
-   id="flowSpan241867">get_class(</flowSpan><flowSpan
-   style="fill:#4e9a06;font-size:16px"
-   id="flowSpan2695">Shift</flowSpan><flowSpan
-   style="font-size:16px"
-   id="flowSpan241869">)</flowSpan>)</flowPara></flowRoot>
+         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#4e9a06"
+   id="flowSpan2695">Shift</flowSpan>)</flowPara></flowRoot>
     <g
        id="g1604"
        transform="translate(-369.439,-230)"
@@ -867,8 +867,8 @@
     </g>
     <path
        sodipodi:nodetypes="cc"
-       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:0.866857;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 253.46609,586.06327 h 39.39122"
+       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:1.3532;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 196.24456,586.06327 h 95.98998"
        id="path1211"
        inkscape:connector-curvature="0" />
   </g>
@@ -879,8 +879,8 @@
      style="display:inline">
     <path
        sodipodi:nodetypes="cc"
-       style="display:inline;fill:none;stroke:#204a87;stroke-width:0.910958px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
-       d="M 564.6718,133.70109 H 702.6302"
+       style="display:inline;fill:none;stroke:#204a87;stroke-width:0.877184px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+       d="M 574.74494,133.70109 H 702.66335"
        id="path695"
        inkscape:connector-curvature="0" />
     <path
@@ -932,8 +932,8 @@
            width="361.94791"
            id="rect2743" /></flowRegion><flowPara
          style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start"
-         id="flowPara1203">.groupBy(<flowSpan
-   style="font-size:13.33333333px"
+         id="flowPara1203">.group_by(<flowSpan
+   style="font-size:13.3333px"
    id="flowSpan251251"><flowSpan
    style="fill:#ce5c00"
    id="flowSpan271199">lambda</flowSpan> <flowSpan
@@ -1034,23 +1034,19 @@
            width="200.00002"
            id="rect2679-7" /></flowRegion><flowPara
          id="flowPara2683-5"
-         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">forEach(<flowSpan
-   style="font-size:16px"
-   id="flowSpan241867-3">get_class(</flowSpan><flowSpan
-   style="font-size:16px;fill:#4e9a06"
-   id="flowSpan2695-5">Shift</flowSpan><flowSpan
-   style="font-size:16px"
-   id="flowSpan241869-6">)</flowSpan>)</flowPara></flowRoot>
+         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#4e9a06"
+   id="flowSpan2695-5">Shift</flowSpan>)</flowPara></flowRoot>
     <path
        sodipodi:nodetypes="cc"
-       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:0.866857;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 255.41401,385.62504 h 39.39122"
+       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:1.36102;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 197.06767,385.62504 h 97.10255"
        id="path1211-2"
        inkscape:connector-curvature="0" />
     <path
        sodipodi:nodetypes="cc"
-       style="display:inline;fill:none;stroke:#204a87;stroke-width:0.723868px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
-       d="M 617.63545,385.62504 H 704.746"
+       style="display:inline;fill:none;stroke:#204a87;stroke-width:0.67975px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+       d="m 627.97301,385.62504 h 76.81576"
        id="path695-9"
        inkscape:connector-curvature="0" />
     <flowRoot
@@ -1067,7 +1063,7 @@
            width="361.94791"
            id="rect2743-7" /></flowRegion><flowPara
          style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start"
-         id="flowPara1203-0">.groupBy(<flowSpan
+         id="flowPara1203-0">.group_by(<flowSpan
    style="font-size:13.3333px"
    id="flowSpan251251-9"><flowSpan
    style="fill:#ce5c00"
