@@ -4,7 +4,7 @@
    height="600"
    id="svg2"
    version="1.1"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
    sodipodi:docname="constraintStreamIncrementalCalculation.svg"
    inkscape:export-filename="constraintStreamIncrementalCalculation.png"
    inkscape:export-xdpi="96"
@@ -186,6 +186,8 @@
      d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
      id="path5767" />
 </marker>
+
+
 
 
 
@@ -500,10 +502,10 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="2.58"
-     inkscape:cx="523.83721"
-     inkscape:cy="345.15504"
+     inkscape:cx="400.3876"
+     inkscape:cy="345.93023"
      inkscape:document-units="px"
-     inkscape:current-layer="layer3"
+     inkscape:current-layer="layer1"
      showgrid="true"
      width="800px"
      borderlayer="true"
@@ -530,7 +532,9 @@
      inkscape:snap-object-midpoints="true"
      inkscape:snap-global="true"
      inkscape:document-rotation="0"
-     inkscape:pagecheckerboard="0">
+     inkscape:pagecheckerboard="0"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        empspacing="10"
        visible="true"
@@ -621,13 +625,9 @@
            width="200.00002"
            id="rect2679" /></flowRegion><flowPara
          id="flowPara2683"
-         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">forEach(<flowSpan
-   style="font-size:16px"
-   id="flowSpan1375352">get_class(</flowSpan><flowSpan
-   style="fill:#4e9a06;font-size:16px"
-   id="flowSpan2695">Shift</flowSpan><flowSpan
-   style="font-size:16px"
-   id="flowSpan1375354">)</flowSpan>)</flowPara></flowRoot>
+         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#4e9a06"
+   id="flowSpan2695">Shift</flowSpan>)</flowPara></flowRoot>
     <g
        id="g1604"
        transform="translate(-399.439,-220)"
@@ -953,8 +953,8 @@
     <path
        inkscape:connector-curvature="0"
        id="path396"
-       d="m 224.42231,596.06334 h 23.53723"
-       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:0.792234;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 166.12274,596.06334 h 80.87189"
+       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:1.4685;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        sodipodi:nodetypes="cc" />
   </g>
   <g

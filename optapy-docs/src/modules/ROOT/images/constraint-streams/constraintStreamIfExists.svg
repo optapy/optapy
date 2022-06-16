@@ -4,7 +4,7 @@
    height="600"
    id="svg2"
    version="1.1"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
    sodipodi:docname="constraintStreamIfExists.svg"
    inkscape:export-filename="constraintStreamIfExists.png"
    inkscape:export-xdpi="96"
@@ -171,6 +171,8 @@
      d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
      id="path5767" />
 </marker>
+
+
 
 
 
@@ -485,10 +487,10 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="2.58"
-     inkscape:cx="441.66667"
-     inkscape:cy="331.97674"
+     inkscape:cx="318.21705"
+     inkscape:cy="332.75194"
      inkscape:document-units="px"
-     inkscape:current-layer="layer5"
+     inkscape:current-layer="layer2"
      showgrid="true"
      width="800px"
      borderlayer="true"
@@ -515,7 +517,9 @@
      inkscape:snap-object-midpoints="true"
      inkscape:snap-global="true"
      inkscape:document-rotation="0"
-     inkscape:pagecheckerboard="0">
+     inkscape:pagecheckerboard="0"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        empspacing="10"
        visible="true"
@@ -576,7 +580,7 @@
            y="220.00005"
            style="font-size:37.33333206px;text-align:center;text-anchor:middle" /></flowRegion><flowPara
          id="flowPara3847"
-         style="font-size:37.3333px;line-height:1.25">ConstraintStream: ifExists()</flowPara></flowRoot>
+         style="font-size:37.3333px;line-height:1.25">ConstraintStream: if_exists()</flowPara></flowRoot>
     <flowRoot
        transform="translate(-19.999997,372.36182)"
        xml:space="preserve"
@@ -855,17 +859,13 @@
            width="200.00002"
            id="rect2679" /></flowRegion><flowPara
          id="flowPara2683"
-         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">forEach(<flowSpan
-   style="font-size:16px"
-   id="flowSpan33640">get_class(</flowSpan><flowSpan
-   style="fill:#4e9a06;font-size:16px"
-   id="flowSpan2695">Shift</flowSpan><flowSpan
-   style="font-size:16px"
-   id="flowSpan33642">)</flowSpan>)</flowPara></flowRoot>
+         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#4e9a06"
+   id="flowSpan2695">Shift</flowSpan>)</flowPara></flowRoot>
     <path
        id="path2729"
-       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:0.867449px;stroke-linecap:round;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 249.39068,575.994 -1.45409,-2.2e-4 v 0 m 1.45409,0 c 6.6941,0 1.86318,29.13255 10.1756,29.13255"
+       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:2.06555px;stroke-linecap:round;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 201.91994,575.06386 -8.15204,-2.2e-4 v 0 m 8.15204,0 c 37.52902,0 10.44551,29.46364 57.04729,29.46364"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="ccccc" />
   </g>
@@ -905,13 +905,9 @@
            y="152.09956"
            style="font-size:21.33333397px;text-align:start;text-anchor:start" /></flowRegion><flowPara
          style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start"
-         id="flowPara2691">forEach(<flowSpan
-   style="font-size:16px"
-   id="flowSpan23652">get_class(</flowSpan><flowSpan
-   style="fill:#204a87;font-size:16px"
-   id="flowSpan2697">Pet</flowSpan><flowSpan
-   style="font-size:16px"
-   id="flowSpan23654">)</flowSpan>)</flowPara></flowRoot>
+         id="flowPara2691">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#204a87"
+   id="flowSpan2697">Pet</flowSpan>)</flowPara></flowRoot>
     <g
        id="g1790"
        transform="translate(-470,-422.36221)"
@@ -1030,8 +1026,8 @@
     </g>
     <path
        id="path2729-3"
-       style="display:inline;fill:none;stroke:#204a87;stroke-width:1.14772px;stroke-linecap:round;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 256.94202,153.77196 2.48413,-2.4e-4 v 0 m -2.48413,0 c -11.43603,0 -3.18302,29.8523 -17.38373,29.8523"
+       style="display:inline;fill:none;stroke:#204a87;stroke-width:2.19986px;stroke-linecap:round;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 250.44296,154.29805 8.45712,-2.6e-4 v 0 m -8.45712,0 c -38.93348,0 -10.83646,32.21434 -59.18218,32.21434"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="ccccc" />
   </g>
@@ -1127,7 +1123,7 @@
            width="400"
            id="rect2743" /></flowRegion><flowPara
          id="flowPara2747"
-         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">.ifExists(</flowPara><flowPara
+         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">.if_exists(</flowPara><flowPara
          style="font-size:16px;line-height:1.25;text-align:start;text-anchor:start"
          id="flowPara2759">  <flowSpan
    style="font-size:12px"

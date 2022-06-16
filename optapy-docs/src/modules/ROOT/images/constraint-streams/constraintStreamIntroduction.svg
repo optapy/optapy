@@ -4,7 +4,7 @@
    height="600"
    id="svg2"
    version="1.1"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
    sodipodi:docname="constraintStreamIntroduction.svg"
    inkscape:export-filename="constraintStreamIntroduction.png"
    inkscape:export-xdpi="96"
@@ -192,6 +192,8 @@
      d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
      id="path5767" />
 </marker>
+
+
 
 
 
@@ -522,10 +524,10 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="2.58"
-     inkscape:cx="428.87597"
-     inkscape:cy="268.79845"
+     inkscape:cx="305.42636"
+     inkscape:cy="269.57364"
      inkscape:document-units="px"
-     inkscape:current-layer="layer5"
+     inkscape:current-layer="layer3"
      showgrid="true"
      width="800px"
      borderlayer="true"
@@ -552,7 +554,9 @@
      inkscape:snap-object-midpoints="true"
      inkscape:snap-global="true"
      inkscape:document-rotation="0"
-     inkscape:pagecheckerboard="0">
+     inkscape:pagecheckerboard="0"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        empspacing="10"
        visible="true"
@@ -708,7 +712,7 @@
        xml:space="preserve"
        transform="translate(0,452.36218)"
        id="text1122861"
-       style="font-family:sans-serif;font-size:21.33333333px;line-height:1.25;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect1122863)" />
+       style="font-size:21.3333px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect1122863);display:inline" />
   </g>
   <g
      inkscape:groupmode="layer"
@@ -756,13 +760,9 @@
            width="200.00002"
            id="rect2679" /></flowRegion><flowPara
          id="flowPara2683"
-         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">forEach(<flowSpan
-   style="font-size:16px"
-   id="flowSpan965709">get_class(</flowSpan><flowSpan
-   style="fill:#4e9a06;font-size:16px"
-   id="flowSpan2695">Shift</flowSpan><flowSpan
-   style="font-size:16px"
-   id="flowSpan965711">)</flowSpan>)</flowPara></flowRoot>
+         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#4e9a06"
+   id="flowSpan2695">Shift</flowSpan>)</flowPara></flowRoot>
     <g
        id="g1604"
        transform="translate(-399.439,-672.36218)"
@@ -1017,8 +1017,8 @@
     <path
        inkscape:connector-curvature="0"
        id="path396"
-       d="m 222.90041,143.70116 h 25.03911"
-       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:0.817119;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 167.23226,143.70116 h 79.81351"
+       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:1.45886;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        sodipodi:nodetypes="cc" />
   </g>
   <g
