@@ -4,7 +4,7 @@
    height="600"
    id="svg2"
    version="1.1"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
    sodipodi:docname="constraintStreamFilter.svg"
    inkscape:export-filename="constraintStreamFilter.png"
    inkscape:export-xdpi="96"
@@ -171,6 +171,8 @@
      d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
      id="path5767" />
 </marker>
+
+
 
 
 
@@ -487,10 +489,10 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="1.8243355"
-     inkscape:cx="193.76918"
-     inkscape:cy="126.89552"
+     inkscape:cx="194.5914"
+     inkscape:cy="215.69497"
      inkscape:document-units="px"
-     inkscape:current-layer="layer3"
+     inkscape:current-layer="layer1"
      showgrid="true"
      width="800px"
      borderlayer="true"
@@ -517,7 +519,9 @@
      inkscape:snap-object-midpoints="true"
      inkscape:snap-global="true"
      inkscape:document-rotation="0"
-     inkscape:pagecheckerboard="0">
+     inkscape:pagecheckerboard="0"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        empspacing="10"
        visible="true"
@@ -608,13 +612,9 @@
            width="200.00002"
            id="rect2679" /></flowRegion><flowPara
          id="flowPara2683"
-         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">forEach(<flowSpan
-   style="font-size:16px"
-   id="flowSpan87574">get_class(</flowSpan><flowSpan
-   style="fill:#4e9a06;font-size:16px"
-   id="flowSpan2695">Shift</flowSpan><flowSpan
-   style="font-size:16px"
-   id="flowSpan87576">)</flowSpan>)</flowPara></flowRoot>
+         style="font-size:21.3333px;line-height:1.25;text-align:start;text-anchor:start">for_each(<flowSpan
+   style="font-size:21.33333333px;fill:#4e9a06"
+   id="flowSpan2695">Shift</flowSpan>)</flowPara></flowRoot>
     <g
        id="g1604"
        transform="translate(-399.439,-220)"
@@ -866,8 +866,8 @@
     </g>
     <path
        sodipodi:nodetypes="cc"
-       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:0.868988;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m 223.27036,586.06327 h 39.5851"
+       style="display:inline;fill:none;stroke:#4e9a06;stroke-width:1.35821;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 165.51451,586.06327 h 96.70225"
        id="path1211"
        inkscape:connector-curvature="0" />
   </g>

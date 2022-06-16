@@ -35,12 +35,11 @@ This is an example of the same code, using the Constraint Streams API:
 
 [source,python,options="nowrap"]
 ----
-from optapy import get_class
 from optapy.score import HardSoftScore
 from optapy.constraint import ConstraintFactory
 
 def do_not_assign_ann(factory : ConstraintFactory):
-    return factory.forEach(get_class(Shift)) \
+    return factory.for_each(Shift) \
             .filter(lambda shift: shift.employee == 'Ann') \
             .penalize("Don't assign Ann", HardSoftScore.ONE_SOFT)
 ----
@@ -71,7 +70,7 @@ To use the ConstraintStreams API in your project, first write a pure Python func
 
 [source,python,options="nowrap"]
 ----
-from optapy import get_class, constraint_provider
+from optapy import constraint_provider
 from optapy.score import HardSoftScore
 from optapy.constraint import ConstraintFactory
 
@@ -82,7 +81,7 @@ def define_constraints(factory : ConstraintFactory):
     ]
 
 def penalize_every_shift(factory : ConstraintFactory):
-    return factory.forEach(get_class(Shift)) \
+    return factory.for_each(Shift) \
             .penalize("Penalize a shift", HardSoftScore.ONE_SOFT)
 ----
 
@@ -117,22 +116,22 @@ Therefore, it is called a `UniConstraintStream`:
 [source,python,options="nowrap"]
 ----
 def do_not_assign_ann(factory : ConstraintFactory):
-    return factory.forEach(get_class(Shift)) \
+    return factory.for_each(Shift) \
     # // Returns UniStream[Shift]
     ...
 ----
 
 Some constraint stream <<constraintStreamsBuildingBlocks, building blocks>> can increase stream cardinality, such as
-<<constraintStreamsJoin,join>> or <<constraintStreamsGroupingAndCollectors,groupBy>>:
+<<constraintStreamsJoin,join>> or <<constraintStreamsGroupingAndCollectors,group_by>>:
 
 [source,python,options="nowrap"]
 ----
 def do_not_assign_ann(factory: ConstraintFactory):
 
-    return (factory.forEach(get_class(Shift)) # Returns Uni[Shift].
-            .join(get_class(Employee)) # Returns Bi[Shift, Employee].
-            .join(get_class(DayOff)) # Returns Tri[Shift, Employee, DayOff].
-            .join(get_class(Country)) # Returns Quad[Shift, Employee, DayOff, Country].
+    return (factory.for_each(Shift) # Returns Uni[Shift].
+            .join(Employee) # Returns Bi[Shift, Employee].
+            .join(DayOff) # Returns Tri[Shift, Employee, DayOff].
+            .join(Country) # Returns Quad[Shift, Employee, DayOff, Country].
             )
             ...
 ----
@@ -142,9 +141,9 @@ The latter can also decrease stream cardinality:
 [source,python,options="nowrap"]
 ----
 def do_not_assign_ann(factory: ConstraintFactory):
-    return (factory.forEach(get_class(Shift)) # Returns UniStream[Shift].
-            .join(get_class(Employee)) # Returns BiStream[Shift, Employee].
-            .groupBy((shift, employee) -> employee) # Returns UniStream[Employee].
+    return (factory.for_each(Shift) # Returns UniStream[Shift].
+            .join(Employee) # Returns BiStream[Shift, Employee].
+            .group_by(lambda shift, employee: employee) # Returns UniStream[Employee].
             )
             ...
 ----
@@ -171,12 +170,12 @@ However, with <<constraintStreamsMappingTuples,tuple mapping>> effectively infin
 [source,python,options="nowrap"]
 ----
 def penta_stream_example(factory: ConstraintFactory):
-    return (factory.forEach(get_class(Shift)) # UniConstraintStream[Shift]
-            .join(get_class(Shift)) # BiConstraintStream[Shift, Shift]
-            .join(get_class(Shift)) # TriConstraintStream[Shift, Shift, Shift]
-            .join(get_class(Shift)) # QuadConstraintStream[Shift, Shift, Shift, Shift]
+    return (factory.for_each(Shift) # UniConstraintStream[Shift]
+            .join(Shift) # BiConstraintStream[Shift, Shift]
+            .join(Shift) # TriConstraintStream[Shift, Shift, Shift]
+            .join(Shift) # QuadConstraintStream[Shift, Shift, Shift, Shift]
             .map(tuple) # UniConstraintStream[Tuple[Shift, Shift, Shift, Shift]]
-            .join(get_class(Shift) # BiConstraintStream[Tuple[Shift, Shift, Shift, Shift], Shift]
+            .join(Shift) # BiConstraintStream[Tuple[Shift, Shift, Shift, Shift], Shift]
             # This BiConstraintStream carries 5 Shift elements.
             )
             ...
@@ -193,13 +192,13 @@ Should a custom implementation be necessary, see <<constraintStreamsDesigningMap
 == Building blocks
 
 Constraint streams are chains of different operations, called building blocks.
-Each constraint stream starts with a `forEach(...)` building block and is terminated by either a penalty or a reward.
+Each constraint stream starts with a `for_each(...)` building block and is terminated by either a penalty or a reward.
 The following example shows the simplest possible constraint stream:
 
 [source,python,options="nowrap"]
 ----
 def penalize_initialized_shifts(factory: ConstraintFactory):
-    return factory.forEach(get_class(Shift)) \
+    return factory.for_each(Shift) \
             .penalize("Initialized shift", HardSoftScore.ONE_SOFT)
 ----
 
@@ -210,30 +209,30 @@ This constraint stream penalizes each known and initialized instance of `Shift`.
 [[constraintStreamsForEach]]
 === ForEach
 
-The `.forEach(T)` building block selects every `T` instance that
+The `.for_each(T)` building block selects every `T` instance that
 is in a xref:planner-configuration/planner-configuration.adoc#problemFacts[problem fact collection]
 or a xref:planner-configuration/planner-configuration.adoc#planningEntitiesOfASolution[planning entity collection]
 and has no `None` genuine planning variables.
 
 To include instances with a `None` genuine planning variable,
-replace the `forEach()` building block by `forEachIncludingNullVars()`:
+replace the `for_each()` building block by `for_each_including_null_vars()`:
 
 [source,python,options="nowrap"]
 ----
 def penalize_all_shifts(factory: ConstraintFactory):
-    return factory.forEachIncludingNullVars(get_class(Shift)) \
+    return factory.for_each_including_null_vars(Shift) \
             .penalize("A shift", HardSoftScore.ONE_SOFT)
 ----
 
 [NOTE]
 ====
-The `forEach()` building block has a legacy counterpart, `from_()`.
+The `for_each()` building block has a legacy counterpart, `from_()`.
 This alternative approach included instances based on the initialization status of their genuine planning variables.
 As an unwanted consequence,
 `from_()` behaves unexpectedly for xref:planner-configuration/planner-configuration.adoc#nullablePlanningVariable[nullable variables].
 These are considered initialized even when `None`,
 and therefore this legacy method could still return entities with `None` variables.
-`from_()`, `fromUnfiltered()` and `fromUniquePair()` are now deprecated and will be removed in a future major version of OptaPy.
+`from_()`, `from_unfiltered()` and `from_unique_pair()` are now deprecated and will be removed in a future major version of OptaPy.
 ====
 
 [[constraintStreamsPenaltiesRewards]]
@@ -290,7 +289,7 @@ The following constraint stream removes all of Beth's shifts from all `Shift` ma
 [source,python,options="nowrap"]
 ----
 def penalize_ann_shifts(factory: ConstraintFactory):
-    return factory.forEach(get_class(Shift)) \
+    return factory.for_each(Shift) \
             .filter(lambda shift: shift.employee.name == "Ann") \
             .penalize("Ann's shift", SimpleScore.ONE)
 ----
@@ -301,8 +300,8 @@ of `Shift` and `DayOff`:
 [source,python,options="nowrap"]
 ----
 def penalize_shifts_on_off_days(factory: ConstraintFactory):
-    return factory.forEach(get_class(Shift)) \
-            .join(get_class(DayOff)) \
+    return factory.for_each(Shift) \
+            .join(DayOff) \
             .filter(lambda shift, day_off: shift.date == day_off.date and shift.employee == day_off.employee) \
             .penalize("Shift on an off-day", SimpleScore.ONE)
 ----
@@ -354,9 +353,9 @@ For example:
 ----
 from optapy.constraint import Joiners
 
-def shift_on_day_off(constraintFactory: ConstraintFactory):
-    return constraintFactory.forEach(get_class(Shift)) \
-            .join(get_class(DayOff),
+def shift_on_day_off(constraint_factory: ConstraintFactory):
+    return constraint_factory.for_each(Shift) \
+            .join(DayOff,
                 Joiners.equal(lambda shift: shift.date,
                               lambda day_off: day_off.date),
                 Joiners.equal(lambda shift: shift.employee,
@@ -390,7 +389,7 @@ It does not create cartesian products and therefore generally performs better.
 
 Grouping collects items in a stream according to user-provider criteria (also called "group key"), similar to what a
 `GROUP BY` SQL clause does. Additionally, some grouping operations also accept one or more `Collector` instances, which
-provide various aggregation functions. The following figure illustrates a simple `groupBy()` operation:
+provide various aggregation functions. The following figure illustrates a simple `group_by()` operation:
 
 image::constraint-streams/constraintStreamGroupBy.png[align="center"]
 
@@ -404,13 +403,13 @@ from optapy.constraint import ConstraintCollectors
 
 
 def required_cpu_power_total(constraint_factory: ConstraintFactory):
-    return constraint_factory.forEach(get_class(CloudProcess)) \
-            .groupBy(lambda process: process.computer,
-                     ConstraintCollectors.sum(lambda process: process.required_cpu_power)) \
+    return constraint_factory.for_each(CloudProcess) \
+            .group_by(lambda process: process.computer,
+                      ConstraintCollectors.sum(lambda process: process.required_cpu_power)) \
             .filter(lambda computer, required_cpu_power: required_cpu_power > computer.cpu_power) \
             .penalize("required_cpu_power_total",
-                    HardSoftScore.ONE_HARD,
-                    lambda computer, required_cpu_power: required_cpu_power - computer.cpu_power)
+                      HardSoftScore.ONE_HARD,
+                      lambda computer, required_cpu_power: required_cpu_power - computer.cpu_power)
 ----
 
 [NOTE]
@@ -431,11 +430,11 @@ There are several collectors available out of the box.
 The following collectors are provided out of the box:
 
 * <<collectorsCount,`count()`>>
-* <<collectorsCountDistinct,`countDistinct()`>>
+* <<collectorsCountDistinct,`count_distinct()`>>
 * <<collectorsSum,`sum()`>>
 * <<collectorsAverage,`average()`>>
 * <<collectorsMinMax,`min()` and `max()`>>
-* <<collectorsCollection,`toList()`, `toSet()` and `toMap()`>>
+* <<collectorsCollection,`to_list()`, `to_set()` and `to_map()`>>
 
 
 [[collectorsCount]]
@@ -448,12 +447,12 @@ don't.
 [source,python,options="nowrap"]
 ----
 def speaker_availability(factory: ConstraintFactory):
-    return factory.forEach(get_class(Talk)) \
-            .groupBy(lambda talk: talk.has_any_unavailable_speaker(),
-                     ConstraintCollectors.count()) \
+    return factory.for_each(Talk) \
+            .group_by(lambda talk: talk.has_any_unavailable_speaker(),
+                      ConstraintCollectors.count()) \
             .penalize("Speaker Availability",
-                    HardSoftScore.ONE_HARD,
-                    lambda has_unavailable_speaker, count: ...)
+                      HardSoftScore.ONE_HARD,
+                      lambda has_unavailable_speaker, count: ...)
 ----
 
 The count is collected in an `int`.
@@ -463,17 +462,17 @@ because - unlike the other built-in collectors - they aren't overloaded methods 
 
 
 [[collectorsCountDistinct]]
-===== `countDistinct()` collector
+===== `count_distinct()` collector
 
-The `ConstraintCollectors.countDistinct(...)` counts any element per group once, regardless of how many times it
+The `ConstraintCollectors.count_distinct(...)` counts any element per group once, regardless of how many times it
 occurs. For example, the following use of the collector gives a number of talks in each unique room.
 
 [source,python,options="nowrap"]
 ----
 def room_count(factory: ConstraintFactory):
-    return factory.forEach(get_class(Talk)) \
-            .groupBy(lambda talk: talk.room,
-                     ConstraintCollectors.countDistinct()) \
+    return factory.for_each(Talk) \
+            .group_by(lambda talk: talk.room,
+                      ConstraintCollectors.count_distinct()) \
             .penalize("room_count",
                       HardSoftScore.ONE_SOFT,
                       lambda room, count: ...)
@@ -492,12 +491,12 @@ required by the processes on that computer using the `ConstraintCollectors.sum(.
 [source,python,options="nowrap"]
 ----
 def required_cpu_power_total(constraint_factory: ConstraintFactory):
-    return constraint_factory.forEach(get_class(CloudProcess)) \
-            .groupBy(lambda process: process.computer,
-                     ConstraintCollectors.sum(lambda process: process.required_cpu_power)) \
+    return constraint_factory.for_each(CloudProcess) \
+            .group_by(lambda process: process.computer,
+                      ConstraintCollectors.sum(lambda process: process.required_cpu_power)) \
             .penalize("required_cpu_power_total",
-                    HardSoftScore.ONE_SOFT,
-                    lambda computer, required_cpu_power: required_cpu_power)
+                      HardSoftScore.ONE_SOFT,
+                      lambda computer, required_cpu_power: required_cpu_power)
 ----
 
 The sum is collected in an `int`.
@@ -514,12 +513,12 @@ required by the processes on that computer using the `ConstraintCollectors.avera
 [source,python,options="nowrap"]
 ----
 def average_cpu_power(constraint_factory: ConstraintFactory):
-    return constraint_factory.forEach(get_class(CloudProcess)) \
-            .groupBy(lambda process: process.computer,
-                     ConstraintCollectors.average(lambda process: process.required_cpu_power)) \
+    return constraint_factory.for_each(CloudProcess) \
+            .group_by(lambda process: process.computer,
+                      ConstraintCollectors.average(lambda process: process.required_cpu_power)) \
             .penalize("average_cpu_power",
-                    HardSoftScore.ONE_SOFT,
-                    lambda computer, average_cpu_power: average_cpu_power)
+                      HardSoftScore.ONE_SOFT,
+                      lambda computer, average_cpu_power: average_cpu_power)
 ----
 
 The average is collected as a `float`, and the average of no elements is `None`.
@@ -539,12 +538,12 @@ The following example finds a computer which runs the most power-demanding proce
 [source,python,options="nowrap"]
 ----
 def computer_with_biggest_process(constraint_factory: ConstraintFactory):
-    return constraint_factory.forEach(get_class(CloudProcess)) \
-            .groupBy(lambda process: process.computer,
-                     ConstraintCollectors.max(lambda process: process.required_cpu_power)) \
-            .penalize("computerWithBiggestProcess",
-                    HardSoftScore.ONE_HARD,
-                    lambda computer, biggest_process: ...)
+    return constraint_factory.for_each(CloudProcess) \
+            .group_by(lambda process: process.computer,
+                      ConstraintCollectors.max(lambda process: process.required_cpu_power)) \
+            .penalize("computer_with_biggest_process",
+                      HardSoftScore.ONE_HARD,
+                      lambda computer, biggest_process: ...)
 ----
 
 [NOTE]
@@ -556,35 +555,35 @@ Additionally, it is expected the comparison magic methods (`\\__lt__(self, other
 
 
 [[collectorsCollection]]
-===== `toList()`, `toSet()` and `toMap()` collectors
+===== `to_list()`, `to_set()` and `to_map()` collectors
 
-To extract all elements per group into a collection, use the `ConstraintCollectors.toList(...)`.
+To extract all elements per group into a collection, use the `ConstraintCollectors.to_list(...)`.
 
 The following example retrieves all processes running on a computer in a `list`:
 
 [source,python,options="nowrap"]
 ----
 def computer_and_its_processes(constraint_factory: ConstraintFactory):
-    return constraint_factory.forEach(get_class(CloudProcess)) \
-            .groupBy(lambda process: process.computer,
-                     ConstraintCollectors.toList()) \
+    return constraint_factory.for_each(CloudProcess) \
+            .group_by(lambda process: process.computer,
+                      ConstraintCollectors.to_list()) \
             .penalize("computer_and_its_processes",
-                    HardSoftScore.ONE_HARD,
-                    lambda computer, process_list: ...)
+                      HardSoftScore.ONE_HARD,
+                      lambda computer, process_list: ...)
 ----
 
 Variants of this collector:
 
-* `toList()` collects a `list` value.
-* `toSet()` collects a `set` value.
-* `toSortedSet()` collects a `SortedSet` value.
-* `toMap()` collects a `dict` value.
-* `toSortedMap()` collects a `SortedMap` value.
+* `to_list()` collects a `list` value.
+* `to_set()` collects a `set` value.
+* `to_sorted_set()` collects a `SortedSet` value.
+* `to_map()` collects a `dict` value.
+* `to_sorted_map()` collects a `SortedMap` value.
 
 [NOTE]
 ====
 The iteration order of elements in the resulting collection is not guaranteed to be stable,
-unless it is a sorted collector such as `toSortedSet` or `toSortedMap`.
+unless it is a sorted collector such as `to_sorted_set` or `to_sorted_map`.
 ====
 
 
@@ -601,16 +600,16 @@ excluding processes which are not long-running:
 [source,python,options="nowrap"]
 ----
 def computer_with_long_running_processes(constraint_factory: ConstraintFactory):
-    return constraint_factory.forEach(get_class(CloudProcess)) \
-            .groupBy(lambda process: process.computer,
-                     ConstraintCollectors.conditionally(
-                         lambda process: process.is_long_running(),
-                         ConstraintCollectors.count()
-                     )
+    return constraint_factory.for_each(CloudProcess) \
+            .group_by(lambda process: process.computer,
+                      ConstraintCollectors.conditionally(
+                          lambda process: process.is_long_running(),
+                          ConstraintCollectors.count()
+                      )
             ) \
             .penalize("long_running_processes",
-                    HardSoftScore.ONE_HARD,
-                    lambda computer, longRunningProcessCount: ...)
+                      HardSoftScore.ONE_HARD,
+                      lambda computer, long_running_process_count: ...)
 ----
 
 This is useful in situations where multiple collectors are used and only some of them need to be restricted.
@@ -646,7 +645,7 @@ def calculate_average(count: int, group_sum: int):
 
 
 Similarly, the `compose()` collector enables you to work around the limitation of <<constraintStreamsCardinality,Constraint Stream cardinality>>
-and use as many as 4 collectors in your <<constraintStreamsGroupingAndCollectors,`groupBy()` statements>>:
+and use as many as 4 collectors in your <<constraintStreamsGroupingAndCollectors,`group_by()` statements>>:
 
 [source,python,options="nowrap"]
 ----
@@ -672,29 +671,29 @@ The following example penalizes computers which have at least one process runnin
 [source,python,options="nowrap"]
 ----
 def running_computer(constraint_factory: ConstraintFactory):
-    return constraint_factory.forEach(get_class(CloudComputer)) \
-            .ifExists(get_class(CloudProcess),
-                      Joiners.equal(lambda computer: computer,
-                                    lambda process: process.computer)) \
+    return constraint_factory.for_each(CloudComputer) \
+            .if_exists(CloudProcess,
+                       Joiners.equal(lambda computer: computer,
+                                     lambda process: process.computer)) \
             .penalize("running_computer",
                     HardSoftScore.ONE_SOFT,
                     lambda computer: ...)
 ----
 
-Note the use of the `ifExists()` building block.
-On `UniConstraintStream`, the `ifExistsOther()` building block is also available which is useful in situations where the
-`forEach()` constraint match type is the same as the `ifExists()` type.
+Note the use of the `if_exists()` building block.
+On `UniConstraintStream`, the `if_exists_other()` building block is also available which is useful in situations where the
+`for_each()` constraint match type is the same as the `if_exists()` type.
 
-Conversely, if the `ifNotExists()` building block is used (as well as the `ifNotExistsOther()` building block on
+Conversely, if the `if_not_exists()` building block is used (as well as the `if_not_exists_other()` building block on
 `UniConstraintStream`) you can achieve the opposite effect:
 
 [source,python,options="nowrap"]
 ----
 def unused_computer(constraint_factory: ConstraintFactory):
-    return constraint_factory.forEach(get_class(CloudComputer)) \
-            .ifNotExists(get_class(CloudProcess),
-                         Joiners.equal(lambda computer: computer,
-                                       lambda process: process.computer)) \
+    return constraint_factory.for_each(CloudComputer) \
+            .if_not_exists(CloudProcess,
+                           Joiners.equal(lambda computer: computer,
+                                         lambda process: process.computer)) \
             .penalize("unused_computer",
                     HardSoftScore.ONE_HARD,
                     lambda computer: ...)
@@ -729,7 +728,7 @@ The result of such mapping is `UniConstraintStream` of the mapped tuples.
 ----
 def computer_with_biggest_process(constraint_factory: ConstraintFactory):
     return (
-        constraint_factory.forEach(get_class(CloudProcess)) # UniConstraintStream[CloudProcess]
+        constraint_factory.for_each(CloudProcess) # UniConstraintStream[CloudProcess]
             .map(lambda process: process.computer) # UniConstraintStream[CloudComputer]
     )
     ...
@@ -776,8 +775,8 @@ to have the duplicate copies eliminated.
 ----
 def computer_with_biggest_process(constraint_factory: ConstraintFactory) {
     return (
-        constraint_factory.forEach(get_class(CloudProcess)) # UniConstraintStream<CloudProcess>
-            .map(lambda process: process.computer)          # UniConstraintStream<CloudComputer>
+        constraint_factory.for_each(CloudProcess) # UniConstraintStream[CloudProcess]
+            .map(lambda process: process.computer)          # UniConstraintStream[CloudComputer]
             .distinct()                                     # The same, each CloudComputer just once.
     )
     ...
@@ -802,11 +801,11 @@ This is done by applying a mapping function to the final element in the source t
 ----
 def required_job_roles(constraint_factory: ConstraintFactory):
     return (
-        constraint_factory.forEach(get_class(Person))       # UniConstraintStream<Person>
-            .join(get_class(Job),
+        constraint_factory.for_each(Person)       # UniConstraintStream<Person>
+            .join(Job,
                   Joiners.equal(lambda job: job,
                                 lambda job: job.assignee))  # BiConstraintStream<Person, Job>
-            .flattenLast(lambda job: job.required_roles)    # BiConstraintStream<Person, Role>
+            .flatten_last(lambda job: job.required_roles)    # BiConstraintStream<Person, Role>
             .filter(lambda person, required_role: ...)
     )
     ...
@@ -838,8 +837,8 @@ Consider the following constraint stream:
 ----
 def horizontal_conflict(factory: ConstraintFactory):
     return factory \
-            .forEachUniquePair(get_class(Queen),
-                               Joiners.equal(lambda queen: queen.row)) \
+            .for_each_unique_pair(Queen,
+                                  Joiners.equal(lambda queen: queen.row)) \
             .penalize("Horizontal conflict", SimpleScore.ONE)
 ----
 
