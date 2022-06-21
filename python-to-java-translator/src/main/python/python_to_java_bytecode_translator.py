@@ -10,6 +10,8 @@ type_to_compiled_java_class = dict()
 def init_type_to_compiled_java_class():
     import org.optaplanner.python.translator.types as java_types
     import org.optaplanner.python.translator.types.errors as java_errors_types
+    import org.optaplanner.python.translator.types.datetime as java_datetime_types
+    import datetime
 
     if len(type_to_compiled_java_class) > 0:
         return
@@ -32,7 +34,10 @@ def init_type_to_compiled_java_class():
     type_to_compiled_java_class[StopIteration] = java_errors_types.StopIteration.STOP_ITERATION_TYPE
     type_to_compiled_java_class[AttributeError] = java_errors_types.AttributeError.ATTRIBUTE_ERROR_TYPE
 
-
+    type_to_compiled_java_class[datetime.datetime] = java_datetime_types.PythonDateTime.DATE_TIME_TYPE
+    type_to_compiled_java_class[datetime.date] = java_datetime_types.PythonDate.DATE_TYPE
+    type_to_compiled_java_class[datetime.time] = java_datetime_types.PythonTime.TIME_TYPE
+    type_to_compiled_java_class[datetime.timedelta] = java_datetime_types.PythonTimeDelta.TIME_DELTA_TYPE
 
 
 def copy_iterable(iterable):
@@ -43,6 +48,22 @@ def copy_iterable(iterable):
     for item in iterable:
         iterable_copy.add(item)
     return iterable_copy
+
+
+def convert_builtin_to_java_python_like_object(value):
+    import datetime
+    from org.optaplanner.python.translator.types.datetime import PythonDate, PythonDateTime, PythonTime, PythonTimeDelta
+    if isinstance(value, datetime.datetime):
+        return PythonDateTime.of(value.year, value.month, value.day, value.hour, value.minute, value.second,
+                                 value.microsecond, value.tzname(), value.fold)
+    elif isinstance(value, datetime.date):
+        return PythonDate.of(value.year, value.month, value.day)
+    elif isinstance(value, datetime.time):
+        return PythonTime.of(value.hour, value.minute, value.second, value.microsecond, value.tzname(), value.fold)
+    elif isinstance(value, datetime.timedelta):
+        return PythonTimeDelta.of(value.days, value.seconds, value.microseconds)
+    else:
+        return None
 
 
 def convert_to_java_python_like_object(value):
@@ -94,6 +115,9 @@ def convert_to_java_python_like_object(value):
         else:
             return CPythonType.getType(JProxy(OpaquePythonReference, inst=value, convert=True))
     else:
+        out = convert_builtin_to_java_python_like_object(value)
+        if out is not None:
+            return out
         return PythonObjectWrapper(JProxy(OpaquePythonReference, inst=value, convert=True))
     # TODO: Get compiled class corresponding to function / class bytecode
 

@@ -2,6 +2,7 @@ package org.optaplanner.python.translator.types;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -145,6 +146,12 @@ public class PythonLikeType implements PythonLikeObject,
         knownFunctionType.getOverloadFunctionSignatureList().add(method);
     }
 
+    public Set<String> getKnownMethods() {
+        Set<String> out = new HashSet<>();
+        getAssignableTypesStream().forEach(type -> out.addAll(type.functionNameToKnownFunctionType.keySet()));
+        return out;
+    }
+
     public void setConstructor(PythonLikeFunction constructor) {
         this.constructor = constructor;
     }
@@ -245,6 +252,14 @@ public class PythonLikeType implements PythonLikeObject,
             }
         }
         return false;
+    }
+
+    public int getDepth() {
+        if (PARENT_TYPES.size() == 0) {
+            return 0;
+        } else {
+            return 1 + PARENT_TYPES.stream().map(PythonLikeType::getDepth).max(Comparator.naturalOrder()).get();
+        }
     }
 
     @Override

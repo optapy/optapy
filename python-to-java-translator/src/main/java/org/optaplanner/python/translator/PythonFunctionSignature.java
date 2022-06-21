@@ -3,6 +3,7 @@ package org.optaplanner.python.translator;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.optaplanner.python.translator.types.PythonLikeType;
 
@@ -90,5 +91,12 @@ public class PythonFunctionSignature {
         int result = Objects.hash(returnType);
         result = 31 * result + Arrays.hashCode(parameterTypes);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return methodDescriptor.getMethodName() +
+                Arrays.stream(parameterTypes).map(PythonLikeType::toString).collect(Collectors.joining(", ", "(", ") -> ")) +
+                returnType;
     }
 }

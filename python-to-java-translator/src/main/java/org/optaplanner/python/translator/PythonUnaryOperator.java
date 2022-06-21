@@ -9,6 +9,7 @@ package org.optaplanner.python.translator;
 public enum PythonUnaryOperator {
     NEGATIVE("__neg__"),
     POSITIVE("__pos__"),
+    ABS("__abs__"),
     INVERT("__invert__"),
     ITERATOR("__iter__"),
     AS_BOOLEAN("__bool__"),
