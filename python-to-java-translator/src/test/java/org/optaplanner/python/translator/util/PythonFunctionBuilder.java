@@ -81,6 +81,8 @@ public class PythonFunctionBuilder {
      */
     public PythonCompiledFunction build() {
         PythonCompiledFunction out = new PythonCompiledFunction();
+        out.module = "test";
+        out.qualifiedName = "TestFunction";
         out.instructionList = instructionList;
         out.typeAnnotations = typeAnnotations;
         out.globalsMap = globalsMap;

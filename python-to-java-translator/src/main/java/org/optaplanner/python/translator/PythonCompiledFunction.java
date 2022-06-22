@@ -8,8 +8,19 @@ import java.util.Optional;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.util.JavaIdentifierUtils;
 
 public class PythonCompiledFunction {
+    /**
+     * The module where the function was defined.
+     */
+    public String module;
+
+    /**
+     * The qualified name of the function. Does not include module.
+     */
+    public String qualifiedName;
+
     /**
      * List of bytecode instructions in the function
      */
@@ -91,5 +102,13 @@ public class PythonCompiledFunction {
             parameterTypes[i] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
         }
         return Type.getMethodDescriptor(returnType, parameterTypes);
+    }
+
+    public String getGeneratedClassBaseName() {
+        if (module == null || module.isEmpty()) {
+            return JavaIdentifierUtils.sanitizeClassName((qualifiedName != null) ? qualifiedName : "PythonFunction");
+        }
+        return JavaIdentifierUtils
+                .sanitizeClassName((qualifiedName != null) ? module + "." + qualifiedName : module + "." + "PythonFunction");
     }
 }

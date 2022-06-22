@@ -39,6 +39,12 @@ public class PythonBytecodeToJavaBytecodeTranslator {
      */
     public static final Map<String, byte[]> classNameToBytecode = new HashMap<>();
 
+    public static final Map<String, Integer> classNameToSharedInstanceCount = new HashMap<>();
+
+    public static final String USER_PACKAGE_BASE = "org.javapython.user.";
+
+    public static final String GENERATED_PACKAGE_BASE = "org.javapython.synthetic.";
+
     public static final String CONSTANTS_STATIC_FIELD_NAME = "co_consts";
 
     public static final String NAMES_STATIC_FIELD_NAME = "co_names";
@@ -57,7 +63,6 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static final String QUALIFIED_NAME_INSTANCE_FIELD_NAME = "__qualname__";
 
     public static final String INTERPRETER_INSTANCE_FIELD_NAME = "__interpreter__";
-    static long generatedClassId = 0L;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PythonBytecodeToJavaBytecodeTranslator.class);
 
@@ -175,8 +180,12 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     @SuppressWarnings("unchecked")
     public static <T> Class<T> translatePythonBytecodeToClass(PythonCompiledFunction pythonCompiledFunction,
             MethodDescriptor methodDescriptor, boolean isVirtual) {
-        String className = "org.optaplanner.optapy.generated." + "function" + generatedClassId + ".GeneratedFunction";
-        generatedClassId++;
+        String maybeClassName = USER_PACKAGE_BASE + pythonCompiledFunction.getGeneratedClassBaseName();
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String className = maybeClassName;
 
         String internalClassName = className.replace('.', '/');
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
@@ -215,8 +224,12 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static <T> Class<T> translatePythonBytecodeToClass(PythonCompiledFunction pythonCompiledFunction,
             MethodDescriptor methodDescriptor, Method methodWithoutGenerics,
             boolean isVirtual) {
-        String className = "org.optaplanner.optapy.generated." + "function" + generatedClassId + ".GeneratedFunction";
-        generatedClassId++;
+        String maybeClassName = USER_PACKAGE_BASE + pythonCompiledFunction.getGeneratedClassBaseName();
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String className = maybeClassName;
 
         String internalClassName = className.replace('.', '/');
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);

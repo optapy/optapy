@@ -1015,15 +1015,21 @@ class_identifier_to_java_class_map = dict()
 def _get_class_identifier_for_object(python_object):
     module = getattr(python_object, '__module__', '__main__')
     if module == '__main__':
-        return python_object.__name__
+        return python_object.__qualname__
     else:
-        return f'{module}.{python_object.__name__}'
+        return f'{module}.{python_object.__qualname__}'
 
 
 def _compose_unique_class_name(class_identifier: str):
-    global unique_class_id
-    unique_class_name = f'class{unique_class_id}.{class_identifier}'
-    unique_class_id += 1
+    from jpype import JInt
+    from org.optaplanner.python.translator.util import JavaIdentifierUtils
+    from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator
+    unique_class_name = f'org.javapython.user.{class_identifier}'
+    unique_class_name = JavaIdentifierUtils.sanitizeClassName(unique_class_name)
+    number_of_instances = PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount.merge(
+        unique_class_name, JInt(1), lambda a, b: JInt(a + b))
+    if number_of_instances > 1:
+        unique_class_name = f'{unique_class_name}$${number_of_instances}'
     return unique_class_name
 
 

@@ -1,8 +1,9 @@
 package org.optaplanner.python.translator;
 
+import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.asmClassLoader;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToBytecode;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.generatedClassId;
+import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
 
 import java.lang.reflect.InvocationTargetException;
@@ -36,16 +37,22 @@ public class PythonOverloadImplementor {
     public static void createDispatchesFor(PythonLikeType pythonLikeType) {
         for (String methodName : pythonLikeType.getKnownMethods()) {
             PythonLikeFunction overloadDispatch =
-                    createDispatchForMethod(pythonLikeType, pythonLikeType.getMethodType(methodName).orElseThrow());
+                    createDispatchForMethod(pythonLikeType, methodName, pythonLikeType.getMethodType(methodName).orElseThrow());
             pythonLikeType.__setAttribute(methodName, overloadDispatch);
         }
     }
 
     private static PythonLikeFunction createDispatchForMethod(PythonLikeType pythonLikeType,
+            String methodName,
             PythonKnownFunctionType knownFunctionType) {
-        String className = "org.optaplanner.optapy.generated." + "class" + generatedClassId + ".GeneratedOverloadDispatch";
+        String maybeClassName = GENERATED_PACKAGE_BASE + pythonLikeType.getJavaTypeInternalName().replace('/', '.') + "."
+                + methodName + "$$Dispatcher";
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String className = maybeClassName;
         String internalClassName = className.replace('.', '/');
-        generatedClassId++;
 
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 

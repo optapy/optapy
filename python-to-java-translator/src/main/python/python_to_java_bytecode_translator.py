@@ -270,6 +270,8 @@ def get_function_bytecode_object(python_function):
 
         instruction_list.add(java_instruction)
 
+    python_compiled_function.module = python_function.__module__
+    python_compiled_function.qualifiedName = python_function.__qualname__
     python_compiled_function.instructionList = instruction_list
     python_compiled_function.co_names = copy_iterable(python_function.__code__.co_names)
     python_compiled_function.co_varnames = copy_iterable(python_function.__code__.co_varnames)
@@ -368,6 +370,8 @@ def translate_python_class_to_java_class(python_class):
     python_compiled_class = PythonCompiledClass()
     python_compiled_class.binaryType = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class,
                                                                   convert=True))
+    python_compiled_class.module = python_class.__module__
+    python_compiled_class.qualifiedName = python_class.__qualname__
     python_compiled_class.className = python_class.__name__
     python_compiled_class.superclassList = superclass_list
     python_compiled_class.instanceFunctionNameToPythonBytecode = instance_method_map

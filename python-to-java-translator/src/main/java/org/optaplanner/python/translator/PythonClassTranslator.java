@@ -1,9 +1,11 @@
 package org.optaplanner.python.translator;
 
+import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE;
+import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.USER_PACKAGE_BASE;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.asmClassLoader;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToBytecode;
+import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.createInstance;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.generatedClassId;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.getInitialStackMetadata;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.getOpcodeList;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass;
@@ -46,6 +48,7 @@ import org.optaplanner.python.translator.types.GeneratedFunctionMethodReference;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.util.JavaIdentifierUtils;
 
 public class PythonClassTranslator {
     static Map<FunctionSignature, InterfaceDeclaration> functionSignatureToInterfaceName = new HashMap<>();
@@ -54,9 +57,13 @@ public class PythonClassTranslator {
     public static String TYPE_FIELD_NAME = "$TYPE";
 
     public static PythonLikeType translatePythonClass(PythonCompiledClass pythonCompiledClass) {
-        String className = "org.optaplanner.optapy.generated." + "class" + generatedClassId + ".GeneratedClass";
+        String maybeClassName = USER_PACKAGE_BASE + pythonCompiledClass.getGeneratedClassBaseName();
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String className = maybeClassName;
         String internalClassName = className.replace('.', '/');
-        generatedClassId++;
 
         List<PythonLikeType> superTypeList = new ArrayList<>(pythonCompiledClass.superclassList.size());
         for (int i = 0; i < pythonCompiledClass.superclassList.size(); i++) {
@@ -283,9 +290,13 @@ public class PythonClassTranslator {
 
     private static Class<?> createPythonWrapperMethod(String methodName, PythonCompiledFunction pythonCompiledFunction,
             InterfaceDeclaration interfaceDeclaration, boolean isVirtual) {
-        String className = "org.optaplanner.optapy.generated." + "class" + generatedClassId + ".GeneratedClass";
+        String maybeClassName = GENERATED_PACKAGE_BASE + pythonCompiledFunction.getGeneratedClassBaseName() + "$$Wrapper";
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String className = maybeClassName;
         String internalClassName = className.replace('.', '/');
-        generatedClassId++;
 
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 
@@ -379,9 +390,13 @@ public class PythonClassTranslator {
 
     private static PythonLikeFunction createConstructor(String classInternalName,
             PythonCompiledFunction initFunction) {
-        String constructorClassName = "org.optaplanner.optapy.generated." + "class" + generatedClassId + ".GeneratedClass";
+        String maybeClassName = GENERATED_PACKAGE_BASE + classInternalName.replace('/', '.') + "$$Constructor";
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String constructorClassName = maybeClassName;
         String constructorInternalClassName = constructorClassName.replace('.', '/');
-        generatedClassId++;
 
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
         classWriter.visit(Opcodes.V11, Modifier.PUBLIC, constructorInternalClassName, null, Type.getInternalName(Object.class),
@@ -812,8 +827,12 @@ public class PythonClassTranslator {
     }
 
     public static InterfaceDeclaration createInterfaceForFunctionSignature(FunctionSignature functionSignature) {
-        String className = "org.optaplanner.optapy.generated." + "interface" + generatedClassId + ".GeneratedInterface";
-        generatedClassId++;
+        String maybeClassName = functionSignature.getClassName();
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String className = maybeClassName;
 
         String internalClassName = className.replace('.', '/');
 
@@ -944,6 +963,10 @@ public class PythonClassTranslator {
         public FunctionSignature(String returnType, String... parameterTypes) {
             this.returnType = returnType;
             this.parameterTypes = parameterTypes;
+        }
+
+        public String getClassName() {
+            return GENERATED_PACKAGE_BASE + "signature.InterfaceSignature";
         }
 
         @Override

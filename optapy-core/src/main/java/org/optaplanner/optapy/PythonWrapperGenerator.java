@@ -407,7 +407,6 @@ public class PythonWrapperGenerator {
         if (interfaceMethods.length != 1) {
             throw new IllegalArgumentException("Can only call this function for functional interfaces (only 1 method)");
         }
-        className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
                 return (Class<? extends A>) asmClassLoader.loadClass(className);
@@ -487,7 +486,6 @@ public class PythonWrapperGenerator {
     public static <A> Class<? extends A> defineWrapperClass(String className, Class<? extends A> baseInterface,
             Supplier<? extends A> delegateSupplier) {
         Method[] interfaceMethods = baseInterface.getMethods();
-        className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
                 return (Class<? extends A>) asmClassLoader.loadClass(className);
@@ -707,7 +705,6 @@ public class PythonWrapperGenerator {
             boolean defineEqualsAndHashcode,
             List<List<Object>> optaplannerMethodAnnotations,
             Map<String, Object> planningEntityAnnotations) {
-        className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
                 return asmClassLoader.loadClass(className);
@@ -759,7 +756,6 @@ public class PythonWrapperGenerator {
     public static Class<?> defineProblemFactClass(String className, Class<?> parentClass,
             boolean defineEqualsAndHashcode,
             List<List<Object>> optaplannerMethodAnnotations) {
-        className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
                 return asmClassLoader.loadClass(className);
@@ -801,7 +797,6 @@ public class PythonWrapperGenerator {
     public static Class<?> definePlanningSolutionClass(String className, Class<?> parentClass,
             boolean defineEqualsAndHashcode,
             List<List<Object>> optaplannerMethodAnnotations) {
-        className = "org.optaplanner.optapy.generated." + className + ".GeneratedClass";
         if (classNameToBytecode.containsKey(className)) {
             try {
                 return asmClassLoader.loadClass(className);
