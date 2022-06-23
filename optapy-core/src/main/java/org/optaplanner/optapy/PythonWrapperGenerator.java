@@ -1248,9 +1248,8 @@ public class PythonWrapperGenerator {
                     methodCreator.readInstanceField(pythonLikeValueMapField, methodCreator.getThis()),
                     methodCreator.load(fieldName),
                     valueAsPythonLikeObject);
-            try {
-                Method setterMethod = parentClass.getMethod(
-                        PythonClassTranslator.getJavaMethodName("s" + methodName.substring(1)), PythonLikeObject.class);
+            try {;
+                Method setterMethod = lookupMethod(parentClass, PythonClassTranslator.getJavaMethodName("s" + methodName.substring(1)));
                 methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(setterMethod), methodCreator.getThis(),
                         valueAsPythonLikeObject);
             } catch (NoSuchMethodException e) {
@@ -1407,8 +1406,7 @@ public class PythonWrapperGenerator {
                     setterMethodCreator.load(fieldName), valueAsPythonLikeObject);
 
             try {
-                Method setterMethod = parentClass.getMethod(PythonClassTranslator.getJavaMethodName(setterMethodName),
-                        PythonLikeObject.class);
+                Method setterMethod = lookupMethod(parentClass, PythonClassTranslator.getJavaMethodName(setterMethodName));
 
                 if (actualReturnType instanceof Class && ((Class<?>) actualReturnType).isAssignableFrom(PythonNone.class)) {
                     setterMethodCreator.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod), setterMethodCreator.getThis(),
@@ -1437,6 +1435,15 @@ public class PythonWrapperGenerator {
             setterMethodCreator.returnValue(null);
         }
         return fieldDescriptor;
+    }
+
+    private static Method lookupMethod(Class<?> declaringClass, String methodName) throws NoSuchMethodException {
+        for (Method method : declaringClass.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                return method;
+            }
+        }
+        throw new NoSuchMethodException();
     }
 
     private static void createAnnotation(AnnotationCreator annotationCreator, Map<String, Object> annotation) {
