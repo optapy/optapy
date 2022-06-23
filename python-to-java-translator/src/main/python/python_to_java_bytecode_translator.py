@@ -11,6 +11,7 @@ def init_type_to_compiled_java_class():
     import org.optaplanner.python.translator.types as java_types
     import org.optaplanner.python.translator.types.errors as java_errors_types
     import org.optaplanner.python.translator.types.datetime as java_datetime_types
+    import builtins
     import datetime
 
     if len(type_to_compiled_java_class) > 0:
@@ -23,6 +24,7 @@ def init_type_to_compiled_java_class():
     type_to_compiled_java_class[type(None)] = java_types.PythonNone.NONE_TYPE
     type_to_compiled_java_class[str] = java_types.PythonString.STRING_TYPE
     type_to_compiled_java_class[object] = java_types.PythonLikeType.getBaseType()
+    type_to_compiled_java_class[any] = java_types.PythonLikeType.getBaseType()
 
     type_to_compiled_java_class[list] = java_types.PythonLikeList.LIST_TYPE
     type_to_compiled_java_class[tuple] = java_types.PythonLikeTuple.TUPLE_TYPE
@@ -171,6 +173,7 @@ def get_java_type_for_python_type(the_type):
     global type_to_compiled_java_class
 
     if isinstance(the_type, type):
+        the_type = erase_generic_args(the_type)
         if the_type in type_to_compiled_java_class:
             return type_to_compiled_java_class[the_type]
         else:
@@ -180,13 +183,15 @@ def get_java_type_for_python_type(the_type):
                 return type_to_compiled_java_class[the_type]
     if isinstance(the_type, str):
         try:
+            the_type = erase_generic_args(the_type)
             maybe_type = globals()[the_type]
             if isinstance(maybe_type, type):
                 return get_java_type_for_python_type(maybe_type)
             return PythonLikeType.getBaseType()
         except:
             return PythonLikeType.getBaseType()
-    raise ValueError(f'{the_type} is not a type or a str')
+    # return base type, since users could use something like 1
+    return PythonLikeType.getBaseType()
 
 
 def copy_type_annotations(annotations_dict):
@@ -196,6 +201,9 @@ def copy_type_annotations(annotations_dict):
     global type_to_compiled_java_class
 
     out = HashMap()
+    if annotations_dict is None:
+        return out
+
     for name, value in annotations_dict.items():
         if not isinstance(name, str):
             continue
@@ -318,6 +326,23 @@ def force_update_type(python_type, java_type):
     type_to_compiled_java_class[python_type] = java_type
 
 
+def erase_generic_args(python_type):
+    from typing import get_origin
+    if isinstance(python_type, type):
+        out = python_type
+        while get_origin(out) is not None:
+            out = get_origin(out)
+        return out
+    elif isinstance(python_type, str):
+        try:
+            generics_start = python_type.index('[')
+            return python_type[generics_start:-2]
+        except ValueError:
+            return python_type
+    else:
+        raise ValueError
+
+
 def translate_python_class_to_java_class(python_class):
     from java.util import ArrayList, HashMap
     from org.optaplanner.python.translator import PythonCompiledClass, PythonClassTranslator # noqa
@@ -327,7 +352,7 @@ def translate_python_class_to_java_class(python_class):
 
     init_type_to_compiled_java_class()
 
-    if python_class in type_to_compiled_java_class:
+    if erase_generic_args(python_class) in type_to_compiled_java_class:
         return type_to_compiled_java_class[python_class]
 
     type_to_compiled_java_class[python_class] = None
@@ -341,6 +366,7 @@ def translate_python_class_to_java_class(python_class):
 
     superclass_list = ArrayList()
     for superclass in python_class.__bases__:
+        superclass = erase_generic_args(superclass)
         if superclass in type_to_compiled_java_class:
             superclass_list.add(type_to_compiled_java_class[superclass])
         else:
@@ -373,6 +399,10 @@ def translate_python_class_to_java_class(python_class):
     python_compiled_class.module = python_class.__module__
     python_compiled_class.qualifiedName = python_class.__qualname__
     python_compiled_class.className = python_class.__name__
+    if hasattr(python_class, '__annotations__'):
+        python_compiled_class.typeAnnotations = copy_type_annotations(python_class.__annotations__)
+    else:
+        python_compiled_class.typeAnnotations = copy_type_annotations(None)
     python_compiled_class.superclassList = superclass_list
     python_compiled_class.instanceFunctionNameToPythonBytecode = instance_method_map
     python_compiled_class.staticFunctionNameToPythonBytecode = static_method_map

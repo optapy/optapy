@@ -21,6 +21,11 @@ public class PythonCompiledClass {
     public String className;
 
     /**
+     * Type annotations for fields
+     */
+    public Map<String, PythonLikeType> typeAnnotations;
+
+    /**
      * The binary type of this PythonCompiledClass;
      * typically {@link CPythonType}. Used when methods
      * cannot be generated.

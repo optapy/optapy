@@ -196,7 +196,7 @@ public class JavaPythonTypeConversionImplementor {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convertPythonObjectToJavaType(Class<? extends T> type, PythonLikeObject object) {
-        if (type.isAssignableFrom(object.getClass())) {
+        if (object == null || type.isAssignableFrom(object.getClass())) {
             // Can directly assign; no modification needed
             return (T) object;
         }

@@ -41,6 +41,7 @@ public class PythonClassTranslatorTest {
         compiledClass.className = "MyClass";
         compiledClass.superclassList = List.of(PythonLikeType.getBaseType());
         compiledClass.staticAttributeNameToObject = Map.of("type_variable", new PythonString("type_value"));
+        compiledClass.typeAnnotations = Map.of("age", PythonInteger.INT_TYPE);
         compiledClass.instanceFunctionNameToPythonBytecode = Map.of("__init__", initFunction,
                 "get_age", ageFunction);
         compiledClass.staticFunctionNameToPythonBytecode = Map.of("hello_world", helloWorldFunction);

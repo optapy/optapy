@@ -16,8 +16,12 @@ public class LoadAttrOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop().push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(),
-                stackMetadata.getValueSourcesUpToStackIndex(1)));
+        PythonLikeType tosType = stackMetadata.getTOSType();
+        return tosType.getInstanceFieldDescriptor(functionMetadata.pythonCompiledFunction.co_names.get(instruction.arg))
+                .map(fieldDescriptor -> stackMetadata.pop().push(ValueSourceInfo.of(this, fieldDescriptor.getFieldPythonLikeType(),
+                                                        stackMetadata.getValueSourcesUpToStackIndex(1)))
+        ).orElseGet(() -> stackMetadata.pop().push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(),
+                stackMetadata.getValueSourcesUpToStackIndex(1))));
     }
 
     @Override

@@ -48,6 +48,7 @@ import org.optaplanner.python.translator.types.GeneratedFunctionMethodReference;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.util.JavaIdentifierUtils;
 
 public class PythonClassTranslator {
@@ -106,8 +107,10 @@ public class PythonClassTranslator {
 
         Map<String, PythonLikeType> attributeNameToTypeMap = new HashMap<>();
         for (String attributeName : instanceAttributeSet) {
-            // TODO: If __annotations__ is not null, use the type from the dict instead of PythonLikeObject
-            PythonLikeType type = PythonLikeType.getBaseType();
+            PythonLikeType type = pythonCompiledClass.typeAnnotations.getOrDefault(attributeName, PythonLikeType.getBaseType());
+            if (type == null) { // null might be in __annotations__
+                type = PythonLikeType.getBaseType();
+            }
             String javaFieldTypeDescriptor = 'L' + type.getJavaTypeInternalName() + ';';
             attributeNameToTypeMap.put(attributeName, type);
             classWriter.visitField(Modifier.PUBLIC, getJavaFieldName(attributeName), javaFieldTypeDescriptor, null, null);

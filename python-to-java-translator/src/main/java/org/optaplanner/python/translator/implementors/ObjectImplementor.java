@@ -75,6 +75,7 @@ public class ObjectImplementor {
             FieldDescriptor fieldDescriptor = maybeFieldDescriptor.get();
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldDescriptor.getDeclaringClassInternalName());
             StackManipulationImplementor.swap(methodVisitor);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldDescriptor.getFieldPythonLikeType().getJavaTypeInternalName());
             methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, fieldDescriptor.getDeclaringClassInternalName(),
                     fieldDescriptor.getJavaFieldName(),
                     fieldDescriptor.getJavaFieldTypeDescriptor());

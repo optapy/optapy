@@ -538,10 +538,12 @@ def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = 
     }
 
     def planning_entity_wrapper(entity_class_argument):
+        from javapython import force_update_type
         out = JImplements('org.optaplanner.python.translator.types.OpaquePythonReference')(entity_class_argument)
         out.__optapy_java_class = _generate_planning_entity_class(entity_class_argument, annotation_data)
         out.__optapy_is_planning_clone = True
         _add_shallow_copy_to_class(out)
+        force_update_type(out, out.__optapy_java_class.getField('$TYPE').get(None))
         return out
 
     if entity_class:  # Called as @planning_entity
@@ -559,8 +561,10 @@ def problem_fact(fact_class: Type) -> Type:
     they are automatically available as facts for ConstraintFactory.from(Class)
     """
     ensure_init()
+    from javapython import force_update_type
     out = JImplements('org.optaplanner.python.translator.types.OpaquePythonReference')(fact_class)
     out.__optapy_java_class = _generate_problem_fact_class(fact_class)
+    force_update_type(out, out.__optapy_java_class.getField('$TYPE').get(None))
     return out
 
 
@@ -591,11 +595,13 @@ def planning_solution(planning_solution_class: Type) -> Type:
     )
     """
     ensure_init()
+    from javapython import force_update_type
     out = JImplements('org.optaplanner.python.translator.types.OpaquePythonReference')(planning_solution_class)
     out.__optapy_java_class = _generate_planning_solution_class(planning_solution_class)
     out.__optapy_is_planning_solution = True
     out.__optapy_is_planning_clone = True
     _add_shallow_copy_to_class(out)
+    force_update_type(out, out.__optapy_java_class.getField('$TYPE').get(None))
     return out
 
 
