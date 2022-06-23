@@ -4,6 +4,7 @@ import static org.optaplanner.python.translator.types.PythonFloat.FLOAT_TYPE;
 import static org.optaplanner.python.translator.types.PythonInteger.INT_TYPE;
 import static org.optaplanner.python.translator.types.PythonLikeTuple.TUPLE_TYPE;
 import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
+import static org.optaplanner.python.translator.types.datetime.PythonTime.TIME_TYPE;
 import static org.optaplanner.python.translator.types.datetime.PythonTimeDelta.TIME_DELTA_TYPE;
 import static org.optaplanner.python.translator.types.datetime.PythonTzinfo.TZ_INFO_TYPE;
 
@@ -18,7 +19,6 @@ import java.time.format.TextStyle;
 import java.time.temporal.Temporal;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,7 +28,6 @@ import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
-import org.optaplanner.python.translator.types.JavaMethodReference;
 import org.optaplanner.python.translator.types.PythonFloat;
 import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeComparable;
@@ -77,9 +76,10 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
 
     private static void registerMethods() throws NoSuchMethodException {
         // Static methods
-        DATE_TIME_TYPE.__setAttribute("combine",
-                new JavaMethodReference(PythonDateTime.class.getMethod("combine", PythonDate.class, PythonTime.class),
-                        Map.of("date", 0, "time", 1)));
+        DATE_TIME_TYPE.addMethod("combine",
+                new PythonFunctionSignature(new MethodDescriptor(
+                        PythonDateTime.class.getMethod("combine", PythonDate.class, PythonTime.class)), DATE_TIME_TYPE,
+                        DATE_TYPE, TIME_TYPE));
 
         // Unary Operators
         DATE_TIME_TYPE.addMethod(PythonUnaryOperator.AS_STRING,
@@ -127,12 +127,12 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
         DATE_TIME_TYPE.addMethod("time",
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDateTime.class.getMethod("time")),
-                        PythonTime.TIME_TYPE));
+                        TIME_TYPE));
 
         DATE_TIME_TYPE.addMethod("timetz",
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDateTime.class.getMethod("timetz")),
-                        PythonTime.TIME_TYPE));
+                        TIME_TYPE));
 
         DATE_TIME_TYPE.addMethod("astimezone",
                 new PythonFunctionSignature(new MethodDescriptor(

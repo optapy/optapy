@@ -14,6 +14,7 @@ import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.PythonCell;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
+import org.optaplanner.python.translator.types.PythonLikeType;
 
 /**
  * Implementations of local variable manipulation opcodes.
@@ -65,7 +66,7 @@ public class VariableImplementor {
      */
     public static void loadGlobalVariable(MethodVisitor methodVisitor, String className,
             PythonCompiledFunction pythonCompiledFunction,
-            PythonBytecodeInstruction instruction) {
+            PythonBytecodeInstruction instruction, PythonLikeType globalType) {
         String globalName = pythonCompiledFunction.co_names.get(instruction.arg);
 
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -81,6 +82,7 @@ public class VariableImplementor {
                         Type.getType(Map.class),
                         Type.getType(String.class)),
                 true);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, globalType.getJavaTypeInternalName());
     }
 
     /**

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 
 public class PythonKnownFunctionType extends PythonLikeType {
@@ -16,6 +17,10 @@ public class PythonKnownFunctionType extends PythonLikeType {
 
     public List<PythonFunctionSignature> getOverloadFunctionSignatureList() {
         return overloadFunctionSignatureList;
+    }
+
+    public boolean isStatic() {
+        return overloadFunctionSignatureList.get(0).getMethodDescriptor().getMethodType() == MethodDescriptor.MethodType.STATIC;
     }
 
     public Optional<PythonFunctionSignature> getFunctionForParameters(PythonLikeType... parameters) {

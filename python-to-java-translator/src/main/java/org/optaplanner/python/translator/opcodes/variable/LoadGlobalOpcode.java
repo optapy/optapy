@@ -19,7 +19,13 @@ public class LoadGlobalOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.push(ValueSourceInfo.of(this, PythonLikeType.getBaseType()));
+        PythonLikeObject global = functionMetadata.pythonCompiledFunction.globalsMap
+                .get(functionMetadata.pythonCompiledFunction.co_names.get(instruction.arg));
+        if (global != null) {
+            return stackMetadata.push(ValueSourceInfo.of(this, global.__getType()));
+        } else {
+            return stackMetadata.push(ValueSourceInfo.of(this, PythonLikeType.getBaseType()));
+        }
     }
 
     @Override
@@ -31,6 +37,7 @@ public class LoadGlobalOpcode extends AbstractOpcode {
                     + "native Python will likely be faster");
         }
         VariableImplementor.loadGlobalVariable(functionMetadata.methodVisitor, functionMetadata.className,
-                functionMetadata.pythonCompiledFunction, instruction);
+                functionMetadata.pythonCompiledFunction, instruction,
+                (global != null) ? global.__getType() : PythonLikeType.getBaseType());
     }
 }

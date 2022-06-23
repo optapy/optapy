@@ -19,6 +19,7 @@ import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.PythonCode;
+import org.optaplanner.python.translator.types.PythonKnownFunctionType;
 import org.optaplanner.python.translator.types.PythonLikeDict;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
@@ -83,7 +84,32 @@ public class FunctionImplementor {
      * (either self and an unbound method object or NULL and an arbitrary callable).
      * All of them are popped and the return value is pushed.
      */
-    public static void callMethod(MethodVisitor methodVisitor,
+    public static void callMethod(MethodVisitor methodVisitor, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+        PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(instruction.arg + 1);
+        if (functionType instanceof PythonKnownFunctionType) {
+            PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
+            PythonLikeType[] parameterTypes =
+                    new PythonLikeType[knownFunctionType.isStatic() ? instruction.arg : instruction.arg + 1];
+            for (int i = 0; i < parameterTypes.length; i++) {
+                parameterTypes[parameterTypes.length - i - 1] = stackMetadata.getTypeAtStackIndex(i);
+            }
+            knownFunctionType.getFunctionForParameters(parameterTypes)
+                    .ifPresentOrElse(functionSignature -> {
+                        functionSignature.getMethodDescriptor().callMethod(methodVisitor);
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                        methodVisitor.visitInsn(Opcodes.POP);
+                        if (knownFunctionType.isStatic()) {
+                            methodVisitor.visitInsn(Opcodes.SWAP);
+                            methodVisitor.visitInsn(Opcodes.POP);
+                        }
+                    }, () -> callGenericMethod(methodVisitor, instruction, localVariableHelper));
+        } else {
+            callGenericMethod(methodVisitor, instruction, localVariableHelper);
+        }
+    }
+
+    private static void callGenericMethod(MethodVisitor methodVisitor,
             PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
         // Stack is method, (obj or null), arg0, ..., arg(argc - 1)
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);

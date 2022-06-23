@@ -147,6 +147,10 @@ public class MethodDescriptor {
         return methodDescriptor;
     }
 
+    public MethodType getMethodType() {
+        return methodType;
+    }
+
     public void callMethod(MethodVisitor methodVisitor) {
         methodVisitor.visitMethodInsn(methodType.getOpcode(), declaringClassInternalName, methodName, methodDescriptor,
                 methodType == MethodType.INTERFACE);

@@ -48,8 +48,6 @@ import org.optaplanner.python.translator.types.GeneratedFunctionMethodReference;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
-import org.optaplanner.python.translator.types.PythonString;
-import org.optaplanner.python.translator.util.JavaIdentifierUtils;
 
 public class PythonClassTranslator {
     static Map<FunctionSignature, InterfaceDeclaration> functionSignatureToInterfaceName = new HashMap<>();

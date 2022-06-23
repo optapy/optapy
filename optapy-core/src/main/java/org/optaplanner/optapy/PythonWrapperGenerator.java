@@ -52,6 +52,7 @@ import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.OptaPyObjectReference;
 import org.optaplanner.python.translator.types.PythonLikeSet;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNone;
 
 import io.quarkus.gizmo.AnnotationCreator;
 import io.quarkus.gizmo.AssignableResultHandle;
@@ -64,7 +65,6 @@ import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
 import io.quarkus.gizmo.WhileLoop;
-import org.optaplanner.python.translator.types.PythonNone;
 
 public class PythonWrapperGenerator {
     // These functions are set in Python code
@@ -1159,7 +1159,7 @@ public class PythonWrapperGenerator {
                     methodCreator.load(PythonClassTranslator.getPythonFieldName(field.getName())));
             fieldValue = methodCreator.invokeStaticMethod(
                     MethodDescriptor.ofMethod(JavaPythonTypeConversionImplementor.class, "convertPythonObjectToJavaType",
-                                              Object.class, Class.class, PythonLikeObject.class),
+                            Object.class, Class.class, PythonLikeObject.class),
                     methodCreator.loadClass(field.getType()),
                     fieldValue); // convert PythonNone to null if the field cannot be assigned to it
             methodCreator.writeInstanceField(FieldDescriptor.of(field), methodCreator.getThis(), fieldValue);
@@ -1231,9 +1231,8 @@ public class PythonWrapperGenerator {
 
             // If it a string, it will be assignable from PythonLikeObject (used for self)
             BranchResult branchResult = methodCreator.ifReferencesEqual(valueAsPythonLikeObject,
-                                                                 methodCreator.readStaticField(FieldDescriptor.of(
-                                                                         PythonNone.class, "INSTANCE", PythonNone.class
-                                                                 )));
+                    methodCreator.readStaticField(FieldDescriptor.of(
+                            PythonNone.class, "INSTANCE", PythonNone.class)));
             BytecodeCreator currentBranch = branchResult.trueBranch();
             currentBranch.assign(valueAsPythonLikeObject, currentBranch.loadNull());
 
@@ -1248,8 +1247,10 @@ public class PythonWrapperGenerator {
                     methodCreator.readInstanceField(pythonLikeValueMapField, methodCreator.getThis()),
                     methodCreator.load(fieldName),
                     valueAsPythonLikeObject);
-            try {;
-                Method setterMethod = lookupMethod(parentClass, PythonClassTranslator.getJavaMethodName("s" + methodName.substring(1)));
+            try {
+                ;
+                Method setterMethod =
+                        lookupMethod(parentClass, PythonClassTranslator.getJavaMethodName("s" + methodName.substring(1)));
                 methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(setterMethod), methodCreator.getThis(),
                         valueAsPythonLikeObject);
             } catch (NoSuchMethodException e) {
@@ -1409,8 +1410,9 @@ public class PythonWrapperGenerator {
                 Method setterMethod = lookupMethod(parentClass, PythonClassTranslator.getJavaMethodName(setterMethodName));
 
                 if (actualReturnType instanceof Class && ((Class<?>) actualReturnType).isAssignableFrom(PythonNone.class)) {
-                    setterMethodCreator.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod), setterMethodCreator.getThis(),
-                                                            valueAsPythonLikeObject);
+                    setterMethodCreator.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod),
+                            setterMethodCreator.getThis(),
+                            valueAsPythonLikeObject);
                 } else {
                     BranchResult isNullBranchResult = setterMethodCreator.ifNull(setterMethodCreator.getMethodParam(0));
                     BytecodeCreator currentBranch = isNullBranchResult.falseBranch();
@@ -1420,14 +1422,14 @@ public class PythonWrapperGenerator {
 
                     currentBranch = isNoneBranchResult.falseBranch();
                     currentBranch.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod), currentBranch.getThis(),
-                                                      valueAsPythonLikeObject);
+                            valueAsPythonLikeObject);
                     currentBranch = isNoneBranchResult.trueBranch();
                     currentBranch.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod), currentBranch.getThis(),
-                                                      currentBranch.loadNull());
+                            currentBranch.loadNull());
 
                     currentBranch = isNullBranchResult.trueBranch();
                     currentBranch.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod), currentBranch.getThis(),
-                                                      currentBranch.loadNull());
+                            currentBranch.loadNull());
                 }
             } catch (NoSuchMethodException e) {
                 // Do nothing; no setter

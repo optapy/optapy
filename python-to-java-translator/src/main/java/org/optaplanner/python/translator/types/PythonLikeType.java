@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -296,7 +297,7 @@ public class PythonLikeType implements PythonLikeObject,
 
     @Override
     public PythonLikeType __getType() {
-        return TYPE_TYPE;
+        return new PythonLikeGenericType(this);
     }
 
     public String getTypeName() {
@@ -322,5 +323,22 @@ public class PythonLikeType implements PythonLikeObject,
     @Override
     public String toString() {
         return "<class " + TYPE_NAME + ">";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || !PythonLikeType.class.isAssignableFrom(o.getClass())) {
+            return false;
+        }
+        PythonLikeType that = (PythonLikeType) o;
+        return JAVA_TYPE_INTERNAL_NAME.equals(that.JAVA_TYPE_INTERNAL_NAME);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(JAVA_TYPE_INTERNAL_NAME);
     }
 }
