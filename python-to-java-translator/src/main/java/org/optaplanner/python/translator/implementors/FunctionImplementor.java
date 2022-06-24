@@ -22,6 +22,7 @@ import org.optaplanner.python.translator.types.PythonCode;
 import org.optaplanner.python.translator.types.PythonKnownFunctionType;
 import org.optaplanner.python.translator.types.PythonLikeDict;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonLikeGenericType;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
@@ -40,6 +41,69 @@ public class FunctionImplementor {
     public static void loadMethod(FunctionMetadata functionMetadata, MethodVisitor methodVisitor, String className,
             PythonCompiledFunction function,
             StackMetadata stackMetadata, PythonBytecodeInstruction instruction) {
+        PythonLikeType stackTosType = stackMetadata.getTOSType();
+        PythonLikeType tosType;
+        boolean isTosType;
+        if (stackTosType instanceof PythonLikeGenericType) {
+            tosType = ((PythonLikeGenericType) stackTosType).getOrigin();
+            isTosType = true;
+        } else {
+            tosType = stackTosType;
+            isTosType = false;
+        }
+        tosType.getMethodType(functionMetadata.pythonCompiledFunction.co_names.get(instruction.arg)).ifPresentOrElse(
+                knownFunctionType -> {
+                    if (isTosType && knownFunctionType.isStatic()) {
+                        methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(String.class)),
+                                true);
+                        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                    } else if (!isTosType && knownFunctionType.isStatic()) {
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                                true);
+                        methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(String.class)),
+                                true);
+                        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                    } else if (isTosType) {
+                        methodVisitor.visitInsn(Opcodes.DUP);
+                        methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(String.class)),
+                                true);
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                    } else {
+                        methodVisitor.visitInsn(Opcodes.DUP);
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                                true);
+                        methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(String.class)),
+                                true);
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                    }
+                },
+                () -> loadGenericMethod(functionMetadata, methodVisitor, className, function, stackMetadata, instruction));
+    }
+
+    /**
+     * Loads a method named co_names[namei] from the TOS object. TOS is popped. This bytecode distinguishes two cases:
+     * if TOS has a method with the correct name, the bytecode pushes the unbound method and TOS.
+     * TOS will be used as the first argument (self) by CALL_METHOD when calling the unbound method.
+     * Otherwise, NULL and the object return by the attribute lookup are pushed.
+     */
+    private static void loadGenericMethod(FunctionMetadata functionMetadata, MethodVisitor methodVisitor, String className,
+            PythonCompiledFunction function,
+            StackMetadata stackMetadata, PythonBytecodeInstruction instruction) {
+
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                 "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
