@@ -16,6 +16,8 @@ public class PythonTzinfo extends AbstractPythonLikeObject {
     public static PythonLikeType TZ_INFO_TYPE = new PythonLikeType("tzinfo",
             PythonTzinfo.class);
 
+    public static PythonLikeType $TYPE = TZ_INFO_TYPE;
+
     static {
         try {
             registerMethods();

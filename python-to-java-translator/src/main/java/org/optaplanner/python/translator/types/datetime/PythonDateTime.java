@@ -57,9 +57,11 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
             PythonDateTime.class,
             List.of(DATE_TYPE));
 
+    public static PythonLikeType $TYPE = DATE_TIME_TYPE;
+
     static {
         try {
-            PythonLikeComparable.setup(DATE_TIME_TYPE.__dir__);
+            PythonLikeComparable.setup(DATE_TIME_TYPE);
             registerMethods();
 
             DATE_TIME_TYPE.__setAttribute("min", new PythonDateTime(LocalDate.of(1, 1, 1),

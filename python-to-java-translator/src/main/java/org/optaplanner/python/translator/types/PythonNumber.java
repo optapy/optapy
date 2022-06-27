@@ -4,7 +4,7 @@ import java.math.BigInteger;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 
-public interface PythonNumber extends Comparable<PythonNumber>, PythonLikeObject {
+public interface PythonNumber extends PythonLikeComparable<PythonNumber>, PythonLikeObject {
 
     PythonLikeType NUMBER_TYPE = new PythonLikeType("number", PythonNumber.class);
 

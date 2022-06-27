@@ -6,16 +6,17 @@ import java.util.Map;
 import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 
-public class PythonString extends AbstractPythonLikeObject implements Comparable<PythonString> {
+public class PythonString extends AbstractPythonLikeObject implements PythonLikeComparable<PythonString> {
     public final String value;
 
     public final static PythonLikeType STRING_TYPE = new PythonLikeType("str", PythonString.class);
 
     static {
         try {
-            PythonLikeComparable.setup(STRING_TYPE.__dir__);
+            PythonLikeComparable.setup(STRING_TYPE);
             STRING_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonString.class.getMethod("length"),
                     Map.of()));
             STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, new PythonFunctionSignature(
@@ -30,6 +31,7 @@ public class PythonString extends AbstractPythonLikeObject implements Comparable
             STRING_TYPE.__dir__.put(PythonUnaryOperator.ITERATOR.getDunderMethod(),
                     new JavaMethodReference(PythonString.class.getMethod("getIterator"),
                             Map.of()));
+            PythonOverloadImplementor.createDispatchesFor(STRING_TYPE);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }

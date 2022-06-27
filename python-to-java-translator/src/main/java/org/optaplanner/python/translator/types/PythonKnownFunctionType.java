@@ -11,7 +11,7 @@ public class PythonKnownFunctionType extends PythonLikeType {
     final List<PythonFunctionSignature> overloadFunctionSignatureList;
 
     public PythonKnownFunctionType(String methodName, List<PythonFunctionSignature> overloadFunctionSignatureList) {
-        super("function-" + methodName, PythonKnownFunctionType.class, List.of(FUNCTION_TYPE));
+        super("function-" + methodName, PythonKnownFunctionType.class, List.of(PythonLikeFunction.getFunctionType()));
         this.overloadFunctionSignatureList = overloadFunctionSignatureList;
     }
 

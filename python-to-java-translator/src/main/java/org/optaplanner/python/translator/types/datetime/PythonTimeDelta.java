@@ -29,16 +29,18 @@ import org.optaplanner.python.translator.types.PythonString;
 /**
  * Python docs: <a href="https://docs.python.org/3/library/datetime.html#timedelta-objects">timedelta-objects</a>
  */
-public class PythonTimeDelta extends AbstractPythonLikeObject implements Comparable<PythonTimeDelta> {
+public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonLikeComparable<PythonTimeDelta> {
     private static final int NANOS_IN_SECOND = 1_000_000_000;
     private static final int SECONDS_IN_DAY = 86400; // 24 * 60 * 60
 
     public static PythonLikeType TIME_DELTA_TYPE = new PythonLikeType("timedelta",
             PythonTimeDelta.class);
 
+    public static PythonLikeType $TYPE = TIME_DELTA_TYPE;
+
     static {
         try {
-            PythonLikeComparable.setup(TIME_DELTA_TYPE.__dir__);
+            PythonLikeComparable.setup(TIME_DELTA_TYPE);
             registerMethods();
 
             TIME_DELTA_TYPE.__setAttribute("min", new PythonTimeDelta(Duration.ofDays(-999999999)));

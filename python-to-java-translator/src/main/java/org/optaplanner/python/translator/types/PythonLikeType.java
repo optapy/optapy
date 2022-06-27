@@ -15,10 +15,12 @@ import java.util.stream.Stream;
 
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.FieldDescriptor;
+import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
@@ -106,18 +108,21 @@ public class PythonLikeType implements PythonLikeObject,
                                 Map.of("self", 0, "format", 1)));
                 BASE_TYPE.__dir__.put(PythonUnaryOperator.AS_STRING.getDunderMethod(),
                         new JavaMethodReference(Object.class.getMethod("toString"), Map.of()));
-                BASE_TYPE.__dir__.put(PythonBinaryOperators.EQUAL.getDunderMethod(),
-                        new JavaMethodReference(Object.class.getMethod("equals", Object.class),
-                                Map.of()));
-                BASE_TYPE.__dir__.put(PythonBinaryOperators.NOT_EQUAL.getDunderMethod(),
-                        new BinaryLambdaReference((a, b) -> ((PythonBoolean) (((PythonLikeFunction) (a.__getType()
-                                .__getAttributeOrError("__eq__")))
-                                        .__call__(List.of(a, b), Map.of()))).not(),
-                                Map.of()));
+
+                BASE_TYPE.addMethod(PythonBinaryOperators.EQUAL, new PythonFunctionSignature(
+                        MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("equal",
+                                PythonLikeObject.class, PythonLikeObject.class)),
+                        PythonBoolean.getBooleanType(), BASE_TYPE, BASE_TYPE));
+                BASE_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL, new PythonFunctionSignature(
+                        MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("notEqual",
+                                PythonLikeObject.class, PythonLikeObject.class)),
+                        PythonBoolean.getBooleanType(), BASE_TYPE, BASE_TYPE));
                 BASE_TYPE.__dir__.put(PythonUnaryOperator.HASH.getDunderMethod(),
                         new JavaMethodReference(Object.class.getMethod("hashCode"), Map.of()));
                 BASE_TYPE.setConstructor((vargs, kwargs) -> new AbstractPythonLikeObject(BASE_TYPE) {
                 });
+
+                PythonOverloadImplementor.createDispatchesFor(BASE_TYPE);
             } catch (NoSuchMethodException e) {
                 throw new IllegalStateException(e);
             }

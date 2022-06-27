@@ -28,7 +28,7 @@ import org.optaplanner.python.translator.types.PythonString;
 /**
  * Python docs: <a href="https://docs.python.org/3/library/datetime.html#datetime.date">date objects</a>
  */
-public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObject implements Comparable<T> {
+public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObject implements PythonLikeComparable<T> {
     static final long EPOCH_ORDINAL_OFFSET = Duration.between(LocalDateTime.of(LocalDate.of(0, 12, 31), LocalTime.MIDNIGHT),
             LocalDateTime.of(LocalDate.ofEpochDay(0), LocalTime.MIDNIGHT)).toDays();
 
@@ -37,9 +37,11 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
     public static PythonLikeType DATE_TYPE = new PythonLikeType("date",
             PythonDate.class);
 
+    public static PythonLikeType $TYPE = DATE_TYPE;
+
     static {
         try {
-            PythonLikeComparable.setup(DATE_TYPE.__dir__);
+            PythonLikeComparable.setup(DATE_TYPE);
             registerMethods();
 
             DATE_TYPE.__setAttribute("min", new PythonDate(LocalDate.of(1, 1, 1)));

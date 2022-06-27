@@ -8,19 +8,26 @@ import java.util.List;
 import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
     final BigInteger value;
 
-    public final static PythonLikeType INT_TYPE = new PythonLikeType("int", PythonInteger.class, List.of(NUMBER_TYPE));
+    public static PythonLikeType INT_TYPE = getIntType();
     public final static PythonInteger ZERO = new PythonInteger(BigInteger.ZERO);
 
-    static {
+    public static PythonLikeType getIntType() {
+        if (INT_TYPE != null) {
+            return INT_TYPE;
+        }
+        INT_TYPE = new PythonLikeType("int", PythonInteger.class, List.of(NUMBER_TYPE));
         try {
-            PythonLikeComparable.setup(INT_TYPE.__dir__);
+            PythonLikeComparable.setup(INT_TYPE);
             PythonNumericOperations.setup(INT_TYPE.__dir__);
             registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(INT_TYPE);
+            return INT_TYPE;
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
@@ -30,7 +37,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         // Unary
         INT_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN,
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("asBoolean")),
-                        PythonBoolean.BOOLEAN_TYPE));
+                        PythonBoolean.getBooleanType()));
         INT_TYPE.addMethod(PythonUnaryOperator.AS_INT,
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("asInteger")),
                         INT_TYPE));
@@ -55,7 +62,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("add", PythonInteger.class)),
                         INT_TYPE, INT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.ADD,
-                new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("add", PythonInteger.class)),
+                new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("add", PythonFloat.class)),
                         FLOAT_TYPE, FLOAT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
                 new PythonFunctionSignature(
@@ -125,7 +132,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("add", PythonInteger.class)),
                         INT_TYPE, INT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
-                new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("add", PythonInteger.class)),
+                new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("add", PythonFloat.class)),
                         FLOAT_TYPE, FLOAT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
                 new PythonFunctionSignature(
@@ -193,49 +200,48 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         // Comparisons
         INT_TYPE.addMethod(PythonBinaryOperators.EQUAL,
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("equal", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
+                        PythonBoolean.getBooleanType(), INT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.EQUAL,
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("equal", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+                        PythonBoolean.getBooleanType(), FLOAT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonInteger.class.getMethod("notEqual", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
+                        PythonBoolean.getBooleanType(), INT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL,
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("notEqual", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+                        PythonBoolean.getBooleanType(), FLOAT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonInteger.class.getMethod("lessThan", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
+                        PythonBoolean.getBooleanType(), INT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN,
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("lessThan", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+                        PythonBoolean.getBooleanType(), FLOAT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonInteger.class.getMethod("lessThanOrEqual", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
+                        PythonBoolean.getBooleanType(), INT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonInteger.class.getMethod("lessThanOrEqual", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+                        PythonBoolean.getBooleanType(), FLOAT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonInteger.class.getMethod("greaterThan", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
+                        PythonBoolean.getBooleanType(), INT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonInteger.class.getMethod("greaterThan", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+                        PythonBoolean.getBooleanType(), FLOAT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonInteger.class.getMethod("greaterThanOrEqual", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
+                        PythonBoolean.getBooleanType(), INT_TYPE));
         INT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonInteger.class.getMethod("greaterThanOrEqual", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
-
+                        PythonBoolean.getBooleanType(), FLOAT_TYPE));
     }
 
     public PythonInteger(long value) {
@@ -243,7 +249,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public PythonInteger(BigInteger value) {
-        super(INT_TYPE);
+        super(getIntType());
         this.value = value;
     }
 

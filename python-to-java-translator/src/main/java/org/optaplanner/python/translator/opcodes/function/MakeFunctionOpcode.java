@@ -17,7 +17,7 @@ public class MakeFunctionOpcode extends AbstractOpcode {
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
         return stackMetadata.pop(2 + Integer.bitCount(instruction.arg))
-                .push(ValueSourceInfo.of(this, PythonLikeFunction.FUNCTION_TYPE,
+                .push(ValueSourceInfo.of(this, PythonLikeFunction.getFunctionType(),
                         stackMetadata.getValueSourcesUpToStackIndex(2 + Integer.bitCount(instruction.arg))));
     }
 

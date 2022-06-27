@@ -7,6 +7,7 @@ import java.util.List;
 import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 
 public class PythonFloat extends AbstractPythonLikeObject implements PythonNumber {
@@ -16,9 +17,10 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
 
     static {
         try {
-            PythonLikeComparable.setup(FLOAT_TYPE.__dir__);
+            PythonLikeComparable.setup(FLOAT_TYPE);
             PythonNumericOperations.setup(FLOAT_TYPE.__dir__);
             registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(FLOAT_TYPE);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
@@ -49,7 +51,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
                 new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonInteger.class)),
                         FLOAT_TYPE, INT_TYPE));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.ADD,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonInteger.class)),
+                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonFloat.class)),
                         FLOAT_TYPE, FLOAT_TYPE));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
                 new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("subtract", PythonInteger.class)),
@@ -95,7 +97,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
                 new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonInteger.class)),
                         FLOAT_TYPE, INT_TYPE));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonInteger.class)),
+                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonFloat.class)),
                         FLOAT_TYPE, FLOAT_TYPE));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
                 new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("subtract", PythonInteger.class)),

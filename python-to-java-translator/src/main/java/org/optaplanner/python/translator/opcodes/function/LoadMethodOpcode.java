@@ -32,7 +32,7 @@ public class LoadMethodOpcode extends AbstractOpcode {
                         .push(ValueSourceInfo.of(this, tosType, stackMetadata.getValueSourcesUpToStackIndex(1))) // TOS, since we know the function exists
                 )
                 .orElseGet(() -> stackMetadata.pop()
-                        .push(ValueSourceInfo.of(this, PythonLikeFunction.FUNCTION_TYPE,
+                        .push(ValueSourceInfo.of(this, PythonLikeFunction.getFunctionType(),
                                 stackMetadata.getValueSourcesUpToStackIndex(1)))
                         .push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(),
                                 stackMetadata.getValueSourcesUpToStackIndex(1)))); // either TOS or NULL

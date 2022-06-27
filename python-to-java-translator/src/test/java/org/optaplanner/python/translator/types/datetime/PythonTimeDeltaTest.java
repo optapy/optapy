@@ -5,9 +5,11 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.types.PythonFloat;
@@ -154,5 +156,40 @@ public class PythonTimeDeltaTest {
 
         a = new PythonTimeDelta(Duration.ofDays(2).plusHours(6).plusMinutes(30).plusSeconds(15).plusMillis(333L));
         assertThat(a.toString()).isEqualTo("2 days, 6:30:15.333000");
+    }
+
+    @Test
+    public void testCompareTimeDelta() {
+        PythonBytecodeToJavaBytecodeTranslator.classOutputRootPath = Path.of("target", "generated-classes");
+        PythonFunctionBuilder builder = PythonFunctionBuilder.newFunction("a", "b")
+                .loadParameter("a")
+                .loadParameter("b")
+                .compare(CompareOp.LESS_THAN)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+
+        BiPredicate<PythonTimeDelta, PythonTimeDelta> lessThan =
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(builder.build(),
+                        BiPredicate.class,
+                        List.of(PythonTimeDelta.class,
+                                PythonTimeDelta.class));
+        assertThat(lessThan.test(new PythonTimeDelta(Duration.ofDays(1)), new PythonTimeDelta(Duration.ofDays(2)))).isTrue();
+        assertThat(lessThan.test(new PythonTimeDelta(Duration.ofDays(2)), new PythonTimeDelta(Duration.ofDays(1)))).isFalse();
+    }
+
+    @Test
+    public void testEqualsTimeDelta() {
+        PythonFunctionBuilder builder = PythonFunctionBuilder.newFunction("a", "b")
+                .loadParameter("a")
+                .loadParameter("b")
+                .compare(CompareOp.EQUALS)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+
+        BiPredicate<PythonTimeDelta, PythonTimeDelta> lessThan =
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(builder.build(),
+                        BiPredicate.class,
+                        List.of(PythonTimeDelta.class,
+                                PythonTimeDelta.class));
+        assertThat(lessThan.test(new PythonTimeDelta(Duration.ofDays(1)), new PythonTimeDelta(Duration.ofDays(1)))).isTrue();
+        assertThat(lessThan.test(new PythonTimeDelta(Duration.ofDays(1)), new PythonTimeDelta(Duration.ofDays(2)))).isFalse();
     }
 }

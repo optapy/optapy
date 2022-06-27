@@ -126,7 +126,7 @@ public class PythonOverloadImplementor {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class), "size",
                     Type.getMethodDescriptor(Type.INT_TYPE), true);
-            if (overloadList.get(0).getMethodDescriptor().methodType != MethodDescriptor.MethodType.STATIC) {
+            if (!overloadList.get(0).getMethodDescriptor().methodType.isStatic()) {
                 methodVisitor.visitInsn(Opcodes.ICONST_M1);
                 methodVisitor.visitInsn(Opcodes.IADD);
             }
@@ -175,7 +175,7 @@ public class PythonOverloadImplementor {
         methodVisitor.visitVarInsn(Opcodes.ASTORE, MATCHING_OVERLOAD_SET_VARIABLE_INDEX);
 
         int startIndex = 0;
-        if (functionSignatureList.get(0).getMethodDescriptor().methodType != MethodDescriptor.MethodType.STATIC) {
+        if (!functionSignatureList.get(0).getMethodDescriptor().methodType.isStatic()) {
             startIndex = 1;
         }
 

@@ -1,19 +1,34 @@
 package org.optaplanner.python.translator.types;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
+import org.optaplanner.python.translator.MethodDescriptor;
+import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.PythonUnaryOperator;
+
 public class PythonBoolean extends PythonInteger {
-    public final static PythonBoolean TRUE;
-    public final static PythonBoolean FALSE;
+    public final static PythonBoolean TRUE = new PythonBoolean(true);
+    public final static PythonBoolean FALSE = new PythonBoolean(false);
 
-    public final static PythonLikeType BOOLEAN_TYPE = new PythonLikeType("bool", PythonBoolean.class, List.of(INT_TYPE));
+    public static PythonLikeType BOOLEAN_TYPE = getBooleanType();
 
-    static {
-        BOOLEAN_TYPE.__dir__.put("__bool__", new UnaryLambdaReference(self -> self, Map.of()));
-        TRUE = new PythonBoolean(true);
-        FALSE = new PythonBoolean(false);
+    public static PythonLikeType getBooleanType() {
+        if (BOOLEAN_TYPE != null) {
+            return BOOLEAN_TYPE;
+        }
+        BOOLEAN_TYPE = new PythonLikeType("bool", PythonBoolean.class, List.of(getIntType()));
+        try {
+            BOOLEAN_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN,
+                    new PythonFunctionSignature(new MethodDescriptor(
+                            PythonBoolean.class.getMethod("asBoolean")),
+                            BOOLEAN_TYPE));
+            PythonOverloadImplementor.createDispatchesFor(BOOLEAN_TYPE);
+            return BOOLEAN_TYPE;
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private final boolean booleanValue;
@@ -33,6 +48,10 @@ public class PythonBoolean extends PythonInteger {
         } else {
             return TRUE;
         }
+    }
+
+    public PythonBoolean asBoolean() {
+        return this;
     }
 
     public static PythonBoolean valueOf(boolean result) {

@@ -38,6 +38,8 @@ public class PythonTime extends AbstractPythonLikeObject {
     public static PythonLikeType TIME_TYPE = new PythonLikeType("time",
             PythonTime.class);
 
+    public static PythonLikeType $TYPE = TIME_TYPE;
+
     static {
         try {
             registerMethods();

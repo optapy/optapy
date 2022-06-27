@@ -6,6 +6,7 @@ import java.util.List;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
+import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -98,5 +99,13 @@ public class ObjectBuiltinOperations {
         // Java format
         //  %[argument_index$][flags][width][.precision]conversion
         return "%1$" + pythonFormatString;
+    }
+
+    public static PythonBoolean equal(PythonLikeObject a, PythonLikeObject b) {
+        return PythonBoolean.valueOf(a.equals(b));
+    }
+
+    public static PythonBoolean notEqual(PythonLikeObject a, PythonLikeObject b) {
+        return PythonBoolean.valueOf(!a.equals(b));
     }
 }

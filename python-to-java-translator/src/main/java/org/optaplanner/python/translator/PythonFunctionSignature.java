@@ -86,14 +86,23 @@ public class PythonFunctionSignature {
     }
 
     public boolean matchesParameters(PythonLikeType... callParameters) {
-        if (callParameters.length < parameterTypes.length - defaultArgumentList.size() ||
-                callParameters.length > parameterTypes.length) {
+        int minParameters = parameterTypes.length - defaultArgumentList.size();
+        int maxParameters = parameterTypes.length;
+        int startIndex = 0;
+
+        if (methodDescriptor.methodType == MethodDescriptor.MethodType.STATIC_AS_VIRTUAL) {
+            minParameters--;
+            maxParameters--;
+            startIndex = 1;
+        }
+        if (callParameters.length < minParameters || callParameters.length > maxParameters) {
             return false;
         }
 
-        for (int i = 0; i < callParameters.length; i++) {
+        for (int i = startIndex; i < callParameters.length; i++) {
             PythonLikeType overloadParameterType = parameterTypes[i];
             PythonLikeType callParameterType = callParameters[i];
+
             if (!callParameterType.isSubclassOf(overloadParameterType)) {
                 return false;
             }

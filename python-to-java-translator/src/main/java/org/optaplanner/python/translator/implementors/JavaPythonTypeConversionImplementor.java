@@ -180,12 +180,12 @@ public class JavaPythonTypeConversionImplementor {
                 return (PythonLikeType) maybeType;
             }
             if (PythonLikeFunction.class.isAssignableFrom(javaClass)) {
-                return PythonLikeFunction.FUNCTION_TYPE;
+                return PythonLikeFunction.getFunctionType();
             }
             return JavaObjectWrapper.getPythonTypeForClass(javaClass);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             if (PythonLikeFunction.class.isAssignableFrom(javaClass)) {
-                return PythonLikeFunction.FUNCTION_TYPE;
+                return PythonLikeFunction.getFunctionType();
             }
             return JavaObjectWrapper.getPythonTypeForClass(javaClass);
         }

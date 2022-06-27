@@ -1,32 +1,42 @@
 package org.optaplanner.python.translator.types;
 
-import java.util.Map;
+import org.optaplanner.python.translator.MethodDescriptor;
+import org.optaplanner.python.translator.PythonBinaryOperators;
+import org.optaplanner.python.translator.PythonFunctionSignature;
 
-import org.optaplanner.python.translator.PythonLikeObject;
+public interface PythonLikeComparable<T> extends Comparable<T> {
+    static void setup(PythonLikeType type) {
+        try {
+            type.addMethod(PythonBinaryOperators.LESS_THAN, new PythonFunctionSignature(
+                    new MethodDescriptor(PythonLikeComparable.class.getMethod("lessThan", Object.class)),
+                    PythonBoolean.getBooleanType(), type));
+            type.addMethod(PythonBinaryOperators.GREATER_THAN, new PythonFunctionSignature(
+                    new MethodDescriptor(PythonLikeComparable.class.getMethod("greaterThan", Object.class)),
+                    PythonBoolean.getBooleanType(), type));
+            type.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL, new PythonFunctionSignature(
+                    new MethodDescriptor(PythonLikeComparable.class.getMethod("lessThanOrEqual", Object.class)),
+                    PythonBoolean.getBooleanType(), type));
+            type.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL, new PythonFunctionSignature(
+                    new MethodDescriptor(PythonLikeComparable.class.getMethod("greaterThanOrEqual", Object.class)),
+                    PythonBoolean.getBooleanType(), type));
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
-public class PythonLikeComparable {
-    final static BinaryLambdaReference __LT__ =
-            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(((Comparable) a).compareTo(b) < 0), Map.of());
-    final static BinaryLambdaReference __LE__ =
-            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(((Comparable) a).compareTo(b) <= 0), Map.of());
-    final static BinaryLambdaReference __EQ__ =
-            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(a.equals(b)), Map.of());
-    final static BinaryLambdaReference __NE__ =
-            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(!a.equals(b)), Map.of());
-    final static BinaryLambdaReference __GE__ =
-            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(((Comparable) a).compareTo(b) >= 0), Map.of());
-    final static BinaryLambdaReference __GT__ =
-            new BinaryLambdaReference((a, b) -> PythonBoolean.valueOf(((Comparable) a).compareTo(b) > 0), Map.of());
+    default PythonBoolean lessThan(T other) {
+        return PythonBoolean.valueOf(compareTo(other) < 0);
+    }
 
-    private PythonLikeComparable() {
-    };
+    default PythonBoolean greaterThan(T other) {
+        return PythonBoolean.valueOf(compareTo(other) > 0);
+    }
 
-    public static void setup(Map<String, PythonLikeObject> map) {
-        map.put("__lt__", __LT__);
-        map.put("__le__", __LE__);
-        map.put("__eq__", __EQ__);
-        map.put("__ne__", __NE__);
-        map.put("__gt__", __GT__);
-        map.put("__ge__", __GE__);
+    default PythonBoolean lessThanOrEqual(T other) {
+        return PythonBoolean.valueOf(compareTo(other) <= 0);
+    }
+
+    default PythonBoolean greaterThanOrEqual(T other) {
+        return PythonBoolean.valueOf(compareTo(other) >= 0);
     }
 }

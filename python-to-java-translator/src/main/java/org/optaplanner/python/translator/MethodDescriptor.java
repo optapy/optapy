@@ -115,7 +115,7 @@ public class MethodDescriptor {
         this.methodType = methodType;
     }
 
-    public MethodDescriptor(Class<?> declaringClass, boolean isStatic,
+    public MethodDescriptor(Class<?> declaringClass, MethodType methodType,
             String methodName, Class<?> returnType, Class<?>... parameterTypes) {
         this.declaringClassInternalName = Type.getInternalName(declaringClass);
         this.methodName = methodName;
@@ -124,15 +124,12 @@ public class MethodDescriptor {
             parameterAsmTypes[i] = Type.getType(parameterTypes[i]);
         }
         this.methodDescriptor = Type.getMethodDescriptor(Type.getType(returnType), parameterAsmTypes);
-        if (declaringClass.isInterface()) {
-            this.methodType = MethodType.INTERFACE;
-        } else if (methodName.equals("<init>")) {
-            this.methodType = MethodType.CONSTRUCTOR;
-        } else if (isStatic) {
-            this.methodType = MethodType.STATIC;
-        } else {
-            this.methodType = MethodType.VIRTUAL;
-        }
+        this.methodType = methodType;
+    }
+
+    public static MethodDescriptor useStaticMethodAsVirtual(Method method) {
+        return new MethodDescriptor(method.getDeclaringClass(), MethodType.STATIC_AS_VIRTUAL,
+                method.getName(), method.getReturnType(), method.getParameterTypes());
     }
 
     public String getDeclaringClassInternalName() {
@@ -183,19 +180,26 @@ public class MethodDescriptor {
     }
 
     public enum MethodType {
-        VIRTUAL(Opcodes.INVOKEVIRTUAL),
-        STATIC(Opcodes.INVOKESTATIC),
-        INTERFACE(Opcodes.INVOKEINTERFACE),
-        CONSTRUCTOR(Opcodes.INVOKESPECIAL);
+        VIRTUAL(Opcodes.INVOKEVIRTUAL, false),
+        STATIC(Opcodes.INVOKESTATIC, true),
+        STATIC_AS_VIRTUAL(Opcodes.INVOKESTATIC, true),
+        INTERFACE(Opcodes.INVOKEINTERFACE, false),
+        CONSTRUCTOR(Opcodes.INVOKESPECIAL, false);
 
         private final int opcode;
+        private final boolean isStatic;
 
-        MethodType(int opcode) {
+        MethodType(int opcode, boolean isStatic) {
             this.opcode = opcode;
+            this.isStatic = isStatic;
         }
 
         public int getOpcode() {
             return opcode;
+        }
+
+        public boolean isStatic() {
+            return isStatic;
         }
     }
 }
