@@ -30,6 +30,6 @@ public class JumpIfTrueOrPopOpcode extends AbstractControlFlowOpcode {
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
         JumpImplementor.jumpIfTrueElsePop(functionMetadata.methodVisitor, instruction,
-                functionMetadata.bytecodeCounterToLabelMap);
+                stackMetadata, functionMetadata.bytecodeCounterToLabelMap);
     }
 }

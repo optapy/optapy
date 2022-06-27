@@ -8,6 +8,8 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 /**
@@ -38,9 +40,11 @@ public class JumpImplementor {
      * Pops TOS. If TOS is true, set the bytecode counter to the {@code instruction} argument.
      */
     public static void popAndJumpIfTrue(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            Map<Integer, Label> bytecodeCounterToLabelMap) {
+            StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
-        DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
+            DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        }
         PythonConstantsImplementor.loadTrue(methodVisitor);
         methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
     }
@@ -49,9 +53,11 @@ public class JumpImplementor {
      * Pops TOS. If TOS is false, set the bytecode counter to the {@code instruction} argument.
      */
     public static void popAndJumpIfFalse(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            Map<Integer, Label> bytecodeCounterToLabelMap) {
+            StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
-        DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
+            DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        }
         PythonConstantsImplementor.loadFalse(methodVisitor);
         methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
     }
@@ -78,10 +84,12 @@ public class JumpImplementor {
      * Otherwise, pop TOS.
      */
     public static void jumpIfTrueElsePop(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            Map<Integer, Label> bytecodeCounterToLabelMap) {
+            StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
         methodVisitor.visitInsn(Opcodes.DUP);
-        DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
+            DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        }
         PythonConstantsImplementor.loadTrue(methodVisitor);
         methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
         methodVisitor.visitInsn(Opcodes.POP);
@@ -92,10 +100,12 @@ public class JumpImplementor {
      * Otherwise, pop TOS.
      */
     public static void jumpIfFalseElsePop(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            Map<Integer, Label> bytecodeCounterToLabelMap) {
+            StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
         methodVisitor.visitInsn(Opcodes.DUP);
-        DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
+            DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
+        }
         PythonConstantsImplementor.loadFalse(methodVisitor);
         methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, jumpLocation);
         methodVisitor.visitInsn(Opcodes.POP);
