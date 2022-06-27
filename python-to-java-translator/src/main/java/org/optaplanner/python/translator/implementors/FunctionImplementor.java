@@ -160,7 +160,7 @@ public class FunctionImplementor {
             }
             knownFunctionType.getFunctionForParameters(parameterTypes)
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.getMethodDescriptor().callMethod(methodVisitor);
+                        functionSignature.callMethod(methodVisitor, instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
                         if (knownFunctionType.isStatic()) {
@@ -229,7 +229,27 @@ public class FunctionImplementor {
      * TOS[argc] is the function to call. TOS...TOS[argc] are all popped and
      * the result is pushed onto the stack.
      */
-    public static void callFunction(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+    public static void callFunction(MethodVisitor methodVisitor, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
+        PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(instruction.arg);
+        if (functionType instanceof PythonLikeGenericType) {
+            functionType = ((PythonLikeGenericType) functionType).getOrigin().getConstructorType().orElse(null);
+        }
+        if (functionType instanceof PythonKnownFunctionType) {
+            PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
+            knownFunctionType.getDefaultFunctionSignature()
+                    .ifPresentOrElse(functionSignature -> {
+                        functionSignature.callWithoutKeywords(methodVisitor, stackMetadata.localVariableHelper,
+                                instruction.arg);
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                        methodVisitor.visitInsn(Opcodes.POP);
+                    }, () -> callGenericFunction(methodVisitor, instruction));
+        } else {
+            callGenericFunction(methodVisitor, instruction);
+        }
+    }
+
+    public static void callGenericFunction(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
         // stack is callable, arg0, arg1, ..., arg(argc - 1)
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
@@ -249,7 +269,34 @@ public class FunctionImplementor {
      * TOS[argc + 2] is the function to call. TOS...TOS[argc + 2] are all popped and
      * the result is pushed onto the stack.
      */
-    public static void callFunctionWithKeywords(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+    public static void callFunctionWithKeywords(MethodVisitor methodVisitor, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
+        PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(instruction.arg + 1);
+        if (functionType instanceof PythonLikeGenericType) {
+            functionType = ((PythonLikeGenericType) functionType).getOrigin().getConstructorType().orElse(null);
+        }
+        if (functionType instanceof PythonKnownFunctionType) {
+            PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
+            knownFunctionType.getDefaultFunctionSignature()
+                    .ifPresentOrElse(functionSignature -> {
+                        functionSignature.callWithKeywords(methodVisitor, stackMetadata.localVariableHelper,
+                                instruction.arg);
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                        methodVisitor.visitInsn(Opcodes.POP);
+                    }, () -> callGenericFunction(methodVisitor, instruction));
+        } else {
+            callGenericFunctionWithKeywords(methodVisitor, instruction);
+        }
+    }
+
+    /**
+     * Calls a function. TOS is a tuple containing keyword names.
+     * TOS[1]...TOS[len(TOS)] are the keyword arguments to the function (TOS[1] is (TOS)[0], TOS[2] is (TOS)[1], ...).
+     * TOS[len(TOS) + 1]...TOS[argc + 1] are the positional arguments (rightmost first).
+     * TOS[argc + 2] is the function to call. TOS...TOS[argc + 2] are all popped and
+     * the result is pushed onto the stack.
+     */
+    public static void callGenericFunctionWithKeywords(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
         // stack is callable, arg0, arg1, ..., arg(argc - len(keys)), ..., arg(argc - 1), keys
         // We know the total number of arguments, but not the number of individual positional/keyword arguments
         // Since Java Bytecode require consistent stack frames  (i.e. the body of a loop must start with

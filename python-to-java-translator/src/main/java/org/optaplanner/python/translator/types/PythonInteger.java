@@ -14,6 +14,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     final BigInteger value;
 
     public final static PythonLikeType INT_TYPE = new PythonLikeType("int", PythonInteger.class, List.of(NUMBER_TYPE));
+    public final static PythonInteger ZERO = new PythonInteger(BigInteger.ZERO);
 
     static {
         try {

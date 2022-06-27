@@ -23,6 +23,10 @@ public class PythonKnownFunctionType extends PythonLikeType {
         return overloadFunctionSignatureList.get(0).getMethodDescriptor().getMethodType() == MethodDescriptor.MethodType.STATIC;
     }
 
+    public Optional<PythonFunctionSignature> getDefaultFunctionSignature() {
+        return overloadFunctionSignatureList.stream().findAny();
+    }
+
     public Optional<PythonFunctionSignature> getFunctionForParameters(PythonLikeType... parameters) {
         List<PythonFunctionSignature> matchingOverloads = overloadFunctionSignatureList.stream()
                 .filter(signature -> signature.matchesParameters(parameters))

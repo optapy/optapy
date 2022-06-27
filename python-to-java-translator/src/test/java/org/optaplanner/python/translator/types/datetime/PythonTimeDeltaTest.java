@@ -2,13 +2,59 @@ package org.optaplanner.python.translator.types.datetime;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.types.PythonFloat;
 import org.optaplanner.python.translator.types.PythonInteger;
+import org.optaplanner.python.translator.types.PythonNumber;
+import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 public class PythonTimeDeltaTest {
+    @Test
+    public void testConstructTimeDeltaPositional() {
+        PythonBytecodeToJavaBytecodeTranslator.classOutputRootPath = Path.of("target/generated-classes");
+        PythonFunctionBuilder builder = PythonFunctionBuilder.newFunction("days")
+                .loadConstant(PythonTimeDelta.TIME_DELTA_TYPE)
+                .loadParameter("days")
+                .callFunction(1)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+
+        Function<PythonNumber, PythonTimeDelta> constructor =
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(builder.build(),
+                        Function.class,
+                        List.of(PythonNumber.class,
+                                PythonTimeDelta.class));
+        assertThat(constructor.apply(PythonInteger.valueOf(30))).isEqualTo(new PythonTimeDelta(Duration.ofDays(30)));
+        assertThat(constructor.apply(PythonFloat.valueOf(1.5)))
+                .isEqualTo(new PythonTimeDelta(Duration.ofDays(1).plusHours(12)));
+    }
+
+    @Test
+    public void testConstructTimeDeltaKeywords() {
+        PythonFunctionBuilder builder = PythonFunctionBuilder.newFunction("minutes")
+                .loadConstant(PythonTimeDelta.TIME_DELTA_TYPE)
+                .loadParameter("minutes")
+                .loadConstant("minutes")
+                .tuple(1)
+                .callFunctionWithKeywords(1)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+
+        Function<PythonNumber, PythonTimeDelta> constructor =
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(builder.build(),
+                        Function.class,
+                        List.of(PythonNumber.class,
+                                PythonTimeDelta.class));
+        assertThat(constructor.apply(PythonInteger.valueOf(30))).isEqualTo(new PythonTimeDelta(Duration.ofMinutes(30)));
+        assertThat(constructor.apply(PythonFloat.valueOf(1.5)))
+                .isEqualTo(new PythonTimeDelta(Duration.ofMinutes(1).plusSeconds(30)));
+    }
+
     @Test
     public void testAddTimeDelta() {
         PythonTimeDelta a = new PythonTimeDelta(Duration.ofDays(1L));

@@ -35,6 +35,7 @@ public class PythonLikeType implements PythonLikeObject,
     private final List<PythonLikeType> PARENT_TYPES;
 
     private final Map<String, PythonKnownFunctionType> functionNameToKnownFunctionType;
+    private Optional<PythonKnownFunctionType> constructorKnownFunctionType;
 
     private final Map<String, FieldDescriptor> instanceFieldToFieldDescriptorMap;
 
@@ -53,6 +54,7 @@ public class PythonLikeType implements PythonLikeObject,
         };
         __dir__ = new HashMap<>();
         functionNameToKnownFunctionType = new HashMap<>();
+        constructorKnownFunctionType = Optional.empty();
         instanceFieldToFieldDescriptorMap = new HashMap<>();
     }
 
@@ -65,6 +67,7 @@ public class PythonLikeType implements PythonLikeObject,
         };
         __dir__ = new HashMap<>();
         functionNameToKnownFunctionType = new HashMap<>();
+        constructorKnownFunctionType = Optional.empty();
         instanceFieldToFieldDescriptorMap = new HashMap<>();
     }
 
@@ -157,6 +160,13 @@ public class PythonLikeType implements PythonLikeObject,
         this.constructor = constructor;
     }
 
+    public void addConstructor(PythonFunctionSignature constructor) {
+        if (constructorKnownFunctionType.isEmpty()) {
+            constructorKnownFunctionType = Optional.of(new PythonKnownFunctionType("<init>", new ArrayList<>()));
+        }
+        constructorKnownFunctionType.get().getOverloadFunctionSignatureList().add(constructor);
+    }
+
     public Optional<PythonKnownFunctionType> getMethodType(String methodName) {
         PythonKnownFunctionType out = new PythonKnownFunctionType(methodName, new ArrayList<>());
         getAssignableTypesStream().forEach(type -> {
@@ -171,6 +181,10 @@ public class PythonLikeType implements PythonLikeObject,
         }
 
         return Optional.of(out);
+    }
+
+    public Optional<PythonKnownFunctionType> getConstructorType() {
+        return constructorKnownFunctionType;
     }
 
     public Optional<FieldDescriptor> getInstanceFieldDescriptor(String fieldName) {

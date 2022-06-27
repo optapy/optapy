@@ -64,7 +64,7 @@ public class ExceptionImplementor {
         // Exception is type: turn it to instance via its constructor
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
         instruction.arg = 0;
-        FunctionImplementor.callFunction(methodVisitor, instruction); // a type is callable; calling it results in calling its constructor
+        FunctionImplementor.callGenericFunction(methodVisitor, instruction); // a type is callable; calling it results in calling its constructor
 
         methodVisitor.visitLabel(ifExceptionIsInstanceStart);
         StackManipulationImplementor.swap(methodVisitor);

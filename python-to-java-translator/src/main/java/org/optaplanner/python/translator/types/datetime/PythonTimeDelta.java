@@ -3,9 +3,14 @@ package org.optaplanner.python.translator.types.datetime;
 import static org.optaplanner.python.translator.types.PythonBoolean.BOOLEAN_TYPE;
 import static org.optaplanner.python.translator.types.PythonFloat.FLOAT_TYPE;
 import static org.optaplanner.python.translator.types.PythonInteger.INT_TYPE;
+import static org.optaplanner.python.translator.types.PythonNumber.NUMBER_TYPE;
 import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
 
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
+import java.util.List;
+import java.util.Map;
 
 import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
@@ -18,6 +23,7 @@ import org.optaplanner.python.translator.types.PythonFloat;
 import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeComparable;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNumber;
 import org.optaplanner.python.translator.types.PythonString;
 
 /**
@@ -42,78 +48,75 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements Compara
 
             TIME_DELTA_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
                 // days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0
-                long days = 0L, seconds = 0L, microseconds = 0L, milliseconds = 0L, minutes = 0L, hours = 0L, weeks = 0L;
+                namedArguments = (namedArguments != null) ? namedArguments : Map.of();
+                PythonNumber days = PythonInteger.ZERO, seconds = PythonInteger.ZERO, microseconds = PythonInteger.ZERO,
+                        milliseconds = PythonInteger.ZERO, minutes = PythonInteger.ZERO, hours = PythonInteger.ZERO,
+                        weeks = PythonInteger.ZERO;
 
                 if (positionalArguments.size() >= 1) {
-                    days = ((PythonInteger) positionalArguments.get(0)).getValue().longValue();
+                    days = (PythonNumber) positionalArguments.get(0);
                 }
 
                 if (positionalArguments.size() >= 2) {
-                    seconds = ((PythonInteger) positionalArguments.get(1)).getValue().longValue();
+                    seconds = (PythonNumber) positionalArguments.get(1);
                 }
 
                 if (positionalArguments.size() >= 3) {
-                    microseconds = ((PythonInteger) positionalArguments.get(2)).getValue().longValue();
+                    microseconds = (PythonNumber) positionalArguments.get(2);
                 }
 
                 if (positionalArguments.size() >= 4) {
-                    milliseconds = ((PythonInteger) positionalArguments.get(3)).getValue().longValue();
+                    milliseconds = (PythonNumber) positionalArguments.get(3);
                 }
 
                 if (positionalArguments.size() >= 5) {
-                    minutes = ((PythonInteger) positionalArguments.get(4)).getValue().longValue();
+                    minutes = (PythonNumber) positionalArguments.get(4);
                 }
 
                 if (positionalArguments.size() >= 6) {
-                    hours = ((PythonInteger) positionalArguments.get(5)).getValue().longValue();
+                    hours = (PythonNumber) positionalArguments.get(5);
                 }
 
                 if (positionalArguments.size() >= 7) {
-                    weeks = ((PythonInteger) positionalArguments.get(6)).getValue().longValue();
+                    weeks = (PythonNumber) positionalArguments.get(6);
                 }
 
                 PythonString daysKey = PythonString.valueOf("days");
                 if (namedArguments.containsKey(daysKey)) {
-                    days = ((PythonInteger) namedArguments.get(daysKey)).getValue().longValue();
+                    days = ((PythonNumber) namedArguments.get(daysKey));
                 }
 
                 PythonString secondsKey = PythonString.valueOf("seconds");
                 if (namedArguments.containsKey(secondsKey)) {
-                    seconds = ((PythonInteger) namedArguments.get(secondsKey)).getValue().longValue();
+                    seconds = ((PythonNumber) namedArguments.get(secondsKey));
                 }
 
                 PythonString microsecondsKey = PythonString.valueOf("microseconds");
                 if (namedArguments.containsKey(microsecondsKey)) {
-                    microseconds = ((PythonInteger) namedArguments.get(microsecondsKey)).getValue().longValue();
+                    microseconds = ((PythonNumber) namedArguments.get(microsecondsKey));
                 }
 
                 PythonString millisecondsKey = PythonString.valueOf("milliseconds");
                 if (namedArguments.containsKey(millisecondsKey)) {
-                    milliseconds = ((PythonInteger) namedArguments.get(millisecondsKey)).getValue().longValue();
+                    milliseconds = ((PythonNumber) namedArguments.get(millisecondsKey));
                 }
 
                 PythonString minutesKey = PythonString.valueOf("minutes");
                 if (namedArguments.containsKey(minutesKey)) {
-                    minutes = ((PythonInteger) namedArguments.get(minutesKey)).getValue().longValue();
+                    minutes = ((PythonNumber) namedArguments.get(minutesKey));
                 }
 
                 PythonString hoursKey = PythonString.valueOf("hours");
                 if (namedArguments.containsKey(hoursKey)) {
-                    hours = ((PythonInteger) namedArguments.get(hoursKey)).getValue().longValue();
+                    hours = ((PythonNumber) namedArguments.get(hoursKey));
                 }
 
                 PythonString weeksKey = PythonString.valueOf("weeks");
                 if (namedArguments.containsKey(weeksKey)) {
-                    weeks = ((PythonInteger) namedArguments.get(weeksKey)).getValue().longValue();
+                    weeks = ((PythonNumber) namedArguments.get(weeksKey));
                 }
 
-                return new PythonTimeDelta(Duration.ofDays(days)
-                        .plusSeconds(seconds)
-                        .plusNanos(microseconds * 1000L)
-                        .plusMillis(milliseconds)
-                        .plusMinutes(minutes)
-                        .plusHours(hours)
-                        .plusDays(7L * weeks));
+                return of(days, seconds, microseconds, milliseconds, minutes, hours, weeks);
             }));
 
             PythonOverloadImplementor.createDispatchesFor(TIME_DELTA_TYPE);
@@ -123,6 +126,19 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements Compara
     }
 
     private static void registerMethods() throws NoSuchMethodException {
+        // Constructor
+        TIME_DELTA_TYPE.addConstructor(new PythonFunctionSignature(
+                new MethodDescriptor(PythonTimeDelta.class.getMethod("of", PythonNumber.class, PythonNumber.class,
+                        PythonNumber.class, PythonNumber.class, PythonNumber.class,
+                        PythonNumber.class, PythonNumber.class)),
+                List.of(PythonInteger.ZERO, PythonInteger.ZERO, PythonInteger.ZERO, PythonInteger.ZERO, PythonInteger.ZERO,
+                        PythonInteger.ZERO, PythonInteger.ZERO),
+                Map.of("days", 0, "seconds", 1, "microseconds", 2,
+                        "milliseconds", 3, "minutes", 4, "hours", 5,
+                        "weeks", 6),
+                TIME_DELTA_TYPE, NUMBER_TYPE, NUMBER_TYPE, NUMBER_TYPE, NUMBER_TYPE, NUMBER_TYPE,
+                NUMBER_TYPE, NUMBER_TYPE));
+
         // Unary
         TIME_DELTA_TYPE.addMethod(PythonUnaryOperator.POSITIVE,
                 new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("pos")),
@@ -208,6 +224,36 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements Compara
     public static PythonTimeDelta of(int days, int seconds, int microseconds) {
         return new PythonTimeDelta(Duration.ofDays(days).plusSeconds(seconds)
                 .plusNanos(microseconds * 1000L));
+    }
+
+    public static PythonTimeDelta of(PythonNumber days, PythonNumber seconds, PythonNumber microseconds,
+            PythonNumber milliseconds, PythonNumber minutes, PythonNumber hours,
+            PythonNumber weeks) {
+        Duration out = Duration.ZERO;
+        out = addToDuration(out, days, ChronoUnit.DAYS);
+        out = addToDuration(out, seconds, ChronoUnit.SECONDS);
+        out = addToDuration(out, microseconds, ChronoUnit.MICROS);
+        out = addToDuration(out, milliseconds, ChronoUnit.MILLIS);
+        out = addToDuration(out, minutes, ChronoUnit.MINUTES);
+        out = addToDuration(out, hours, ChronoUnit.HOURS);
+        if (weeks instanceof PythonInteger) { // weeks is an estimated duration; cannot use addToDuration
+            out = out.plusDays(weeks.getValue().longValue() * 7);
+        } else if (weeks instanceof PythonFloat) {
+            out = out.plusNanos(Math.round(Duration.ofDays(7L).toNanos() * weeks.getValue().doubleValue()));
+        } else {
+            throw new IllegalArgumentException("Amount for weeks is not a float or integer.");
+        }
+        return new PythonTimeDelta(out);
+    }
+
+    private static Duration addToDuration(Duration duration, PythonNumber amount, TemporalUnit temporalUnit) {
+        if (amount instanceof PythonInteger) {
+            return duration.plus(amount.getValue().longValue(), temporalUnit);
+        } else if (amount instanceof PythonFloat) {
+            return duration.plusNanos(Math.round(temporalUnit.getDuration().toNanos() * amount.getValue().doubleValue()));
+        } else {
+            throw new IllegalArgumentException("Amount for " + temporalUnit.toString() + " is not a float or integer.");
+        }
     }
 
     public PythonFloat total_seconds() {

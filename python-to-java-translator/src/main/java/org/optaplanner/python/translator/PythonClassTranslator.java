@@ -23,13 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -591,7 +587,8 @@ public class PythonClassTranslator {
 
         methodVisitor.visitCode();
 
-        createFieldSwitch(methodVisitor, instanceAttributes, 2, field -> {
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        BytecodeSwitchImplementor.createStringSwitch(methodVisitor, instanceAttributes, 2, field -> {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
             methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, getJavaFieldName(field),
                     'L' + fieldToType.get(field).getJavaTypeInternalName() + ';');
@@ -624,7 +621,8 @@ public class PythonClassTranslator {
 
         methodVisitor.visitCode();
 
-        createFieldSwitch(methodVisitor, instanceAttributes, 3, field -> {
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        BytecodeSwitchImplementor.createStringSwitch(methodVisitor, instanceAttributes, 3, field -> {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldToType.get(field).getJavaTypeInternalName());
@@ -659,7 +657,8 @@ public class PythonClassTranslator {
 
         methodVisitor.visitCode();
 
-        createFieldSwitch(methodVisitor, instanceAttributes, 2, field -> {
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        BytecodeSwitchImplementor.createStringSwitch(methodVisitor, instanceAttributes, 2, field -> {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
             methodVisitor.visitInsn(Opcodes.ACONST_NULL);
             methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, getJavaFieldName(field),
@@ -677,102 +676,6 @@ public class PythonClassTranslator {
 
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
-    }
-
-    public static void createFieldSwitch(MethodVisitor methodVisitor, Collection<String> fieldNames,
-            int switchVariable, Consumer<String> caseWriter, Runnable defaultCase, boolean doesEachCaseReturnEarly) {
-        if (fieldNames.isEmpty()) {
-            defaultCase.run();
-            return;
-        }
-
-        // keys in lookup switch MUST be sorted
-        SortedMap<Integer, List<String>> hashCodeToMatchingFieldList = new TreeMap<>();
-        for (String fieldName : fieldNames) {
-            hashCodeToMatchingFieldList.computeIfAbsent(fieldName.hashCode(), hash -> new ArrayList<>()).add(fieldName);
-        }
-
-        int[] keys = new int[hashCodeToMatchingFieldList.size()];
-        Label[] hashCodeLabels = new Label[keys.length];
-
-        { // Scoped to hide keyIndex
-            int keyIndex = 0;
-            for (Integer key : hashCodeToMatchingFieldList.keySet()) {
-                keys[keyIndex] = key;
-                hashCodeLabels[keyIndex] = new Label();
-                keyIndex++;
-            }
-        }
-
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(String.class), "hashCode",
-                Type.getMethodDescriptor(Type.INT_TYPE), false);
-        Map<Integer, String> switchVariableValueToField = new HashMap<>();
-
-        Label endOfKeySwitch = new Label();
-
-        methodVisitor.visitLdcInsn(-1);
-        methodVisitor.visitVarInsn(Opcodes.ISTORE, switchVariable);
-
-        methodVisitor.visitLookupSwitchInsn(endOfKeySwitch, keys, hashCodeLabels);
-
-        int totalEntries = 0;
-        for (int i = 0; i < keys.length; i++) {
-            methodVisitor.visitLabel(hashCodeLabels[i]);
-            List<String> matchingFields = hashCodeToMatchingFieldList.get(keys[i]);
-
-            for (int fieldIndex = 0; fieldIndex < matchingFields.size(); fieldIndex++) {
-                String field = matchingFields.get(fieldIndex);
-                Label ifDoesNotMatchLabel = new Label();
-
-                methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
-                methodVisitor.visitLdcInsn(field);
-                methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(String.class), "equals",
-                        Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)), false);
-                if (fieldIndex != matchingFields.size() - 1) {
-                    methodVisitor.visitJumpInsn(Opcodes.IFEQ, ifDoesNotMatchLabel);
-                } else {
-                    methodVisitor.visitJumpInsn(Opcodes.IFEQ, endOfKeySwitch);
-                }
-                methodVisitor.visitLdcInsn(totalEntries);
-                methodVisitor.visitVarInsn(Opcodes.ISTORE, switchVariable);
-                if (fieldIndex != matchingFields.size() - 1) {
-                    methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfKeySwitch);
-                    methodVisitor.visitLabel(ifDoesNotMatchLabel);
-                }
-
-                switchVariableValueToField.put(totalEntries, field);
-                totalEntries++;
-            }
-            if (totalEntries != fieldNames.size()) {
-                methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfKeySwitch);
-            }
-        }
-        methodVisitor.visitLabel(endOfKeySwitch);
-
-        Label missingField = new Label();
-        Label endOfFieldsSwitch = new Label();
-        Label[] fieldHandlerLabels = new Label[totalEntries];
-        for (int i = 0; i < fieldHandlerLabels.length; i++) {
-            fieldHandlerLabels[i] = new Label();
-        }
-
-        methodVisitor.visitVarInsn(Opcodes.ILOAD, switchVariable);
-        methodVisitor.visitTableSwitchInsn(0, totalEntries - 1, missingField, fieldHandlerLabels);
-
-        for (int i = 0; i < totalEntries; i++) {
-            methodVisitor.visitLabel(fieldHandlerLabels[i]);
-            String field = switchVariableValueToField.get(i);
-            caseWriter.accept(field);
-            if (!doesEachCaseReturnEarly) {
-                methodVisitor.visitJumpInsn(Opcodes.GOTO, endOfFieldsSwitch);
-            }
-        }
-        methodVisitor.visitLabel(missingField);
-        defaultCase.run();
-        if (!doesEachCaseReturnEarly) {
-            methodVisitor.visitLabel(endOfFieldsSwitch);
-        }
     }
 
     public static InterfaceDeclaration getInterfaceForFunctionSignature(FunctionSignature functionSignature) {
