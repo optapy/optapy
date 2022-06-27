@@ -52,7 +52,7 @@ public class JavaPythonTypeConversionImplementorTest {
 
     @Test
     public void testReturnBoolean() {
-        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("ignored")
                 .loadConstant(Boolean.TRUE)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
@@ -61,7 +61,7 @@ public class JavaPythonTypeConversionImplementorTest {
 
         assertThat(javaFunction.test("Hi")).isEqualTo(true);
 
-        pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+        pythonCompiledFunction = PythonFunctionBuilder.newFunction("ignored")
                 .loadConstant(Boolean.FALSE)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
@@ -73,7 +73,7 @@ public class JavaPythonTypeConversionImplementorTest {
 
     @Test
     public void testReturnVoid() {
-        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("ignored")
                 .loadConstant(null)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();

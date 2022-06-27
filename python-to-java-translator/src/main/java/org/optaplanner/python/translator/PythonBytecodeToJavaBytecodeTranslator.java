@@ -501,10 +501,19 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
     private static void translatePythonBytecodeToMethod(MethodDescriptor method, String className, MethodVisitor methodVisitor,
             PythonCompiledFunction pythonCompiledFunction, boolean isPythonLikeFunction, int pythonVersion, boolean isVirtual) {
-        for (Type parameter : method.getParameterTypes()) {
-            methodVisitor.visitParameter(null, 0);
+        for (int i = 0; i < method.getParameterTypes().length; i++) {
+            if (!isPythonLikeFunction) {
+                methodVisitor.visitParameter(pythonCompiledFunction.co_varnames.get(i), 0);
+            } else {
+                methodVisitor.visitParameter(null, 0);
+            }
         }
         methodVisitor.visitCode();
+
+        Label start = new Label();
+        Label end = new Label();
+
+        methodVisitor.visitLabel(start);
 
         Map<Integer, Label> bytecodeCounterToLabelMap = new HashMap<>();
         LocalVariableHelper localVariableHelper = new LocalVariableHelper(method.getParameterTypes(), pythonCompiledFunction);
@@ -555,6 +564,17 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
             bytecodeIndexToArgumentorsMap.getOrDefault(instruction.offset, List.of()).forEach(Runnable::run);
             opcodeList.get(i).implement(functionMetadata, stackMetadata);
+        }
+
+        methodVisitor.visitLabel(end);
+
+        for (int i = method.getParameterTypes().length; i < localVariableHelper.getNumberOfLocalVariables(); i++) {
+            methodVisitor.visitLocalVariable(pythonCompiledFunction.co_varnames.get(i),
+                    Type.getDescriptor(PythonLikeObject.class),
+                    null,
+                    start,
+                    end,
+                    localVariableHelper.getPythonLocalVariableSlot(i));
         }
 
         methodVisitor.visitMaxs(-1, -1);
