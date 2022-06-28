@@ -64,8 +64,8 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
             return 0;
         }
 
-        PythonLikeFunction lessThan = (PythonLikeFunction) __getAttributeOrError("__lt__");
-        PythonBoolean result = (PythonBoolean) lessThan.__call__(List.of(other), Map.of());
+        PythonLikeFunction lessThan = (PythonLikeFunction) __getType().__getAttributeOrError("__lt__");
+        PythonBoolean result = (PythonBoolean) lessThan.__call__(List.of(this, other), Map.of());
         if (result.getBooleanValue()) {
             return -1;
         } else {
@@ -79,22 +79,25 @@ public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction
             return false;
         }
         PythonObjectWrapper other = (PythonObjectWrapper) o;
-        PythonLikeFunction equals = (PythonLikeFunction) __getAttributeOrError("__eq__");
-        PythonBoolean result = (PythonBoolean) equals.__call__(List.of(other), Map.of());
-        return result.getBooleanValue();
+        PythonLikeFunction equals = (PythonLikeFunction) __getType().__getAttributeOrError("__eq__");
+        PythonLikeObject result = equals.__call__(List.of(this, other), Map.of());
+        if (result instanceof PythonBoolean) {
+            return ((PythonBoolean) result).getBooleanValue();
+        }
+        return false;
     }
 
     @Override
     public int hashCode() {
-        PythonLikeFunction hash = (PythonLikeFunction) __getAttributeOrError("__hash__");
-        PythonInteger result = (PythonInteger) hash.__call__(List.of(), Map.of());
+        PythonLikeFunction hash = (PythonLikeFunction) __getType().__getAttributeOrError("__hash__");
+        PythonInteger result = (PythonInteger) hash.__call__(List.of(this), Map.of());
         return result.value.hashCode();
     }
 
     @Override
     public String toString() {
-        PythonLikeFunction str = (PythonLikeFunction) __getAttributeOrError("__str__");
-        PythonString result = (PythonString) str.__call__(List.of(), Map.of());
+        PythonLikeFunction str = (PythonLikeFunction) __getType().__getAttributeOrError("__str__");
+        PythonString result = (PythonString) str.__call__(List.of(this), Map.of());
         return result.toString();
     }
 }

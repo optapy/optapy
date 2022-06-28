@@ -206,6 +206,11 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("remainder_time_delta", PythonTimeDelta.class)),
                         TIME_DELTA_TYPE, TIME_DELTA_TYPE));
+
+        // Methods
+        TIME_DELTA_TYPE.addMethod("total_seconds", new PythonFunctionSignature(
+                new MethodDescriptor(PythonTimeDelta.class.getMethod("total_seconds")),
+                FLOAT_TYPE));
     }
 
     final Duration duration;
