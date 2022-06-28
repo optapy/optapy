@@ -19,7 +19,7 @@ public class ForIterOpcode extends AbstractControlFlowOpcode {
     public List<Integer> getPossibleNextBytecodeIndexList() {
         return List.of(
                 getBytecodeIndex() + 1,
-                getBytecodeIndex() + instruction.arg);
+                getBytecodeIndex() + instruction.arg + 1);
     }
 
     @Override

@@ -41,7 +41,7 @@ public class CollectionImplementor {
         Label catchStartLabel = new Label();
         Label catchEndLabel = new Label();
         Label loopEndLabel =
-                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg, key -> new Label());
+                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1, key -> new Label());
 
         methodVisitor.visitTryCatchBlock(tryStartLabel, tryEndLabel, catchStartLabel,
                 Type.getInternalName(StopIteration.class));

@@ -144,7 +144,7 @@ public class PythonFunctionBuilder {
         jumpBackInstruction.isJumpTarget = false;
         instructionList.add(jumpBackInstruction);
 
-        instruction.arg = instructionList.size() - instruction.offset;
+        instruction.arg = instructionList.size() - instruction.offset - 1;
 
         PythonBytecodeInstruction afterLoopInstruction = new PythonBytecodeInstruction();
         afterLoopInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.NOP;

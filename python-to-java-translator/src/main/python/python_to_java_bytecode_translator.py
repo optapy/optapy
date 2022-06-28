@@ -356,8 +356,12 @@ def translate_python_class_to_java_class(python_class):
         return type_to_compiled_java_class[python_class]
 
     type_to_compiled_java_class[python_class] = None
-    methods = inspect.getmembers(python_class, predicate=inspect.isfunction)
-    methods = [method for method in methods if method[0] in python_class.__dict__]
+    methods = []
+    for method_name in python_class.__dict__:
+        method = inspect.getattr_static(python_class, method_name)
+        if inspect.isfunction(method):
+            methods.append((method_name, method))
+
     static_attributes = inspect.getmembers(python_class, predicate=lambda member: not inspect.isfunction(member))
     static_attributes = [attribute for attribute in static_attributes if attribute[0] in python_class.__dict__]
     static_methods = [method for method in methods if isinstance(method[1], __STATIC_METHOD_TYPE)]

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
@@ -79,8 +80,17 @@ public class PythonClassTranslator {
             } catch (UnsupportedOperationException e) {
                 // silently ignore unsupported operations
             } catch (Exception e) {
-                System.out.println("WARNING: Ignoring exception");
                 e.printStackTrace();
+                System.out.println("WARNING: Ignoring exception");
+                //e.printStackTrace();
+                System.out.println("globals: " + instanceMethod.globalsMap);
+                System.out.println("co_constants: " + instanceMethod.co_constants);
+                System.out.println("co_names: " + instanceMethod.co_names);
+                System.out.println("co_varnames: " + instanceMethod.co_varnames);
+                System.out.println("Instructions:");
+                System.out.println(instanceMethod.instructionList.stream()
+                        .map(PythonBytecodeInstruction::toString)
+                        .collect(Collectors.joining("\n")));
             }
         });
 
