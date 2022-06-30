@@ -84,13 +84,85 @@ def _get_python_object_attribute(object_id, name):
         raise OptaPyException(error)
 
 
-def _get_python_object_attribute_as_python_like(object_id, name):
+def _get_python_object_attribute_as_python_like(object_id, name, instance_map):
     """Gets an attribute from a Python Object"""
     from javapython import convert_to_java_python_like_object
+    from org.optaplanner.optapy import OptaPyObjectReference
+    from org.optaplanner.python.translator.types import PythonLikeSet, PythonLikeDict, PythonLikeList, PythonLikeTuple
+
     the_object = object_id
-    out = getattr(the_object, str(name))
-    out = convert_to_java_python_like_object(out)
-    return out
+    if the_object is None:
+        return None
+    item = getattr(the_object, str(name))
+    item_id = id(item)
+
+    if item_id in instance_map:
+        return OptaPyObjectReference(id(item))
+    elif _is_deep_planning_clone(item):
+        return OptaPyObjectReference(id(item))
+    elif isinstance(item, str):  # a string is a sequence
+        return convert_to_java_python_like_object(item, instance_map)
+    elif isinstance(item, Sequence):
+        out = PythonLikeList()
+        instance_map[item_id] = out
+        for element in item:
+            if _is_deep_planning_clone(element):
+                out.add(OptaPyObjectReference(id(element)))
+            else:
+                new_element = convert_to_java_python_like_object(element, instance_map)
+                if hasattr(type(element), '__optapy_java_class'):
+                    new_element = OptaPyObjectReference(id(element))
+                out.add(new_element)
+
+        if isinstance(item, MutableSequence):
+            return out
+        else:
+            return PythonLikeTuple.fromList(out)
+    elif isinstance(item, Set):
+        out = PythonLikeSet()
+        instance_map[item_id] = out
+
+        for element in item:
+            if _is_deep_planning_clone(element):
+                out.add(OptaPyObjectReference(id(element)))
+            else:
+                new_element = convert_to_java_python_like_object(element, instance_map)
+                if hasattr(type(element), '__optapy_java_class'):
+                    new_element = OptaPyObjectReference(id(element))
+                out.add(new_element)
+
+        return out
+    elif isinstance(item, Mapping):
+        out = PythonLikeDict()
+        instance_map[item_id] = out
+        for key, value in item.items():
+            new_key = None
+            new_value = None
+            if _is_deep_planning_clone(key):
+                #_planning_clone(key, instance_map)
+                new_key = OptaPyObjectReference(id(key))
+            else:
+                new_key = convert_to_java_python_like_object(key, instance_map)
+                if hasattr(type(key), '__optapy_java_class'):
+                    new_key = OptaPyObjectReference(id(key))
+
+            if _is_deep_planning_clone(value):
+                #_planning_clone(value, instance_map)
+                new_value = OptaPyObjectReference(id(key))
+            else:
+                new_value = convert_to_java_python_like_object(value, instance_map)
+                if hasattr(type(value), '__optapy_java_class'):
+                    new_value = OptaPyObjectReference(id(value))
+
+            out.put(new_key, new_value)
+
+        return out
+    else:
+        out = convert_to_java_python_like_object(item, instance_map)
+        if hasattr(type(item), '__optapy_java_class'):
+            out = OptaPyObjectReference(id(item))
+
+        return out
 
 
 def _get_python_array_to_id_array(the_object: List):
@@ -361,7 +433,8 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
     PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToValue(
         JObject(PythonBiFunction(_get_python_object_attribute), java.util.function.BiFunction))
     PythonWrapperGenerator.setPythonObjectIdAndAttributeNameToPythonLikeValue(
-        JObject(PythonBiFunction(_get_python_object_attribute_as_python_like), java.util.function.BiFunction))
+        JObject(PythonTriFunction(_get_python_object_attribute_as_python_like),
+                org.optaplanner.core.api.function.TriFunction))
     PythonWrapperGenerator.setPythonObjectIdAndAttributeSetter(JObject(PythonTriFunction(_set_python_object_attribute),
                                                                        org.optaplanner.core.api.function.TriFunction))
 

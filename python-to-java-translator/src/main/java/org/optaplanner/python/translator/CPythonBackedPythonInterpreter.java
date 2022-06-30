@@ -8,6 +8,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.optaplanner.python.translator.builtins.GlobalBuiltins;
+import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
@@ -19,6 +20,8 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
 
     public static Function<OpaquePythonReference, OpaquePythonReference> lookupPythonReferenceTypePythonFunction;
     public static BiFunction<OpaquePythonReference, String, PythonLikeObject> lookupAttributeOnPythonReferencePythonFunction;
+
+    public static TriFunction<OpaquePythonReference, String, Map<Number, PythonLikeObject>, PythonLikeObject> lookupAttributeOnPythonReferenceWithMapPythonFunction;
     public static TriConsumer<OpaquePythonReference, String, Object> setAttributeOnPythonReferencePythonFunction;
     public static BiConsumer<OpaquePythonReference, String> deleteAttributeOnPythonReferencePythonFunction;
     public static TriFunction<OpaquePythonReference, List<PythonLikeObject>, Map<PythonString, PythonLikeObject>, PythonLikeObject> callPythonFunction;
@@ -43,12 +46,25 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
         return lookupAttributeOnPythonReferencePythonFunction.apply(object, attribute);
     }
 
+    public static PythonLikeObject lookupAttributeOnPythonReference(OpaquePythonReference object, String attribute,
+            Map<Number, PythonLikeObject> map) {
+        return lookupAttributeOnPythonReferenceWithMapPythonFunction.apply(object, attribute, map);
+    }
+
     public static void setAttributeOnPythonReference(OpaquePythonReference object, String attribute, Object value) {
         setAttributeOnPythonReferencePythonFunction.accept(object, attribute, value);
     }
 
     public static void deleteAttributeOnPythonReference(OpaquePythonReference object, String attribute) {
         deleteAttributeOnPythonReferencePythonFunction.accept(object, attribute);
+    }
+
+    public static void updateJavaObjectFromPythonObject(CPythonBackedPythonLikeObject javaObject,
+            OpaquePythonReference pythonObject,
+            Map<Number, PythonLikeObject> instanceMap) {
+        javaObject.$setInstanceMap(instanceMap);
+        javaObject.$setCPythonReference(pythonObject);
+        javaObject.$readFieldsFromCPythonReference();
     }
 
     public static PythonLikeObject callPythonReference(OpaquePythonReference object, List<PythonLikeObject> positionalArguments,

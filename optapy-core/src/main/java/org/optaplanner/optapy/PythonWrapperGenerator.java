@@ -33,6 +33,7 @@ import org.optaplanner.core.api.domain.solution.PlanningEntityProperty;
 import org.optaplanner.core.api.domain.solution.PlanningScore;
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
+import org.optaplanner.core.api.domain.solution.ProblemFactProperty;
 import org.optaplanner.core.api.domain.valuerange.ValueRangeProvider;
 import org.optaplanner.core.api.domain.variable.AnchorShadowVariable;
 import org.optaplanner.core.api.domain.variable.CustomShadowVariable;
@@ -48,8 +49,8 @@ import org.optaplanner.core.api.score.stream.ConstraintProvider;
 import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
-import org.optaplanner.python.translator.types.OptaPyObjectReference;
 import org.optaplanner.python.translator.types.PythonLikeSet;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
@@ -85,7 +86,7 @@ public class PythonWrapperGenerator {
     private static BiFunction<OpaquePythonReference, String, Object> pythonObjectIdAndAttributeNameToValue;
 
     // Reads an attribute on a OpaquePythonReference as a PythonLikeObject;
-    private static BiFunction<OpaquePythonReference, String, Object> pythonObjectIdAndAttributeNameToPythonLikeValue;
+    private static TriFunction<OpaquePythonReference, String, Map<Number, PythonLikeObject>, Object> pythonObjectIdAndAttributeNameToPythonLikeValue;
 
     // Sets an attribute on a OpaquePythonReference
     public static TriFunction<OpaquePythonReference, String, Object, Object> pythonObjectIdAndAttributeSetter;
@@ -133,7 +134,8 @@ public class PythonWrapperGenerator {
 
     @SuppressWarnings("unused")
     public static void
-            setPythonObjectIdAndAttributeNameToPythonLikeValue(BiFunction<OpaquePythonReference, String, Object> function) {
+            setPythonObjectIdAndAttributeNameToPythonLikeValue(
+                    TriFunction<OpaquePythonReference, String, Map<Number, PythonLikeObject>, Object> function) {
         pythonObjectIdAndAttributeNameToPythonLikeValue = function;
     }
 
@@ -178,8 +180,14 @@ public class PythonWrapperGenerator {
         };
     }
 
-    public static PythonLikeObject getPythonLikeObjectForAttribute(PythonObject object, String attributeName) {
-        Object out = pythonObjectIdAndAttributeNameToPythonLikeValue.apply(object.get__optapy_Id(), attributeName);
+    public static Number getPythonObjectId(PythonObject pythonObject) {
+        return pythonObjectToId.apply(pythonObject.get__optapy_Id());
+    }
+
+    public static PythonLikeObject getPythonLikeObjectForAttribute(PythonObject object, String attributeName,
+            Map<Number, PythonLikeObject> instanceMap) {
+        Object out = pythonObjectIdAndAttributeNameToPythonLikeValue.apply(object.get__optapy_Id(), attributeName,
+                instanceMap);
         return unwrapOptaPyReferences(object.get__optapy_reference_map(), out);
     }
 
@@ -961,6 +969,308 @@ public class PythonWrapperGenerator {
         methodCreator.returnValue(null);
     }
 
+    private static void generateReadFromPythonObject(ClassCreator classCreator, GeneratedClassType generatedClassType,
+            Class<?> parentClass,
+            List<FieldDescriptor> planningEntityPropertyFieldList,
+            List<FieldDescriptor> planningEntityCollectionFieldList,
+            List<FieldDescriptor> problemFactPropertyFieldList,
+            List<FieldDescriptor> problemFactCollectionFieldList,
+            List<FieldDescriptor> planningVariableFieldList,
+            List<String> planningVariableSetterNameList) {
+        MethodCreator methodCreator = classCreator.getMethodCreator("readFromPythonObject", void.class, Set.class, Map.class);
+
+        ResultHandle doneSet = methodCreator.getMethodParam(0);
+        ResultHandle referenceMap = methodCreator.getMethodParam(1);
+        ResultHandle alreadyHandled = methodCreator.invokeInterfaceMethod(
+                MethodDescriptor.ofMethod(Collection.class, "contains", boolean.class, Object.class),
+                methodCreator.getMethodParam(0), methodCreator.getThis());
+        methodCreator.ifTrue(alreadyHandled).trueBranch().returnValue(null);
+        methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Collection.class, "add", boolean.class, Object.class),
+                methodCreator.getMethodParam(0), methodCreator.getThis());
+
+        for (Field field : parentClass.getFields()) {
+            if (Modifier.isStatic(field.getModifiers()) || !PythonLikeObject.class.isAssignableFrom(field.getType())) {
+                continue;
+            }
+
+            ResultHandle fieldValue = methodCreator.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getPythonLikeObjectForAttribute",
+                            PythonLikeObject.class, PythonObject.class,
+                            String.class, Map.class),
+                    methodCreator.getThis(),
+                    methodCreator.load(PythonClassTranslator.getPythonFieldName(field.getName())),
+                    referenceMap);
+
+            fieldValue = methodCreator.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(JavaPythonTypeConversionImplementor.class, "convertPythonObjectToJavaType",
+                            Object.class, Class.class, PythonLikeObject.class),
+                    methodCreator.loadClass(field.getType()),
+                    fieldValue); // convert PythonNone to null if the field cannot be assigned to it
+            methodCreator.writeInstanceField(FieldDescriptor.of(field), methodCreator.getThis(), fieldValue);
+        }
+
+        switch (generatedClassType) {
+            case PROBLEM_FACT:
+            case PLANNING_ENTITY: {
+                break;
+            }
+            case PLANNING_SOLUTION: {
+                ResultHandle thisObject = methodCreator.getThis();
+                // planning entities
+                for (FieldDescriptor planningEntityField : planningEntityPropertyFieldList) {
+                    methodCreator.invokeInterfaceMethod(
+                            MethodDescriptor.ofMethod(PythonObject.class, "readFromPythonObject", void.class, Set.class,
+                                    Map.class),
+                            methodCreator.readInstanceField(planningEntityField, thisObject), doneSet, referenceMap);
+                }
+                for (FieldDescriptor planningEntityCollectionField : planningEntityCollectionFieldList) {
+                    if (planningEntityCollectionField.getType().endsWith("[]")) {
+                        // Array
+                        AssignableResultHandle arrayIndex = methodCreator.createVariable(int.class);
+                        methodCreator.assign(arrayIndex, methodCreator.load(0));
+
+                        ResultHandle array = methodCreator.readInstanceField(planningEntityCollectionField, thisObject);
+                        ResultHandle arrayLength = methodCreator.arrayLength(array);
+
+                        WhileLoop arrayLoop =
+                                methodCreator.whileLoop(condition -> condition.ifIntegerLessThan(arrayIndex, arrayLength));
+                        try (BytecodeCreator arrayLoopBlock = arrayLoop.block()) {
+                            ResultHandle arrayElement = arrayLoopBlock.readArrayValue(array, arrayIndex);
+                            arrayLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "readFromPythonObject", void.class, Set.class,
+                                            Map.class),
+                                    arrayElement, doneSet, referenceMap);
+                            arrayLoopBlock.assign(arrayIndex, methodCreator.increment(arrayIndex));
+                        }
+                    } else {
+                        // Collection
+                        ResultHandle iterator = methodCreator.invokeInterfaceMethod(
+                                MethodDescriptor.ofMethod(Collection.class, "iterator",
+                                        Iterator.class),
+                                methodCreator.readInstanceField(planningEntityCollectionField, thisObject));
+                        WhileLoop iteratorLoop = methodCreator.whileLoop(condition -> condition.ifTrue(condition
+                                .invokeInterfaceMethod(MethodDescriptor.ofMethod(Iterator.class, "hasNext", boolean.class),
+                                        iterator)));
+                        try (BytecodeCreator iteratorLoopBlock = iteratorLoop.block()) {
+                            ResultHandle element = iteratorLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(Iterator.class, "next", Object.class),
+                                    iterator);
+                            iteratorLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "readFromPythonObject", void.class, Set.class,
+                                            Map.class),
+                                    element, doneSet, referenceMap);
+                        }
+                    }
+                }
+
+                // problem facts
+                for (FieldDescriptor problemFactField : problemFactPropertyFieldList) {
+                    ResultHandle fieldValue = methodCreator.readInstanceField(problemFactField, thisObject);
+                    ResultHandle isInstanceOfPythonObject = methodCreator.instanceOf(fieldValue, PythonObject.class);
+                    methodCreator.ifTrue(isInstanceOfPythonObject)
+                            .trueBranch()
+                            .invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "readFromPythonObject", void.class, Set.class,
+                                            Map.class),
+                                    fieldValue, doneSet, referenceMap);
+                }
+
+                for (FieldDescriptor problemFactCollectionField : problemFactCollectionFieldList) {
+                    if (problemFactCollectionField.getType().endsWith("[]")) {
+                        // Array
+                        AssignableResultHandle arrayIndex = methodCreator.createVariable(int.class);
+                        methodCreator.assign(arrayIndex, methodCreator.load(0));
+
+                        ResultHandle array = methodCreator.readInstanceField(problemFactCollectionField, thisObject);
+                        ResultHandle arrayLength = methodCreator.arrayLength(array);
+
+                        WhileLoop arrayLoop =
+                                methodCreator.whileLoop(condition -> condition.ifIntegerLessThan(arrayIndex, arrayLength));
+                        try (BytecodeCreator arrayLoopBlock = arrayLoop.block()) {
+                            ResultHandle arrayElement = arrayLoopBlock.readArrayValue(array, arrayIndex);
+                            ResultHandle isInstanceOfPythonObject = arrayLoopBlock.instanceOf(arrayElement, PythonObject.class);
+                            arrayLoopBlock.ifTrue(isInstanceOfPythonObject)
+                                    .trueBranch()
+                                    .invokeInterfaceMethod(
+                                            MethodDescriptor.ofMethod(PythonObject.class, "readFromPythonObject", void.class,
+                                                    Set.class, Map.class),
+                                            arrayElement, doneSet, referenceMap);
+                            arrayLoopBlock.assign(arrayIndex, methodCreator.increment(arrayIndex));
+                        }
+                    } else {
+                        // Collection
+                        ResultHandle iterator = methodCreator.invokeInterfaceMethod(
+                                MethodDescriptor.ofMethod(Collection.class, "iterator",
+                                        Iterator.class),
+                                methodCreator.readInstanceField(problemFactCollectionField, thisObject));
+                        WhileLoop iteratorLoop = methodCreator.whileLoop(condition -> condition.ifTrue(condition
+                                .invokeInterfaceMethod(MethodDescriptor.ofMethod(Iterator.class, "hasNext", boolean.class),
+                                        iterator)));
+                        try (BytecodeCreator iteratorLoopBlock = iteratorLoop.block()) {
+                            ResultHandle element = iteratorLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(Iterator.class, "next", Object.class),
+                                    iterator);
+                            ResultHandle isInstanceOfPythonObject = iteratorLoopBlock.instanceOf(element, PythonObject.class);
+                            iteratorLoopBlock.ifTrue(isInstanceOfPythonObject)
+                                    .trueBranch()
+                                    .invokeInterfaceMethod(
+                                            MethodDescriptor.ofMethod(PythonObject.class, "readFromPythonObject", void.class,
+                                                    Set.class, Map.class),
+                                            element, doneSet, referenceMap);
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                throw new IllegalStateException("Unhandled GeneratedClassType (" + generatedClassType + ")");
+        }
+        //methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class, "$readFieldsFromCPythonReference", void.class),
+        //                                  methodCreator.getThis());
+        methodCreator.returnValue(null);
+    }
+
+    private static void generateVisitIds(ClassCreator classCreator, GeneratedClassType generatedClassType,
+            Class<?> parentClass,
+            List<FieldDescriptor> planningEntityPropertyFieldList,
+            List<FieldDescriptor> planningEntityCollectionFieldList,
+            List<FieldDescriptor> problemFactPropertyFieldList,
+            List<FieldDescriptor> problemFactCollectionFieldList,
+            List<FieldDescriptor> planningVariableFieldList,
+            List<String> planningVariableSetterNameList) {
+        MethodCreator methodCreator = classCreator.getMethodCreator("visitIds", void.class, Map.class);
+
+        ResultHandle referenceMap = methodCreator.getMethodParam(0);
+        methodCreator.invokeInterfaceMethod(
+                MethodDescriptor.ofMethod(Map.class, "put", Object.class, Object.class, Object.class),
+                referenceMap,
+                methodCreator.invokeStaticMethod(
+                        MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getPythonObjectId", Number.class,
+                                PythonObject.class),
+                        methodCreator.getThis()),
+                methodCreator.getThis());
+
+        switch (generatedClassType) {
+            case PROBLEM_FACT: {
+                //methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(parentClass, "$readFieldsFromCPythonReference", void.class),
+                //                                  methodCreator.getThis());
+                break;
+            }
+            case PLANNING_ENTITY: {
+                //methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(parentClass, "$readFieldsFromCPythonReference", void.class),
+                //                                  methodCreator.getThis());
+                break;
+            }
+            case PLANNING_SOLUTION: {
+                ResultHandle thisObject = methodCreator.getThis();
+                //methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(parentClass, "$readFieldsFromCPythonReference", void.class),
+                //                                  methodCreator.getThis());
+                // planning entities
+                for (FieldDescriptor planningEntityField : planningEntityPropertyFieldList) {
+                    methodCreator.invokeInterfaceMethod(
+                            MethodDescriptor.ofMethod(PythonObject.class, "visitIds", void.class, Map.class),
+                            methodCreator.readInstanceField(planningEntityField, thisObject), referenceMap);
+                }
+                for (FieldDescriptor planningEntityCollectionField : planningEntityCollectionFieldList) {
+                    if (planningEntityCollectionField.getType().endsWith("[]")) {
+                        // Array
+                        AssignableResultHandle arrayIndex = methodCreator.createVariable(int.class);
+                        methodCreator.assign(arrayIndex, methodCreator.load(0));
+
+                        ResultHandle array = methodCreator.readInstanceField(planningEntityCollectionField, thisObject);
+                        ResultHandle arrayLength = methodCreator.arrayLength(array);
+
+                        WhileLoop arrayLoop =
+                                methodCreator.whileLoop(condition -> condition.ifIntegerLessThan(arrayIndex, arrayLength));
+                        try (BytecodeCreator arrayLoopBlock = arrayLoop.block()) {
+                            ResultHandle arrayElement = arrayLoopBlock.readArrayValue(array, arrayIndex);
+                            arrayLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "visitIds", void.class, Map.class),
+                                    arrayElement, referenceMap);
+                            arrayLoopBlock.assign(arrayIndex, methodCreator.increment(arrayIndex));
+                        }
+                    } else {
+                        // Collection
+                        ResultHandle iterator = methodCreator.invokeInterfaceMethod(
+                                MethodDescriptor.ofMethod(Collection.class, "iterator",
+                                        Iterator.class),
+                                methodCreator.readInstanceField(planningEntityCollectionField, thisObject));
+                        WhileLoop iteratorLoop = methodCreator.whileLoop(condition -> condition.ifTrue(condition
+                                .invokeInterfaceMethod(MethodDescriptor.ofMethod(Iterator.class, "hasNext", boolean.class),
+                                        iterator)));
+                        try (BytecodeCreator iteratorLoopBlock = iteratorLoop.block()) {
+                            ResultHandle element = iteratorLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(Iterator.class, "next", Object.class),
+                                    iterator);
+                            iteratorLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "visitIds", void.class, Map.class), element,
+                                    referenceMap);
+                        }
+                    }
+                }
+
+                // problem facts
+                for (FieldDescriptor problemFactField : problemFactPropertyFieldList) {
+                    ResultHandle fieldValue = methodCreator.readInstanceField(problemFactField, thisObject);
+                    ResultHandle isInstanceOfPythonObject = methodCreator.instanceOf(fieldValue, PythonObject.class);
+                    methodCreator.ifTrue(isInstanceOfPythonObject)
+                            .trueBranch()
+                            .invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "visitIds", void.class, Map.class),
+                                    fieldValue, referenceMap);
+                }
+
+                for (FieldDescriptor problemFactCollectionField : problemFactCollectionFieldList) {
+                    if (problemFactCollectionField.getType().endsWith("[]")) {
+                        // Array
+                        AssignableResultHandle arrayIndex = methodCreator.createVariable(int.class);
+                        methodCreator.assign(arrayIndex, methodCreator.load(0));
+
+                        ResultHandle array = methodCreator.readInstanceField(problemFactCollectionField, thisObject);
+                        ResultHandle arrayLength = methodCreator.arrayLength(array);
+
+                        WhileLoop arrayLoop =
+                                methodCreator.whileLoop(condition -> condition.ifIntegerLessThan(arrayIndex, arrayLength));
+                        try (BytecodeCreator arrayLoopBlock = arrayLoop.block()) {
+                            ResultHandle arrayElement = arrayLoopBlock.readArrayValue(array, arrayIndex);
+                            ResultHandle isInstanceOfPythonObject = arrayLoopBlock.instanceOf(arrayElement, PythonObject.class);
+                            arrayLoopBlock.ifTrue(isInstanceOfPythonObject)
+                                    .trueBranch()
+                                    .invokeInterfaceMethod(
+                                            MethodDescriptor.ofMethod(PythonObject.class, "visitIds", void.class, Map.class),
+                                            arrayElement, referenceMap);
+                            arrayLoopBlock.assign(arrayIndex, methodCreator.increment(arrayIndex));
+                        }
+                    } else {
+                        // Collection
+                        ResultHandle iterator = methodCreator.invokeInterfaceMethod(
+                                MethodDescriptor.ofMethod(Collection.class, "iterator",
+                                        Iterator.class),
+                                methodCreator.readInstanceField(problemFactCollectionField, thisObject));
+                        WhileLoop iteratorLoop = methodCreator.whileLoop(condition -> condition.ifTrue(condition
+                                .invokeInterfaceMethod(MethodDescriptor.ofMethod(Iterator.class, "hasNext", boolean.class),
+                                        iterator)));
+                        try (BytecodeCreator iteratorLoopBlock = iteratorLoop.block()) {
+                            ResultHandle element = iteratorLoopBlock.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(Iterator.class, "next", Object.class),
+                                    iterator);
+                            ResultHandle isInstanceOfPythonObject = iteratorLoopBlock.instanceOf(element, PythonObject.class);
+                            iteratorLoopBlock.ifTrue(isInstanceOfPythonObject)
+                                    .trueBranch()
+                                    .invokeInterfaceMethod(
+                                            MethodDescriptor.ofMethod(PythonObject.class, "visitIds", void.class, Map.class),
+                                            element, referenceMap);
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                throw new IllegalStateException("Unhandled GeneratedClassType (" + generatedClassType + ")");
+        }
+        methodCreator.returnValue(null);
+    }
+
     public enum GeneratedClassType {
         PROBLEM_FACT,
         PLANNING_ENTITY,
@@ -1027,6 +1337,8 @@ public class PythonWrapperGenerator {
         List<Object> returnTypeList = new ArrayList<>(optaplannerMethodAnnotations.size());
         List<FieldDescriptor> planningEntityFieldList = new ArrayList<>();
         List<FieldDescriptor> planningEntityCollectionFieldList = new ArrayList<>();
+        List<FieldDescriptor> problemFactFieldList = new ArrayList<>();
+        List<FieldDescriptor> problemFactCollectionFieldList = new ArrayList<>();
         List<FieldDescriptor> planningVariableFieldList = new ArrayList<>();
         List<String> planningVariableSetterNameList = new ArrayList<>();
         List<FieldDescriptor> planningScoreFieldList = new ArrayList<>();
@@ -1045,6 +1357,7 @@ public class PythonWrapperGenerator {
                             pythonSetterField,
                             methodName, returnType, signature, annotations, returnTypeList,
                             planningEntityFieldList, planningEntityCollectionFieldList,
+                            problemFactFieldList, problemFactCollectionFieldList,
                             planningVariableFieldList, planningVariableSetterNameList,
                             planningScoreFieldList, planningScoreSetterNameList));
         }
@@ -1054,6 +1367,18 @@ public class PythonWrapperGenerator {
         generateForceUpdate(classCreator, generatedClassType, parentClass, valueField,
                 planningEntityFieldList, planningEntityCollectionFieldList, planningVariableFieldList,
                 planningVariableSetterNameList, planningScoreFieldList, planningScoreSetterNameList);
+
+        generateReadFromPythonObject(classCreator, generatedClassType, parentClass,
+                planningEntityFieldList, planningEntityCollectionFieldList,
+                problemFactFieldList, problemFactCollectionFieldList,
+                planningVariableFieldList,
+                planningVariableSetterNameList);
+
+        generateVisitIds(classCreator, generatedClassType, parentClass,
+                planningEntityFieldList, planningEntityCollectionFieldList,
+                problemFactFieldList, problemFactCollectionFieldList,
+                planningVariableFieldList,
+                planningVariableSetterNameList);
 
         if (!hasOptaPyParentClass) {
             createToString(classCreator, valueField);
@@ -1146,25 +1471,6 @@ public class PythonWrapperGenerator {
                     methodCreator.getMethodParam(3));
         }
 
-        for (Field field : parentClass.getFields()) {
-            if (Modifier.isStatic(field.getModifiers()) || !PythonLikeObject.class.isAssignableFrom(field.getType())) {
-                continue;
-            }
-
-            ResultHandle fieldValue = methodCreator.invokeStaticMethod(
-                    MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getPythonLikeObjectForAttribute",
-                            PythonLikeObject.class, PythonObject.class,
-                            String.class),
-                    methodCreator.getThis(),
-                    methodCreator.load(PythonClassTranslator.getPythonFieldName(field.getName())));
-            fieldValue = methodCreator.invokeStaticMethod(
-                    MethodDescriptor.ofMethod(JavaPythonTypeConversionImplementor.class, "convertPythonObjectToJavaType",
-                            Object.class, Class.class, PythonLikeObject.class),
-                    methodCreator.loadClass(field.getType()),
-                    fieldValue); // convert PythonNone to null if the field cannot be assigned to it
-            methodCreator.writeInstanceField(FieldDescriptor.of(field), methodCreator.getThis(), fieldValue);
-        }
-
         for (int i = 0; i < fieldDescriptorList.size(); i++) {
             FieldDescriptor fieldDescriptor = fieldDescriptorList.get(i);
             Object returnType = returnTypeList.get(i);
@@ -1222,6 +1528,11 @@ public class PythonWrapperGenerator {
                                 actualClass, outResultHandle, methodCreator.getMethodParam(2),
                                 methodCreator.getMethodParam(3)));
             }
+        }
+
+        for (FieldDescriptor fieldDescriptor : fieldDescriptorList) {
+            String methodName = fieldDescriptor.getName().substring(0, fieldDescriptor.getName().length() - 6);
+
             // Put it into the map used by the python interpreter
             AssignableResultHandle valueAsPythonLikeObject = methodCreator.createVariable(PythonLikeObject.class);
             methodCreator.assign(valueAsPythonLikeObject, methodCreator.invokeStaticMethod(
@@ -1248,7 +1559,6 @@ public class PythonWrapperGenerator {
                     methodCreator.load(fieldName),
                     valueAsPythonLikeObject);
             try {
-                ;
                 Method setterMethod =
                         lookupMethod(parentClass, PythonClassTranslator.getJavaMethodName("s" + methodName.substring(1)));
                 methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(setterMethod), methodCreator.getThis(),
@@ -1268,8 +1578,18 @@ public class PythonWrapperGenerator {
         initCreator.invokeInterfaceMethod(
                 MethodDescriptor.ofMethod(Map.class, "put", Object.class, Object.class, Object.class),
                 initCreator.getMethodParam(2), initCreator.getMethodParam(1), initCreator.getThis());
+        initCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class,
+                "$setCPythonReference",
+                void.class,
+                OpaquePythonReference.class),
+                initCreator.getThis(), initCreator.getMethodParam(0));
         initCreator.writeInstanceField(valueField, initCreator.getThis(), initCreator.getMethodParam(0));
         initCreator.writeInstanceField(referenceMapField, initCreator.getThis(), initCreator.getMethodParam(2));
+        initCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class,
+                "$setInstanceMap",
+                void.class,
+                Map.class),
+                initCreator.getThis(), initCreator.getMethodParam(2));
         initCreator.writeInstanceField(pythonSetterField, initCreator.getThis(), initCreator.getMethodParam(3));
         initCreator.writeInstanceField(pythonLikeValueMapField, initCreator.getThis(),
                 initCreator.newInstance(MethodDescriptor.ofConstructor(HashMap.class)));
@@ -1282,6 +1602,7 @@ public class PythonWrapperGenerator {
             String methodName, Class<?> returnType, String signature,
             List<Map<String, Object>> annotations, List<Object> returnTypeList,
             List<FieldDescriptor> planningEntityFieldList, List<FieldDescriptor> planningEntityCollectionFieldList,
+            List<FieldDescriptor> problemFactFieldList, List<FieldDescriptor> problemFactCollectionFieldList,
             List<FieldDescriptor> planningVariableFieldList, List<String> planningVariableSetterNameList,
             List<FieldDescriptor> planningScoreFieldDescriptor,
             List<String> planningScoreFieldDescriptorName) {
@@ -1326,6 +1647,10 @@ public class PythonWrapperGenerator {
                 planningVariableFieldList.add(fieldDescriptor);
             } else if (PlanningScore.class.isAssignableFrom(annotationType)) {
                 planningScoreFieldDescriptor.add(fieldDescriptor);
+            } else if (ProblemFactProperty.class.isAssignableFrom(annotationType)) {
+                problemFactFieldList.add(fieldDescriptor);
+            } else if (ProblemFactCollectionProperty.class.isAssignableFrom(annotationType)) {
+                problemFactCollectionFieldList.add(fieldDescriptor);
             }
         }
 

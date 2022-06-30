@@ -27,6 +27,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -40,8 +41,9 @@ import org.optaplanner.python.translator.opcodes.object.DeleteAttrOpcode;
 import org.optaplanner.python.translator.opcodes.object.LoadAttrOpcode;
 import org.optaplanner.python.translator.opcodes.object.StoreAttrOpcode;
 import org.optaplanner.python.translator.opcodes.variable.LoadFastOpcode;
-import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
+import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.GeneratedFunctionMethodReference;
+import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
@@ -64,7 +66,7 @@ public class PythonClassTranslator {
         List<PythonLikeType> superTypeList = new ArrayList<>(pythonCompiledClass.superclassList.size());
         for (int i = 0; i < pythonCompiledClass.superclassList.size(); i++) {
             if (pythonCompiledClass.superclassList.get(i) == PythonLikeType.getBaseType()) {
-                superTypeList.add(AbstractPythonLikeObject.OBJECT_TYPE);
+                superTypeList.add(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
             } else {
                 superTypeList.add(pythonCompiledClass.superclassList.get(i));
             }
@@ -187,6 +189,9 @@ public class PythonClassTranslator {
             createStaticMethod(pythonLikeType, classWriter, internalClassName, classMethodEntry.getKey(),
                     classMethodEntry.getValue());
         }
+
+        createCPythonOperationMethods(classWriter, internalClassName, superClassType.getJavaTypeInternalName(),
+                attributeNameToTypeMap);
 
         classWriter.visitEnd();
         writeClassOutput(classNameToBytecode, className, classWriter.toByteArray());
@@ -688,6 +693,138 @@ public class PythonClassTranslator {
         methodVisitor.visitEnd();
     }
 
+    public static void createCPythonOperationMethods(ClassWriter classWriter, String internalClassName,
+            String superClassInternalName, Map<String, PythonLikeType> attributeNameToType) {
+        createReadFromCPythonReference(classWriter, internalClassName, superClassInternalName, attributeNameToType);
+        createWriteToCPythonReference(classWriter, internalClassName, superClassInternalName, attributeNameToType);
+    }
+
+    public static void createReadFromCPythonReference(ClassWriter classWriter, String internalClassName,
+            String superClassInternalName, Map<String, PythonLikeType> attributeNameToType) {
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "$readFieldsFromCPythonReference",
+                Type.getMethodDescriptor(Type.VOID_TYPE), null,
+                null);
+        methodVisitor.visitCode();
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, superClassInternalName,
+                "$readFieldsFromCPythonReference",
+                Type.getMethodDescriptor(Type.VOID_TYPE), false);
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(CPythonBackedPythonLikeObject.class),
+                "$cpythonReference", Type.getDescriptor(OpaquePythonReference.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+
+        Label ifReferenceIsNotNull = new Label();
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, ifReferenceIsNotNull);
+        methodVisitor.visitInsn(Opcodes.RETURN);
+
+        methodVisitor.visitLabel(ifReferenceIsNotNull);
+        for (String field : attributeNameToType.keySet()) {
+            methodVisitor.visitInsn(Opcodes.DUP2);
+            methodVisitor.visitLdcInsn(field);
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+            methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(CPythonBackedPythonLikeObject.class),
+                    "$instanceMap", Type.getDescriptor(Map.class));
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(CPythonBackedPythonInterpreter.class),
+                    "lookupAttributeOnPythonReference",
+                    Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                            Type.getType(OpaquePythonReference.class),
+                            Type.getType(String.class),
+                            Type.getType(Map.class)),
+                    false);
+
+            boolean isAssignableFromNone = false;
+
+            try {
+                isAssignableFromNone = attributeNameToType.get(field).getJavaClass().isAssignableFrom(PythonNone.class);
+            } catch (ClassNotFoundException e) {
+                // do nothing
+            }
+
+            Label ifFieldIsNone = new Label();
+            Label doneSettingField = new Label();
+
+            if (!isAssignableFromNone) {
+                methodVisitor.visitInsn(Opcodes.DUP);
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonNone.class),
+                        "INSTANCE", Type.getDescriptor(PythonNone.class));
+
+                methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, ifFieldIsNone);
+            }
+
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, attributeNameToType.get(field).getJavaTypeInternalName());
+            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName, getJavaFieldName(field),
+                    "L" + attributeNameToType.get(field).getJavaTypeInternalName() + ";");
+
+            if (!isAssignableFromNone) {
+                methodVisitor.visitJumpInsn(Opcodes.GOTO, doneSettingField);
+
+                methodVisitor.visitLabel(ifFieldIsNone);
+                methodVisitor.visitInsn(Opcodes.POP);
+                methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName, getJavaFieldName(field),
+                        "L" + attributeNameToType.get(field).getJavaTypeInternalName() + ";");
+                methodVisitor.visitLabel(doneSettingField);
+            }
+        }
+        methodVisitor.visitInsn(Opcodes.RETURN);
+
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+    }
+
+    public static void createWriteToCPythonReference(ClassWriter classWriter, String internalClassName,
+            String superClassInternalName, Map<String, PythonLikeType> attributeNameToType) {
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "$writeFieldsToCPythonReference",
+                Type.getMethodDescriptor(Type.VOID_TYPE), null,
+                null);
+        methodVisitor.visitCode();
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, superClassInternalName,
+                "$writeFieldsToCPythonReference",
+                Type.getMethodDescriptor(Type.VOID_TYPE), false);
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(CPythonBackedPythonLikeObject.class),
+                "$cpythonReference", Type.getDescriptor(OpaquePythonReference.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+
+        Label ifReferenceIsNotNull = new Label();
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, ifReferenceIsNotNull);
+        methodVisitor.visitInsn(Opcodes.RETURN);
+
+        methodVisitor.visitLabel(ifReferenceIsNotNull);
+
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        for (String field : attributeNameToType.keySet()) {
+            methodVisitor.visitInsn(Opcodes.DUP2);
+
+            methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, getJavaFieldName(field),
+                    "L" + attributeNameToType.get(field).getJavaTypeInternalName() + ";");
+            methodVisitor.visitLdcInsn(field);
+            methodVisitor.visitInsn(Opcodes.SWAP);
+
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(CPythonBackedPythonInterpreter.class),
+                    "setAttributeOnPythonReference",
+                    Type.getMethodDescriptor(Type.VOID_TYPE,
+                            Type.getType(OpaquePythonReference.class),
+                            Type.getType(String.class),
+                            Type.getType(Object.class)),
+                    false);
+        }
+        methodVisitor.visitInsn(Opcodes.RETURN);
+
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+    }
+
     public static InterfaceDeclaration getInterfaceForFunctionSignature(FunctionSignature functionSignature) {
         return functionSignatureToInterfaceName.computeIfAbsent(functionSignature,
                 PythonClassTranslator::createInterfaceForFunctionSignature);
@@ -712,6 +849,7 @@ public class PythonClassTranslator {
             getInterfaceForPythonFunctionIgnoringReturn(PythonCompiledFunction pythonCompiledFunction) {
         String[] parameterTypes = new String[pythonCompiledFunction.co_argcount];
         List<PythonLikeType> parameterTypeAnnotations = pythonCompiledFunction.getParameterTypes();
+
         for (int i = 0; i < parameterTypeAnnotations.size(); i++) {
             parameterTypes[i] = 'L' + parameterTypeAnnotations.get(i).getJavaTypeInternalName() + ';';
         }

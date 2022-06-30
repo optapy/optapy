@@ -83,7 +83,11 @@ public class PythonCompiledFunction {
 
         for (int i = 0; i < co_argcount; i++) {
             String parameterName = co_varnames.get(i);
-            out.add(typeAnnotations.getOrDefault(parameterName, defaultType));
+            PythonLikeType parameterType = typeAnnotations.get(parameterName);
+            if (parameterType == null) { // map may have nulls
+                parameterType = defaultType;
+            }
+            out.add(parameterType);
         }
         return out;
     }

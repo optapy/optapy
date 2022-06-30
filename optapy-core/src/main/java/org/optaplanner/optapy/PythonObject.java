@@ -1,6 +1,7 @@
 package org.optaplanner.optapy;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
@@ -29,4 +30,8 @@ public interface PythonObject extends PythonLikeObject {
     Map<Number, Object> get__optapy_reference_map();
 
     void forceUpdate();
+
+    void readFromPythonObject(Set doneSet, Map<Number, Object> referenceMap);
+
+    void visitIds(Map<Number, Object> referenceMap);
 }

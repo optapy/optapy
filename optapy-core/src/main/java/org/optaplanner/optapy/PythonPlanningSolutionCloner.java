@@ -1,5 +1,7 @@
 package org.optaplanner.optapy;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.function.Function;
 
 import org.optaplanner.core.api.domain.solution.cloner.SolutionCloner;
@@ -33,7 +35,11 @@ public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
         OpaquePythonReference planningClone = deepClonePythonObject.apply(toClone);
 
         // Wrap the deep cloned OpaquePythonReference into a new PythonObject
-        return PythonWrapperGenerator.wrap(o.getClass(), planningClone, toClone.get__optapy_reference_map(),
-                pythonSetter);
+        PythonObject out =
+                (PythonObject) PythonWrapperGenerator.wrap(o.getClass(), planningClone, toClone.get__optapy_reference_map(),
+                        pythonSetter);
+        out.visitIds(out.get__optapy_reference_map());
+        out.readFromPythonObject(Collections.newSetFromMap(new IdentityHashMap<>()), out.get__optapy_reference_map());
+        return out;
     }
 }

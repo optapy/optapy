@@ -10,8 +10,8 @@ import java.util.Objects;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 
-public class PythonLikeList extends AbstractPythonLikeObject implements List<PythonLikeObject> {
-    final List<PythonLikeObject> delegate;
+public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<T> {
+    final List delegate;
     private int remainderToAdd;
 
     public final static PythonLikeType LIST_TYPE = new PythonLikeType("list", PythonLikeList.class);
@@ -71,7 +71,7 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
         }
     }
 
-    public PythonLikeList(List<PythonLikeObject> delegate) {
+    public PythonLikeList(List delegate) {
         super(LIST_TYPE);
         this.delegate = delegate;
         remainderToAdd = 0;
@@ -97,7 +97,7 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
 
     public PythonInteger count(PythonLikeObject search) {
         long count = 0;
-        for (PythonLikeObject x : delegate) {
+        for (Object x : delegate) {
             if (Objects.equals(search, x)) {
                 count++;
             }
@@ -126,7 +126,7 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     }
 
     @Override
-    public Iterator<PythonLikeObject> iterator() {
+    public Iterator<T> iterator() {
         return delegate.iterator();
     }
 
@@ -135,13 +135,12 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
         return delegate.toArray();
     }
 
-    @Override
-    public <T> T[] toArray(T[] ts) {
+    public Object[] toArray(Object[] ts) {
         return delegate.toArray(ts);
     }
 
     @Override
-    public boolean add(PythonLikeObject pythonLikeObject) {
+    public boolean add(Object pythonLikeObject) {
         return delegate.add(pythonLikeObject);
     }
 
@@ -151,27 +150,27 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     }
 
     @Override
-    public boolean containsAll(Collection<?> collection) {
+    public boolean containsAll(Collection collection) {
         return delegate.containsAll(collection);
     }
 
     @Override
-    public boolean addAll(Collection<? extends PythonLikeObject> collection) {
+    public boolean addAll(Collection collection) {
         return delegate.addAll(collection);
     }
 
     @Override
-    public boolean addAll(int i, Collection<? extends PythonLikeObject> collection) {
+    public boolean addAll(int i, Collection collection) {
         return delegate.addAll(i, collection);
     }
 
     @Override
-    public boolean removeAll(Collection<?> collection) {
+    public boolean removeAll(Collection collection) {
         return delegate.removeAll(collection);
     }
 
     @Override
-    public boolean retainAll(Collection<?> collection) {
+    public boolean retainAll(Collection collection) {
         return delegate.retainAll(collection);
     }
 
@@ -181,23 +180,23 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     }
 
     @Override
-    public PythonLikeObject get(int i) {
-        return delegate.get(i);
+    public T get(int i) {
+        return (T) delegate.get(i);
     }
 
     @Override
-    public PythonLikeObject set(int i, PythonLikeObject pythonLikeObject) {
+    public Object set(int i, Object pythonLikeObject) {
         return delegate.set(i, pythonLikeObject);
     }
 
     @Override
-    public void add(int i, PythonLikeObject pythonLikeObject) {
+    public void add(int i, Object pythonLikeObject) {
         delegate.add(i, pythonLikeObject);
     }
 
     @Override
-    public PythonLikeObject remove(int i) {
-        return delegate.remove(i);
+    public T remove(int i) {
+        return (T) delegate.remove(i);
     }
 
     @Override
@@ -211,17 +210,17 @@ public class PythonLikeList extends AbstractPythonLikeObject implements List<Pyt
     }
 
     @Override
-    public ListIterator<PythonLikeObject> listIterator() {
+    public ListIterator<T> listIterator() {
         return delegate.listIterator();
     }
 
     @Override
-    public ListIterator<PythonLikeObject> listIterator(int i) {
+    public ListIterator<T> listIterator(int i) {
         return delegate.listIterator(i);
     }
 
     @Override
-    public List<PythonLikeObject> subList(int i, int i1) {
+    public List<T> subList(int i, int i1) {
         return delegate.subList(i, i1);
     }
 

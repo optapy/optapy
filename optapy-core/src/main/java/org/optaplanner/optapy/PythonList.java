@@ -5,17 +5,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.optaplanner.core.api.function.TriFunction;
-import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.OpaqueJavaReference;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonLikeList;
-import org.optaplanner.python.translator.types.PythonLikeType;
 
-public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference {
+public class PythonList<T> extends PythonLikeList<T> implements PythonObject, List<T> {
     private static Function<OpaquePythonReference, Object> clearPythonList;
     private static Function<OpaquePythonReference, Integer> getPythonListLength;
     private static BiFunction<OpaquePythonReference, Integer, Object> getItemAtIndexInPythonList;
@@ -102,6 +100,16 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     }
 
     @Override
+    public void readFromPythonObject(Set doneSet, Map<Number, Object> referenceMap) {
+
+    }
+
+    @Override
+    public void visitIds(Map<Number, Object> referenceMap) {
+
+    }
+
+    @Override
     public int size() {
         return getPythonListLength.apply(pythonListOpaqueReference);
     }
@@ -123,8 +131,8 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     }
 
     @Override
-    public Iterator<T> iterator() {
-        return new Iterator<T>() {
+    public Iterator iterator() {
+        return new Iterator() {
             int index = 0;
             final int length = size();
 
@@ -134,8 +142,8 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
             }
 
             @Override
-            public T next() {
-                T out = get(index);
+            public Object next() {
+                Object out = get(index);
                 index++;
                 return out;
             }
@@ -153,20 +161,20 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     }
 
     @Override
-    public <T1> T1[] toArray(T1[] t1s) {
+    public Object[] toArray(Object[] t1s) {
         int length = size();
         if (t1s.length == length) {
             for (int i = 0; i < length; i++) {
-                t1s[i] = (T1) get(i);
+                t1s[i] = get(i);
             }
             return t1s;
         } else {
-            return (T1[]) toArray();
+            return toArray();
         }
     }
 
     @Override
-    public boolean add(T t) {
+    public boolean add(Object t) {
         if (t instanceof OpaquePythonReference) {
             addItemToPythonList.apply(pythonListOpaqueReference, t);
         } else if (t instanceof PythonObject) {
@@ -189,7 +197,7 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     }
 
     @Override
-    public boolean containsAll(Collection<?> collection) {
+    public boolean containsAll(Collection collection) {
         for (Object o : collection) {
             if (!contains(o)) {
                 return false;
@@ -199,25 +207,25 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     }
 
     @Override
-    public boolean addAll(Collection<? extends T> collection) {
+    public boolean addAll(Collection collection) {
         for (Object o : collection) {
-            add((T) o);
+            add(o);
         }
         return true;
     }
 
     @Override
-    public boolean addAll(int i, Collection<? extends T> collection) {
+    public boolean addAll(int i, Collection collection) {
         int index = i;
         for (Object o : collection) {
-            add(index, (T) o);
+            add(index, o);
             index++;
         }
         return true;
     }
 
     @Override
-    public boolean removeAll(Collection<?> collection) {
+    public boolean removeAll(Collection collection) {
         boolean anyRemoved = false;
         for (Object o : collection) {
             anyRemoved |= remove(o);
@@ -226,7 +234,7 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     }
 
     @Override
-    public boolean retainAll(Collection<?> collection) {
+    public boolean retainAll(Collection collection) {
         boolean anyRemoved = false;
         for (Object o : collection) {
             if (!contains(o)) {
@@ -257,14 +265,14 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
 
         // Different proxies of the same object are different objects according to IdentityHashMap,
         // so wrap it (which will return the same Proxy if it was already created)
-        T wrapped_out = (T) PythonWrapperGenerator.wrap(PythonWrapperGenerator.getJavaClass((OpaquePythonReference) out),
+        Object wrapped_out = PythonWrapperGenerator.wrap(PythonWrapperGenerator.getJavaClass((OpaquePythonReference) out),
                 (OpaquePythonReference) out, idMap, pythonSetter);
-        return wrapped_out;
+        return (T) wrapped_out;
     }
 
     @Override
-    public T set(int i, T t) {
-        T old = get(i);
+    public Object set(int i, Object t) {
+        Object old = get(i);
         if (t instanceof OpaquePythonReference) {
             setItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
         } else if (t instanceof PythonObject) {
@@ -276,7 +284,7 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     }
 
     @Override
-    public void add(int i, T t) {
+    public void add(int i, Object t) {
         if (t instanceof OpaquePythonReference) {
             addItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
         } else if (t instanceof PythonObject) {
@@ -316,18 +324,18 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
     }
 
     @Override
-    public ListIterator<T> listIterator() {
+    public ListIterator listIterator() {
         return new PythonListIterator(0);
     }
 
     @Override
-    public ListIterator<T> listIterator(int start) {
+    public ListIterator listIterator(int start) {
         return new PythonListIterator(start);
     }
 
     @Override
-    public List<T> subList(int start, int end) {
-        return new PythonList<>(slicePythonList.apply(pythonListOpaqueReference, start, end), null, null, pythonSetter);
+    public List subList(int start, int end) {
+        return new PythonList(slicePythonList.apply(pythonListOpaqueReference, start, end), null, null, pythonSetter);
     }
 
     @Override
@@ -335,30 +343,7 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
         return PythonWrapperGenerator.getPythonObjectString(pythonListOpaqueReference);
     }
 
-    public PythonLikeObject proxy() {
-        return new PythonLikeList((List<PythonLikeObject>) this);
-    }
-
-    // These methods do not need to be implemented since the list is proxied
-    @Override
-    public PythonLikeObject __getAttributeOrNull(String attributeName) {
-        return null;
-    }
-
-    @Override
-    public void __setAttribute(String attributeName, PythonLikeObject value) {
-    }
-
-    @Override
-    public void __deleteAttribute(String attributeName) {
-    }
-
-    @Override
-    public PythonLikeType __getType() {
-        return null;
-    }
-
-    public class PythonListIterator implements ListIterator<T> {
+    public class PythonListIterator implements ListIterator {
 
         int index;
 
@@ -372,8 +357,8 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
         }
 
         @Override
-        public T next() {
-            T out = get(index);
+        public Object next() {
+            Object out = get(index);
             index++;
             return out;
         }
@@ -384,7 +369,7 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
         }
 
         @Override
-        public T previous() {
+        public Object previous() {
             index--;
             return get(index);
         }
@@ -405,12 +390,12 @@ public class PythonList<T> implements PythonObject, List<T>, OpaqueJavaReference
         }
 
         @Override
-        public void set(T t) {
+        public void set(Object t) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void add(T t) {
+        public void add(Object t) {
             throw new UnsupportedOperationException();
         }
     }

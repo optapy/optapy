@@ -7,55 +7,46 @@ import java.util.Map;
 import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 
-public class PythonObjectWrapper implements PythonLikeObject, PythonLikeFunction, Comparable<PythonObjectWrapper> {
+public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
+        implements PythonLikeObject, PythonLikeFunction, Comparable<PythonObjectWrapper> {
 
     private final static PythonLikeType PYTHON_REFERENCE_TYPE =
             new PythonLikeType("python-reference", PythonObjectWrapper.class),
             $TYPE = PYTHON_REFERENCE_TYPE;
-
-    private final OpaquePythonReference pythonReference;
     private final Map<String, PythonLikeObject> cachedAttributeMap;
 
-    private final CPythonType type;
-
     public PythonObjectWrapper(OpaquePythonReference pythonReference) {
-        this.pythonReference = pythonReference;
+        super(CPythonType.lookupTypeOfPythonObject(pythonReference), pythonReference);
         cachedAttributeMap = new HashMap<>();
-        type = CPythonType.lookupTypeOfPythonObject(pythonReference);
     }
 
     public OpaquePythonReference getWrappedObject() {
-        return pythonReference;
+        return $cpythonReference;
     }
 
     @Override
     public PythonLikeObject __getAttributeOrNull(String attributeName) {
         return cachedAttributeMap.computeIfAbsent(attributeName,
-                key -> CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
-                        attributeName));
+                key -> CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference($cpythonReference,
+                        attributeName, $instanceMap));
     }
 
     @Override
     public void __setAttribute(String attributeName, PythonLikeObject value) {
         cachedAttributeMap.put(attributeName, value);
-        CPythonBackedPythonInterpreter.setAttributeOnPythonReference(pythonReference, attributeName, value);
+        CPythonBackedPythonInterpreter.setAttributeOnPythonReference($cpythonReference, attributeName, value);
     }
 
     @Override
     public void __deleteAttribute(String attributeName) {
         cachedAttributeMap.remove(attributeName);
-        CPythonBackedPythonInterpreter.deleteAttributeOnPythonReference(pythonReference, attributeName);
-    }
-
-    @Override
-    public PythonLikeType __getType() {
-        return type;
+        CPythonBackedPythonInterpreter.deleteAttributeOnPythonReference($cpythonReference, attributeName);
     }
 
     @Override
     public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
             Map<PythonString, PythonLikeObject> namedArguments) {
-        return CPythonBackedPythonInterpreter.callPythonReference(pythonReference, positionalArguments, namedArguments);
+        return CPythonBackedPythonInterpreter.callPythonReference($cpythonReference, positionalArguments, namedArguments);
     }
 
     @Override

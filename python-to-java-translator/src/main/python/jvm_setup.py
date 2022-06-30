@@ -39,6 +39,8 @@ def init(*args, path: List[str] = None, include_translator_jars: bool = True):
     CPythonBackedPythonInterpreter.lookupPythonReferenceIdPythonFunction = GetPythonObjectId()
     CPythonBackedPythonInterpreter.lookupPythonReferenceTypePythonFunction = GetPythonObjectType()
     CPythonBackedPythonInterpreter.lookupAttributeOnPythonReferencePythonFunction = GetAttributeOnPythonObject()
+    CPythonBackedPythonInterpreter.lookupAttributeOnPythonReferenceWithMapPythonFunction = \
+        GetAttributeOnPythonObjectWithMap()
     CPythonBackedPythonInterpreter.setAttributeOnPythonReferencePythonFunction = SetAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.deleteAttributeOnPythonReferencePythonFunction = DeleteAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.callPythonFunction = CallPythonFunction()
@@ -68,6 +70,17 @@ class GetAttributeOnPythonObject:
             return None
         out = getattr(python_object, attribute_name)
         return convert_to_java_python_like_object(out)
+
+
+@jpype.JImplements('org.optaplanner.python.translator.TriFunction', deferred=True)
+class GetAttributeOnPythonObjectWithMap:
+    @jpype.JOverride()
+    def apply(self, python_object, attribute_name, instance_map):
+        from .python_to_java_bytecode_translator import convert_to_java_python_like_object
+        if not hasattr(python_object, attribute_name):
+            return None
+        out = getattr(python_object, attribute_name)
+        return convert_to_java_python_like_object(out, instance_map)
 
 
 @jpype.JImplements('org.optaplanner.python.translator.TriConsumer', deferred=True)
