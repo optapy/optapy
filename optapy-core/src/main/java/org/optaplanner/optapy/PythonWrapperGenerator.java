@@ -14,7 +14,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +50,6 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
-import org.optaplanner.python.translator.types.PythonLikeSet;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 
@@ -84,9 +82,6 @@ public class PythonWrapperGenerator {
 
     // Reads an attribute on a OpaquePythonReference
     private static BiFunction<OpaquePythonReference, String, Object> pythonObjectIdAndAttributeNameToValue;
-
-    // Reads an attribute on a OpaquePythonReference as a PythonLikeObject;
-    private static TriFunction<OpaquePythonReference, String, Map<Number, PythonLikeObject>, Object> pythonObjectIdAndAttributeNameToPythonLikeValue;
 
     // Sets an attribute on a OpaquePythonReference
     public static TriFunction<OpaquePythonReference, String, Object, Object> pythonObjectIdAndAttributeSetter;
@@ -130,13 +125,6 @@ public class PythonWrapperGenerator {
     @SuppressWarnings("unused")
     public static void setPythonObjectIdAndAttributeNameToValue(BiFunction<OpaquePythonReference, String, Object> function) {
         pythonObjectIdAndAttributeNameToValue = function;
-    }
-
-    @SuppressWarnings("unused")
-    public static void
-            setPythonObjectIdAndAttributeNameToPythonLikeValue(
-                    TriFunction<OpaquePythonReference, String, Map<Number, PythonLikeObject>, Object> function) {
-        pythonObjectIdAndAttributeNameToPythonLikeValue = function;
     }
 
     @SuppressWarnings("unused")
@@ -184,13 +172,7 @@ public class PythonWrapperGenerator {
         return pythonObjectToId.apply(pythonObject.get__optapy_Id());
     }
 
-    public static PythonLikeObject getPythonLikeObjectForAttribute(PythonObject object, String attributeName,
-            Map<Number, PythonLikeObject> instanceMap) {
-        Object out = pythonObjectIdAndAttributeNameToPythonLikeValue.apply(object.get__optapy_Id(), attributeName,
-                instanceMap);
-        return unwrapOptaPyReferences(object.get__optapy_reference_map(), out);
-    }
-
+    @SuppressWarnings("unused") // used by variable listener/custom shadow variable on Python side
     public static void updateVariableFromPythonObject(PythonObject object, String variableName)
             throws IllegalAccessException, InvocationTargetException {
         Object newValue;
@@ -220,35 +202,6 @@ public class PythonWrapperGenerator {
             }
         }
         throw new IllegalArgumentException("Unable to find variable (" + variableName + ") on entity (" + object + ").");
-    }
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static PythonLikeObject unwrapOptaPyReferences(Map<Number, Object> referenceMap, Object toUnwrap) {
-        if (toUnwrap instanceof OptaPyObjectReference) {
-            return (PythonLikeObject) referenceMap.get(((OptaPyObjectReference) toUnwrap).getId());
-        } else if (toUnwrap instanceof List) {
-            List toUnwrapList = (List) toUnwrap;
-            toUnwrapList.replaceAll(unwrap -> unwrapOptaPyReferences(referenceMap, unwrap));
-            return (PythonLikeObject) toUnwrapList;
-        } else if (toUnwrap instanceof Map) {
-            Map toUnwrapMap = (Map) toUnwrap;
-            Set<Map.Entry> entrySet = new HashSet<>(toUnwrapMap.entrySet());
-            for (Map.Entry entry : entrySet) {
-                toUnwrapMap.remove(entry.getKey());
-                toUnwrapMap.put(unwrapOptaPyReferences(referenceMap, entry.getKey()),
-                        unwrapOptaPyReferences(referenceMap, entry.getValue()));
-            }
-            return (PythonLikeObject) toUnwrapMap;
-        } else if (toUnwrap instanceof Set) {
-            Set toUnwrapSet = (Set) toUnwrap;
-            PythonLikeSet out = new PythonLikeSet();
-            for (Object o : toUnwrapSet) {
-                out.add(unwrapOptaPyReferences(referenceMap, o));
-            }
-            return out;
-        } else {
-            return (PythonLikeObject) toUnwrap;
-        }
     }
 
     @SuppressWarnings("unused")
@@ -988,27 +941,6 @@ public class PythonWrapperGenerator {
         methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Collection.class, "add", boolean.class, Object.class),
                 methodCreator.getMethodParam(0), methodCreator.getThis());
 
-        for (Field field : parentClass.getFields()) {
-            if (Modifier.isStatic(field.getModifiers()) || !PythonLikeObject.class.isAssignableFrom(field.getType())) {
-                continue;
-            }
-
-            ResultHandle fieldValue = methodCreator.invokeStaticMethod(
-                    MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getPythonLikeObjectForAttribute",
-                            PythonLikeObject.class, PythonObject.class,
-                            String.class, Map.class),
-                    methodCreator.getThis(),
-                    methodCreator.load(PythonClassTranslator.getPythonFieldName(field.getName())),
-                    referenceMap);
-
-            fieldValue = methodCreator.invokeStaticMethod(
-                    MethodDescriptor.ofMethod(JavaPythonTypeConversionImplementor.class, "convertPythonObjectToJavaType",
-                            Object.class, Class.class, PythonLikeObject.class),
-                    methodCreator.loadClass(field.getType()),
-                    fieldValue); // convert PythonNone to null if the field cannot be assigned to it
-            methodCreator.writeInstanceField(FieldDescriptor.of(field), methodCreator.getThis(), fieldValue);
-        }
-
         switch (generatedClassType) {
             case PROBLEM_FACT:
             case PLANNING_ENTITY: {
@@ -1125,8 +1057,9 @@ public class PythonWrapperGenerator {
             default:
                 throw new IllegalStateException("Unhandled GeneratedClassType (" + generatedClassType + ")");
         }
-        //methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class, "$readFieldsFromCPythonReference", void.class),
-        //                                  methodCreator.getThis());
+        methodCreator.invokeVirtualMethod(
+                MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class, "$readFieldsFromCPythonReference", void.class),
+                methodCreator.getThis());
         methodCreator.returnValue(null);
     }
 
