@@ -1,4 +1,5 @@
 import pathlib
+import threading
 
 from jpype.types import *
 from jpype import JImplements, JImplementationFor, JOverride
@@ -18,6 +19,18 @@ if TYPE_CHECKING:
 
 Solution_ = TypeVar('Solution_')
 ProblemId_ = TypeVar('ProblemId_')
+
+
+def await_best_solution_from_solver_job(solver_job: '_SolverJob', problem_id, exception_handler):
+    try:
+        solver_job.getFinalBestSolution()
+    except Exception as e:
+        exception_handler(problem_id, e)
+        raise e
+
+
+def create_python_thread_for_solver_job(solver_job: '_SolverJob', problem_id, exception_handler):
+    threading.Thread(target=await_best_solution_from_solver_job, args=(solver_job, problem_id, exception_handler)).start()
 
 
 @JImplements('org.optaplanner.core.api.solver.SolverManager', deferred=True)
@@ -88,8 +101,11 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
             self._wrap_final_best_solution_and_exception_handler(cleanup, final_best_solution_consumer,
                                                                  exception_handler)
 
-        return self.delegate.solve(problem_id, problem_getter, wrapped_final_best_solution_consumer,
-                                   wrapped_exception_handler)
+        solver_job = self.delegate.solve(problem_id, problem_getter, wrapped_final_best_solution_consumer,
+                                         wrapped_exception_handler)
+        create_python_thread_for_solver_job(solver_job, problem_id,
+                                            exception_handler if exception_handler is not None else lambda _1, _2: None)
+        return solver_job
 
     @JOverride
     def solveAndListen(self, problem_id: ProblemId_, problem: Union[Solution_, Callable[[ProblemId_], Solution_]],
@@ -105,9 +121,13 @@ class _PythonSolverManager(Generic[Solution_, ProblemId_]):
         def wrapped_best_solution_consumer(best_solution):
             best_solution_consumer(_unwrap_java_object(best_solution))
 
-        return self.delegate.solveAndListen(problem_id, problem_getter, wrapped_best_solution_consumer,
-                                            wrapped_final_best_solution_consumer,
-                                            wrapped_exception_handler)
+        solver_job = self.delegate.solveAndListen(problem_id, problem_getter, wrapped_best_solution_consumer,
+                                                  wrapped_final_best_solution_consumer,
+                                                  wrapped_exception_handler)
+
+        create_python_thread_for_solver_job(solver_job, problem_id,
+                                            exception_handler if exception_handler is not None else lambda _1, _2: None)
+        return solver_job
 
     @JOverride
     def getSolverStatus(self, problem_id: ProblemId_) -> '_SolverStatus':
