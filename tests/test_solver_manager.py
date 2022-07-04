@@ -1,3 +1,4 @@
+import pytest
 import optapy
 import optapy.types
 import optapy.score
@@ -204,3 +205,114 @@ def test_solve():
         assert_problem_change_solver_run(solver_manager, solver_job)
         assert len(solution_list) == 2
     time.sleep(1)  # ensure the thread factory close
+
+
+@pytest.mark.filterwarnings("ignore:.*Exception in thread.*:pytest.PytestUnhandledThreadExceptionWarning")
+def test_error():
+    @optapy.problem_fact
+    class Value:
+        def __init__(self, value):
+            self.value = value
+
+        @optapy.planning_id
+        def get_id(self):
+            return self.value
+
+        def __str__(self):
+            return f'Value({self.value})'
+
+        def __repr__(self):
+            return str(self)
+
+    @optapy.planning_entity
+    class Entity:
+        def __init__(self, code, value=None):
+            self.code = code
+            self.value = value
+
+        @optapy.planning_variable(Value, value_range_provider_refs=['value_range'])
+        def get_value(self):
+            return self.value
+
+        def set_value(self, value):
+            self.value = value
+
+        @optapy.planning_id
+        def get_id(self):
+            return self.code
+
+        def __str__(self):
+            return f'Entity(code={self.code}, value={self.value})'
+
+        def __repr__(self):
+            return str(self)
+
+    @optapy.constraint_provider
+    def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
+        return [
+            constraint_factory.for_each(Entity)
+                              .filter(lambda e: e.missing_attribute == 1)
+                              .reward('Maximize Value', optapy.score.SimpleScore.ONE, lambda entity: entity.value.value)
+        ]
+
+    @optapy.planning_solution
+    class Solution:
+        def __init__(self, entity_list, value_range, score=None):
+            self.entity_list = entity_list
+            self.value_range = value_range
+            self.score = score
+
+        @optapy.planning_entity_collection_property(Entity)
+        def get_entity_list(self):
+            return self.entity_list
+
+        @optapy.deep_planning_clone
+        @optapy.problem_fact_collection_property(Value)
+        @optapy.value_range_provider(range_id='value_range')
+        def get_value_range(self):
+            return self.value_range
+
+        def set_value_range(self, value_range):
+            self.value_range = value_range
+
+        @optapy.planning_score(optapy.score.SimpleScore)
+        def get_score(self) -> optapy.score.SimpleScore:
+            return self.score
+
+        def set_score(self, score):
+            self.score = score
+
+        def __str__(self):
+            return f'Solution(entity_list={self.entity_list[0]}, value_list={self.value_range[0]}, score={self.score})'
+
+    solver_config = optapy.config.solver.SolverConfig()
+    termination_config = optapy.config.solver.termination.TerminationConfig()
+    termination_config.setBestScoreLimit('6')
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
+        .withTerminationConfig(termination_config)
+    problem: Solution = Solution([Entity('A'), Entity('B'), Entity('C')], [Value(1), Value(2), Value(3)],
+                                 optapy.score.SimpleScore.ONE)
+    with optapy.solver_manager_create(solver_config) as solver_manager:
+        import time
+        the_problem_id = None
+        the_exception = None
+        def my_exception_handler(problem_id, exception):
+            nonlocal the_problem_id
+            nonlocal the_exception
+            the_problem_id = problem_id
+            the_exception = exception
+
+        solver_manager.solve(1, problem, exception_handler=my_exception_handler)
+        time.sleep(0.1)  # Sleep so solve is executed
+        assert the_problem_id == 1
+        assert the_exception is not None
+
+        the_problem_id = None
+        the_exception = None
+        solver_manager.solveAndListen(1, problem, best_solution_consumer=lambda solution: None,
+                                      exception_handler=my_exception_handler)
+        time.sleep(0.1)  # Sleep so solve is executed
+        assert the_problem_id == 1
+        assert the_exception is not None
