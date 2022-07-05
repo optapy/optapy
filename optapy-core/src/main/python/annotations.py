@@ -903,6 +903,9 @@ def problem_change(problem_change_class: Type['_ProblemChange']) -> \
         run_id = id(problem_change_director)
         solution.forceUpdate()
 
+        reference_map = solution.get__optapy_reference_map()
+        python_setter = solution._optaplannerPythonSetter
+
         problem_change_director._set_instance_map(run_id, solution.get__optapy_reference_map())
         problem_change_director._set_update_function(run_id, solution._optaplannerPythonSetter)
 
@@ -910,6 +913,10 @@ def problem_change(problem_change_class: Type['_ProblemChange']) -> \
 
         problem_change_director._unset_instance_map(run_id)
         problem_change_director._unset_update_function(run_id)
+
+        reference_map.clear()
+        getattr(solution, "$setFields")(solution.get__optapy_Id(), id(solution.get__optapy_Id()), reference_map,
+                                        python_setter)
 
     setattr(problem_change_class, 'doChange', JOverride()(wrapper_doChange))
     out = jpype.JImplements(ProblemChange)(problem_change_class)

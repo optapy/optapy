@@ -3,6 +3,7 @@ package org.optaplanner.optapy;
 import java.util.Map;
 import java.util.Set;
 
+import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
 
@@ -34,4 +35,6 @@ public interface PythonObject extends PythonLikeObject {
     void readFromPythonObject(Set doneSet, Map<Number, Object> referenceMap);
 
     void visitIds(Map<Number, Object> referenceMap);
+
+    void $setFields(OpaquePythonReference reference, Number id, Map referenceMap, TriFunction setter);
 }

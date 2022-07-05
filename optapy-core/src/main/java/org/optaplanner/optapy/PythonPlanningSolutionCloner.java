@@ -39,7 +39,15 @@ public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
                 (PythonObject) PythonWrapperGenerator.wrap(o.getClass(), planningClone, toClone.get__optapy_reference_map(),
                         pythonSetter);
         out.visitIds(out.get__optapy_reference_map());
-        out.readFromPythonObject(Collections.newSetFromMap(new IdentityHashMap<>()), out.get__optapy_reference_map());
+
+        // Mirror the reference map (not pass a reference to it)
+        // so Score + list variables can be safely garbage collected in Python
+        // (if it was not mirrored, reading the python object would add entries for them to the map,
+        //  which is used when cloning. If score/list variable was garbage collected by Python, another
+        //  Python Object can have the same id, leading to the old value in the map being returned,
+        //  causing an exception (or worse, a subtle bug))
+        out.readFromPythonObject(Collections.newSetFromMap(new IdentityHashMap<>()),
+                new MirrorWithExtrasMap<>(out.get__optapy_reference_map()));
         return out;
     }
 }

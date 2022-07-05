@@ -38,6 +38,7 @@ import org.optaplanner.core.api.domain.variable.AnchorShadowVariable;
 import org.optaplanner.core.api.domain.variable.CustomShadowVariable;
 import org.optaplanner.core.api.domain.variable.IndexShadowVariable;
 import org.optaplanner.core.api.domain.variable.InverseRelationShadowVariable;
+import org.optaplanner.core.api.domain.variable.PlanningListVariable;
 import org.optaplanner.core.api.domain.variable.PlanningVariable;
 import org.optaplanner.core.api.domain.variable.VariableListener;
 import org.optaplanner.core.api.function.TriFunction;
@@ -45,11 +46,13 @@ import org.optaplanner.core.api.score.calculator.ConstraintMatchAwareIncremental
 import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
 import org.optaplanner.core.api.score.calculator.IncrementalScoreCalculator;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
+import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
 import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
+import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 
@@ -110,6 +113,30 @@ public class PythonWrapperGenerator {
     @SuppressWarnings("unused")
     public static void setValueOnPythonObject(OpaquePythonReference objectId, String attributeName, Object value) {
         pythonObjectIdAndAttributeSetter.apply(objectId, attributeName, value);
+    }
+
+    @SuppressWarnings("unused")
+    public static void setListValueOnPythonObject(OpaquePythonReference objectId, String attributeName, List javaList,
+            Map<Number, Object> idMap, TriFunction updatePythonValue) {
+        if (javaList instanceof PythonList) {
+            pythonObjectIdAndAttributeSetter.apply(objectId, attributeName, javaList);
+        } else {
+            OpaquePythonReference pythonListReference =
+                    (OpaquePythonReference) getValueFromPythonObject(objectId, "get" + attributeName.substring(3));
+            PythonList pythonList = new PythonList(pythonListReference,
+                    CPythonBackedPythonInterpreter.getPythonReferenceId(pythonListReference), idMap, updatePythonValue);
+            pythonList.clear();
+            for (Object o : javaList) {
+                pythonList.add(o);
+            }
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public static void visitListIdOnPythonObject(OpaquePythonReference objectId, String getterName, List value,
+            Map referenceMap) {
+        OpaquePythonReference listPythonReference = (OpaquePythonReference) getValueFromPythonObject(objectId, getterName);
+        referenceMap.put(CPythonBackedPythonInterpreter.getPythonReferenceId(listPythonReference), value);
     }
 
     @SuppressWarnings("unused")
@@ -303,9 +330,21 @@ public class PythonWrapperGenerator {
 
     public static <T> T wrapCollection(OpaquePythonReference object, Number id, Map<Number, Object> map,
             TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
-        PythonList out = new PythonList(object, id, map, pythonSetter);
-        map.put(id, out);
-        return (T) out;
+        if (pythonSetter == PythonWrapperGenerator.NONE_PYTHON_SETTER) {
+            PythonLikeList out = new PythonLikeList();
+            map.put(id, out);
+
+            List itemIds = new PythonList(object, id, map, pythonSetter);
+            for (Object itemId : itemIds) {
+                out.add(itemId);
+            }
+
+            return (T) out;
+        } else {
+            PythonList out = new PythonList(object, id, map, pythonSetter);
+            map.put(id, out);
+            return (T) out;
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -324,7 +363,7 @@ public class PythonWrapperGenerator {
         try {
             if (javaClass.isArray()) {
                 return wrapArray(javaClass, object, id, map, pythonSetter);
-            } else if (javaClass.isAssignableFrom(PythonList.class)) {
+            } else if (javaClass.isAssignableFrom(List.class)) {
                 return wrapCollection(object, id, map, pythonSetter);
             } else if (javaClass.isAssignableFrom(OpaquePythonReference.class)) {
                 // Don't wrap OpaquePythonReference if it is a pointer to an OpaquePythonReference
@@ -819,10 +858,11 @@ public class PythonWrapperGenerator {
 
     private static void generateForceUpdate(ClassCreator classCreator, GeneratedClassType generatedClassType,
             Class<?> parentClass,
-            FieldDescriptor valueField, List<FieldDescriptor> planningEntityPropertyFieldList,
+            FieldDescriptor valueField, FieldDescriptor pythonSetterField,
+            List<FieldDescriptor> planningEntityPropertyFieldList,
             List<FieldDescriptor> planningEntityCollectionFieldList,
-            List<FieldDescriptor> planningVariableFieldList,
-            List<String> planningVariableSetterNameList,
+            List<FieldDescriptor> planningVariableFieldList, List<String> planningVariableSetterNameList,
+            List<FieldDescriptor> planningListVariableFieldList, List<String> planningListVariableSetterNameList,
             List<FieldDescriptor> planningScoreFieldList,
             List<String> planningScoreSetterNameList) {
         MethodCreator methodCreator = classCreator.getMethodCreator("forceUpdate", void.class);
@@ -858,6 +898,22 @@ public class PythonWrapperGenerator {
                             opaquePythonReference,
                             methodCreator.load(setterName),
                             methodCreator.readInstanceField(planningVariableField, thisObj));
+                }
+
+                for (int i = 0; i < planningListVariableFieldList.size(); i++) {
+                    FieldDescriptor planningListVariableField = planningListVariableFieldList.get(i);
+                    String setterName = planningListVariableSetterNameList.get(i);
+
+                    methodCreator.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "setListValueOnPythonObject", void.class,
+                                    OpaquePythonReference.class, String.class, List.class, Map.class, TriFunction.class),
+                            opaquePythonReference,
+                            methodCreator.load(setterName),
+                            methodCreator.readInstanceField(planningListVariableField, thisObj),
+                            methodCreator.invokeInterfaceMethod(
+                                    MethodDescriptor.ofMethod(PythonObject.class, "get__optapy_reference_map", Map.class),
+                                    thisObj),
+                            methodCreator.readInstanceField(pythonSetterField, thisObj));
                 }
                 break;
             }
@@ -940,6 +996,9 @@ public class PythonWrapperGenerator {
         methodCreator.ifTrue(alreadyHandled).trueBranch().returnValue(null);
         methodCreator.invokeInterfaceMethod(MethodDescriptor.ofMethod(Collection.class, "add", boolean.class, Object.class),
                 methodCreator.getMethodParam(0), methodCreator.getThis());
+        methodCreator.invokeVirtualMethod(
+                MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class, "$setInstanceMap", void.class, Map.class),
+                methodCreator.getThis(), methodCreator.getMethodParam(1));
 
         switch (generatedClassType) {
             case PROBLEM_FACT:
@@ -1064,13 +1123,13 @@ public class PythonWrapperGenerator {
     }
 
     private static void generateVisitIds(ClassCreator classCreator, GeneratedClassType generatedClassType,
-            Class<?> parentClass,
+            Class<?> parentClass, FieldDescriptor valueField,
             List<FieldDescriptor> planningEntityPropertyFieldList,
-            List<FieldDescriptor> planningEntityCollectionFieldList,
+            List<FieldDescriptor> planningEntityCollectionFieldList, List<String> planningEntityCollectionGetterList,
             List<FieldDescriptor> problemFactPropertyFieldList,
-            List<FieldDescriptor> problemFactCollectionFieldList,
-            List<FieldDescriptor> planningVariableFieldList,
-            List<String> planningVariableSetterNameList) {
+            List<FieldDescriptor> problemFactCollectionFieldList, List<String> problemFactCollectionGetterList,
+            List<FieldDescriptor> planningVariableFieldList, List<String> planningVariableSetterNameList,
+            List<FieldDescriptor> planningListVariableFieldList, List<String> planningListVariableSetterNameList) {
         MethodCreator methodCreator = classCreator.getMethodCreator("visitIds", void.class, Map.class);
 
         ResultHandle referenceMap = methodCreator.getMethodParam(0);
@@ -1085,26 +1144,38 @@ public class PythonWrapperGenerator {
 
         switch (generatedClassType) {
             case PROBLEM_FACT: {
-                //methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(parentClass, "$readFieldsFromCPythonReference", void.class),
-                //                                  methodCreator.getThis());
                 break;
             }
             case PLANNING_ENTITY: {
-                //methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(parentClass, "$readFieldsFromCPythonReference", void.class),
-                //                                  methodCreator.getThis());
+                ResultHandle thisObj = methodCreator.getThis();
+                ResultHandle opaquePythonReference = methodCreator.readInstanceField(valueField, methodCreator.getThis());
+
+                for (int i = 0; i < planningListVariableFieldList.size(); i++) {
+                    FieldDescriptor planningListVariableField = planningListVariableFieldList.get(i);
+                    String setterName = planningListVariableSetterNameList.get(i);
+
+                    methodCreator.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "visitListIdOnPythonObject", void.class,
+                                    OpaquePythonReference.class, String.class, List.class, Map.class),
+                            opaquePythonReference,
+                            methodCreator.load("get" + setterName.substring(3)),
+                            methodCreator.readInstanceField(planningListVariableField, thisObj),
+                            referenceMap);
+                }
                 break;
             }
             case PLANNING_SOLUTION: {
                 ResultHandle thisObject = methodCreator.getThis();
-                //methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(parentClass, "$readFieldsFromCPythonReference", void.class),
-                //                                  methodCreator.getThis());
+                ResultHandle opaquePythonReference = methodCreator.readInstanceField(valueField, methodCreator.getThis());
+
                 // planning entities
                 for (FieldDescriptor planningEntityField : planningEntityPropertyFieldList) {
                     methodCreator.invokeInterfaceMethod(
                             MethodDescriptor.ofMethod(PythonObject.class, "visitIds", void.class, Map.class),
                             methodCreator.readInstanceField(planningEntityField, thisObject), referenceMap);
                 }
-                for (FieldDescriptor planningEntityCollectionField : planningEntityCollectionFieldList) {
+                for (int i = 0; i < planningEntityCollectionFieldList.size(); i++) {
+                    FieldDescriptor planningEntityCollectionField = planningEntityCollectionFieldList.get(i);
                     if (planningEntityCollectionField.getType().endsWith("[]")) {
                         // Array
                         AssignableResultHandle arrayIndex = methodCreator.createVariable(int.class);
@@ -1124,6 +1195,14 @@ public class PythonWrapperGenerator {
                         }
                     } else {
                         // Collection
+                        methodCreator.invokeStaticMethod(
+                                MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "visitListIdOnPythonObject", void.class,
+                                        OpaquePythonReference.class, String.class, List.class, Map.class),
+                                opaquePythonReference,
+                                methodCreator.load(planningEntityCollectionGetterList.get(i)),
+                                methodCreator.readInstanceField(planningEntityCollectionField, thisObject),
+                                referenceMap);
+
                         ResultHandle iterator = methodCreator.invokeInterfaceMethod(
                                 MethodDescriptor.ofMethod(Collection.class, "iterator",
                                         Iterator.class),
@@ -1153,7 +1232,8 @@ public class PythonWrapperGenerator {
                                     fieldValue, referenceMap);
                 }
 
-                for (FieldDescriptor problemFactCollectionField : problemFactCollectionFieldList) {
+                for (int i = 0; i < problemFactCollectionFieldList.size(); i++) {
+                    FieldDescriptor problemFactCollectionField = problemFactCollectionFieldList.get(i);
                     if (problemFactCollectionField.getType().endsWith("[]")) {
                         // Array
                         AssignableResultHandle arrayIndex = methodCreator.createVariable(int.class);
@@ -1176,6 +1256,14 @@ public class PythonWrapperGenerator {
                         }
                     } else {
                         // Collection
+                        methodCreator.invokeStaticMethod(
+                                MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "visitListIdOnPythonObject", void.class,
+                                        OpaquePythonReference.class, String.class, List.class, Map.class),
+                                opaquePythonReference,
+                                methodCreator.load(problemFactCollectionGetterList.get(i)),
+                                methodCreator.readInstanceField(problemFactCollectionField, thisObject),
+                                referenceMap);
+
                         ResultHandle iterator = methodCreator.invokeInterfaceMethod(
                                 MethodDescriptor.ofMethod(Collection.class, "iterator",
                                         Iterator.class),
@@ -1270,10 +1358,14 @@ public class PythonWrapperGenerator {
         List<Object> returnTypeList = new ArrayList<>(optaplannerMethodAnnotations.size());
         List<FieldDescriptor> planningEntityFieldList = new ArrayList<>();
         List<FieldDescriptor> planningEntityCollectionFieldList = new ArrayList<>();
+        List<String> planningEntityCollectionGetterList = new ArrayList<>();
         List<FieldDescriptor> problemFactFieldList = new ArrayList<>();
         List<FieldDescriptor> problemFactCollectionFieldList = new ArrayList<>();
+        List<String> problemFactCollectionGetterList = new ArrayList<>();
         List<FieldDescriptor> planningVariableFieldList = new ArrayList<>();
         List<String> planningVariableSetterNameList = new ArrayList<>();
+        List<FieldDescriptor> planningListVariableFieldList = new ArrayList<>();
+        List<String> planningListVariableSetterNameList = new ArrayList<>();
         List<FieldDescriptor> planningScoreFieldList = new ArrayList<>();
         List<String> planningScoreSetterNameList = new ArrayList<>();
 
@@ -1289,17 +1381,22 @@ public class PythonWrapperGenerator {
                     .add(generateWrapperMethod(classCreator, parentClass, valueField, pythonLikeValueMapField,
                             pythonSetterField,
                             methodName, returnType, signature, annotations, returnTypeList,
-                            planningEntityFieldList, planningEntityCollectionFieldList,
-                            problemFactFieldList, problemFactCollectionFieldList,
+                            planningEntityFieldList,
+                            planningEntityCollectionFieldList, planningEntityCollectionGetterList,
+                            problemFactFieldList,
+                            problemFactCollectionFieldList, problemFactCollectionGetterList,
                             planningVariableFieldList, planningVariableSetterNameList,
+                            planningListVariableFieldList, planningListVariableSetterNameList,
                             planningScoreFieldList, planningScoreSetterNameList));
         }
         createConstructor(classCreator, valueField, referenceMapField, pythonLikeValueMapField, pythonSetterField,
                 parentClass, fieldDescriptorList, returnTypeList);
 
-        generateForceUpdate(classCreator, generatedClassType, parentClass, valueField,
-                planningEntityFieldList, planningEntityCollectionFieldList, planningVariableFieldList,
-                planningVariableSetterNameList, planningScoreFieldList, planningScoreSetterNameList);
+        generateForceUpdate(classCreator, generatedClassType, parentClass, valueField, pythonSetterField,
+                planningEntityFieldList, planningEntityCollectionFieldList,
+                planningVariableFieldList, planningVariableSetterNameList,
+                planningListVariableFieldList, planningListVariableSetterNameList,
+                planningScoreFieldList, planningScoreSetterNameList);
 
         generateReadFromPythonObject(classCreator, generatedClassType, parentClass,
                 planningEntityFieldList, planningEntityCollectionFieldList,
@@ -1307,11 +1404,13 @@ public class PythonWrapperGenerator {
                 planningVariableFieldList,
                 planningVariableSetterNameList);
 
-        generateVisitIds(classCreator, generatedClassType, parentClass,
-                planningEntityFieldList, planningEntityCollectionFieldList,
-                problemFactFieldList, problemFactCollectionFieldList,
-                planningVariableFieldList,
-                planningVariableSetterNameList);
+        generateVisitIds(classCreator, generatedClassType, parentClass, valueField,
+                planningEntityFieldList,
+                planningEntityCollectionFieldList, planningEntityCollectionGetterList,
+                problemFactFieldList,
+                problemFactCollectionFieldList, problemFactCollectionGetterList,
+                planningVariableFieldList, planningVariableSetterNameList,
+                planningListVariableFieldList, planningListVariableSetterNameList);
 
         if (!hasOptaPyParentClass) {
             createToString(classCreator, valueField);
@@ -1376,8 +1475,6 @@ public class PythonWrapperGenerator {
                 OpaquePythonReference.class, Number.class, Map.class, TriFunction.class));
         methodCreator.setModifiers(Modifier.PUBLIC);
 
-        ResultHandle value = methodCreator.getMethodParam(0);
-
         methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, PythonLikeType.class),
                 methodCreator.getThis(),
                 methodCreator.readStaticField(FieldDescriptor.of(classCreator.getClassName(),
@@ -1403,6 +1500,56 @@ public class PythonWrapperGenerator {
                     methodCreator.getMethodParam(2),
                     methodCreator.getMethodParam(3));
         }
+        createSetFields(classCreator, valueField, referenceMapField, pythonLikeValueMapField, pythonSetterField,
+                parentClass, fieldDescriptorList, returnTypeList);
+        methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(classCreator.getClassName(), "$setFields", void.class,
+                OpaquePythonReference.class, Number.class, Map.class, TriFunction.class),
+                methodCreator.getThis(),
+                methodCreator.getMethodParam(0), methodCreator.getMethodParam(1), methodCreator.getMethodParam(2),
+                methodCreator.getMethodParam(3));
+        methodCreator.returnValue(methodCreator.getThis());
+    }
+
+    private static void createInitMethod(ClassCreator classCreator, FieldDescriptor valueField,
+            FieldDescriptor referenceMapField, FieldDescriptor pythonLikeValueMapField, FieldDescriptor pythonSetterField) {
+        MethodCreator initCreator = classCreator.getMethodCreator("$init", void.class,
+                OpaquePythonReference.class, Number.class, Map.class,
+                TriFunction.class);
+        initCreator.invokeInterfaceMethod(
+                MethodDescriptor.ofMethod(Map.class, "put", Object.class, Object.class, Object.class),
+                initCreator.getMethodParam(2), initCreator.getMethodParam(1), initCreator.getThis());
+        initCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class,
+                "$setCPythonReference",
+                void.class,
+                OpaquePythonReference.class),
+                initCreator.getThis(), initCreator.getMethodParam(0));
+        initCreator.writeInstanceField(valueField, initCreator.getThis(), initCreator.getMethodParam(0));
+        initCreator.writeInstanceField(referenceMapField, initCreator.getThis(), initCreator.getMethodParam(2));
+        initCreator.writeInstanceField(pythonSetterField, initCreator.getThis(), initCreator.getMethodParam(3));
+        initCreator.writeInstanceField(pythonLikeValueMapField, initCreator.getThis(),
+                initCreator.newInstance(MethodDescriptor.ofConstructor(HashMap.class)));
+        initCreator.returnValue(null);
+    }
+
+    private static void createSetFields(ClassCreator classCreator, FieldDescriptor valueField,
+            FieldDescriptor referenceMapField, FieldDescriptor pythonLikeValueMapField, FieldDescriptor pythonSetterField,
+            Class<?> parentClass, List<FieldDescriptor> fieldDescriptorList, List<Object> returnTypeList) {
+        MethodCreator methodCreator =
+                classCreator.getMethodCreator(MethodDescriptor.ofMethod(classCreator.getClassName(), "$setFields", void.class,
+                        OpaquePythonReference.class, Number.class, Map.class, TriFunction.class));
+        methodCreator.setModifiers(Modifier.PUBLIC);
+
+        try {
+            Method parentSetFields = parentClass.getMethod("$setFields", OpaquePythonReference.class, Number.class, Map.class,
+                    TriFunction.class);
+            methodCreator.invokeSpecialMethod(MethodDescriptor.ofMethod(parentSetFields), methodCreator.getThis(),
+                    methodCreator.getMethodParam(0), methodCreator.getMethodParam(1),
+                    methodCreator.getMethodParam(2), methodCreator.getMethodParam(3));
+        } catch (NoSuchMethodException e) {
+            // Do nothing; don't need to call parent $setFields as it does not have one
+        }
+
+        ResultHandle value = methodCreator.getMethodParam(0);
 
         for (int i = 0; i < fieldDescriptorList.size(); i++) {
             FieldDescriptor fieldDescriptor = fieldDescriptorList.get(i);
@@ -1438,7 +1585,7 @@ public class PythonWrapperGenerator {
                     if (returnTypeClass.isArray()) {
                         actualClass = methodCreator.loadClass(returnTypeClass);
                     } else if (Collection.class.isAssignableFrom(returnTypeClass)) {
-                        actualClass = methodCreator.loadClass(PythonList.class);
+                        actualClass = methodCreator.loadClass(List.class);
                     } else {
                         actualClass = methodCreator.invokeStaticMethod(
                                 MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getJavaClass", Class.class,
@@ -1500,33 +1647,7 @@ public class PythonWrapperGenerator {
                 // Do nothing; no setter
             }
         }
-        methodCreator.returnValue(methodCreator.getThis());
-    }
-
-    private static void createInitMethod(ClassCreator classCreator, FieldDescriptor valueField,
-            FieldDescriptor referenceMapField, FieldDescriptor pythonLikeValueMapField, FieldDescriptor pythonSetterField) {
-        MethodCreator initCreator = classCreator.getMethodCreator("$init", void.class,
-                OpaquePythonReference.class, Number.class, Map.class,
-                TriFunction.class);
-        initCreator.invokeInterfaceMethod(
-                MethodDescriptor.ofMethod(Map.class, "put", Object.class, Object.class, Object.class),
-                initCreator.getMethodParam(2), initCreator.getMethodParam(1), initCreator.getThis());
-        initCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class,
-                "$setCPythonReference",
-                void.class,
-                OpaquePythonReference.class),
-                initCreator.getThis(), initCreator.getMethodParam(0));
-        initCreator.writeInstanceField(valueField, initCreator.getThis(), initCreator.getMethodParam(0));
-        initCreator.writeInstanceField(referenceMapField, initCreator.getThis(), initCreator.getMethodParam(2));
-        initCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(CPythonBackedPythonLikeObject.class,
-                "$setInstanceMap",
-                void.class,
-                Map.class),
-                initCreator.getThis(), initCreator.getMethodParam(2));
-        initCreator.writeInstanceField(pythonSetterField, initCreator.getThis(), initCreator.getMethodParam(3));
-        initCreator.writeInstanceField(pythonLikeValueMapField, initCreator.getThis(),
-                initCreator.newInstance(MethodDescriptor.ofConstructor(HashMap.class)));
-        initCreator.returnValue(null);
+        methodCreator.returnValue(null);
     }
 
     private static FieldDescriptor generateWrapperMethod(ClassCreator classCreator, Class<?> parentClass,
@@ -1534,9 +1655,12 @@ public class PythonWrapperGenerator {
             FieldDescriptor pythonLikeAttributeField, FieldDescriptor pythonSetterField,
             String methodName, Class<?> returnType, String signature,
             List<Map<String, Object>> annotations, List<Object> returnTypeList,
-            List<FieldDescriptor> planningEntityFieldList, List<FieldDescriptor> planningEntityCollectionFieldList,
-            List<FieldDescriptor> problemFactFieldList, List<FieldDescriptor> problemFactCollectionFieldList,
+            List<FieldDescriptor> planningEntityFieldList,
+            List<FieldDescriptor> planningEntityCollectionFieldList, List<String> planningEntityCollectionGetterList,
+            List<FieldDescriptor> problemFactFieldList,
+            List<FieldDescriptor> problemFactCollectionFieldList, List<String> problemFactCollectionGetterList,
             List<FieldDescriptor> planningVariableFieldList, List<String> planningVariableSetterNameList,
+            List<FieldDescriptor> planningListVariableFieldList, List<String> planningListVariableSetterNameList,
             List<FieldDescriptor> planningScoreFieldDescriptor,
             List<String> planningScoreFieldDescriptorName) {
         // Python types are not required, so we need to discover them. If the type is unknown, we default to Object,
@@ -1578,6 +1702,11 @@ public class PythonWrapperGenerator {
                     AnchorShadowVariable.class.isAssignableFrom(annotationType) ||
                     CustomShadowVariable.class.isAssignableFrom(annotationType)) {
                 planningVariableFieldList.add(fieldDescriptor);
+            } else if (PlanningListVariable.class.isAssignableFrom(annotationType) ||
+                    (InverseRelationShadowVariable.class.isAssignableFrom(annotationType) &&
+                            actualReturnType instanceof Class &&
+                            Collection.class.isAssignableFrom((Class<?>) actualReturnType))) {
+                planningListVariableFieldList.add(fieldDescriptor);
             } else if (PlanningScore.class.isAssignableFrom(annotationType)) {
                 planningScoreFieldDescriptor.add(fieldDescriptor);
             } else if (ProblemFactProperty.class.isAssignableFrom(annotationType)) {
@@ -1628,8 +1757,17 @@ public class PythonWrapperGenerator {
                         AnchorShadowVariable.class.isAssignableFrom(annotationType) ||
                         CustomShadowVariable.class.isAssignableFrom(annotationType)) {
                     planningVariableSetterNameList.add(setterMethodName);
+                } else if (PlanningListVariable.class.isAssignableFrom(annotationType) ||
+                        (InverseRelationShadowVariable.class.isAssignableFrom(annotationType) &&
+                                actualReturnType instanceof Class &&
+                                Collection.class.isAssignableFrom((Class<?>) actualReturnType))) {
+                    planningListVariableSetterNameList.add(setterMethodName);
                 } else if (PlanningScore.class.isAssignableFrom(annotationType)) {
                     planningScoreFieldDescriptorName.add(setterMethodName);
+                } else if (PlanningEntityCollectionProperty.class.isAssignableFrom(annotationType)) {
+                    planningEntityCollectionGetterList.add(methodName);
+                } else if (ProblemFactCollectionProperty.class.isAssignableFrom(annotationType)) {
+                    problemFactCollectionGetterList.add(methodName);
                 }
             }
 

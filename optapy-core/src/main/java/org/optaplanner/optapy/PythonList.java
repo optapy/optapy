@@ -100,6 +100,11 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
     }
 
     @Override
+    public void $setFields(OpaquePythonReference reference, Number id, Map referenceMap, TriFunction setter) {
+
+    }
+
+    @Override
     public void readFromPythonObject(Set doneSet, Map<Number, Object> referenceMap) {
 
     }
