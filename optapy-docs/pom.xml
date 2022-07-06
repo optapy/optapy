@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optaplanner-build-parent</artifactId>
-    <version>8.21.0.Final</version>
+    <version>8.23.0.Final</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -29,7 +29,7 @@
     -->
     <source.document.name>.index.adoc</source.document.name>
 
-    <version.optapy>8.21.0a0</version.optapy>
+    <version.optapy>8.23.0a0</version.optapy>
   </properties>
 
   <build>
