@@ -76,6 +76,99 @@ def test_single_property():
     assert solution.entity.value == '1'
 
 
+def test_constraint_stream_in_join():
+    @optapy.problem_fact
+    class Value:
+        def __init__(self, code):
+            self.code = code
+
+    @optapy.planning_entity
+    class Entity:
+        def __init__(self, code, value=None):
+            self.code = code
+            self.value = value
+
+        @optapy.planning_variable(Value, value_range_provider_refs=['value_range'])
+        def get_value(self):
+            return self.value
+
+        def set_value(self, value):
+            self.value = value
+
+    @optapy.constraint_provider
+    def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
+        return [
+            constraint_factory.for_each(Entity)
+                .filter(lambda e: e.code == 'A')
+                .join(constraint_factory.for_each(Entity).filter(lambda e: e.code == 'B'))
+                .join(constraint_factory.for_each(Entity).filter(lambda e: e.code == 'C'))
+                .join(constraint_factory.for_each(Entity).filter(lambda e: e.code == 'D'))
+                .group_by(optapy.constraint.ConstraintCollectors.sum(lambda a, b, c, d: a.value.code + b.value.code +
+                                                                                        c.value.code + d.value.code))
+                .reward('First Four Entities', optapy.score.SimpleScore.ONE, lambda the_sum: the_sum),
+        ]
+
+    @optapy.planning_solution
+    class Solution:
+        def __init__(self, entity_list, value_list, score=None):
+            self.entity_list = entity_list
+            self.value_list = value_list
+            self.score = score
+
+        @optapy.planning_entity_collection_property(Entity)
+        def get_entity_list(self):
+            return self.entity_list
+
+        @optapy.problem_fact_collection_property(Value)
+        @optapy.value_range_provider(range_id='value_range')
+        def get_value(self):
+            return self.value_list
+
+        @optapy.planning_score(optapy.score.SimpleScore)
+        def get_score(self) -> optapy.score.SimpleScore:
+            return self.score
+
+        def set_score(self, score):
+            self.score = score
+
+    solver_config = optapy.config.solver.SolverConfig()
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints)
+
+    entity_1, entity_2, entity_3, entity_4, entity_5 = Entity('A'), Entity('B'), Entity('C'), Entity('D'), Entity('E')
+    value_1, value_2, value_3 = Value(1), Value(2), Value(3)
+    problem = Solution([entity_1, entity_2, entity_3, entity_4, entity_5], [value_1, value_2, value_3])
+    score_manager = optapy.score_manager_create(optapy.solver_factory_create(solver_config))
+
+    entity_1.set_value(value_1)
+    entity_2.set_value(value_1)
+    entity_3.set_value(value_1)
+    entity_4.set_value(value_1)
+    entity_5.set_value(value_1)
+
+    assert score_manager.updateScore(problem) == optapy.score.SimpleScore.of(4)
+
+    entity_5.set_value(value_2)
+
+    assert score_manager.updateScore(problem) == optapy.score.SimpleScore.of(4)
+
+    entity_1.set_value(value_2)
+    assert score_manager.updateScore(problem) == optapy.score.SimpleScore.of(5)
+
+    entity_2.set_value(value_2)
+    assert score_manager.updateScore(problem) == optapy.score.SimpleScore.of(6)
+
+    entity_3.set_value(value_2)
+    assert score_manager.updateScore(problem) == optapy.score.SimpleScore.of(7)
+
+    entity_4.set_value(value_2)
+    assert score_manager.updateScore(problem) == optapy.score.SimpleScore.of(8)
+
+    entity_1.set_value(value_3)
+    assert score_manager.updateScore(problem) == optapy.score.SimpleScore.of(9)
+
+
 def test_tuple_group_by_key():
     @optapy.planning_entity
     class Entity:
