@@ -565,7 +565,7 @@ public class PythonWrapperGenerator {
      * }
      *
      * public void afterVariableChange(scoreDirector, entity) {
-     *     delegate.afterVariableChange(scoreDirector, entity);
+     * delegate.afterVariableChange(scoreDirector, entity);
      * }
      * ...
      * }
@@ -577,7 +577,7 @@ public class PythonWrapperGenerator {
      */
     @SuppressWarnings("unused")
     public static Class<?> defineVariableListenerClass(String className,
-                                                       Supplier<? extends VariableListener> variableListenerSupplier) {
+            Supplier<? extends VariableListener> variableListenerSupplier) {
         return defineWrapperClass(className, VariableListener.class, variableListenerSupplier);
     }
 
@@ -962,7 +962,8 @@ public class PythonWrapperGenerator {
         if (methodName.startsWith("get")) {
             String setterMethodName = "set" + methodName.substring(3);
             String javaSetterMethodName = "set" + javaMethodName.substring(3);
-            MethodCreator setterMethodCreator = classCreator.getMethodCreator(javaSetterMethodName, void.class, actualReturnType);
+            MethodCreator setterMethodCreator =
+                    classCreator.getMethodCreator(javaSetterMethodName, void.class, actualReturnType);
             if (signature != null) {
                 setterMethodCreator.setSignature("(" + signature + ")V;");
             }
@@ -1021,7 +1022,8 @@ public class PythonWrapperGenerator {
         } else if (annotationValue instanceof Map) {
             Map<String, Object> nestedAnnotation = (Map<String, Object>) annotationValue;
             Class<?> nestedAnnotationClass = (Class<?>) nestedAnnotation.get("annotationType");
-            AnnotationCreator nestedAnnotationValue = AnnotationCreator.of(nestedAnnotationClass.getName(), RetentionPolicy.RUNTIME);
+            AnnotationCreator nestedAnnotationValue =
+                    AnnotationCreator.of(nestedAnnotationClass.getName(), RetentionPolicy.RUNTIME);
             createAnnotation(nestedAnnotationValue, nestedAnnotation);
             return nestedAnnotationValue;
         } else {
