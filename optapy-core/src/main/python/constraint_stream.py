@@ -611,6 +611,7 @@ class PythonUniConstraintStream(Generic[A]):
         b_type = None
         if isinstance(unistream_or_type, PythonUniConstraintStream):
             b_type = unistream_or_type.a_type
+            unistream_or_type = unistream_or_type.delegate
         else:
             b_type = get_class(unistream_or_type)
             unistream_or_type = b_type
@@ -1188,6 +1189,7 @@ class PythonBiConstraintStream(Generic[A, B]):
         c_type = None
         if isinstance(unistream_or_type, PythonUniConstraintStream):
             c_type = unistream_or_type.a_type
+            unistream_or_type = unistream_or_type.delegate
         else:
             c_type = get_class(unistream_or_type)
             unistream_or_type = c_type
@@ -1706,6 +1708,7 @@ class PythonTriConstraintStream(Generic[A, B, C]):
         d_type = None
         if isinstance(unistream_or_type, PythonUniConstraintStream):
             d_type = unistream_or_type.a_type
+            unistream_or_type = unistream_or_type.delegate
         else:
             d_type = get_class(unistream_or_type)
             unistream_or_type = d_type
