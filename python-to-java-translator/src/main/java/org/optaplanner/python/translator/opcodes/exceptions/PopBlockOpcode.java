@@ -18,6 +18,6 @@ public class PopBlockOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        // Do nothing, since Java already popped the block for us
+        // Pop block has a stack effect of 0 (does nothing); ASM take care of popping blocks for us via computeFrames
     }
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.optaplanner.python.translator.types.PythonLikeType;
 
@@ -14,6 +15,10 @@ public class StackMetadata {
     public List<ValueSourceInfo> localVariableValueSources;
 
     public List<ValueSourceInfo> cellVariableValueSources;
+
+    public int getStackSize() {
+        return stackValueSources.size();
+    }
 
     /**
      * Returns the value source for the given stack index (stack index is how many
@@ -123,7 +128,12 @@ public class StackMetadata {
                 out.localVariableValueSources.size() != other.localVariableValueSources.size() ||
                 out.cellVariableValueSources.size() != other.cellVariableValueSources.size()) {
             throw new IllegalArgumentException("Impossible State: Bytecode stack metadata size does not match when " +
-                    "unifying (" + this + ") with (" + other + ")");
+                    "unifying (" + out.stackValueSources.stream()
+                            .map(valueSource -> valueSource.valueType.toString()).collect(Collectors.joining(", ", "[", "]"))
+                    +
+                    ") with (" + other.stackValueSources.stream()
+                            .map(valueSource -> valueSource.valueType.toString()).collect(Collectors.joining(", ", "[", "]"))
+                    + ")");
         }
 
         for (int i = 0; i < out.stackValueSources.size(); i++) {

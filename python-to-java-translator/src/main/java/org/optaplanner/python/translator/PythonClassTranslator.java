@@ -85,7 +85,7 @@ public class PythonClassTranslator {
                 e.printStackTrace();
                 System.out.println("WARNING: Ignoring exception");
                 //e.printStackTrace();
-                System.out.println("globals: " + instanceMethod.globalsMap);
+                //System.out.println("globals: " + instanceMethod.globalsMap);
                 System.out.println("co_constants: " + instanceMethod.co_constants);
                 System.out.println("co_names: " + instanceMethod.co_names);
                 System.out.println("co_varnames: " + instanceMethod.co_varnames);
@@ -207,6 +207,20 @@ public class PythonClassTranslator {
             throw new IllegalStateException("Impossible State: could not access type static field for generated class ("
                     + className + ").", e);
         }
+
+        final Map<Number, PythonLikeObject> instanceMap = new HashMap<>();
+        pythonCompiledClass.staticAttributeNameToClassInstance.forEach((attributeName, instancePointer) -> {
+            try {
+                CPythonBackedPythonLikeObject objectInstance =
+                        (CPythonBackedPythonLikeObject) generatedClass.getConstructor().newInstance();
+                objectInstance.$setCPythonReference(instancePointer);
+                objectInstance.$setInstanceMap(instanceMap);
+                objectInstance.$readFieldsFromCPythonReference();
+                pythonLikeType.__setAttribute(attributeName, objectInstance);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                throw new RuntimeException("Unable to construct instance of class (" + generatedClass + ")", e);
+            }
+        });
 
         for (Map.Entry<String, PythonCompiledFunction> instanceMethodEntry : pythonCompiledClass.instanceFunctionNameToPythonBytecode
                 .entrySet()) {
@@ -976,6 +990,14 @@ public class PythonClassTranslator {
             return PythonLikeType.getBaseType();
         } catch (Exception e) {
             System.out.println("WARNING: Ignoring exception");
+            //System.out.println("globals: " + pythonCompiledFunction.globalsMap);
+            System.out.println("co_constants: " + pythonCompiledFunction.co_constants);
+            System.out.println("co_names: " + pythonCompiledFunction.co_names);
+            System.out.println("co_varnames: " + pythonCompiledFunction.co_varnames);
+            System.out.println("Instructions:");
+            System.out.println(pythonCompiledFunction.instructionList.stream()
+                    .map(PythonBytecodeInstruction::toString)
+                    .collect(Collectors.joining("\n")));
             e.printStackTrace();
             return PythonLikeType.getBaseType();
         }

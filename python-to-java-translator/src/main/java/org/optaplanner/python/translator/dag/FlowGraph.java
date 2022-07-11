@@ -10,13 +10,9 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.optaplanner.python.translator.FunctionMetadata;
+import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
-import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.opcodes.Opcode;
-import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
-import org.optaplanner.python.translator.types.PythonLikeType;
-import org.optaplanner.python.translator.types.errors.PythonBaseException;
-import org.optaplanner.python.translator.types.errors.PythonTraceback;
 
 public class FlowGraph {
     BasicBlock initialBlock;
@@ -116,17 +112,19 @@ public class FlowGraph {
     private void computeStackMetadataForOperations(FunctionMetadata functionMetadata,
             StackMetadata initialStackMetadata) {
         Map<Integer, StackMetadata> opcodeIndexToStackMetadata = new HashMap<>();
-        final StackMetadata exceptionStackMetadata =
-                initialStackMetadata.push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonTraceback.TRACEBACK_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonBaseException.BASE_EXCEPTION_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeType.getTypeType()));
         opcodeIndexToStackMetadata.put(0, initialStackMetadata);
 
         for (BasicBlock basicBlock : basicBlockList) {
             for (Opcode opcode : basicBlock.getBlockOpcodeList()) {
-                // If there is no stack metadata for the opcode, then it must be for an exception handler
                 StackMetadata currentStackMetadata =
-                        opcodeIndexToStackMetadata.computeIfAbsent(opcode.getBytecodeIndex(), key -> exceptionStackMetadata);
+                        opcodeIndexToStackMetadata.get(opcode.getBytecodeIndex());
+                if (currentStackMetadata == null) {
+                    throw new IllegalStateException(
+                            "Cannot get stack metadata at index " + opcode.getBytecodeIndex() + " for bytecode:\n" +
+                                    functionMetadata.pythonCompiledFunction.instructionList.stream()
+                                            .map(PythonBytecodeInstruction::toString)
+                                            .collect(Collectors.joining("\n")));
+                }
                 List<Integer> branchList = opcode.getPossibleNextBytecodeIndexList();
                 List<StackMetadata> nextStackMetadataList = opcode
                         .getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);

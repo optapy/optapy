@@ -182,13 +182,11 @@ public class FlowGraphTest {
                             })
                             .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_ASSERTION_ERROR)
                             .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
-                })
+                }, true)
                 .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
                     except.loadConstant("Assert").op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
-                })
+                }, true)
                 .tryEnd()
-                .loadConstant(null)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
@@ -208,17 +206,19 @@ public class FlowGraphTest {
                 new FrameData().stack(), // NOP
                 new FrameData().stack(), // LOAD_ASSERTION_ERROR
                 new FrameData().stack(ASSERTION_ERROR_TYPE), // RAISE
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // JUMP_ABSOLUTE
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // except handler; DUP_TOP,
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, TYPE_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, TYPE_TYPE, TYPE_TYPE), // JUMP_IF_NOT_EXC_MATCH
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, STRING_TYPE), // RETURN
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_EXCEPT
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // RAISE
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // NOP
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // END_TRY, LOAD_CONSTANT
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, NONE_TYPE) // RETURN
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // except handler; DUP_TOP,
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
+                        TYPE_TYPE), // LOAD_CONSTANT
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, TYPE_TYPE,
+                        TYPE_TYPE), // JUMP_IF_NOT_EXC_MATCH
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE), // POP_EXCEPT
+                new FrameData().stack(), // LOAD_CONSTANT
+                new FrameData().stack(STRING_TYPE), // RETURN
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE,
+                        TYPE_TYPE) // RAISE
         );
     }
 
@@ -240,14 +240,14 @@ public class FlowGraphTest {
                                 block.loadConstant(new StopIteration())
                                         .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
                             });
-                })
+                }, false)
                 .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
                     except.loadConstant("Assert").storeGlobalVariable("exception");
-                })
+                }, false)
                 .andFinally(code -> {
                     code.loadConstant("Finally")
                             .storeGlobalVariable("finally");
-                })
+                }, false)
                 .tryEnd()
                 .loadConstant(1)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
@@ -276,15 +276,23 @@ public class FlowGraphTest {
                 new FrameData().stack(StopIteration.STOP_ITERATION_TYPE), // RAISE
                 new FrameData().stack(), // NOP
                 new FrameData().stack(), // JUMP_ABSOLUTE
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // except handler; DUP_TOP,
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, TYPE_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, TYPE_TYPE, TYPE_TYPE), // JUMP_IF_NOT_EXC_MATCH
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, STRING_TYPE), // RETURN
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // NOP
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
-                new FrameData().stack(TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
-                new FrameData().stack(TRACEBACK_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // except handler; DUP_TOP,
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
+                        TYPE_TYPE), // LOAD_CONSTANT
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, TYPE_TYPE,
+                        TYPE_TYPE), // JUMP_IF_NOT_EXC_MATCH
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE), // POP_EXCEPT
+                new FrameData().stack(), // LOAD_CONSTANT
+                new FrameData().stack(STRING_TYPE), // STORE_GLOBAL
+                new FrameData().stack(), // JUMP_ABSOLUTE
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE), // POP_TOP
+                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE), // POP_EXCEPT
+                new FrameData().stack(), // FINALLY; Catch target; NO-OP
                 new FrameData().stack(), // FINALLY; Load constant
                 new FrameData().stack(STRING_TYPE), // STORE
                 new FrameData().stack(), // RAISE

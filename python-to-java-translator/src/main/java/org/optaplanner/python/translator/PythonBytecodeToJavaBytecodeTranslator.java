@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
@@ -486,8 +487,9 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         }
 
         for (int i = 0; i < localVariableHelper.getNumberOfBoundCells(); i++) {
-            // Bound variables are not initialized by default
-            initialStackMetadata.cellVariableValueSources.add(null);
+            // Bound variables are assumed initialized
+            initialStackMetadata.cellVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
+                    PythonLikeType.getBaseType()));
         }
 
         for (int i = 0; i < localVariableHelper.getNumberOfFreeCells(); i++) {
@@ -577,7 +579,16 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                     localVariableHelper.getPythonLocalVariableSlot(i));
         }
 
-        methodVisitor.visitMaxs(-1, -1);
+        try {
+            methodVisitor.visitMaxs(-1, -1);
+        } catch (Exception e) {
+            throw new IllegalStateException("Invalid Java bytecode generated (this is a bug):\n" +
+                    pythonCompiledFunction.instructionList.stream()
+                            .map(PythonBytecodeInstruction::toString)
+                            .collect(Collectors.joining("\n")),
+                    e);
+        }
+
         methodVisitor.visitEnd();
     }
 

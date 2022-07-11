@@ -4,7 +4,16 @@ import inspect
 from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass
 
 global_dict_to_instance = dict()
+global_dict_to_key_set = dict()
 type_to_compiled_java_class = dict()
+
+
+def is_c_native(object):
+    try:
+        dis.code_info(object)
+        return False
+    except TypeError:
+        return True
 
 
 def init_type_to_compiled_java_class():
@@ -96,8 +105,31 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
                                                                                convert=True),
                                                                         instance_map)
         return out
-    else:
+    elif inspect.isbuiltin(value) or is_c_native(value):
         return None
+    elif inspect.isfunction(value):
+        try:
+            from org.optaplanner.python.translator.types import PythonLikeFunction
+            out = translate_python_bytecode_to_java_bytecode(value, PythonLikeFunction)
+            instance_map.put(JLong(id(value)), out)
+            return out
+        except:
+            return None
+    else:
+        try:
+            java_type = translate_python_class_to_java_class(type(value))
+            if isinstance(java_type, CPythonType):
+                return None
+            java_class = java_type.getJavaClass()
+            out = java_class.getConstructor(PythonLikeType).newInstance(java_type)
+            instance_map.put(JLong(id(value)), out)
+            CPythonBackedPythonInterpreter.updateJavaObjectFromPythonObject(out,
+                                                                            JProxy(OpaquePythonReference, inst=value,
+                                                                                   convert=True),
+                                                                            instance_map)
+            return out
+        except:
+            return None
 
 def convert_to_java_python_like_object(value, instance_map=None):
     from java.util import HashMap
@@ -300,17 +332,24 @@ def copy_closure(closure):
 
 def copy_globals(globals_dict):
     global global_dict_to_instance
+    global global_dict_to_key_set
     from java.util import HashMap
 
     globals_dict_key = id(globals_dict)
     if globals_dict_key in global_dict_to_instance:
         out = global_dict_to_instance[globals_dict_key]
+        key_set = global_dict_to_key_set[globals_dict_key]
     else:
         out = HashMap()
+        key_set = set()
+        global_dict_to_instance[globals_dict_key] = out
+        global_dict_to_key_set[globals_dict_key] = key_set
 
-    global_dict_to_instance[globals_dict_key] = out
+    instance_map = HashMap()
     for key, value in globals_dict.items():
-        out.computeIfAbsent(key, lambda _: convert_to_java_python_like_object(value))
+        if key not in key_set:
+            key_set.add(key)
+            out.put(key, convert_to_java_python_like_object(value, instance_map))
 
     return out
 
@@ -469,8 +508,23 @@ def translate_python_class_to_java_class(python_class):
         instance_method_map.put(method[0], get_function_bytecode_object(method[1]))
 
     static_attributes_map = HashMap()
+    static_attributes_to_class_instance_map = HashMap()
     for attribute in static_attributes:
-        static_attributes_map.put(attribute[0], convert_to_java_python_like_object(attribute[1]))
+        attribute_type = type(attribute[1])
+        if attribute_type == python_class:
+            static_attributes_to_class_instance_map.put(attribute[0],
+                                                        JProxy(OpaquePythonReference,
+                                                               inst=attribute[1], convert=True))
+        else:
+            if attribute_type not in type_to_compiled_java_class:
+                try:
+                    translate_python_class_to_java_class(attribute_type)
+                except:
+                    superclass_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=attribute_type, convert=True))
+                    type_to_compiled_java_class[attribute_type] = superclass_java_type
+
+            static_attributes_map.put(attribute[0], convert_to_java_python_like_object(attribute[1]))
+
 
     python_compiled_class = PythonCompiledClass()
     python_compiled_class.binaryType = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class,
@@ -482,11 +536,13 @@ def translate_python_class_to_java_class(python_class):
         python_compiled_class.typeAnnotations = copy_type_annotations(python_class.__annotations__)
     else:
         python_compiled_class.typeAnnotations = copy_type_annotations(None)
+
     python_compiled_class.superclassList = superclass_list
     python_compiled_class.instanceFunctionNameToPythonBytecode = instance_method_map
     python_compiled_class.staticFunctionNameToPythonBytecode = static_method_map
     python_compiled_class.classFunctionNameToPythonBytecode = class_method_map
     python_compiled_class.staticAttributeNameToObject = static_attributes_map
+    python_compiled_class.staticAttributeNameToClassInstance = static_attributes_to_class_instance_map
 
     out = PythonClassTranslator.translatePythonClass(python_compiled_class)
     type_to_compiled_java_class[python_class] = out

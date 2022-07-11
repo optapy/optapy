@@ -27,4 +27,14 @@ public class OpcodeWithoutSource implements Opcode {
     public boolean isJumpTarget() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return other.getClass() == getClass();
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

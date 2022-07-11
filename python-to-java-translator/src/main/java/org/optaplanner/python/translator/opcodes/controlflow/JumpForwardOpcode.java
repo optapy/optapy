@@ -15,7 +15,7 @@ public class JumpForwardOpcode extends AbstractControlFlowOpcode {
 
     @Override
     public List<Integer> getPossibleNextBytecodeIndexList() {
-        return List.of(getBytecodeIndex() + instruction.arg);
+        return List.of(getBytecodeIndex() + instruction.arg + 1);
     }
 
     @Override

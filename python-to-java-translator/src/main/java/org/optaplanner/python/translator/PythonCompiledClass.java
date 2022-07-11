@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.optaplanner.python.translator.types.CPythonType;
+import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.util.JavaIdentifierUtils;
 
@@ -35,7 +36,16 @@ public class PythonCompiledClass {
     public Map<String, PythonCompiledFunction> instanceFunctionNameToPythonBytecode;
     public Map<String, PythonCompiledFunction> staticFunctionNameToPythonBytecode;
     public Map<String, PythonCompiledFunction> classFunctionNameToPythonBytecode;
+
+    /**
+     * Contains static attributes that are not instances of this class
+     */
     public Map<String, PythonLikeObject> staticAttributeNameToObject;
+
+    /**
+     * Contains static attributes that are instances of this class
+     */
+    public Map<String, OpaquePythonReference> staticAttributeNameToClassInstance;
 
     public String getGeneratedClassBaseName() {
         if (module == null || module.isEmpty()) {

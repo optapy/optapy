@@ -35,13 +35,11 @@ public class ExceptionImplementorTest {
                             })
                             .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_ASSERTION_ERROR)
                             .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
-                })
+                }, true)
                 .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
                     except.loadConstant("Assert").op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
-                })
+                }, true)
                 .tryEnd()
-                .loadConstant(null)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -70,14 +68,14 @@ public class ExceptionImplementorTest {
                                 block.loadConstant(new StopIteration())
                                         .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
                             });
-                })
+                }, false)
                 .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
                     except.loadConstant("Assert").storeGlobalVariable("exception");
-                })
+                }, false)
                 .andFinally(code -> {
                     code.loadConstant("Finally")
                             .storeGlobalVariable("finally");
-                })
+                }, false)
                 .tryEnd()
                 .loadConstant(1)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)

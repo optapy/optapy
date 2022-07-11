@@ -70,7 +70,11 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
             return false;
         }
         PythonObjectWrapper other = (PythonObjectWrapper) o;
-        PythonLikeFunction equals = (PythonLikeFunction) __getType().__getAttributeOrError("__eq__");
+        Object maybeEquals = __getType().__getAttributeOrNull("__eq__");
+        if (!(maybeEquals instanceof PythonLikeFunction)) {
+            return super.equals(o);
+        }
+        PythonLikeFunction equals = (PythonLikeFunction) maybeEquals;
         PythonLikeObject result = equals.__call__(List.of(this, other), Map.of());
         if (result instanceof PythonBoolean) {
             return ((PythonBoolean) result).getBooleanValue();
@@ -80,14 +84,22 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
 
     @Override
     public int hashCode() {
-        PythonLikeFunction hash = (PythonLikeFunction) __getType().__getAttributeOrError("__hash__");
+        Object maybeHash = __getType().__getAttributeOrNull("__hash__");
+        if (!(maybeHash instanceof PythonLikeFunction)) {
+            return super.hashCode();
+        }
+        PythonLikeFunction hash = (PythonLikeFunction) maybeHash;
         PythonInteger result = (PythonInteger) hash.__call__(List.of(this), Map.of());
         return result.value.hashCode();
     }
 
     @Override
     public String toString() {
-        PythonLikeFunction str = (PythonLikeFunction) __getType().__getAttributeOrError("__str__");
+        Object maybeStr = __getType().__getAttributeOrNull("__str__");
+        if (!(maybeStr instanceof PythonLikeFunction)) {
+            return super.toString();
+        }
+        PythonLikeFunction str = (PythonLikeFunction) maybeStr;
         PythonString result = (PythonString) str.__call__(List.of(this), Map.of());
         return result.toString();
     }

@@ -23,7 +23,8 @@ public class JumpImplementor {
     public static void jumpRelative(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation =
-                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg, key -> new Label());
+                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1,
+                        key -> new Label());
         methodVisitor.visitJumpInsn(Opcodes.GOTO, jumpLocation);
     }
 

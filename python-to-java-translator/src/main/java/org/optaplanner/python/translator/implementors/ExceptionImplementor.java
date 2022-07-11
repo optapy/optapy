@@ -12,6 +12,8 @@ import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.errors.PythonAssertionError;
 import org.optaplanner.python.translator.types.errors.PythonBaseException;
@@ -106,26 +108,73 @@ public class ExceptionImplementor {
      */
     public static void createTryFinallyBlock(MethodVisitor methodVisitor, String className,
             PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper,
+            StackMetadata stackMetadata,
             Map<Integer, Label> bytecodeCounterToLabelMap,
             BiConsumer<Integer, Runnable> bytecodeCounterCodeArgumentConsumer) {
+        // Store the stack in local variables so the except block has access to them
+        int[] stackLocals = new int[stackMetadata.getStackSize()];
+        for (int i = 0; i < stackLocals.length; i++) {
+            stackLocals[i] = stackMetadata.localVariableHelper.newLocal();
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, stackLocals[i]);
+        }
+
+        // Restore the stored locals
+        for (int i = stackLocals.length - 1; i >= 0; i--) {
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, stackLocals[i]);
+        }
+
         Label finallyStart =
-                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg, key -> new Label());
+                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1,
+                        key -> new Label());
         Label tryStart = new Label();
-        methodVisitor.visitLabel(tryStart);
 
         methodVisitor.visitTryCatchBlock(tryStart, finallyStart, finallyStart, Type.getInternalName(PythonBaseException.class));
 
+        methodVisitor.visitLabel(tryStart);
+
         // At finallyStart, stack is expected to be:
-        // [tb, exception, exception_class] ; where:
+        // [(stack-before-try), instruction, level, label, tb, exception, exception_class] ; where:
+        // (stack-before-try) = the stack state before the try statement
+        // (see https://github.com/python/cpython/blob/b6558d768f19584ad724be23030603280f9e6361/Python/compile.c#L3241-L3268 )
+        // instruction =  instruction that created the block
+        // level = stack depth at the time the block was created
+        // label = label to go to for exception
+        // (see https://stackoverflow.com/a/66720684)
         // tb = stack trace
         // exception = exception instance
         // exception_class = the exception class
-        bytecodeCounterCodeArgumentConsumer.accept(instruction.offset + instruction.arg, () -> {
+        bytecodeCounterCodeArgumentConsumer.accept(instruction.offset + instruction.arg + 1, () -> {
             // Stack is exception
+            for (int i = stackLocals.length - 1; i >= 0; i--) {
+                methodVisitor.visitVarInsn(Opcodes.ALOAD, stackLocals[i]);
+                methodVisitor.visitInsn(Opcodes.SWAP);
+            }
+
+            // Stack is (stack-before-try), exception
             // Duplicate exception to the current exception variable slot so we can reraise it if needed
             methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getCurrentExceptionVariableSlot());
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, stackMetadata.localVariableHelper.getCurrentExceptionVariableSlot());
+
+            // Instruction
+            PythonConstantsImplementor.loadNone(methodVisitor); // We don't use it
+            methodVisitor.visitInsn(Opcodes.SWAP);
+
+            // Stack is (stack-before-try), instruction, exception
+
+            // Stack Size
+            methodVisitor.visitLdcInsn(stackMetadata.getStackSize());
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonInteger.class),
+                    "valueOf", Type.getMethodDescriptor(Type.getType(PythonInteger.class), Type.INT_TYPE),
+                    false);
+            methodVisitor.visitInsn(Opcodes.SWAP);
+
+            // Stack is (stack-before-try), instruction, stack-size, exception
+
+            // Label
+            PythonConstantsImplementor.loadNone(methodVisitor); // We don't use it
+            methodVisitor.visitInsn(Opcodes.SWAP);
+
+            // Stack is (stack-before-try), instruction, stack-size, label, exception
 
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
             methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className,
@@ -137,19 +186,24 @@ public class ExceptionImplementor {
                     true);
             methodVisitor.visitInsn(Opcodes.SWAP);
 
-            // Stack is traceback, exception
+            // Stack is (stack-before-try), instruction, stack-size, label, traceback, exception
             methodVisitor.visitInsn(Opcodes.DUP);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                     "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
                     true);
 
-            // Stack is traceback, exception, exception_class
+            // Stack is (stack-before-try), instruction, stack-size, label, traceback, exception, exception_class
         });
     }
 
-    public static void endExcept(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper) {
+    public static void startExceptOrFinally(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper) {
         // Clear the exception since it was handled
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getCurrentExceptionVariableSlot());
+
+        // Pop off the block (three items that we don't use)
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitInsn(Opcodes.POP);
     }
 }

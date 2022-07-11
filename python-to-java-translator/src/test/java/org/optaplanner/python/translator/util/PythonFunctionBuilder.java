@@ -161,7 +161,7 @@ public class PythonFunctionBuilder {
      * @param tryBlockBuilder The code to execute inside the try block
      * @return An {@link ExceptBuilder} for the try block
      */
-    public ExceptBuilder tryCode(Consumer<PythonFunctionBuilder> tryBlockBuilder) {
+    public ExceptBuilder tryCode(Consumer<PythonFunctionBuilder> tryBlockBuilder, boolean tryExitEarly) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
         instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.SETUP_FINALLY;
         instruction.offset = instructionList.size();
@@ -170,13 +170,16 @@ public class PythonFunctionBuilder {
 
         tryBlockBuilder.accept(this);
 
-        instruction.arg = instructionList.size() - tryStart + 2;
+        instruction.arg = instructionList.size() - tryStart + (tryExitEarly ? 0 : 1);
 
         instruction = new PythonBytecodeInstruction();
         instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.JUMP_ABSOLUTE;
         instruction.offset = instructionList.size();
         instruction.arg = 0;
-        instructionList.add(instruction);
+
+        if (!tryExitEarly) {
+            instructionList.add(instruction);
+        }
 
         return new ExceptBuilder(this, instruction);
     }

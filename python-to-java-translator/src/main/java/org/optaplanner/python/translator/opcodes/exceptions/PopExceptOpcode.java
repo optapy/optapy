@@ -14,11 +14,11 @@ public class PopExceptOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.copy();
+        return stackMetadata.pop(3);
     }
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        ExceptionImplementor.endExcept(functionMetadata.methodVisitor, stackMetadata.localVariableHelper);
+        ExceptionImplementor.startExceptOrFinally(functionMetadata.methodVisitor, stackMetadata.localVariableHelper);
     }
 }

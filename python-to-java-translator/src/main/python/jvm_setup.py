@@ -80,7 +80,12 @@ class GetAttributeOnPythonObjectWithMap:
         if not hasattr(python_object, attribute_name):
             return None
         out = getattr(python_object, attribute_name)
-        return convert_to_java_python_like_object(out, instance_map)
+        try:
+            return convert_to_java_python_like_object(out, instance_map)
+        except Exception as e:
+            import traceback
+            traceback.print_exception(e)
+            raise e
 
 
 @jpype.JImplements('org.optaplanner.python.translator.TriConsumer', deferred=True)
