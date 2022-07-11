@@ -253,4 +253,7 @@
   enableSearchInput(false)
 
   globalScope.initSearch = initSearch
+  globalScope.antoraSearch = {
+    initSearch: initSearch
+  }
 })(typeof globalThis !== 'undefined' ? globalThis : window)
