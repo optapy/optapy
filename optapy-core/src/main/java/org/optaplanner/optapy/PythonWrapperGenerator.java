@@ -118,18 +118,7 @@ public class PythonWrapperGenerator {
     @SuppressWarnings("unused")
     public static void setListValueOnPythonObject(OpaquePythonReference objectId, String attributeName, List javaList,
             Map<Number, Object> idMap, TriFunction updatePythonValue) {
-        if (javaList instanceof PythonList) {
-            pythonObjectIdAndAttributeSetter.apply(objectId, attributeName, javaList);
-        } else {
-            OpaquePythonReference pythonListReference =
-                    (OpaquePythonReference) getValueFromPythonObject(objectId, "get" + attributeName.substring(3));
-            PythonList pythonList = new PythonList(pythonListReference,
-                    CPythonBackedPythonInterpreter.getPythonReferenceId(pythonListReference), idMap, updatePythonValue);
-            pythonList.clear();
-            for (Object o : javaList) {
-                pythonList.add(o);
-            }
-        }
+        pythonObjectIdAndAttributeSetter.apply(objectId, attributeName, javaList);
     }
 
     @SuppressWarnings("unused")
@@ -330,21 +319,9 @@ public class PythonWrapperGenerator {
 
     public static <T> T wrapCollection(OpaquePythonReference object, Number id, Map<Number, Object> map,
             TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
-        if (pythonSetter == PythonWrapperGenerator.NONE_PYTHON_SETTER) {
-            PythonLikeList out = new PythonLikeList();
-            map.put(id, out);
-
-            List itemIds = new PythonList(object, id, map, pythonSetter);
-            for (Object itemId : itemIds) {
-                out.add(itemId);
-            }
-
-            return (T) out;
-        } else {
-            PythonList out = new PythonList(object, id, map, pythonSetter);
-            map.put(id, out);
-            return (T) out;
-        }
+        PythonList out = new PythonList(object, id, map, pythonSetter);
+        map.put(id, out);
+        return (T) out;
     }
 
     @SuppressWarnings("unchecked")
