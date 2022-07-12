@@ -1,5 +1,6 @@
 package org.optaplanner.optapy;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -77,11 +78,29 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     private TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter;
 
+    private final List<Object> cachedObjectList;
+
     public PythonList(OpaquePythonReference pythonListOpaqueReference, Number id, Map<Number, Object> idMap,
             TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter) {
         this.pythonListOpaqueReference = pythonListOpaqueReference;
         this.idMap = idMap;
         this.pythonSetter = pythonSetter;
+        int size = getPythonListLength.apply(pythonListOpaqueReference);
+        this.cachedObjectList = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            cachedObjectList.add(null);
+        }
+        for (int i = 0; i < size; i++) {
+            get(i); // use side-effect of populating cachedObjectList
+        }
+    }
+
+    public PythonList(OpaquePythonReference pythonListOpaqueReference, Number id, Map<Number, Object> idMap,
+            TriFunction<OpaquePythonReference, String, Object, Object> pythonSetter, List cachedObjectList) {
+        this.pythonListOpaqueReference = pythonListOpaqueReference;
+        this.idMap = idMap;
+        this.pythonSetter = pythonSetter;
+        this.cachedObjectList = cachedObjectList;
     }
 
     @Override
@@ -116,16 +135,20 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     @Override
     public int size() {
-        return getPythonListLength.apply(pythonListOpaqueReference);
+        return cachedObjectList.size();
     }
 
     @Override
     public boolean isEmpty() {
-        return size() == 0;
+        return cachedObjectList.isEmpty();
     }
 
     @Override
     public boolean contains(Object o) {
+        if (cachedObjectList.contains(o)) {
+            return true;
+        }
+
         if (o instanceof OpaquePythonReference) {
             return doesPythonListContainItem.apply(pythonListOpaqueReference, o);
         } else if (o instanceof PythonObject) {
@@ -180,6 +203,7 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     @Override
     public boolean add(Object t) {
+        cachedObjectList.add(t);
         if (t instanceof OpaquePythonReference) {
             addItemToPythonList.apply(pythonListOpaqueReference, t);
         } else if (t instanceof PythonObject) {
@@ -192,6 +216,7 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     @Override
     public boolean remove(Object t) {
+        cachedObjectList.remove(t);
         if (t instanceof OpaquePythonReference) {
             return removeItemFromPythonList.apply(pythonListOpaqueReference, t);
         } else if (t instanceof PythonObject) {
@@ -251,20 +276,33 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     @Override
     public void clear() {
+        cachedObjectList.clear();
         clearPythonList.apply(pythonListOpaqueReference);
     }
 
     @Override
     public T get(int i) {
+        if (i < 0 || i >= cachedObjectList.size()) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        Object maybeResult = cachedObjectList.get(i);
+        if (maybeResult != null) {
+            return (T) maybeResult;
+        }
+
         Object out = getItemAtIndexInPythonList.apply(pythonListOpaqueReference, i);
         if (out instanceof Number) {
             if (out instanceof Long) {
+                cachedObjectList.set(i, (int) (long) out);
                 return (T) (Integer) (int) (long) out; // How to cast Long to Integer in java
             }
+            cachedObjectList.set(i, out);
             return (T) out;
         }
 
         if (out instanceof String || out instanceof Boolean || out instanceof PythonObject) {
+            cachedObjectList.set(i, out);
             return (T) out;
         }
 
@@ -272,12 +310,14 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
         // so wrap it (which will return the same Proxy if it was already created)
         Object wrapped_out = PythonWrapperGenerator.wrap(PythonWrapperGenerator.getJavaClass((OpaquePythonReference) out),
                 (OpaquePythonReference) out, idMap, pythonSetter);
+        cachedObjectList.set(i, wrapped_out);
         return (T) wrapped_out;
     }
 
     @Override
     public Object set(int i, Object t) {
         Object old = get(i);
+        cachedObjectList.set(i, t);
         if (t instanceof OpaquePythonReference) {
             setItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
         } else if (t instanceof PythonObject) {
@@ -290,6 +330,7 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     @Override
     public void add(int i, Object t) {
+        cachedObjectList.add(i, t);
         if (t instanceof OpaquePythonReference) {
             addItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
         } else if (t instanceof PythonObject) {
@@ -302,6 +343,7 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
     @Override
     public T remove(int i) {
         T out = get(i);
+        cachedObjectList.remove(i);
         removeItemAtIndexFromPythonList.apply(pythonListOpaqueReference, i);
         return out;
     }
@@ -340,7 +382,8 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     @Override
     public List subList(int start, int end) {
-        return new PythonList(slicePythonList.apply(pythonListOpaqueReference, start, end), null, null, pythonSetter);
+        return new PythonList(slicePythonList.apply(pythonListOpaqueReference, start, end), null, null, pythonSetter,
+                cachedObjectList.subList(start, end));
     }
 
     @Override
