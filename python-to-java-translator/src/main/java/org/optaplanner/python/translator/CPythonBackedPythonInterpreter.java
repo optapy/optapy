@@ -1,6 +1,7 @@
 package org.optaplanner.python.translator;
 
 import java.io.PrintStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -15,6 +16,8 @@ import org.optaplanner.python.translator.types.errors.PythonTraceback;
 
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     PrintStream standardOutput;
+
+    public static Map<Number, Object> pythonObjectIdToConvertedObjectMap = new HashMap<>();
 
     public static Function<OpaquePythonReference, Number> lookupPythonReferenceIdPythonFunction;
 

@@ -1,5 +1,6 @@
 package org.optaplanner.python.translator.implementors;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -10,12 +11,14 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.StopIteration;
@@ -35,18 +38,23 @@ public class CollectionImplementor {
      * normal exceptions.
      */
     public static void iterateIterator(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            Map<Integer, Label> bytecodeCounterToLabelMap) {
+            StackMetadata stackMetadata,
+            FunctionMetadata functionMetadata) {
         Label tryStartLabel = new Label();
         Label tryEndLabel = new Label();
         Label catchStartLabel = new Label();
         Label catchEndLabel = new Label();
         Label loopEndLabel =
-                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1, key -> new Label());
+                functionMetadata.bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1,
+                        key -> new Label());
+
+        int[] storedStack = StackManipulationImplementor.storeStack(methodVisitor, stackMetadata);
 
         methodVisitor.visitTryCatchBlock(tryStartLabel, tryEndLabel, catchStartLabel,
                 Type.getInternalName(StopIteration.class));
 
         methodVisitor.visitLabel(tryStartLabel);
+
         methodVisitor.visitInsn(Opcodes.DUP);
         DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
         methodVisitor.visitLabel(tryEndLabel);
@@ -56,6 +64,13 @@ public class CollectionImplementor {
         methodVisitor.visitInsn(Opcodes.POP);
         methodVisitor.visitJumpInsn(Opcodes.GOTO, loopEndLabel);
         methodVisitor.visitLabel(catchEndLabel);
+
+        functionMetadata.bytecodeCounterToCodeArgumenterList
+                .computeIfAbsent(instruction.offset + instruction.arg + 1, key -> new ArrayList<>())
+                .add(() -> {
+                    StackManipulationImplementor.restoreStack(methodVisitor, storedStack);
+                    methodVisitor.visitInsn(Opcodes.POP);
+                });
     }
 
     /**
@@ -483,7 +498,7 @@ public class CollectionImplementor {
     public static void collectionAdd(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             LocalVariableHelper localVariableHelper) {
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
                 "add",
@@ -498,7 +513,7 @@ public class CollectionImplementor {
     public static void collectionAddAll(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             LocalVariableHelper localVariableHelper) {
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
                 "addAll",
@@ -514,7 +529,7 @@ public class CollectionImplementor {
     public static void mapPut(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             LocalVariableHelper localVariableHelper) {
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
         StackManipulationImplementor.rotateThree(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
                 "put",
@@ -529,7 +544,7 @@ public class CollectionImplementor {
     public static void mapPutAll(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             LocalVariableHelper localVariableHelper) {
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
                 "putAll",
@@ -545,7 +560,7 @@ public class CollectionImplementor {
     public static void mapPutAllOnlyIfAllNewElseThrow(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             LocalVariableHelper localVariableHelper) {
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg + 1);
+        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
 
         // Duplicate both maps so we can get their key sets

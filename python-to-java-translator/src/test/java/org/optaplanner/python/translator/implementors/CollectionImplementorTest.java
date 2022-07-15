@@ -112,9 +112,9 @@ public class CollectionImplementorTest {
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(3)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 3)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 2)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 0)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
@@ -130,9 +130,9 @@ public class CollectionImplementorTest {
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(2)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_ADD, 3)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_ADD, 2)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_ADD, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_ADD, 0)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
@@ -149,8 +149,8 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .list(2)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_EXTEND, 2)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_EXTEND, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_EXTEND, 0)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
@@ -208,11 +208,11 @@ public class CollectionImplementorTest {
                 .storeVariable("tail")
                 .loadVariable("tail")
                 .loadVariable("a")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 0)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 1)
                 .loadVariable("b")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 0)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 1)
                 .loadVariable("c")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 0)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 1)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
@@ -232,8 +232,8 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .set(2)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_UPDATE, 2)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_UPDATE, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_UPDATE, 0)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
@@ -252,9 +252,9 @@ public class CollectionImplementorTest {
                 .loadConstant(4)
                 .loadConstant(3)
                 .loadConstant(6)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 5)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 1)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 6)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 4)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 2)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
@@ -276,8 +276,8 @@ public class CollectionImplementorTest {
                 .loadConstant(3)
                 .loadConstant(6)
                 .dict(2)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_UPDATE, 2)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_UPDATE, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_UPDATE, 0)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
@@ -299,8 +299,8 @@ public class CollectionImplementorTest {
                 .loadConstant(3)
                 .loadConstant(6)
                 .dict(2)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 2)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 0)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
@@ -322,8 +322,8 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(4)
                 .dict(2)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 2)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 0)
                 .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
                 .build();
 

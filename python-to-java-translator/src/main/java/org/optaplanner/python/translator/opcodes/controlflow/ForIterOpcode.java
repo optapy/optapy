@@ -33,6 +33,6 @@ public class ForIterOpcode extends AbstractControlFlowOpcode {
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
         CollectionImplementor.iterateIterator(functionMetadata.methodVisitor, instruction,
-                functionMetadata.bytecodeCounterToLabelMap);
+                stackMetadata, functionMetadata);
     }
 }

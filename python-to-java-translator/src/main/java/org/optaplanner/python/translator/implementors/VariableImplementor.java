@@ -48,6 +48,7 @@ public class VariableImplementor {
         String globalName = pythonCompiledFunction.co_names.get(instruction.arg);
 
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, className);
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className,
                 PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
@@ -70,6 +71,7 @@ public class VariableImplementor {
         String globalName = pythonCompiledFunction.co_names.get(instruction.arg);
 
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, className);
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className,
                 PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
@@ -94,6 +96,7 @@ public class VariableImplementor {
         String globalName = pythonCompiledFunction.co_names.get(instruction.arg);
 
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, className);
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className,
                 PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));

@@ -129,6 +129,17 @@ public class PythonFunctionBuilder {
      * @param blockBuilder the bytecode to run in the loop
      */
     public PythonFunctionBuilder loop(Consumer<PythonFunctionBuilder> blockBuilder) {
+        return loop(blockBuilder, false);
+    }
+
+    /**
+     * TOS is an iterator. While the iterator is not empty, push the
+     * iterator's next element to the top of the stack and run the specified
+     * code. Repeat until the iterator is empty, and then pop the iterator off the stack.
+     *
+     * @param blockBuilder the bytecode to run in the loop
+     */
+    public PythonFunctionBuilder loop(Consumer<PythonFunctionBuilder> blockBuilder, boolean alwaysExitEarly) {
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
         instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.FOR_ITER;
         instruction.offset = instructionList.size();
@@ -137,12 +148,14 @@ public class PythonFunctionBuilder {
 
         blockBuilder.accept(this);
 
-        PythonBytecodeInstruction jumpBackInstruction = new PythonBytecodeInstruction();
-        jumpBackInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.JUMP_ABSOLUTE;
-        jumpBackInstruction.offset = instructionList.size();
-        jumpBackInstruction.arg = instruction.offset;
-        jumpBackInstruction.isJumpTarget = false;
-        instructionList.add(jumpBackInstruction);
+        if (!alwaysExitEarly) {
+            PythonBytecodeInstruction jumpBackInstruction = new PythonBytecodeInstruction();
+            jumpBackInstruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.JUMP_ABSOLUTE;
+            jumpBackInstruction.offset = instructionList.size();
+            jumpBackInstruction.arg = instruction.offset;
+            jumpBackInstruction.isJumpTarget = false;
+            instructionList.add(jumpBackInstruction);
+        }
 
         instruction.arg = instructionList.size() - instruction.offset - 1;
 

@@ -10,10 +10,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
+import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.MyObject;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.types.JavaMethodReference;
+import org.optaplanner.python.translator.types.PythonCode;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.UnaryLambdaReference;
@@ -218,5 +221,95 @@ public class FunctionImplementorTest {
 
         Supplier javaFunction = translatePythonBytecode(parentFunction, Supplier.class);
         assertThat(javaFunction.get()).isEqualTo(321);
+    }
+
+    @Test
+    public void testEnumDir() {
+        // Test a complicated list comp used in enums (ensuring it creates valid Java bytecode)
+        PythonCompiledFunction firstListComp = PythonFunctionBuilder.newFunction(".0")
+                .list(0)
+                .loadParameter(".0")
+                .loop(loopBuilder -> {
+                    loopBuilder.storeVariable("cls")
+                            .loadVariable("cls")
+                            .getAttribute("__dict__")
+                            .op(PythonBytecodeInstruction.OpcodeIdentifier.GET_ITER)
+                            .loop(innerLoopBuilder -> {
+                                innerLoopBuilder.storeVariable("m")
+                                        .loadVariable("m")
+                                        .loadConstant(0)
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_SUBSCR)
+                                        .loadConstant("_")
+                                        .compare(CompareOp.NOT_EQUALS)
+                                        .ifTrue(ifBuilder -> {
+                                            ifBuilder.loadVariable("m")
+                                                    .loadFreeVariable("self")
+                                                    .getAttribute("_member_map_")
+                                                    .op(PythonBytecodeInstruction.OpcodeIdentifier.CONTAINS_OP, 1)
+                                                    .ifTrue(innerIfBuilder -> {
+                                                        ifBuilder.loadVariable("m")
+                                                                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 3);
+                                                    });
+                                        });
+                            });
+                })
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        PythonCompiledFunction secondListComp = PythonFunctionBuilder.newFunction(".0")
+                .list(0)
+                .loadParameter(".0")
+                .loop(loopBuilder -> {
+                    loopBuilder.storeVariable("m")
+                            .loadVariable("m")
+                            .loadConstant(0)
+                            .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_SUBSCR)
+                            .loadConstant("_")
+                            .compare(CompareOp.NOT_EQUALS)
+                            .ifTrue(ifBuilder -> {
+                                ifBuilder.loadVariable("m")
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 2);
+                            });
+                })
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        PythonCode firstListCompCode = new PythonCode(
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass(firstListComp, PythonLikeFunction.class));
+
+        PythonCode secondListCompCode = new PythonCode(
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass(secondListComp,
+                        PythonLikeFunction.class));
+
+        PythonCompiledFunction dirFunction = PythonFunctionBuilder.newFunction("self")
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_CLOSURE, 0)
+                .tuple(1)
+                .loadConstant(firstListCompCode)
+                .loadConstant("Enum.__dir__.<locals>.<listcomp>")
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAKE_FUNCTION, 8)
+                .loadCellVariable("self")
+                .getAttribute("__class__")
+                .loadMethod("mro")
+                .callMethod(0)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.GET_ITER)
+                .callFunction(1)
+                .loadConstant(secondListCompCode)
+                .loadConstant("Enum.__dir__.<locals>.<listcomp>")
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAKE_FUNCTION, 0)
+                .loadCellVariable("self")
+                .getAttribute("__dict__")
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.GET_ITER)
+                .callFunction(1)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
+                .storeVariable("added_behavior")
+                .list(0)
+                .loadConstant(List.of("__class__", "__doc__", "__module__"))
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_EXTEND, 1)
+                .loadVariable("added_behavior")
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        translatePythonBytecode(dirFunction, Function.class);
     }
 }

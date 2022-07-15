@@ -1,7 +1,9 @@
 package org.optaplanner.optapy;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 import org.optaplanner.core.api.domain.solution.cloner.SolutionCloner;
@@ -38,7 +40,21 @@ public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
         PythonObject out =
                 (PythonObject) PythonWrapperGenerator.wrap(o.getClass(), planningClone, toClone.get__optapy_reference_map(),
                         pythonSetter);
-        out.visitIds(out.get__optapy_reference_map());
+
+        Map<Number, Object> oldIdMap = new HashMap<>();
+        Map<Number, Object> newIdMap = new HashMap<>();
+        toClone.visitIds(oldIdMap);
+        out.visitIds(newIdMap);
+
+        for (Number id : oldIdMap.keySet()) {
+            if (!newIdMap.containsKey(id)) {
+                toClone.get__optapy_reference_map().remove(id);
+            } else {
+                newIdMap.remove(id);
+            }
+        }
+
+        toClone.get__optapy_reference_map().putAll(newIdMap);
 
         // Mirror the reference map (not pass a reference to it)
         // so Score + list variables can be safely garbage collected in Python

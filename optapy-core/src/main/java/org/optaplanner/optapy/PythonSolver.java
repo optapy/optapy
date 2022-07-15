@@ -1,9 +1,9 @@
 package org.optaplanner.optapy;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
 
+import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
 
 @SuppressWarnings("unused")
@@ -19,7 +19,8 @@ public class PythonSolver {
         try {
             final boolean onlyUseJavaSettersForThisInstance = onlyUseJavaSetters;
             onlyUseJavaSetters = false;
-            PythonObject out = (PythonObject) PythonWrapperGenerator.wrap(solutionClass, problem, new HashMap<>(),
+            PythonObject out = (PythonObject) PythonWrapperGenerator.wrap(solutionClass, problem,
+                    new MirrorWithExtrasMap<>(CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap),
                     onlyUseJavaSettersForThisInstance ? PythonWrapperGenerator.NONE_PYTHON_SETTER
                             : PythonWrapperGenerator.pythonObjectIdAndAttributeSetter);
             out.visitIds(out.get__optapy_reference_map());

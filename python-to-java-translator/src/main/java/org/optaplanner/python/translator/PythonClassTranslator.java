@@ -194,6 +194,7 @@ public class PythonClassTranslator {
                 attributeNameToTypeMap);
 
         classWriter.visitEnd();
+
         writeClassOutput(classNameToBytecode, className, classWriter.toByteArray());
 
         Class<? extends PythonLikeObject> generatedClass;
@@ -207,20 +208,6 @@ public class PythonClassTranslator {
             throw new IllegalStateException("Impossible State: could not access type static field for generated class ("
                     + className + ").", e);
         }
-
-        final Map<Number, PythonLikeObject> instanceMap = new HashMap<>();
-        pythonCompiledClass.staticAttributeNameToClassInstance.forEach((attributeName, instancePointer) -> {
-            try {
-                CPythonBackedPythonLikeObject objectInstance =
-                        (CPythonBackedPythonLikeObject) generatedClass.getConstructor().newInstance();
-                objectInstance.$setCPythonReference(instancePointer);
-                objectInstance.$setInstanceMap(instanceMap);
-                objectInstance.$readFieldsFromCPythonReference();
-                pythonLikeType.__setAttribute(attributeName, objectInstance);
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                throw new RuntimeException("Unable to construct instance of class (" + generatedClass + ")", e);
-            }
-        });
 
         for (Map.Entry<String, PythonCompiledFunction> instanceMethodEntry : pythonCompiledClass.instanceFunctionNameToPythonBytecode
                 .entrySet()) {
@@ -253,6 +240,23 @@ public class PythonClassTranslator {
         }
 
         return pythonLikeType;
+    }
+
+    public static void setSelfStaticInstances(PythonCompiledClass pythonCompiledClass, Class<?> generatedClass,
+            PythonLikeType pythonLikeType,
+            Map<Number, PythonLikeObject> instanceMap) {
+        pythonCompiledClass.staticAttributeNameToClassInstance.forEach((attributeName, instancePointer) -> {
+            try {
+                CPythonBackedPythonLikeObject objectInstance =
+                        (CPythonBackedPythonLikeObject) generatedClass.getConstructor().newInstance();
+                objectInstance.$setCPythonReference(instancePointer);
+                objectInstance.$setInstanceMap(instanceMap);
+                objectInstance.$readFieldsFromCPythonReference();
+                pythonLikeType.__setAttribute(attributeName, objectInstance);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                throw new RuntimeException("Unable to construct instance of class (" + generatedClass + ")", e);
+            }
+        });
     }
 
     public static String getJavaFieldName(String pythonFieldName) {

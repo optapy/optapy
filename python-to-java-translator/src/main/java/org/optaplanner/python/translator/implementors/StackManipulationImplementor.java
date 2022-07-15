@@ -6,6 +6,7 @@ import java.util.List;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.optaplanner.python.translator.LocalVariableHelper;
+import org.optaplanner.python.translator.StackMetadata;
 
 /**
  * Implementations of stack manipulation opcodes (rotations, pop, duplication, etc.)
@@ -135,6 +136,25 @@ public class StackManipulationImplementor {
             int local = localList.get(i);
             methodVisitor.visitVarInsn(Opcodes.ALOAD, local);
             localVariableHelper.freeLocal();
+        }
+    }
+
+    public static int[] storeStack(MethodVisitor methodVisitor, StackMetadata stackMetadata) {
+        int[] stackLocalVariables = new int[stackMetadata.getStackSize()];
+        for (int i = stackLocalVariables.length - 1; i >= 0; i--) {
+            stackLocalVariables[i] = stackMetadata.localVariableHelper.newLocal();
+            methodVisitor.visitVarInsn(Opcodes.ASTORE, i);
+        }
+        for (int i = 0; i < stackLocalVariables.length; i++) {
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, i);
+        }
+
+        return stackLocalVariables;
+    }
+
+    public static void restoreStack(MethodVisitor methodVisitor, int[] stackLocalVariables) {
+        for (int i = 0; i < stackLocalVariables.length; i++) {
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, i);
         }
     }
 }

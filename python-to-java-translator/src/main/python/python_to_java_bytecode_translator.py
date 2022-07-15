@@ -1,12 +1,11 @@
 import dis
 
 import inspect
-from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass
+from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, onJVMStart
 
 global_dict_to_instance = dict()
 global_dict_to_key_set = dict()
 type_to_compiled_java_class = dict()
-
 
 def is_c_native(object):
     try:
@@ -20,7 +19,6 @@ def init_type_to_compiled_java_class():
     import org.optaplanner.python.translator.types as java_types
     import org.optaplanner.python.translator.types.errors as java_errors_types
     import org.optaplanner.python.translator.types.datetime as java_datetime_types
-    import builtins
     import datetime
 
     if len(type_to_compiled_java_class) > 0:
@@ -61,6 +59,15 @@ def copy_iterable(iterable):
     return iterable_copy
 
 
+def remove_from_instance_map(instance_map, object_id):
+    instance_map.remove(object_id)
+
+
+def put_in_instance_map(instance_map, python_object, java_object):
+    global objects_without_weakref_id_set
+    instance_map.put(id(python_object), java_object)
+
+
 def convert_object_to_java_python_like_object(value, instance_map=None):
     import datetime
     from java.lang import Object
@@ -74,24 +81,24 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
 
     if isinstance(value, Object):
         out = JavaObjectWrapper(value)
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, datetime.datetime):
         out = PythonDateTime.of(value.year, value.month, value.day, value.hour, value.minute, value.second,
                                 value.microsecond, value.tzname(), value.fold)
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, datetime.date):
         out = PythonDate.of(value.year, value.month, value.day)
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, datetime.time):
         out = PythonTime.of(value.hour, value.minute, value.second, value.microsecond, value.tzname(), value.fold)
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, datetime.timedelta):
         out = PythonTimeDelta.of(value.days, value.seconds, value.microseconds)
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         return out
     elif type(value) in type_to_compiled_java_class:
         java_type = type_to_compiled_java_class[type(value)]
@@ -99,7 +106,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
             return None
         java_class = java_type.getJavaClass()
         out = java_class.getConstructor(PythonLikeType).newInstance(java_type)
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         CPythonBackedPythonInterpreter.updateJavaObjectFromPythonObject(out,
                                                                         JProxy(OpaquePythonReference, inst=value,
                                                                                convert=True),
@@ -111,7 +118,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
         try:
             from org.optaplanner.python.translator.types import PythonLikeFunction
             out = translate_python_bytecode_to_java_bytecode(value, PythonLikeFunction)
-            instance_map.put(JLong(id(value)), out)
+            put_in_instance_map(instance_map, value, out)
             return out
         except:
             return None
@@ -122,7 +129,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
                 return None
             java_class = java_type.getJavaClass()
             out = java_class.getConstructor(PythonLikeType).newInstance(java_type)
-            instance_map.put(JLong(id(value)), out)
+            put_in_instance_map(instance_map, value, out)
             CPythonBackedPythonInterpreter.updateJavaObjectFromPythonObject(out,
                                                                             JProxy(OpaquePythonReference, inst=value,
                                                                                    convert=True),
@@ -146,7 +153,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
     if instance_map.containsKey(JLong(id(value))):
         return instance_map.get(JLong(id(value)))
     elif isinstance(value, PythonLikeObject):
-        instance_map.put(JLong(id(value)), value)
+        put_in_instance_map(instance_map, value, out)
         return value
     elif value is None:
         return PythonNone.INSTANCE
@@ -154,49 +161,47 @@ def convert_to_java_python_like_object(value, instance_map=None):
         return PythonBoolean.valueOf(JBoolean(value))
     elif isinstance(value, int):
         out = PythonInteger.valueOf(JInt(value))
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, float):
         out = PythonFloat.valueOf(JFloat(value))
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, str):
         out = PythonString.valueOf(value)
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, tuple):
         out = PythonLikeTuple()
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         for item in value:
             out.add(convert_to_java_python_like_object(item, instance_map))
         return out
     elif isinstance(value, list):
         out = PythonLikeList()
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         for item in value:
             out.add(convert_to_java_python_like_object(item, instance_map))
         return out
     elif isinstance(value, set):
         out = PythonLikeSet()
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         for item in value:
             out.add(convert_to_java_python_like_object(item, instance_map))
         return out
     elif isinstance(value, dict):
         out = PythonLikeDict()
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         for map_key, map_value in value.items():
             out.put(convert_to_java_python_like_object(map_key, instance_map),
                     convert_to_java_python_like_object(map_value, instance_map))
         return out
-    #elif hasattr(value, '__optapy_java_class'):
-    #    return OptaPyObjectReference(JLong(id(value)))
     elif isinstance(value, type):
         if value in type_to_compiled_java_class:
             return type_to_compiled_java_class[value]
         else:
             out = CPythonType.getType(JProxy(OpaquePythonReference, inst=value, convert=True))
-            instance_map.put(JLong(id(value)), out)
+            put_in_instance_map(instance_map, value, out)
             return out
     else:
         out = convert_object_to_java_python_like_object(value, instance_map)
@@ -204,7 +209,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
             return out
         proxy = JProxy(OpaquePythonReference, inst=value, convert=True)
         out = PythonObjectWrapper(proxy)
-        instance_map.put(JLong(id(value)), out)
+        put_in_instance_map(instance_map, value, out)
         CPythonBackedPythonInterpreter.updateJavaObjectFromPythonObject(out,
                                                                         proxy,
                                                                         instance_map)
@@ -309,23 +314,25 @@ def copy_type_annotations(annotations_dict):
 
 def copy_constants(constants_iterable):
     from java.util import ArrayList
+    from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
     if constants_iterable is None:
         return None
     iterable_copy = ArrayList()
     for item in constants_iterable:
-        iterable_copy.add(convert_to_java_python_like_object(item))
+        iterable_copy.add(convert_to_java_python_like_object(item, CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap))
     return iterable_copy
 
 
 def copy_closure(closure):
     from org.optaplanner.python.translator.types import PythonLikeTuple, PythonCell
+    from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
     out = PythonLikeTuple()
     if closure is None:
         return out
     else:
         for cell in closure:
             java_cell = PythonCell()
-            java_cell.cellValue = convert_to_java_python_like_object(cell.cell_contents)
+            java_cell.cellValue = convert_to_java_python_like_object(cell.cell_contents, CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap)
             out.add(java_cell)
         return out
 
@@ -334,6 +341,7 @@ def copy_globals(globals_dict):
     global global_dict_to_instance
     global global_dict_to_key_set
     from java.util import HashMap
+    from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
 
     globals_dict_key = id(globals_dict)
     if globals_dict_key in global_dict_to_instance:
@@ -345,7 +353,7 @@ def copy_globals(globals_dict):
         global_dict_to_instance[globals_dict_key] = out
         global_dict_to_key_set[globals_dict_key] = key_set
 
-    instance_map = HashMap()
+    instance_map = CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap
     for key, value in globals_dict.items():
         if key not in key_set:
             key_set.add(key)
@@ -448,7 +456,7 @@ def erase_generic_args(python_type):
 def translate_python_class_to_java_class(python_class):
     from java.lang import Class as JavaClass
     from java.util import ArrayList, HashMap
-    from org.optaplanner.python.translator import PythonCompiledClass, PythonClassTranslator # noqa
+    from org.optaplanner.python.translator import PythonCompiledClass, PythonClassTranslator, CPythonBackedPythonInterpreter # noqa
     from org.optaplanner.python.translator.types import JavaObjectWrapper, OpaquePythonReference, CPythonType # noqa
 
     global type_to_compiled_java_class
@@ -488,7 +496,7 @@ def translate_python_class_to_java_class(python_class):
         else:
             try:
                 superclass_list.add(translate_python_class_to_java_class(superclass))
-            except:
+            except Exception:
                 superclass_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=superclass, convert=True))
                 type_to_compiled_java_class[superclass] = superclass_java_type
                 python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
@@ -546,4 +554,6 @@ def translate_python_class_to_java_class(python_class):
 
     out = PythonClassTranslator.translatePythonClass(python_compiled_class)
     type_to_compiled_java_class[python_class] = out
+    PythonClassTranslator.setSelfStaticInstances(python_compiled_class, out.getJavaClass(), out,
+                                                 CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap)
     return out

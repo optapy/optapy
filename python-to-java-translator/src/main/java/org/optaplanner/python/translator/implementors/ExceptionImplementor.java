@@ -112,16 +112,7 @@ public class ExceptionImplementor {
             Map<Integer, Label> bytecodeCounterToLabelMap,
             BiConsumer<Integer, Runnable> bytecodeCounterCodeArgumentConsumer) {
         // Store the stack in local variables so the except block has access to them
-        int[] stackLocals = new int[stackMetadata.getStackSize()];
-        for (int i = 0; i < stackLocals.length; i++) {
-            stackLocals[i] = stackMetadata.localVariableHelper.newLocal();
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, stackLocals[i]);
-        }
-
-        // Restore the stored locals
-        for (int i = stackLocals.length - 1; i >= 0; i--) {
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, stackLocals[i]);
-        }
+        int[] stackLocals = StackManipulationImplementor.storeStack(methodVisitor, stackMetadata);
 
         Label finallyStart =
                 bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1,
@@ -145,38 +136,32 @@ public class ExceptionImplementor {
         // exception_class = the exception class
         bytecodeCounterCodeArgumentConsumer.accept(instruction.offset + instruction.arg + 1, () -> {
             // Stack is exception
-            for (int i = stackLocals.length - 1; i >= 0; i--) {
-                methodVisitor.visitVarInsn(Opcodes.ALOAD, stackLocals[i]);
-                methodVisitor.visitInsn(Opcodes.SWAP);
-            }
-
-            // Stack is (stack-before-try), exception
             // Duplicate exception to the current exception variable slot so we can reraise it if needed
-            methodVisitor.visitInsn(Opcodes.DUP);
             methodVisitor.visitVarInsn(Opcodes.ASTORE, stackMetadata.localVariableHelper.getCurrentExceptionVariableSlot());
+            StackManipulationImplementor.restoreStack(methodVisitor, stackLocals);
+
+            // Stack is (stack-before-try)
 
             // Instruction
             PythonConstantsImplementor.loadNone(methodVisitor); // We don't use it
-            methodVisitor.visitInsn(Opcodes.SWAP);
 
-            // Stack is (stack-before-try), instruction, exception
+            // Stack is (stack-before-try), instruction
 
             // Stack Size
             methodVisitor.visitLdcInsn(stackMetadata.getStackSize());
             methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonInteger.class),
                     "valueOf", Type.getMethodDescriptor(Type.getType(PythonInteger.class), Type.INT_TYPE),
                     false);
-            methodVisitor.visitInsn(Opcodes.SWAP);
 
             // Stack is (stack-before-try), instruction, stack-size, exception
 
             // Label
             PythonConstantsImplementor.loadNone(methodVisitor); // We don't use it
-            methodVisitor.visitInsn(Opcodes.SWAP);
 
-            // Stack is (stack-before-try), instruction, stack-size, label, exception
+            // Stack is (stack-before-try), instruction, stack-size, label
 
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, className); // needed cast; type confusion on this?
             methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className,
                     PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
                     Type.getDescriptor(PythonInterpreter.class));
@@ -184,9 +169,15 @@ public class ExceptionImplementor {
             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
                     "getTraceback", Type.getMethodDescriptor(Type.getType(PythonTraceback.class)),
                     true);
-            methodVisitor.visitInsn(Opcodes.SWAP);
+
+            // Stack is (stack-before-try), instruction, stack-size, label, traceback
+
+            // Load exception
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, stackMetadata.localVariableHelper.getCurrentExceptionVariableSlot());
 
             // Stack is (stack-before-try), instruction, stack-size, label, traceback, exception
+
+            // Get exception class
             methodVisitor.visitInsn(Opcodes.DUP);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                     "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),

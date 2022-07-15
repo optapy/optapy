@@ -7,17 +7,20 @@ import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTran
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.errors.PythonAssertionError;
+import org.optaplanner.python.translator.types.errors.PythonException;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
@@ -107,5 +110,36 @@ public class ExceptionImplementorTest {
         assertThat(javaFunction.apply(2)).isEqualTo(1);
         assertThat(globalsMap.get("exception")).isEqualTo(PythonNone.INSTANCE);
         assertThat(globalsMap.get("finally")).isEqualTo("Finally");
+    }
+
+    @Test
+    public void testExceptionInLoop() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("start", "last_values")
+                .loadGlobalVariable("reversed")
+                .loadParameter("last_values")
+                .callFunction(1)
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.GET_ITER)
+                .loop(loopBuilder -> {
+                    loopBuilder.storeVariable("last_value")
+                            .tryCode(tryBuilder -> {
+                                tryBuilder.loadVariable("last_value")
+                                        .loadConstant(1)
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.POP_BLOCK)
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_TWO)
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.POP_TOP)
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                            }, true).except(PythonException.EXCEPTION_TYPE, exceptBuilder -> {
+                                exceptBuilder
+                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.JUMP_ABSOLUTE, 4);
+                            }, true)
+                            .tryEnd();
+                }, true)
+                .loadParameter("start")
+                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        BiFunction biFunction =
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
     }
 }
