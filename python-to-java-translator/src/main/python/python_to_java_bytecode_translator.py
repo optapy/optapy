@@ -73,7 +73,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
     from java.lang import Object
     from java.util import HashMap
     from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
-    from org.optaplanner.python.translator.types import OpaquePythonReference, PythonLikeType, CPythonType, JavaObjectWrapper
+    from org.optaplanner.python.translator.types import OpaquePythonReference, PythonLikeType, CPythonType, JavaObjectWrapper, CPythonBackedPythonLikeObject
     from org.optaplanner.python.translator.types.datetime import PythonDate, PythonDateTime, PythonTime, PythonTimeDelta
 
     if instance_map is None:
@@ -99,6 +99,15 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
     elif isinstance(value, datetime.timedelta):
         out = PythonTimeDelta.of(value.days, value.seconds, value.microseconds)
         put_in_instance_map(instance_map, value, out)
+        return out
+    elif type(value) is object:
+        java_type = type_to_compiled_java_class[type(value)]
+        out = CPythonBackedPythonLikeObject(java_type)
+        put_in_instance_map(instance_map, value, out)
+        CPythonBackedPythonInterpreter.updateJavaObjectFromPythonObject(out,
+                                                                        JProxy(OpaquePythonReference, inst=value,
+                                                                               convert=True),
+                                                                        instance_map)
         return out
     elif type(value) in type_to_compiled_java_class:
         java_type = type_to_compiled_java_class[type(value)]
@@ -138,12 +147,20 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
         except:
             return None
 
+
+def is_banned_module(module):
+    if module.__name__.startswith('jpype') or module.__name__.startswith('_jpype') or module.__name__.startswith('importlib'):
+        return True
+    return False
+
+
 def convert_to_java_python_like_object(value, instance_map=None):
     from java.util import HashMap
+    from types import ModuleType
     from org.optaplanner.python.translator import PythonLikeObject, CPythonBackedPythonInterpreter
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
         PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper, CPythonType, \
-        OpaquePythonReference
+        OpaquePythonReference, PythonModule
 
     global type_to_compiled_java_class
 
@@ -153,7 +170,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
     if instance_map.containsKey(JLong(id(value))):
         return instance_map.get(JLong(id(value)))
     elif isinstance(value, PythonLikeObject):
-        put_in_instance_map(instance_map, value, out)
+        put_in_instance_map(instance_map, value, value)
         return value
     elif value is None:
         return PythonNone.INSTANCE
@@ -203,6 +220,13 @@ def convert_to_java_python_like_object(value, instance_map=None):
             out = CPythonType.getType(JProxy(OpaquePythonReference, inst=value, convert=True))
             put_in_instance_map(instance_map, value, out)
             return out
+    elif isinstance(value, ModuleType) and repr(value).startswith('<module \'') and not is_banned_module(value):  # should not convert java modules
+        out = PythonModule()
+        out.setPythonReference(JProxy(OpaquePythonReference, inst=value, convert=True))
+        put_in_instance_map(instance_map, value, out)
+        for item_name, item_value in tuple(value.__dict__.items()):
+            out.addItem(item_name, convert_to_java_python_like_object(item_value, instance_map))
+        return out
     else:
         out = convert_object_to_java_python_like_object(value, instance_map)
         if out is not None:
@@ -214,20 +238,19 @@ def convert_to_java_python_like_object(value, instance_map=None):
                                                                         proxy,
                                                                         instance_map)
         return out
-    # TODO: Get compiled class corresponding to function / class bytecode
 
 
-def unwrap_python_like_object(python_like_object):
+def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from org.optaplanner.python.translator import PythonLikeObject
     from java.util import List, Map, Set
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
-        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper, \
+        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonModule, PythonObjectWrapper, \
         JavaObjectWrapper
 
     if isinstance(python_like_object, (PythonObjectWrapper, JavaObjectWrapper)):
         out = python_like_object.getWrappedObject()
         return out
-    elif python_like_object is PythonNone.INSTANCE:
+    elif isinstance(python_like_object, PythonNone):
         return None
     elif isinstance(python_like_object, (PythonBoolean, PythonFloat, PythonString)):
         return python_like_object.getValue()
@@ -236,29 +259,34 @@ def unwrap_python_like_object(python_like_object):
     elif isinstance(python_like_object, (PythonLikeTuple, tuple)):
         out = []
         for item in python_like_object:
-            out.append(unwrap_python_like_object(item))
+            out.append(unwrap_python_like_object(item, default))
         return tuple(out)
     elif isinstance(python_like_object, List):
         out = []
         for item in python_like_object:
-            out.append(unwrap_python_like_object(item))
+            out.append(unwrap_python_like_object(item, default))
         return out
     elif isinstance(python_like_object, Set):
         out = set()
         for item in python_like_object:
-            out.add(unwrap_python_like_object(item))
+            out.add(unwrap_python_like_object(item, default))
         return out
     elif isinstance(python_like_object, Map):
         out = dict()
         for entry in python_like_object.entrySet():
-            out[unwrap_python_like_object(entry.getKey())] = unwrap_python_like_object(entry.getValue())
+            out[unwrap_python_like_object(entry.getKey(), default)] = unwrap_python_like_object(entry.getValue(),
+                                                                                                default)
         return out
+    elif isinstance(python_like_object, PythonModule):
+        return python_like_object.getPythonReference()
     elif hasattr(python_like_object, 'get__optapy_Id'):
         return python_like_object.get__optapy_Id()
     elif not isinstance(python_like_object, PythonLikeObject):
         return python_like_object
     else:
-        raise NotImplementedError(f'Unable to convert object of type {type(value)}')
+        if default == NotImplementedError:
+            raise NotImplementedError(f'Unable to convert object of type {type(python_like_object)}')
+        return default
 
 
 def get_java_type_for_python_type(the_type):

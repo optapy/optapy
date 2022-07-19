@@ -44,6 +44,7 @@ def init(*args, path: List[str] = None, include_translator_jars: bool = True):
     CPythonBackedPythonInterpreter.setAttributeOnPythonReferencePythonFunction = SetAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.deleteAttributeOnPythonReferencePythonFunction = DeleteAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.callPythonFunction = CallPythonFunction()
+    CPythonBackedPythonInterpreter.importModuleFunction = ImportModule()
 
 
 @jpype.JImplements('java.util.function.Function', deferred=True)
@@ -118,6 +119,21 @@ class CallPythonFunction:
             from org.optaplanner.python.translator.types.errors import CPythonException
             print(e)
             raise CPythonException(str(e))
+
+
+@jpype.JImplements('org.optaplanner.python.translator.PentaFunction', deferred=True)
+class ImportModule:
+    @jpype.JOverride()
+    def apply(self, module_name, globals_map, locals_map, from_list, level):
+        from .python_to_java_bytecode_translator import unwrap_python_like_object, convert_to_java_python_like_object
+        from org.optaplanner.python.translator import CPythonBackedPythonInterpreter  # noqa
+        python_globals = unwrap_python_like_object(globals_map, None)
+        python_locals = unwrap_python_like_object(locals_map, None)
+        python_from_list = unwrap_python_like_object(from_list, None)
+        return convert_to_java_python_like_object(
+            __import__(module_name, python_globals, python_locals, python_from_list, level),
+            CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap
+        )
 
 
 def ensure_init():

@@ -704,6 +704,48 @@ public class PythonFunctionBuilder {
     }
 
     /**
+     * Loads a module using TOS as level and TOS1 as from_list
+     *
+     * @param moduleName The module to get
+     */
+    public PythonFunctionBuilder loadModule(String moduleName) {
+        PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.IMPORT_NAME;
+        instruction.offset = instructionList.size();
+
+        int attributeIndex = co_names.indexOf(moduleName);
+        if (attributeIndex == -1) {
+            attributeIndex = co_names.size();
+            co_names.add(moduleName);
+        }
+
+        instruction.arg = attributeIndex;
+        instructionList.add(instruction);
+        return this;
+    }
+
+    /**
+     * Loads an attribute from TOS (which is a module)
+     *
+     * @param attributeName The attribute to get
+     */
+    public PythonFunctionBuilder getFromModule(String attributeName) {
+        PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+        instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.IMPORT_FROM;
+        instruction.offset = instructionList.size();
+
+        int attributeIndex = co_names.indexOf(attributeName);
+        if (attributeIndex == -1) {
+            attributeIndex = co_names.size();
+            co_names.add(attributeName);
+        }
+
+        instruction.arg = attributeIndex;
+        instructionList.add(instruction);
+        return this;
+    }
+
+    /**
      * Perform a comparison on TOS and TOS1, popping TOS, TOS1 and pushing the result.
      *
      * @param compareOp The comparison to perform

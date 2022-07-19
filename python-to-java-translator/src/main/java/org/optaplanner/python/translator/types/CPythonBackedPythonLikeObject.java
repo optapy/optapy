@@ -5,7 +5,7 @@ import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 
-public abstract class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject {
+public class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject {
     public static final PythonLikeType CPYTHON_BACKED_OBJECT_TYPE =
             new PythonLikeType("object", CPythonBackedPythonLikeObject.class);
 
