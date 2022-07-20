@@ -148,9 +148,17 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
             return None
 
 
-def is_banned_module(module):
-    if module.__name__.startswith('jpype') or module.__name__.startswith('_jpype') or module.__name__.startswith('importlib'):
-        return True
+def is_banned_module(module: str):
+    banned_modules = {'jpype', 'importlib', 'pytest'}
+    for banned_module in banned_modules:
+        if module == banned_module:
+            return True
+        elif module == f'_{banned_module}':
+            return True
+        elif module.startswith(f'{banned_module}.'):
+            return True
+        elif module.startswith(f'_{banned_module}.'):
+            return True
     return False
 
 
@@ -220,7 +228,8 @@ def convert_to_java_python_like_object(value, instance_map=None):
             out = CPythonType.getType(JProxy(OpaquePythonReference, inst=value, convert=True))
             put_in_instance_map(instance_map, value, out)
             return out
-    elif isinstance(value, ModuleType) and repr(value).startswith('<module \'') and not is_banned_module(value):  # should not convert java modules
+    elif isinstance(value, ModuleType) and repr(value).startswith('<module \'') and not \
+            is_banned_module(value.__name__):  # should not convert java modules
         out = PythonModule()
         out.setPythonReference(JProxy(OpaquePythonReference, inst=value, convert=True))
         put_in_instance_map(instance_map, value, out)
@@ -498,6 +507,11 @@ def translate_python_class_to_java_class(python_class):
         out = JavaObjectWrapper.getPythonTypeForClass(python_class)
         type_to_compiled_java_class[python_class] = out
         return out
+
+    if python_class.__module__ is not None and is_banned_module(python_class.__module__):
+        python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
+        type_to_compiled_java_class[python_class] = python_class_java_type
+        return python_class_java_type
 
     type_to_compiled_java_class[python_class] = None
     methods = []
