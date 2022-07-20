@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.MyObject;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
@@ -21,9 +21,9 @@ public class ObjectImplementorTest {
     public void testIs() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(5)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DUP_TOP)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.IS_OP, 0)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.DUP_TOP)
+                .op(OpcodeIdentifier.IS_OP, 0)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -31,11 +31,11 @@ public class ObjectImplementorTest {
 
         pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(5)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DUP_TOP)
+                .op(OpcodeIdentifier.DUP_TOP)
                 .loadConstant(0)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.IS_OP, 0)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.BINARY_ADD)
+                .op(OpcodeIdentifier.IS_OP, 0)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -44,9 +44,9 @@ public class ObjectImplementorTest {
         // Test is not
         pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(5)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DUP_TOP)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.IS_OP, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.DUP_TOP)
+                .op(OpcodeIdentifier.IS_OP, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -54,11 +54,11 @@ public class ObjectImplementorTest {
 
         pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(5)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DUP_TOP)
+                .op(OpcodeIdentifier.DUP_TOP)
                 .loadConstant(0)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.IS_OP, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.BINARY_ADD)
+                .op(OpcodeIdentifier.IS_OP, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -70,7 +70,7 @@ public class ObjectImplementorTest {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
                 .loadParameter("item")
                 .getAttribute("name")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -85,7 +85,7 @@ public class ObjectImplementorTest {
                 .loadParameter("value")
                 .loadParameter("item")
                 .storeAttribute("name")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         BiConsumer javaFunction = translatePythonBytecode(pythonCompiledFunction, BiConsumer.class);

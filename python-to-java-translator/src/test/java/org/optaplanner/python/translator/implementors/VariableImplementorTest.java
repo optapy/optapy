@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -24,12 +24,12 @@ public class VariableImplementorTest {
         PythonCompiledFunction setterCompiledFunction = PythonFunctionBuilder.newFunction("value")
                 .loadParameter("value")
                 .storeGlobalVariable("my_global")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         PythonCompiledFunction getterCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadGlobalVariable("my_global")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         AtomicReference<PythonLikeObject> myGlobalReference = new AtomicReference<>();

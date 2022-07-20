@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -33,7 +33,7 @@ public class ModuleImplementorTest {
                 .loadParameter("level")
                 .loadParameter("from_list")
                 .loadModule("module")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
@@ -57,7 +57,7 @@ public class ModuleImplementorTest {
                 .loadParameter("level")
                 .loadParameter("from_list")
                 .loadModule("module")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
@@ -87,11 +87,11 @@ public class ModuleImplementorTest {
                 .storeVariable("a")
                 .getFromModule("item2")
                 .storeVariable("b")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.POP_TOP)
+                .op(OpcodeIdentifier.POP_TOP)
                 .loadVariable("a")
                 .loadVariable("b")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.BINARY_ADD)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);

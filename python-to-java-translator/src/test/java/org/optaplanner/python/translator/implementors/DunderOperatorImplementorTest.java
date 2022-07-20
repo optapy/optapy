@@ -8,7 +8,7 @@ import java.util.function.BiPredicate;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.CompareOp;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
@@ -20,7 +20,7 @@ public class DunderOperatorImplementorTest {
                 .loadParameter("a")
                 .loadParameter("b")
                 .compare(CompareOp.LESS_THAN)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         BiPredicate javaFunction = translatePythonBytecode(pythonCompiledFunction, BiPredicate.class);
@@ -33,7 +33,7 @@ public class DunderOperatorImplementorTest {
                 .loadParameter("a")
                 .loadParameter("b")
                 .compare(CompareOp.LESS_THAN_OR_EQUALS)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, BiPredicate.class);
@@ -46,7 +46,7 @@ public class DunderOperatorImplementorTest {
                 .loadParameter("a")
                 .loadParameter("b")
                 .compare(CompareOp.GREATER_THAN)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, BiPredicate.class);
@@ -59,7 +59,7 @@ public class DunderOperatorImplementorTest {
                 .loadParameter("a")
                 .loadParameter("b")
                 .compare(CompareOp.GREATER_THAN_OR_EQUALS)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, BiPredicate.class);
@@ -75,7 +75,7 @@ public class DunderOperatorImplementorTest {
                 .loadParameter("a")
                 .loadParameter("b")
                 .compare(CompareOp.EQUALS)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         BiPredicate javaFunction = translatePythonBytecode(pythonCompiledFunction, BiPredicate.class);
@@ -88,7 +88,7 @@ public class DunderOperatorImplementorTest {
                 .loadParameter("a")
                 .loadParameter("b")
                 .compare(CompareOp.NOT_EQUALS)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, BiPredicate.class);
@@ -98,12 +98,12 @@ public class DunderOperatorImplementorTest {
         assertThat(javaFunction.test(1, 1)).isEqualTo(false);
     }
 
-    private BiFunction getMathFunction(PythonBytecodeInstruction.OpcodeIdentifier opcodeIdentifier) {
+    private BiFunction getMathFunction(OpcodeIdentifier opcodeIdentifier) {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("a", "b")
                 .loadParameter("a")
                 .loadParameter("b")
                 .op(opcodeIdentifier)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         return translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
@@ -111,17 +111,17 @@ public class DunderOperatorImplementorTest {
 
     @Test
     public void testMathOp() {
-        BiFunction javaFunction = getMathFunction(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD);
+        BiFunction javaFunction = getMathFunction(OpcodeIdentifier.BINARY_ADD);
 
         assertThat(javaFunction.apply(1L, 2L)).isEqualTo(3L);
 
-        javaFunction = getMathFunction(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_SUBTRACT);
+        javaFunction = getMathFunction(OpcodeIdentifier.BINARY_SUBTRACT);
         assertThat(javaFunction.apply(3L, 2L)).isEqualTo(1L);
 
-        javaFunction = getMathFunction(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_TRUE_DIVIDE);
+        javaFunction = getMathFunction(OpcodeIdentifier.BINARY_TRUE_DIVIDE);
         assertThat(javaFunction.apply(3L, 2L)).isEqualTo(1.5d);
 
-        javaFunction = getMathFunction(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_FLOOR_DIVIDE);
+        javaFunction = getMathFunction(OpcodeIdentifier.BINARY_FLOOR_DIVIDE);
         assertThat(javaFunction.apply(3L, 2L)).isEqualTo(1L);
     }
 }

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
@@ -17,9 +17,9 @@ public class StackManipulationImplementorTest {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant(1)
                 .loadConstant(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_TWO)
+                .op(OpcodeIdentifier.ROT_TWO)
                 .tuple(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier<?> javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -33,9 +33,9 @@ public class StackManipulationImplementorTest {
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_THREE)
+                .op(OpcodeIdentifier.ROT_THREE)
                 .tuple(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier<?> javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -50,9 +50,9 @@ public class StackManipulationImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .loadConstant(4)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_FOUR)
+                .op(OpcodeIdentifier.ROT_FOUR)
                 .tuple(4)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier<?> javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);

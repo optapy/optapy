@@ -13,7 +13,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.optaplanner.python.translator.CompareOp;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
@@ -34,13 +34,13 @@ public class ExceptionImplementorTest {
                             .loadConstant(5)
                             .compare(CompareOp.LESS_THAN)
                             .ifTrue(block -> {
-                                block.loadConstant("Try").op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                                block.loadConstant("Try").op(OpcodeIdentifier.RETURN_VALUE);
                             })
-                            .op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_ASSERTION_ERROR)
-                            .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
+                            .op(OpcodeIdentifier.LOAD_ASSERTION_ERROR)
+                            .op(OpcodeIdentifier.RAISE_VARARGS, 1);
                 }, true)
                 .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
-                    except.loadConstant("Assert").op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                    except.loadConstant("Assert").op(OpcodeIdentifier.RETURN_VALUE);
                 }, true)
                 .tryEnd()
                 .build();
@@ -61,15 +61,15 @@ public class ExceptionImplementorTest {
                             .loadConstant(1)
                             .compare(CompareOp.EQUALS)
                             .ifTrue(block -> {
-                                block.op(PythonBytecodeInstruction.OpcodeIdentifier.LOAD_ASSERTION_ERROR)
-                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
+                                block.op(OpcodeIdentifier.LOAD_ASSERTION_ERROR)
+                                        .op(OpcodeIdentifier.RAISE_VARARGS, 1);
                             })
                             .loadParameter("item")
                             .loadConstant(2)
                             .compare(CompareOp.EQUALS)
                             .ifTrue(block -> {
                                 block.loadConstant(new StopIteration())
-                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.RAISE_VARARGS, 1);
+                                        .op(OpcodeIdentifier.RAISE_VARARGS, 1);
                             });
                 }, false)
                 .except(PythonAssertionError.ASSERTION_ERROR_TYPE, except -> {
@@ -81,7 +81,7 @@ public class ExceptionImplementorTest {
                 }, false)
                 .tryEnd()
                 .loadConstant(1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Class javaFunctionClass = translatePythonBytecodeToClass(pythonCompiledFunction, Function.class);
@@ -118,25 +118,25 @@ public class ExceptionImplementorTest {
                 .loadGlobalVariable("reversed")
                 .loadParameter("last_values")
                 .callFunction(1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.GET_ITER)
+                .op(OpcodeIdentifier.GET_ITER)
                 .loop(loopBuilder -> {
                     loopBuilder.storeVariable("last_value")
                             .tryCode(tryBuilder -> {
                                 tryBuilder.loadVariable("last_value")
                                         .loadConstant(1)
-                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD)
-                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.POP_BLOCK)
-                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_TWO)
-                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.POP_TOP)
-                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                                        .op(OpcodeIdentifier.BINARY_ADD)
+                                        .op(OpcodeIdentifier.POP_BLOCK)
+                                        .op(OpcodeIdentifier.ROT_TWO)
+                                        .op(OpcodeIdentifier.POP_TOP)
+                                        .op(OpcodeIdentifier.RETURN_VALUE);
                             }, true).except(PythonException.EXCEPTION_TYPE, exceptBuilder -> {
                                 exceptBuilder
-                                        .op(PythonBytecodeInstruction.OpcodeIdentifier.JUMP_ABSOLUTE, 4);
+                                        .op(OpcodeIdentifier.JUMP_ABSOLUTE, 4);
                             }, true)
                             .tryEnd();
                 }, true)
                 .loadParameter("start")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         BiFunction biFunction =

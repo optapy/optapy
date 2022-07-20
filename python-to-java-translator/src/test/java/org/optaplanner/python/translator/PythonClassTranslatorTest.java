@@ -24,18 +24,18 @@ public class PythonClassTranslatorTest {
                 .loadParameter("self")
                 .storeAttribute("age")
                 .loadConstant(null)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         PythonCompiledFunction ageFunction = PythonFunctionBuilder.newFunction("self")
                 .loadParameter("self")
                 .getAttribute("age")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         PythonCompiledFunction helloWorldFunction = PythonFunctionBuilder.newFunction()
                 .loadConstant("hello world")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         compiledClass.className = "MyClass";

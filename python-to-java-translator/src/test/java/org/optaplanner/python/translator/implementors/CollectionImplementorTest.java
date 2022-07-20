@@ -13,7 +13,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
@@ -29,8 +29,8 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .tuple(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.GET_ITER)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.GET_ITER)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Iterable javaFunction = translatePythonBytecode(pythonCompiledFunction, Iterable.class);
@@ -46,14 +46,14 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .tuple(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.GET_ITER)
+                .op(OpcodeIdentifier.GET_ITER)
                 .loop(block -> {
                     block.loadVariable("sum");
-                    block.op(PythonBytecodeInstruction.OpcodeIdentifier.BINARY_ADD);
+                    block.op(OpcodeIdentifier.BINARY_ADD);
                     block.storeVariable("sum");
                 })
                 .loadVariable("sum")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -68,8 +68,8 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .tuple(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.CONTAINS_OP, 0)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.CONTAINS_OP, 0)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Predicate javaFunction = translatePythonBytecode(pythonCompiledFunction, Predicate.class);
@@ -82,8 +82,8 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .tuple(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.CONTAINS_OP, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.CONTAINS_OP, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, Predicate.class);
@@ -98,7 +98,7 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(2)
                 .set(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -112,10 +112,10 @@ public class CollectionImplementorTest {
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.LIST_APPEND, 3)
+                .op(OpcodeIdentifier.LIST_APPEND, 2)
+                .op(OpcodeIdentifier.LIST_APPEND, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -130,10 +130,10 @@ public class CollectionImplementorTest {
                 .loadConstant(1)
                 .loadConstant(2)
                 .loadConstant(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_ADD, 3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_ADD, 2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_ADD, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.SET_ADD, 3)
+                .op(OpcodeIdentifier.SET_ADD, 2)
+                .op(OpcodeIdentifier.SET_ADD, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -149,9 +149,9 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .list(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_EXTEND, 2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_EXTEND, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.LIST_EXTEND, 2)
+                .op(OpcodeIdentifier.LIST_EXTEND, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -166,8 +166,8 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .list(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_TO_TUPLE)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.LIST_TO_TUPLE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -180,7 +180,7 @@ public class CollectionImplementorTest {
     public void testUnpackSequence() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("sequence")
                 .loadParameter("sequence")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.UNPACK_SEQUENCE, 3)
+                .op(OpcodeIdentifier.UNPACK_SEQUENCE, 3)
                 .storeVariable("a")
                 .storeVariable("b")
                 .storeVariable("c")
@@ -188,7 +188,7 @@ public class CollectionImplementorTest {
                 .loadVariable("b")
                 .loadVariable("c")
                 .tuple(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -201,19 +201,19 @@ public class CollectionImplementorTest {
     public void testUnpackSequenceWithTail() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("sequence")
                 .loadParameter("sequence")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.UNPACK_EX, 3)
+                .op(OpcodeIdentifier.UNPACK_EX, 3)
                 .storeVariable("a")
                 .storeVariable("b")
                 .storeVariable("c")
                 .storeVariable("tail")
                 .loadVariable("tail")
                 .loadVariable("a")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 1)
+                .op(OpcodeIdentifier.LIST_APPEND, 1)
                 .loadVariable("b")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 1)
+                .op(OpcodeIdentifier.LIST_APPEND, 1)
                 .loadVariable("c")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.LIST_APPEND, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.LIST_APPEND, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -232,9 +232,9 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(3)
                 .set(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_UPDATE, 2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.SET_UPDATE, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.SET_UPDATE, 2)
+                .op(OpcodeIdentifier.SET_UPDATE, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -252,10 +252,10 @@ public class CollectionImplementorTest {
                 .loadConstant(4)
                 .loadConstant(3)
                 .loadConstant(6)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 6)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 4)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.MAP_ADD, 2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.MAP_ADD, 6)
+                .op(OpcodeIdentifier.MAP_ADD, 4)
+                .op(OpcodeIdentifier.MAP_ADD, 2)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -276,9 +276,9 @@ public class CollectionImplementorTest {
                 .loadConstant(3)
                 .loadConstant(6)
                 .dict(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_UPDATE, 2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_UPDATE, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.DICT_UPDATE, 2)
+                .op(OpcodeIdentifier.DICT_UPDATE, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -299,9 +299,9 @@ public class CollectionImplementorTest {
                 .loadConstant(3)
                 .loadConstant(6)
                 .dict(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.DICT_MERGE, 2)
+                .op(OpcodeIdentifier.DICT_MERGE, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -322,9 +322,9 @@ public class CollectionImplementorTest {
                 .loadConstant(2)
                 .loadConstant(4)
                 .dict(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DICT_MERGE, 1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.DICT_MERGE, 2)
+                .op(OpcodeIdentifier.DICT_MERGE, 1)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -341,7 +341,7 @@ public class CollectionImplementorTest {
                 .loadConstant(3)
                 .loadConstant(6)
                 .dict(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -361,7 +361,7 @@ public class CollectionImplementorTest {
                 .loadConstant(3)
                 .tuple(3)
                 .constDict(3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -374,12 +374,12 @@ public class CollectionImplementorTest {
     public void testSetItem() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("key", "value")
                 .dict(0)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DUP_TOP)
+                .op(OpcodeIdentifier.DUP_TOP)
                 .loadParameter("value")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_TWO)
+                .op(OpcodeIdentifier.ROT_TWO)
                 .loadParameter("key")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.STORE_SUBSCR)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.STORE_SUBSCR)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         BiFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
@@ -389,12 +389,12 @@ public class CollectionImplementorTest {
                 .loadConstant(1)
                 .loadConstant(2)
                 .list(2)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.DUP_TOP)
+                .op(OpcodeIdentifier.DUP_TOP)
                 .loadParameter("value")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.ROT_TWO)
+                .op(OpcodeIdentifier.ROT_TWO)
                 .loadParameter("key")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.STORE_SUBSCR)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.STORE_SUBSCR)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);

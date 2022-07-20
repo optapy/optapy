@@ -3,6 +3,7 @@ package org.optaplanner.python.translator.implementors;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonInterpreter;
@@ -63,7 +64,7 @@ public class StringImplementor {
     /**
      * TOS1 is a value and TOS is an optional format string (either PythonNone or PythonString).
      * Depending on {@code instruction.arg}, does one of several things to TOS1 before formatting it
-     * (as specified by {@link PythonBytecodeInstruction.OpcodeIdentifier#FORMAT_VALUE}:
+     * (as specified by {@link OpcodeIdentifier#FORMAT_VALUE}:
      *
      * arg & 3 == 0: Do nothing
      * arg & 3 == 1: Call str() on value before formatting it

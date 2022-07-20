@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.types.PythonInteger;
@@ -27,8 +27,8 @@ public class StringImplementorTest {
                 .loadConstant("My name")
                 .loadConstant(" is ")
                 .loadConstant("awesome!")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.BUILD_STRING, 3)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.BUILD_STRING, 3)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Supplier javaFunction = translatePythonBytecode(pythonCompiledFunction, Supplier.class);
@@ -40,8 +40,8 @@ public class StringImplementorTest {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item", "format")
                 .loadParameter("item")
                 .loadParameter("format")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.FORMAT_VALUE, 4)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.FORMAT_VALUE, 4)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         BiFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
@@ -56,8 +56,8 @@ public class StringImplementorTest {
     public void testFormatWithoutParameter() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("item")
                 .loadParameter("item")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.FORMAT_VALUE, 0)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.FORMAT_VALUE, 0)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -70,9 +70,9 @@ public class StringImplementorTest {
     public void testPrint() {
         PythonCompiledFunction compiledFunction = PythonFunctionBuilder.newFunction("to_print")
                 .loadParameter("to_print")
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.PRINT_EXPR)
+                .op(OpcodeIdentifier.PRINT_EXPR)
                 .loadConstant(null)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);

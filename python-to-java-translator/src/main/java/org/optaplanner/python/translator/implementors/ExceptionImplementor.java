@@ -8,6 +8,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.LocalVariableHelper;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonInterpreter;
@@ -103,7 +104,7 @@ public class ExceptionImplementor {
 
     /**
      * Creates a try...finally block. Python also treat catch blocks as finally blocks, which
-     * are handled via the {@link PythonBytecodeInstruction.OpcodeIdentifier#JUMP_IF_NOT_EXC_MATCH} instruction.
+     * are handled via the {@link OpcodeIdentifier#JUMP_IF_NOT_EXC_MATCH} instruction.
      * {@code instruction.arg} is the difference in bytecode offset to the first catch/finally block.
      */
     public static void createTryFinallyBlock(MethodVisitor methodVisitor, String className,

@@ -10,7 +10,7 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.CompareOp;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.types.PythonFloat;
 import org.optaplanner.python.translator.types.PythonInteger;
@@ -25,7 +25,7 @@ public class PythonTimeDeltaTest {
                 .loadConstant(PythonTimeDelta.TIME_DELTA_TYPE)
                 .loadParameter("days")
                 .callFunction(1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                .op(OpcodeIdentifier.RETURN_VALUE);
 
         Function<PythonNumber, PythonTimeDelta> constructor =
                 PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(builder.build(),
@@ -45,7 +45,7 @@ public class PythonTimeDeltaTest {
                 .loadConstant("minutes")
                 .tuple(1)
                 .callFunctionWithKeywords(1)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                .op(OpcodeIdentifier.RETURN_VALUE);
 
         Function<PythonNumber, PythonTimeDelta> constructor =
                 PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(builder.build(),
@@ -165,7 +165,7 @@ public class PythonTimeDeltaTest {
                 .loadParameter("a")
                 .loadParameter("b")
                 .compare(CompareOp.LESS_THAN)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                .op(OpcodeIdentifier.RETURN_VALUE);
 
         BiPredicate<PythonTimeDelta, PythonTimeDelta> lessThan =
                 PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(builder.build(),
@@ -182,7 +182,7 @@ public class PythonTimeDeltaTest {
                 .loadParameter("a")
                 .loadParameter("b")
                 .compare(CompareOp.EQUALS)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                .op(OpcodeIdentifier.RETURN_VALUE);
 
         BiPredicate<PythonTimeDelta, PythonTimeDelta> lessThan =
                 PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(builder.build(),

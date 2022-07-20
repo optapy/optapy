@@ -7,7 +7,7 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.CompareOp;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
@@ -22,10 +22,10 @@ public class JumpImplementorTest {
                 .compare(CompareOp.LESS_THAN)
                 .ifTrue(block -> {
                     block.loadConstant(10);
-                    block.op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                    block.op(OpcodeIdentifier.RETURN_VALUE);
                 })
                 .loadConstant(-10)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -41,10 +41,10 @@ public class JumpImplementorTest {
                 .compare(CompareOp.LESS_THAN)
                 .ifFalse(block -> {
                     block.loadConstant(10);
-                    block.op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                    block.op(OpcodeIdentifier.RETURN_VALUE);
                 })
                 .loadConstant(-10)
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -60,9 +60,9 @@ public class JumpImplementorTest {
                 .compare(CompareOp.LESS_THAN)
                 .ifTruePopTop(block -> {
                     block.loadConstant(true);
-                    block.op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                    block.op(OpcodeIdentifier.RETURN_VALUE);
                 })
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE) // Top is False (block was skipped)
+                .op(OpcodeIdentifier.RETURN_VALUE) // Top is False (block was skipped)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
@@ -78,9 +78,9 @@ public class JumpImplementorTest {
                 .compare(CompareOp.LESS_THAN)
                 .ifFalsePopTop(block -> {
                     block.loadConstant(false);
-                    block.op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE);
+                    block.op(OpcodeIdentifier.RETURN_VALUE);
                 })
-                .op(PythonBytecodeInstruction.OpcodeIdentifier.RETURN_VALUE) // Top is True (block was skipped)
+                .op(OpcodeIdentifier.RETURN_VALUE) // Top is True (block was skipped)
                 .build();
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);

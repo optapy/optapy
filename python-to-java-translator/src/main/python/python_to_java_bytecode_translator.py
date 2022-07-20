@@ -392,7 +392,7 @@ def copy_globals(globals_dict):
 
 def get_function_bytecode_object(python_function):
     from java.util import ArrayList
-    from org.optaplanner.python.translator import PythonBytecodeInstruction, PythonCompiledFunction # noqa
+    from org.optaplanner.python.translator import PythonBytecodeInstruction, PythonCompiledFunction, OpcodeIdentifier # noqa
 
     init_type_to_compiled_java_class()
 
@@ -400,7 +400,7 @@ def get_function_bytecode_object(python_function):
     instruction_list = ArrayList()
     for instruction in dis.get_instructions(python_function):
         java_instruction = PythonBytecodeInstruction()
-        java_instruction.opcode = PythonBytecodeInstruction.OpcodeIdentifier.valueOf(instruction.opname)
+        java_instruction.opcode = OpcodeIdentifier.valueOf(instruction.opname)
         java_instruction.opname = instruction.opname
         java_instruction.offset = JInt(instruction.offset // 2)
 
