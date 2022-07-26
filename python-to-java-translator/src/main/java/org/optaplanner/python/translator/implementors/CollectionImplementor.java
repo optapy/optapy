@@ -68,7 +68,7 @@ public class CollectionImplementor {
         functionMetadata.bytecodeCounterToCodeArgumenterList
                 .computeIfAbsent(instruction.offset + instruction.arg + 1, key -> new ArrayList<>())
                 .add(() -> {
-                    StackManipulationImplementor.restoreStack(methodVisitor, storedStack);
+                    StackManipulationImplementor.restoreStack(methodVisitor, stackMetadata, storedStack);
                     methodVisitor.visitInsn(Opcodes.POP);
                 });
     }
@@ -83,14 +83,14 @@ public class CollectionImplementor {
         int sizeLocal = localVariableHelper.newLocal();
 
         methodVisitor.visitInsn(Opcodes.ICONST_0);
-        methodVisitor.visitVarInsn(Opcodes.ISTORE, sizeLocal);
+        localVariableHelper.writeTemp(methodVisitor, Type.INT_TYPE, sizeLocal);
 
         int[] unpackedLocals = new int[toUnpack];
 
         for (int i = 0; i < toUnpack; i++) {
             unpackedLocals[i] = localVariableHelper.newLocal();
             methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, unpackedLocals[i]);
+            localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), unpackedLocals[i]);
         }
 
         // Get the iterator for the iterable
@@ -110,12 +110,12 @@ public class CollectionImplementor {
             methodVisitor.visitInsn(Opcodes.DUP);
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
             if (i < toUnpack) { // Store the unpacked value in a local
-                methodVisitor.visitVarInsn(Opcodes.ASTORE, unpackedLocals[i]);
+                localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), unpackedLocals[i]);
             } else { // Try to get more elements to see if the iterable contain exactly enough
                 methodVisitor.visitInsn(Opcodes.POP);
             }
             // increment size
-            methodVisitor.visitIincInsn(sizeLocal, 1);
+            localVariableHelper.incrementTemp(methodVisitor, sizeLocal);
         }
         methodVisitor.visitLabel(tryEndLabel);
 
@@ -129,12 +129,12 @@ public class CollectionImplementor {
         methodVisitor.visitInsn(Opcodes.POP);
 
         // Check if too few
-        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        localVariableHelper.readTemp(methodVisitor, Type.INT_TYPE, sizeLocal);
         methodVisitor.visitLdcInsn(toUnpack);
         methodVisitor.visitJumpInsn(Opcodes.IF_ICMPLT, toFewElements);
 
         // Check if too many
-        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        localVariableHelper.readTemp(methodVisitor, Type.INT_TYPE, sizeLocal);
         methodVisitor.visitLdcInsn(toUnpack);
         methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGT, toManyElements);
 
@@ -154,7 +154,7 @@ public class CollectionImplementor {
                 "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
                 false);
 
-        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        localVariableHelper.readTemp(methodVisitor, Type.INT_TYPE, sizeLocal);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
                 "append", Type.getMethodDescriptor(Type.getType(StringBuilder.class), Type.INT_TYPE),
                 false);
@@ -186,7 +186,7 @@ public class CollectionImplementor {
         methodVisitor.visitLabel(exactNumberOfElements);
         for (int i = toUnpack - 1; i >= 0; i--) {
             // Unlike all other collection operators, UNPACK_SEQUENCE unpacks the result in reverse order
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, unpackedLocals[i]);
+            localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), unpackedLocals[i]);
         }
 
         localVariableHelper.freeLocal();
@@ -207,19 +207,19 @@ public class CollectionImplementor {
         int sizeLocal = localVariableHelper.newLocal();
 
         methodVisitor.visitInsn(Opcodes.ICONST_0);
-        methodVisitor.visitVarInsn(Opcodes.ISTORE, sizeLocal);
+        localVariableHelper.writeTemp(methodVisitor, Type.INT_TYPE, sizeLocal);
 
         int[] unpackedLocals = new int[toUnpack];
 
         for (int i = 0; i < toUnpack; i++) {
             unpackedLocals[i] = localVariableHelper.newLocal();
             methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, unpackedLocals[i]);
+            localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), unpackedLocals[i]);
         }
 
         int tailLocal = localVariableHelper.newLocal();
         CollectionImplementor.buildCollection(PythonLikeList.class, methodVisitor, 0);
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, tailLocal);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), tailLocal);
 
         // Get the iterator for the iterable
         DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.ITERATOR);
@@ -238,9 +238,9 @@ public class CollectionImplementor {
             methodVisitor.visitInsn(Opcodes.DUP);
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
             // Store the unpacked value in a local
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, unpackedLocals[i]);
+            localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), unpackedLocals[i]);
             // increment size
-            methodVisitor.visitIincInsn(sizeLocal, 1);
+            localVariableHelper.incrementTemp(methodVisitor, sizeLocal);
         }
 
         // Keep iterating through the iterable until StopIteration is raised to get all of its elements
@@ -249,7 +249,7 @@ public class CollectionImplementor {
 
         methodVisitor.visitInsn(Opcodes.DUP);
         DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, tailLocal);
+        localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), tailLocal);
         methodVisitor.visitInsn(Opcodes.SWAP);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
                 "add",
@@ -268,7 +268,7 @@ public class CollectionImplementor {
         methodVisitor.visitInsn(Opcodes.POP);
 
         // Check if too few
-        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        localVariableHelper.readTemp(methodVisitor, Type.INT_TYPE, sizeLocal);
         methodVisitor.visitLdcInsn(toUnpack);
         methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, exactNumberOfElements);
 
@@ -284,7 +284,7 @@ public class CollectionImplementor {
                 "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
                 false);
 
-        methodVisitor.visitVarInsn(Opcodes.ILOAD, sizeLocal);
+        localVariableHelper.readTemp(methodVisitor, Type.INT_TYPE, sizeLocal);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
                 "append", Type.getMethodDescriptor(Type.getType(StringBuilder.class), Type.INT_TYPE),
                 false);
@@ -307,9 +307,9 @@ public class CollectionImplementor {
         methodVisitor.visitLabel(exactNumberOfElements);
 
         // Unlike all other collection operators, UNPACK_SEQUENCE unpacks the result in reverse order
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, tailLocal);
+        localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), tailLocal);
         for (int i = toUnpack - 1; i >= 0; i--) {
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, unpackedLocals[i]);
+            localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), unpackedLocals[i]);
         }
 
         localVariableHelper.freeLocal();

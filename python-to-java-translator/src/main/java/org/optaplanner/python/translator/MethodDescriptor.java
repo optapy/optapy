@@ -153,6 +153,11 @@ public class MethodDescriptor {
                 methodType == MethodType.INTERFACE);
     }
 
+    public MethodDescriptor withReturnType(Type returnType) {
+        return new MethodDescriptor(declaringClassInternalName, methodType, methodName,
+                Type.getMethodDescriptor(returnType, Type.getArgumentTypes(methodDescriptor)));
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

@@ -31,6 +31,19 @@ public class PythonBytecodeInstruction {
      */
     public boolean isJumpTarget;
 
+    public PythonBytecodeInstruction copy() {
+        PythonBytecodeInstruction out = new PythonBytecodeInstruction();
+
+        out.opcode = opcode;
+        out.opname = opname;
+        out.arg = arg;
+        out.offset = offset;
+        out.startsLine = startsLine;
+        out.isJumpTarget = isJumpTarget;
+
+        return out;
+    }
+
     @Override
     public String toString() {
         return "[" + offset + "] " + opcode.name() + " (" + arg + ")" + (isJumpTarget ? " {JUMP TARGET}" : "");

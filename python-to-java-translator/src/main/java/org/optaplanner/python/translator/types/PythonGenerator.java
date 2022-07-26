@@ -1,0 +1,67 @@
+package org.optaplanner.python.translator.types;
+
+import java.util.Iterator;
+
+import org.optaplanner.python.translator.MethodDescriptor;
+import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.types.errors.GeneratorExit;
+import org.optaplanner.python.translator.types.errors.PythonBaseException;
+
+public abstract class PythonGenerator extends AbstractPythonLikeObject implements Iterator<PythonLikeObject> {
+    public static PythonLikeType GENERATOR_TYPE = new PythonLikeType("generator", PythonGenerator.class);
+    public static PythonLikeType $TYPE = GENERATOR_TYPE;
+    static {
+        try {
+            registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(GENERATOR_TYPE);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void registerMethods() throws NoSuchMethodException {
+        GENERATOR_TYPE.addMethod("__next__",
+                new PythonFunctionSignature(
+                        new MethodDescriptor(PythonGenerator.class.getMethod("next")),
+                        PythonLikeType.getBaseType()));
+        GENERATOR_TYPE.addMethod("send",
+                new PythonFunctionSignature(
+                        new MethodDescriptor(PythonGenerator.class.getMethod("send", PythonLikeObject.class)),
+                        PythonLikeType.getBaseType(), PythonLikeType.getBaseType()));
+        GENERATOR_TYPE.addMethod("throw",
+                new PythonFunctionSignature(
+                        new MethodDescriptor(PythonGenerator.class.getMethod("throwValue", Throwable.class)),
+                        PythonLikeType.getBaseType(), PythonBaseException.BASE_EXCEPTION_TYPE));
+        GENERATOR_TYPE.addMethod("close",
+                new PythonFunctionSignature(
+                        new MethodDescriptor(PythonGenerator.class.getMethod("close")),
+                        PythonLikeType.getBaseType()));
+    }
+
+    public PythonLikeObject sentValue;
+    public Throwable thrownValue;
+
+    public PythonGenerator() {
+        super(GENERATOR_TYPE);
+        sentValue = PythonNone.NONE_TYPE;
+        thrownValue = null;
+    }
+
+    public PythonNone close() {
+        this.thrownValue = new GeneratorExit();
+        next();
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonLikeObject send(PythonLikeObject sentValue) {
+        this.sentValue = sentValue;
+        return next();
+    }
+
+    public PythonLikeObject throwValue(Throwable thrownValue) {
+        this.thrownValue = thrownValue;
+        return next();
+    }
+}

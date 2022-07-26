@@ -925,8 +925,6 @@ public class PythonClassTranslator {
     }
 
     private static FlowGraph createFlowGraph(PythonCompiledFunction pythonCompiledFunction, boolean isVirtual) {
-        int PYTHON_VERSION = Integer.MAX_VALUE;
-
         InterfaceDeclaration interfaceDeclaration = getInterfaceForPythonFunctionIgnoringReturn(pythonCompiledFunction);
         MethodDescriptor methodDescriptor = new MethodDescriptor(interfaceDeclaration.interfaceName.replace('.', '/'),
                 MethodDescriptor.MethodType.INTERFACE,
@@ -934,9 +932,10 @@ public class PythonClassTranslator {
                 interfaceDeclaration.methodDescriptor);
         LocalVariableHelper localVariableHelper =
                 new LocalVariableHelper(methodDescriptor.getParameterTypes(), pythonCompiledFunction);
-        List<Opcode> opcodeList = getOpcodeList(pythonCompiledFunction, PYTHON_VERSION);
+        List<Opcode> opcodeList = getOpcodeList(pythonCompiledFunction);
         StackMetadata initialStackMetadata = getInitialStackMetadata(localVariableHelper, methodDescriptor, isVirtual);
         FunctionMetadata functionMetadata = new FunctionMetadata();
+        functionMetadata.functionType = PythonBytecodeToJavaBytecodeTranslator.getFunctionType(pythonCompiledFunction);
         functionMetadata.bytecodeCounterToLabelMap = new HashMap<>();
         functionMetadata.bytecodeCounterToCodeArgumenterList = new HashMap<>();
         functionMetadata.method = methodDescriptor;

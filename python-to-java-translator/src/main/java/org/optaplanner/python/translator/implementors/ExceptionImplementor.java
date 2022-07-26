@@ -40,7 +40,7 @@ public class ExceptionImplementor {
      * Reraise the last exception (stored in the exception local variable slot)
      */
     public static void reraiseLast(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper) {
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getCurrentExceptionVariableSlot());
+        localVariableHelper.readCurrentException(methodVisitor);
         methodVisitor.visitInsn(Opcodes.ATHROW);
     }
 
@@ -138,8 +138,8 @@ public class ExceptionImplementor {
         bytecodeCounterCodeArgumentConsumer.accept(instruction.offset + instruction.arg + 1, () -> {
             // Stack is exception
             // Duplicate exception to the current exception variable slot so we can reraise it if needed
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, stackMetadata.localVariableHelper.getCurrentExceptionVariableSlot());
-            StackManipulationImplementor.restoreStack(methodVisitor, stackLocals);
+            stackMetadata.localVariableHelper.writeCurrentException(methodVisitor);
+            StackManipulationImplementor.restoreStack(methodVisitor, stackMetadata, stackLocals);
 
             // Stack is (stack-before-try)
 
@@ -174,7 +174,7 @@ public class ExceptionImplementor {
             // Stack is (stack-before-try), instruction, stack-size, label, traceback
 
             // Load exception
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, stackMetadata.localVariableHelper.getCurrentExceptionVariableSlot());
+            stackMetadata.localVariableHelper.readCurrentException(methodVisitor);
 
             // Stack is (stack-before-try), instruction, stack-size, label, traceback, exception
 
@@ -191,7 +191,7 @@ public class ExceptionImplementor {
     public static void startExceptOrFinally(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper) {
         // Clear the exception since it was handled
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getCurrentExceptionVariableSlot());
+        localVariableHelper.writeCurrentException(methodVisitor);
 
         // Pop off the block (three items that we don't use)
         methodVisitor.visitInsn(Opcodes.POP);

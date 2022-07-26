@@ -1,6 +1,7 @@
 package org.optaplanner.python.translator.implementors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.createInstance;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass;
@@ -107,7 +108,7 @@ public class ExceptionImplementorTest {
         assertThat(globalsMap.get("exception")).isEqualTo("Assert");
         assertThat(globalsMap.get("finally")).isEqualTo("Finally");
 
-        assertThat(javaFunction.apply(2)).isEqualTo(1);
+        assertThatCode(() -> javaFunction.apply(2)).isInstanceOf(StopIteration.class);
         assertThat(globalsMap.get("exception")).isEqualTo(PythonNone.INSTANCE);
         assertThat(globalsMap.get("finally")).isEqualTo("Finally");
     }

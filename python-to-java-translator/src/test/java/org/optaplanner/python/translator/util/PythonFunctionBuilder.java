@@ -176,6 +176,11 @@ public class PythonFunctionBuilder {
      * @return An {@link ExceptBuilder} for the try block
      */
     public ExceptBuilder tryCode(Consumer<PythonFunctionBuilder> tryBlockBuilder, boolean tryExitEarly) {
+        PythonBytecodeInstruction notCatchedFinallyBlock = new PythonBytecodeInstruction();
+        notCatchedFinallyBlock.opcode = OpcodeIdentifier.SETUP_FINALLY;
+        notCatchedFinallyBlock.offset = instructionList.size();
+        instructionList.add(notCatchedFinallyBlock);
+
         PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
         instruction.opcode = OpcodeIdentifier.SETUP_FINALLY;
         instruction.offset = instructionList.size();
@@ -195,7 +200,7 @@ public class PythonFunctionBuilder {
             instructionList.add(instruction);
         }
 
-        return new ExceptBuilder(this, instruction);
+        return new ExceptBuilder(this, instruction, notCatchedFinallyBlock);
     }
 
     /**

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.StackMetadata;
 
@@ -44,11 +45,11 @@ public class StackManipulationImplementor {
         methodVisitor.visitInsn(Opcodes.DUP_X2);
         methodVisitor.visitInsn(Opcodes.POP);
 
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, secondFromStack);
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, thirdFromStack);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), secondFromStack);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), thirdFromStack);
         methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, thirdFromStack);
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, secondFromStack);
+        localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), thirdFromStack);
+        localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), secondFromStack);
 
         localVariableHelper.freeLocal();
         localVariableHelper.freeLocal();
@@ -93,7 +94,7 @@ public class StackManipulationImplementor {
         for (int i = 0; i < posFromTOS; i++) {
             int local = localVariableHelper.newLocal();
             localList.add(local);
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, local);
+            localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), local);
         }
 
         // Duplicate TOS[posFromTOS]
@@ -102,7 +103,7 @@ public class StackManipulationImplementor {
         // Restore TOS...TOS[posFromTOS - 1] from local variables, swaping the duplicated value to keep it on TOS
         for (int i = posFromTOS - 1; i >= 0; i--) {
             int local = localList.get(i);
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, local);
+            localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), local);
             methodVisitor.visitInsn(Opcodes.SWAP);
             localVariableHelper.freeLocal();
         }
@@ -125,36 +126,38 @@ public class StackManipulationImplementor {
         for (int i = 0; i < posFromTOS + 1; i++) {
             int local = localVariableHelper.newLocal();
             localList.add(local);
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, local);
+            localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), local);
         }
 
         // Copy TOS to this position
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, localList.get(0));
+        localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), localList.get(0));
 
         // Restore TOS[1]...TOS[posFromTOS] from local variables
         for (int i = posFromTOS; i > 0; i--) {
             int local = localList.get(i);
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, local);
+            localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), local);
             localVariableHelper.freeLocal();
         }
     }
 
     public static int[] storeStack(MethodVisitor methodVisitor, StackMetadata stackMetadata) {
         int[] stackLocalVariables = new int[stackMetadata.getStackSize()];
+
         for (int i = stackLocalVariables.length - 1; i >= 0; i--) {
             stackLocalVariables[i] = stackMetadata.localVariableHelper.newLocal();
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, i);
+            stackMetadata.localVariableHelper.writeTemp(methodVisitor, Type.getType(Object.class), stackLocalVariables[i]);
         }
+
         for (int i = 0; i < stackLocalVariables.length; i++) {
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, i);
+            stackMetadata.localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), stackLocalVariables[i]);
         }
 
         return stackLocalVariables;
     }
 
-    public static void restoreStack(MethodVisitor methodVisitor, int[] stackLocalVariables) {
+    public static void restoreStack(MethodVisitor methodVisitor, StackMetadata stackMetadata, int[] stackLocalVariables) {
         for (int i = 0; i < stackLocalVariables.length; i++) {
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, i);
+            stackMetadata.localVariableHelper.readTemp(methodVisitor, Type.getType(Object.class), stackLocalVariables[i]);
         }
     }
 }

@@ -1,6 +1,7 @@
 package org.optaplanner.python.translator.opcodes;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.optaplanner.python.translator.FunctionMetadata;
@@ -31,6 +32,15 @@ public interface Opcode {
      *         listing.
      */
     int getBytecodeIndex();
+
+    /**
+     * Relabel the instruction corresponding to this opcode. Updates bytecode
+     * index according to {@code originalBytecodeIndexToNewBytecodeIndex}, and if arg represents a jump target,
+     * recompute it using {@code originalBytecodeIndexToNewBytecodeIndex}.
+     *
+     * @param originalBytecodeIndexToNewBytecodeIndex A map from the original bytecode index to the new bytecode index
+     */
+    void relabel(Map<Integer, Integer> originalBytecodeIndexToNewBytecodeIndex);
 
     /**
      * Return the possible next bytecode index after this instruction is executed.

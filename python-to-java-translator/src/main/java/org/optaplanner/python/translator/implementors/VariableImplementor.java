@@ -29,7 +29,7 @@ public class VariableImplementor {
      */
     public static void loadLocalVariable(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             LocalVariableHelper localVariableHelper) {
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getPythonLocalVariableSlot(instruction.arg));
+        localVariableHelper.readLocal(methodVisitor, instruction.arg);
     }
 
     /**
@@ -37,7 +37,7 @@ public class VariableImplementor {
      */
     public static void storeInLocalVariable(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             LocalVariableHelper localVariableHelper) {
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(instruction.arg));
+        localVariableHelper.writeLocal(methodVisitor, instruction.arg);
     }
 
     /**
@@ -122,7 +122,7 @@ public class VariableImplementor {
             LocalVariableHelper localVariableHelper) {
         // Deleting is implemented as setting the value to null
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(instruction.arg));
+        localVariableHelper.writeLocal(methodVisitor, instruction.arg);
     }
 
     /**
@@ -135,7 +135,7 @@ public class VariableImplementor {
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonCell.class), "<init>",
                 Type.getMethodDescriptor(Type.VOID_TYPE), false);
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonCellOrFreeVariableSlot(cellIndex));
+        localVariableHelper.writeCell(methodVisitor, cellIndex);
     }
 
     /**
@@ -154,8 +154,7 @@ public class VariableImplementor {
                 Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(int.class)),
                 true);
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonCell.class));
-        methodVisitor.visitVarInsn(Opcodes.ASTORE,
-                localVariableHelper.pythonFreeVariablesStart + cellIndex);
+        localVariableHelper.writeFreeCell(methodVisitor, cellIndex);
     }
 
     /**
@@ -165,7 +164,7 @@ public class VariableImplementor {
      */
     public static void loadCell(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
             LocalVariableHelper localVariableHelper) {
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getPythonCellOrFreeVariableSlot(instruction.arg));
+        localVariableHelper.readCell(methodVisitor, instruction.arg);
     }
 
     /**

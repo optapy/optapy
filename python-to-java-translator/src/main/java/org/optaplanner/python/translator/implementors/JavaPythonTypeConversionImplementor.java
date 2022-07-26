@@ -446,7 +446,7 @@ public class JavaPythonTypeConversionImplementor {
             methodVisitor.visitVarInsn(loadOpcode, localVariableHelper.getParameterSlot(parameterIndex));
             methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, valueOfOwner, "valueOf",
                     valueOfDescriptor, false);
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
+            localVariableHelper.writeLocal(methodVisitor, parameterIndex);
         } else {
             try {
                 Class<?> typeClass = Class.forName(parameterType.getClassName(), false,
@@ -458,14 +458,14 @@ public class JavaPythonTypeConversionImplementor {
                             "wrapJavaObject",
                             Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(Object.class)),
                             false);
-                    methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
+                    localVariableHelper.writeLocal(methodVisitor, parameterIndex);
                 } else {
                     methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
-                    methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
+                    localVariableHelper.writeLocal(methodVisitor, parameterIndex);
                 }
             } catch (ClassNotFoundException e) {
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
-                methodVisitor.visitVarInsn(Opcodes.ASTORE, localVariableHelper.getPythonLocalVariableSlot(parameterIndex));
+                localVariableHelper.writeLocal(methodVisitor, parameterIndex);
             }
         }
     }

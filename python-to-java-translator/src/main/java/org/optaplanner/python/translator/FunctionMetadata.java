@@ -7,6 +7,12 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
 public class FunctionMetadata {
+
+    public FunctionMetadata() {
+
+    }
+
+    public PythonFunctionType functionType;
     public MethodDescriptor method;
     public String className;
     public MethodVisitor methodVisitor;

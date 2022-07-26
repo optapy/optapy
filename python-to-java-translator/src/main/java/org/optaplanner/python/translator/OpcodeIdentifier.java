@@ -311,6 +311,12 @@ public enum OpcodeIdentifier {
     RETURN_VALUE,
 
     /**
+     * Pops TOS. The kind operand corresponds to the type of generator or coroutine.
+     * The legal kinds are 0 for generator, 1 for coroutine, and 2 for async generator.
+     */
+    GEN_START,
+
+    /**
      * Pops TOS and yields it from a generator.
      */
     YIELD_VALUE,

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
@@ -76,6 +77,33 @@ public class PythonCompiledFunction {
      * The number of keyword only arguments the function takes
      */
     public int co_kwonlyargcount;
+
+    /**
+     * The python version this function was compiled in (see sys.hexversion)
+     */
+    public int pythonVersion;
+
+    public PythonCompiledFunction copy() {
+        PythonCompiledFunction out = new PythonCompiledFunction();
+
+        out.module = module;
+        out.qualifiedName = qualifiedName;
+        out.instructionList = instructionList.stream().map(PythonBytecodeInstruction::copy)
+                .collect(Collectors.toCollection(ArrayList::new));
+        out.closure = closure;
+        out.globalsMap = globalsMap;
+        out.typeAnnotations = typeAnnotations;
+        out.co_names = new ArrayList<>(co_names);
+        out.co_varnames = new ArrayList<>(co_varnames);
+        out.co_cellvars = new ArrayList<>(co_cellvars);
+        out.co_freevars = new ArrayList<>(co_freevars);
+        out.co_constants = new ArrayList<>(co_constants);
+        out.co_argcount = co_argcount;
+        out.co_kwonlyargcount = co_kwonlyargcount;
+        out.pythonVersion = pythonVersion;
+
+        return out;
+    }
 
     public List<PythonLikeType> getParameterTypes() {
         List<PythonLikeType> out = new ArrayList<>(co_argcount);

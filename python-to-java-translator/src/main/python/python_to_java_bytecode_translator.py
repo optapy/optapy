@@ -1,5 +1,6 @@
 import dis
 
+import sys
 import inspect
 from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, onJVMStart
 
@@ -438,6 +439,7 @@ def get_function_bytecode_object(python_function):
     python_compiled_function.closure = copy_closure(python_function.__closure__)
     python_compiled_function.globalsMap = copy_globals(python_function.__globals__)
     python_compiled_function.typeAnnotations = copy_type_annotations(python_function.__annotations__)
+    python_compiled_function.pythonVersion = sys.hexversion
     return python_compiled_function
 
 

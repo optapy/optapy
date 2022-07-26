@@ -1,6 +1,7 @@
 package org.optaplanner.python.translator.opcodes.controlflow;
 
 import java.util.List;
+import java.util.Map;
 
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
@@ -18,6 +19,12 @@ public class JumpIfFalseOrPopOpcode extends AbstractControlFlowOpcode {
         return List.of(
                 getBytecodeIndex() + 1,
                 instruction.arg);
+    }
+
+    @Override
+    public void relabel(Map<Integer, Integer> originalBytecodeIndexToNewBytecodeIndex) {
+        instruction.arg = originalBytecodeIndexToNewBytecodeIndex.get(instruction.arg);
+        super.relabel(originalBytecodeIndexToNewBytecodeIndex);
     }
 
     @Override

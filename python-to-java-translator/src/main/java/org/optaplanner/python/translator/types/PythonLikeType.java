@@ -327,6 +327,10 @@ public class PythonLikeType implements PythonLikeObject,
         return JAVA_TYPE_INTERNAL_NAME;
     }
 
+    public String getJavaTypeDescriptor() {
+        return "L" + JAVA_TYPE_INTERNAL_NAME + ";";
+    }
+
     /**
      * Return the Java class corresponding to this type, if it exists. Throws {@link ClassNotFoundException} otherwise.
      */

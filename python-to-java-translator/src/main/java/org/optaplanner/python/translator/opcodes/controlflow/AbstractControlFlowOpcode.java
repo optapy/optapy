@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.controlflow;
 
+import java.util.Map;
+
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.opcodes.Opcode;
 
@@ -8,6 +10,11 @@ public abstract class AbstractControlFlowOpcode implements Opcode {
 
     public AbstractControlFlowOpcode(PythonBytecodeInstruction instruction) {
         this.instruction = instruction;
+    }
+
+    @Override
+    public void relabel(Map<Integer, Integer> originalBytecodeIndexToNewBytecodeIndex) {
+        instruction.offset = originalBytecodeIndexToNewBytecodeIndex.get(instruction.offset);
     }
 
     @Override

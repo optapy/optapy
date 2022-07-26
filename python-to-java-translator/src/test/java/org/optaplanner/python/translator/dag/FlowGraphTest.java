@@ -17,13 +17,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.opcodes.Opcode;
@@ -47,6 +47,7 @@ public class FlowGraphTest {
 
     static FunctionMetadata getFunctionMetadata(PythonCompiledFunction function) {
         FunctionMetadata out = new FunctionMetadata();
+        out.functionType = PythonBytecodeToJavaBytecodeTranslator.getFunctionType(function);
         out.className = FlowGraphTest.class.getName();
         out.pythonCompiledFunction = function;
         out.bytecodeCounterToLabelMap = new HashMap<>();
@@ -71,6 +72,17 @@ public class FlowGraphTest {
         return initialStackMetadata;
     }
 
+    static List<FrameData> getFrameData(FlowGraph flowGraph) {
+        List<StackMetadata> stackMetadataList = flowGraph.getStackMetadataForOperations();
+        List<FrameData> out = new ArrayList<>(stackMetadataList.size());
+
+        for (int i = 0; i < stackMetadataList.size(); i++) {
+            out.add(FrameData.from(i, stackMetadataList.get(i)));
+        }
+
+        return out;
+    }
+
     @Test
     public void testStackMetadataForBasicOps() {
         PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction()
@@ -84,15 +96,14 @@ public class FlowGraphTest {
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
         StackMetadata metadata = getInitialStackMetadata(0, 0);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
-        List<FrameData> stackMetadataList = flowGraph.getStackMetadataForOperations()
-                .stream().map(FrameData::from).collect(Collectors.toList());
+        List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
         assertThat(stackMetadataList).containsExactly(
-                new FrameData(),
-                new FrameData().stack(INT_TYPE),
-                new FrameData().stack(INT_TYPE, STRING_TYPE),
-                new FrameData().stack(STRING_TYPE, INT_TYPE),
-                new FrameData().stack(TUPLE_TYPE));
+                new FrameData(0),
+                new FrameData(1).stack(INT_TYPE),
+                new FrameData(2).stack(INT_TYPE, STRING_TYPE),
+                new FrameData(3).stack(STRING_TYPE, INT_TYPE),
+                new FrameData(4).stack(TUPLE_TYPE));
     }
 
     @Test
@@ -111,18 +122,17 @@ public class FlowGraphTest {
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
         StackMetadata metadata = getInitialStackMetadata(2, 0);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
-        List<FrameData> stackMetadataList = flowGraph.getStackMetadataForOperations()
-                .stream().map(FrameData::from).collect(Collectors.toList());
+        List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
         assertThat(stackMetadataList).containsExactly(
-                new FrameData().locals(null, null),
-                new FrameData().stack(INT_TYPE).locals(null, null),
-                new FrameData().stack().locals(INT_TYPE, null),
-                new FrameData().stack(STRING_TYPE).locals(INT_TYPE, null),
-                new FrameData().stack().locals(INT_TYPE, STRING_TYPE),
-                new FrameData().stack(INT_TYPE).locals(INT_TYPE, STRING_TYPE),
-                new FrameData().stack(INT_TYPE, STRING_TYPE).locals(INT_TYPE, STRING_TYPE),
-                new FrameData().stack(TUPLE_TYPE).locals(INT_TYPE, STRING_TYPE));
+                new FrameData(0).locals(null, null),
+                new FrameData(1).stack(INT_TYPE).locals(null, null),
+                new FrameData(2).stack().locals(INT_TYPE, null),
+                new FrameData(3).stack(STRING_TYPE).locals(INT_TYPE, null),
+                new FrameData(4).stack().locals(INT_TYPE, STRING_TYPE),
+                new FrameData(5).stack(INT_TYPE).locals(INT_TYPE, STRING_TYPE),
+                new FrameData(6).stack(INT_TYPE, STRING_TYPE).locals(INT_TYPE, STRING_TYPE),
+                new FrameData(7).stack(TUPLE_TYPE).locals(INT_TYPE, STRING_TYPE));
     }
 
     @Test
@@ -147,27 +157,26 @@ public class FlowGraphTest {
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
         StackMetadata metadata = getInitialStackMetadata(1, 0);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
-        List<FrameData> stackMetadataList = flowGraph.getStackMetadataForOperations()
-                .stream().map(FrameData::from).collect(Collectors.toList());
+        List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
         assertThat(stackMetadataList).containsExactly(
-                new FrameData().locals((PythonLikeType) null), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE).locals((PythonLikeType) null), // STORE
-                new FrameData().stack().locals(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE).locals(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE, INT_TYPE).locals(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE, INT_TYPE, INT_TYPE).locals(INT_TYPE), // TUPLE(3)
+                new FrameData(0).locals((PythonLikeType) null), // LOAD_CONSTANT
+                new FrameData(1).stack(INT_TYPE).locals((PythonLikeType) null), // STORE
+                new FrameData(2).stack().locals(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(3).stack(INT_TYPE).locals(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(4).stack(INT_TYPE, INT_TYPE).locals(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(5).stack(INT_TYPE, INT_TYPE, INT_TYPE).locals(INT_TYPE), // TUPLE(3)
 
                 // Type information is lost because Tuple is not generic
-                new FrameData().stack(TUPLE_TYPE).locals(INT_TYPE), // ITERATOR
-                new FrameData().stack(ITERATOR_TYPE).locals(OBJECT_TYPE), // NEXT
-                new FrameData().stack(ITERATOR_TYPE, OBJECT_TYPE).locals(OBJECT_TYPE), // LOAD_VAR
-                new FrameData().stack(ITERATOR_TYPE, OBJECT_TYPE, OBJECT_TYPE).locals(OBJECT_TYPE), // ADD
-                new FrameData().stack(ITERATOR_TYPE, OBJECT_TYPE).locals(OBJECT_TYPE), // STORE
-                new FrameData().stack(ITERATOR_TYPE).locals(OBJECT_TYPE), // JUMP_ABS
-                new FrameData().stack().locals(OBJECT_TYPE), // NOP
-                new FrameData().stack().locals(OBJECT_TYPE), // LOAD_VAR
-                new FrameData().stack(OBJECT_TYPE).locals(OBJECT_TYPE) // RETURN
+                new FrameData(6).stack(TUPLE_TYPE).locals(INT_TYPE), // ITERATOR
+                new FrameData(7).stack(ITERATOR_TYPE).locals(OBJECT_TYPE), // NEXT
+                new FrameData(8).stack(ITERATOR_TYPE, OBJECT_TYPE).locals(OBJECT_TYPE), // LOAD_VAR
+                new FrameData(9).stack(ITERATOR_TYPE, OBJECT_TYPE, OBJECT_TYPE).locals(OBJECT_TYPE), // ADD
+                new FrameData(10).stack(ITERATOR_TYPE, OBJECT_TYPE).locals(OBJECT_TYPE), // STORE
+                new FrameData(11).stack(ITERATOR_TYPE).locals(OBJECT_TYPE), // JUMP_ABS
+                new FrameData(12).stack().locals(OBJECT_TYPE), // NOP
+                new FrameData(13).stack().locals(OBJECT_TYPE), // LOAD_VAR
+                new FrameData(14).stack(OBJECT_TYPE).locals(OBJECT_TYPE) // RETURN
         );
     }
 
@@ -193,33 +202,37 @@ public class FlowGraphTest {
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
         StackMetadata metadata = getInitialStackMetadata(0, 0);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
-        List<FrameData> stackMetadataList = flowGraph.getStackMetadataForOperations()
-                .stream().map(FrameData::from).collect(Collectors.toList());
+        List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
         assertThat(stackMetadataList).containsExactly(
-                new FrameData().stack(), // SETUP_TRY
-                new FrameData().stack(), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE, INT_TYPE), // COMPARE
-                new FrameData().stack(BOOLEAN_TYPE), // POP_JUMP_IF_TRUE
-                new FrameData().stack(), // LOAD_CONSTANT
-                new FrameData().stack(STRING_TYPE), // RETURN
-                new FrameData().stack(), // NOP
-                new FrameData().stack(), // LOAD_ASSERTION_ERROR
-                new FrameData().stack(ASSERTION_ERROR_TYPE), // RAISE
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // except handler; DUP_TOP,
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
+                new FrameData(0).stack(), // SETUP_TRY
+                new FrameData(1).stack(), // SETUP_TRY
+                new FrameData(2).stack(), // LOAD_CONSTANT
+                new FrameData(3).stack(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(4).stack(INT_TYPE, INT_TYPE), // COMPARE
+                new FrameData(5).stack(BOOLEAN_TYPE), // POP_JUMP_IF_TRUE
+                new FrameData(6).stack(), // LOAD_CONSTANT
+                new FrameData(7).stack(STRING_TYPE), // RETURN
+                new FrameData(8).stack(), // NOP
+                new FrameData(9).stack(), // LOAD_ASSERTION_ERROR
+                new FrameData(10).stack(ASSERTION_ERROR_TYPE), // RAISE
+                new FrameData(11).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // except handler; DUP_TOP,
+                new FrameData(12).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
                         TYPE_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, TYPE_TYPE,
+                new FrameData(13).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
+                        TYPE_TYPE,
                         TYPE_TYPE), // JUMP_IF_NOT_EXC_MATCH
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE), // POP_EXCEPT
-                new FrameData().stack(), // LOAD_CONSTANT
-                new FrameData().stack(STRING_TYPE), // RETURN
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE,
-                        TYPE_TYPE) // RAISE
+                new FrameData(14).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
+                new FrameData(15).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
+                new FrameData(16).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE), // POP_TOP
+                new FrameData(17).stack(NONE_TYPE, INT_TYPE, NONE_TYPE), // POP_EXCEPT
+                new FrameData(18).stack(), // LOAD_CONSTANT
+                new FrameData(19).stack(STRING_TYPE), // RETURN
+                new FrameData(20).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE,
+                        TYPE_TYPE), // POP_TOP
+                new FrameData(21).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
+                new FrameData(22).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // RERAISE
+                new FrameData(23).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE) // RERAISE
         );
     }
 
@@ -257,50 +270,55 @@ public class FlowGraphTest {
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
         StackMetadata metadata = getInitialStackMetadata(0, 0);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
-        List<FrameData> stackMetadataList = flowGraph.getStackMetadataForOperations()
-                .stream().map(FrameData::from).collect(Collectors.toList());
+        List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
         assertThat(stackMetadataList).containsExactly(
-                new FrameData().stack(), // SETUP_TRY
-                new FrameData().stack(), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE, INT_TYPE), // COMPARE
-                new FrameData().stack(BOOLEAN_TYPE), // POP_JUMP_IF_TRUE
-                new FrameData().stack(), // LOAD_ASSERTION_ERROR
-                new FrameData().stack(ASSERTION_ERROR_TYPE), // RAISE
-                new FrameData().stack(), // NOP
-                new FrameData().stack(), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE, INT_TYPE), // COMPARE
-                new FrameData().stack(BOOLEAN_TYPE), // POP_JUMP_IF_TRUE
-                new FrameData().stack(), // LOAD_CONSTANT
-                new FrameData().stack(StopIteration.STOP_ITERATION_TYPE), // RAISE
-                new FrameData().stack(), // NOP
-                new FrameData().stack(), // JUMP_ABSOLUTE
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // except handler; DUP_TOP,
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
+                new FrameData(0).stack(), // SETUP_TRY
+                new FrameData(1).stack(), // SETUP_TRY
+                new FrameData(2).stack(), // LOAD_CONSTANT
+                new FrameData(3).stack(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(4).stack(INT_TYPE, INT_TYPE), // COMPARE
+                new FrameData(5).stack(BOOLEAN_TYPE), // POP_JUMP_IF_TRUE
+                new FrameData(6).stack(), // LOAD_ASSERTION_ERROR
+                new FrameData(7).stack(ASSERTION_ERROR_TYPE), // RAISE
+                new FrameData(8).stack(), // NOP
+                new FrameData(9).stack(), // LOAD_CONSTANT
+                new FrameData(10).stack(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(11).stack(INT_TYPE, INT_TYPE), // COMPARE
+                new FrameData(12).stack(BOOLEAN_TYPE), // POP_JUMP_IF_TRUE
+                new FrameData(13).stack(), // LOAD_CONSTANT
+                new FrameData(14).stack(StopIteration.STOP_ITERATION_TYPE), // RAISE
+                new FrameData(15).stack(), // NOP
+                new FrameData(16).stack(), // JUMP_ABSOLUTE
+                new FrameData(17).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // except handler; DUP_TOP,
+                new FrameData(18).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
                         TYPE_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE, TYPE_TYPE,
+                new FrameData(19).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
+                        TYPE_TYPE,
                         TYPE_TYPE), // JUMP_IF_NOT_EXC_MATCH
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE), // POP_EXCEPT
-                new FrameData().stack(), // LOAD_CONSTANT
-                new FrameData().stack(STRING_TYPE), // STORE_GLOBAL
-                new FrameData().stack(), // JUMP_ABSOLUTE
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE), // POP_TOP
-                new FrameData().stack(NONE_TYPE, INT_TYPE, NONE_TYPE), // POP_EXCEPT
-                new FrameData().stack(), // FINALLY; Catch target; NO-OP
-                new FrameData().stack(), // FINALLY; Load constant
-                new FrameData().stack(STRING_TYPE), // STORE
-                new FrameData().stack(), // RAISE
-                new FrameData().stack(), // END_TRY; FINALLY; Load constant
-                new FrameData().stack(STRING_TYPE), // STORE
-                new FrameData().stack(), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE) // RETURN
+                new FrameData(20).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
+                new FrameData(21).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
+                new FrameData(22).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE), // POP_TOP
+                new FrameData(23).stack(NONE_TYPE, INT_TYPE, NONE_TYPE), // POP_EXCEPT
+                new FrameData(24).stack(), // LOAD_CONSTANT
+                new FrameData(25).stack(STRING_TYPE), // STORE_GLOBAL
+                new FrameData(26).stack(), // JUMP_ABSOLUTE
+                new FrameData(27).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // RERAISE
+                new FrameData(28).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // POP_TOP
+                new FrameData(29).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // POP_TOP
+                new FrameData(30).stack(), // POP_TOP
+                new FrameData(31).stack(), // Load constant
+                new FrameData(32).stack(STRING_TYPE), // STORE
+                new FrameData(33).stack(), // JUMP_ABSOLUTE
+                new FrameData(34).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // NO-OP; Uncaught exception handler
+                new FrameData(35).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), // LOAD-CONSTANT
+                new FrameData(36).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE,
+                        STRING_TYPE), // STORE
+                new FrameData(37).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE, TYPE_TYPE), //  POP-TOP
+                new FrameData(38).stack(NONE_TYPE, INT_TYPE, NONE_TYPE, TRACEBACK_TYPE, BASE_EXCEPTION_TYPE), // RERAISE
+                new FrameData(39).stack(), // NO-OP; After try
+                new FrameData(40).stack(), // LOAD_CONSTANT
+                new FrameData(41).stack(INT_TYPE) // RETURN
         );
     }
 
@@ -325,23 +343,22 @@ public class FlowGraphTest {
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
         StackMetadata metadata = getInitialStackMetadata(1, 0);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
-        List<FrameData> stackMetadataList = flowGraph.getStackMetadataForOperations()
-                .stream().map(FrameData::from).collect(Collectors.toList());
+        List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
         assertThat(stackMetadataList).containsExactly(
-                new FrameData().stack().locals((PythonLikeType) null), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE).locals((PythonLikeType) null), // STORE
-                new FrameData().stack().locals(INT_TYPE), // LOAD_VARIABLE
-                new FrameData().stack(INT_TYPE).locals(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE, INT_TYPE).locals(INT_TYPE), // COMPARE_OP
-                new FrameData().stack(BOOLEAN_TYPE).locals(INT_TYPE), // POP_JUMP_IF_TRUE
-                new FrameData().stack().locals(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(STRING_TYPE).locals(INT_TYPE), // STORE
-                new FrameData().stack().locals(STRING_TYPE), // LOAD_VARIABLE
-                new FrameData().stack(STRING_TYPE).locals(STRING_TYPE), // RETURN
-                new FrameData().stack().locals(INT_TYPE), // NOP
-                new FrameData().stack().locals(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE).locals(INT_TYPE) // RETURN
+                new FrameData(0).stack().locals((PythonLikeType) null), // LOAD_CONSTANT
+                new FrameData(1).stack(INT_TYPE).locals((PythonLikeType) null), // STORE
+                new FrameData(2).stack().locals(INT_TYPE), // LOAD_VARIABLE
+                new FrameData(3).stack(INT_TYPE).locals(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(4).stack(INT_TYPE, INT_TYPE).locals(INT_TYPE), // COMPARE_OP
+                new FrameData(5).stack(BOOLEAN_TYPE).locals(INT_TYPE), // POP_JUMP_IF_TRUE
+                new FrameData(6).stack().locals(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(7).stack(STRING_TYPE).locals(INT_TYPE), // STORE
+                new FrameData(8).stack().locals(STRING_TYPE), // LOAD_VARIABLE
+                new FrameData(9).stack(STRING_TYPE).locals(STRING_TYPE), // RETURN
+                new FrameData(10).stack().locals(INT_TYPE), // NOP
+                new FrameData(11).stack().locals(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(12).stack(INT_TYPE).locals(INT_TYPE) // RETURN
         );
     }
 
@@ -364,37 +381,38 @@ public class FlowGraphTest {
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
         StackMetadata metadata = getInitialStackMetadata(1, 0);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
-        List<FrameData> stackMetadataList = flowGraph.getStackMetadataForOperations()
-                .stream().map(FrameData::from).collect(Collectors.toList());
+        List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
         assertThat(stackMetadataList).containsExactly(
-                new FrameData().stack().locals((PythonLikeType) null), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE).locals((PythonLikeType) null), // STORE
-                new FrameData().stack().locals(INT_TYPE), // LOAD_VARIABLE
-                new FrameData().stack(INT_TYPE).locals(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE, INT_TYPE).locals(INT_TYPE), // COMPARE_OP
-                new FrameData().stack(BOOLEAN_TYPE).locals(INT_TYPE), // POP_JUMP_IF_TRUE
-                new FrameData().stack().locals(INT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(STRING_TYPE).locals(INT_TYPE), // STORE
-                new FrameData().stack().locals(OBJECT_TYPE), // NOP
-                new FrameData().stack().locals(OBJECT_TYPE), // LOAD_CONSTANT
-                new FrameData().stack(INT_TYPE).locals(OBJECT_TYPE) // RETURN
+                new FrameData(0).stack().locals((PythonLikeType) null), // LOAD_CONSTANT
+                new FrameData(1).stack(INT_TYPE).locals((PythonLikeType) null), // STORE
+                new FrameData(2).stack().locals(INT_TYPE), // LOAD_VARIABLE
+                new FrameData(3).stack(INT_TYPE).locals(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(4).stack(INT_TYPE, INT_TYPE).locals(INT_TYPE), // COMPARE_OP
+                new FrameData(5).stack(BOOLEAN_TYPE).locals(INT_TYPE), // POP_JUMP_IF_TRUE
+                new FrameData(6).stack().locals(INT_TYPE), // LOAD_CONSTANT
+                new FrameData(7).stack(STRING_TYPE).locals(INT_TYPE), // STORE
+                new FrameData(8).stack().locals(OBJECT_TYPE), // NOP
+                new FrameData(9).stack().locals(OBJECT_TYPE), // LOAD_CONSTANT
+                new FrameData(10).stack(INT_TYPE).locals(OBJECT_TYPE) // RETURN
         );
     }
 
     private static class FrameData {
+        int index;
         List<PythonLikeType> stackTypes;
         List<PythonLikeType> localVariableTypes;
         List<PythonLikeType> cellTypes;
 
-        public FrameData() {
+        public FrameData(int index) {
+            this.index = index;
             stackTypes = new ArrayList<>();
             localVariableTypes = new ArrayList<>();
             cellTypes = new ArrayList<>();
         }
 
-        public static FrameData from(StackMetadata stackMetadata) {
-            FrameData out = new FrameData();
+        public static FrameData from(int index, StackMetadata stackMetadata) {
+            FrameData out = new FrameData(index);
             stackMetadata.stackValueSources.forEach(valueSourceInfo -> {
                 if (valueSourceInfo != null) {
                     out.stackTypes.add(valueSourceInfo.getValueType());
@@ -420,7 +438,7 @@ public class FlowGraphTest {
         }
 
         public FrameData copy() {
-            FrameData out = new FrameData();
+            FrameData out = new FrameData(index);
             out.stackTypes.addAll(stackTypes);
             out.localVariableTypes.addAll(localVariableTypes);
             out.cellTypes.addAll(cellTypes);
@@ -454,20 +472,22 @@ public class FlowGraphTest {
                 return false;
             }
             FrameData frameData = (FrameData) o;
-            return Objects.equals(stackTypes, frameData.stackTypes)
+            return index == frameData.index
+                    && Objects.equals(stackTypes, frameData.stackTypes)
                     && Objects.equals(localVariableTypes, frameData.localVariableTypes)
                     && Objects.equals(cellTypes, frameData.cellTypes);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(stackTypes, localVariableTypes, cellTypes);
+            return Objects.hash(index, stackTypes, localVariableTypes, cellTypes);
         }
 
         @Override
         public String toString() {
             return "FrameData{" +
-                    "stackTypes=" + stackTypes +
+                    "index=" + index +
+                    ", stackTypes=" + stackTypes +
                     ", localVariableTypes=" + localVariableTypes +
                     ", cellTypes=" + cellTypes +
                     '}';
