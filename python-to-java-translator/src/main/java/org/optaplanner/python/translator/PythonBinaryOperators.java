@@ -51,6 +51,11 @@ public enum PythonBinaryOperators {
     GET_ITEM("__getitem__"),
     DELETE_ITEM("__delitem__"),
 
+    // Generator operations
+    // https://docs.python.org/3/reference/expressions.html#generator-iterator-methods
+    SEND("send"),
+    THROW("throw"),
+
     // Membership operations
     // https://docs.python.org/3/reference/expressions.html#membership-test-operations
     CONTAINS("__contains__"),

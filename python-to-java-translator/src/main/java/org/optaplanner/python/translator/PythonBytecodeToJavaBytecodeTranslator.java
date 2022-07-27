@@ -508,6 +508,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             switch (instruction.opcode) {
                 case GEN_START:
                 case YIELD_VALUE:
+                case YIELD_FROM:
                     return PythonFunctionType.GENERATOR;
 
                 default:
