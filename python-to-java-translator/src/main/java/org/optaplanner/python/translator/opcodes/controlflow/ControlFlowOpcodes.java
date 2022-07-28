@@ -8,10 +8,6 @@ import org.optaplanner.python.translator.opcodes.Opcode;
 public class ControlFlowOpcodes {
     public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction, int pythonVersion) {
         switch (instruction.opcode) {
-            case SETUP_WITH: {
-                return Optional.empty(); // TODO
-            }
-
             case RETURN_VALUE: {
                 return Optional.of(new ReturnValueOpcode(instruction));
             }

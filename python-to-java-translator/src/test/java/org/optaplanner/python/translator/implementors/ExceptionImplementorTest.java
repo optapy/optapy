@@ -19,9 +19,13 @@ import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonBoolean;
+import org.optaplanner.python.translator.types.PythonInteger;
+import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.errors.PythonAssertionError;
 import org.optaplanner.python.translator.types.errors.PythonException;
+import org.optaplanner.python.translator.types.errors.PythonTraceback;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
@@ -142,5 +146,82 @@ public class ExceptionImplementorTest {
 
         BiFunction biFunction =
                 PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
+    }
+
+    @Test
+    public void testWithBlocksWithoutException() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("cxt")
+                .loadConstant(0)
+                .storeVariable("result")
+                .loadParameter("cxt")
+                .with(withBuilder -> {
+                    withBuilder
+                            .loadConstant(1)
+                            .op(OpcodeIdentifier.BINARY_ADD)
+                            .storeVariable("result");
+                })
+                .loadVariable("result")
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        Function function =
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(pythonCompiledFunction, Function.class);
+
+        TestContextManager contextManager = new TestContextManager();
+        assertThat(function.apply(contextManager)).isEqualTo(2);
+        assertThat(contextManager.hasExited()).isTrue();
+        assertThat(contextManager.getException()).isNull();
+    }
+
+    @Test
+    public void testWithBlocksWithException() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("cxt")
+                .loadParameter("cxt")
+                .with(withBuilder -> {
+                    withBuilder
+                            .ifTrue(ifBuilder -> {
+                                ifBuilder.op(OpcodeIdentifier.LOAD_ASSERTION_ERROR)
+                                        .op(OpcodeIdentifier.RERAISE);
+                            });
+                })
+                .loadConstant(null)
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        Function function =
+                PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(pythonCompiledFunction, Function.class);
+
+        TestContextManager contextManager = new TestContextManager();
+        assertThatCode(() -> function.apply(contextManager)).isInstanceOf(PythonAssertionError.class);
+        assertThat(contextManager.hasExited()).isTrue();
+        assertThat(contextManager.getException()).isInstanceOf(PythonAssertionError.class);
+    }
+
+    public static class TestContextManager {
+        Throwable exception;
+        boolean exitCalled;
+
+        public TestContextManager() {
+            exception = null;
+            exitCalled = false;
+        }
+
+        public PythonInteger __enter__() {
+            return PythonInteger.valueOf(1);
+        }
+
+        public PythonBoolean __exit__(PythonLikeType type, Throwable exception, PythonTraceback traceback) {
+            exitCalled = true;
+            this.exception = exception;
+            return PythonBoolean.FALSE;
+        }
+
+        public boolean hasExited() {
+            return exitCalled;
+        }
+
+        public Throwable getException() {
+            return exception;
+        }
     }
 }

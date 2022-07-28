@@ -17,9 +17,6 @@ public class ExceptionOpcodes {
             case POP_EXCEPT: {
                 return Optional.of(new PopExceptOpcode(instruction));
             }
-            case WITH_EXCEPT_START: {
-                return Optional.empty(); // TODO
-            }
             case RERAISE: {
                 return Optional.of(new ReraiseOpcode(instruction));
             }
@@ -28,6 +25,12 @@ public class ExceptionOpcodes {
             }
             case RAISE_VARARGS: {
                 return Optional.of(new RaiseVarargsOpcode(instruction));
+            }
+            case SETUP_WITH: {
+                return Optional.of(new SetupWithOpcode(instruction));
+            }
+            case WITH_EXCEPT_START: {
+                return Optional.of(new WithExceptStartOpcode(instruction));
             }
             default: {
                 return Optional.empty();

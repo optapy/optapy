@@ -376,7 +376,7 @@ public enum OpcodeIdentifier {
 
     /**
      * This opcode performs several operations before a with block starts. First, it loads __exit__() from the
-     * context manager and pushes it onto the stack for later use by WITH_CLEANUP_START. Then, __enter__() is called,
+     * context manager and pushes it onto the stack for later use by {@link #WITH_EXCEPT_START}. Then, __enter__() is called,
      * and a finally block pointing to delta is pushed. Finally, the result of calling the __enter__() method is pushed
      * onto the stack. The next opcode will either ignore it (POP_TOP), or store it
      * in (a) variable(s) (STORE_FAST, STORE_NAME, or UNPACK_SEQUENCE).

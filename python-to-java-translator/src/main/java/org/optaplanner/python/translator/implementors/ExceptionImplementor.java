@@ -1,5 +1,8 @@
 package org.optaplanner.python.translator.implementors;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
@@ -7,14 +10,20 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
+import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
+import org.optaplanner.python.translator.types.BoundPythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonInteger;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.errors.PythonAssertionError;
 import org.optaplanner.python.translator.types.errors.PythonBaseException;
@@ -108,7 +117,7 @@ public class ExceptionImplementor {
      * {@code instruction.arg} is the difference in bytecode offset to the first catch/finally block.
      */
     public static void createTryFinallyBlock(MethodVisitor methodVisitor, String className,
-            PythonBytecodeInstruction instruction,
+            int handlerLocation,
             StackMetadata stackMetadata,
             Map<Integer, Label> bytecodeCounterToLabelMap,
             BiConsumer<Integer, Runnable> bytecodeCounterCodeArgumentConsumer) {
@@ -116,7 +125,7 @@ public class ExceptionImplementor {
         int[] stackLocals = StackManipulationImplementor.storeStack(methodVisitor, stackMetadata);
 
         Label finallyStart =
-                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1,
+                bytecodeCounterToLabelMap.computeIfAbsent(handlerLocation,
                         key -> new Label());
         Label tryStart = new Label();
 
@@ -135,7 +144,7 @@ public class ExceptionImplementor {
         // tb = stack trace
         // exception = exception instance
         // exception_class = the exception class
-        bytecodeCounterCodeArgumentConsumer.accept(instruction.offset + instruction.arg + 1, () -> {
+        bytecodeCounterCodeArgumentConsumer.accept(handlerLocation, () -> {
             // Stack is exception
             // Duplicate exception to the current exception variable slot so we can reraise it if needed
             stackMetadata.localVariableHelper.writeCurrentException(methodVisitor);
@@ -197,5 +206,163 @@ public class ExceptionImplementor {
         methodVisitor.visitInsn(Opcodes.POP);
         methodVisitor.visitInsn(Opcodes.POP);
         methodVisitor.visitInsn(Opcodes.POP);
+    }
+
+    public static void startWith(PythonBytecodeInstruction instruction, FunctionMetadata functionMetadata,
+            StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
+        methodVisitor.visitInsn(Opcodes.DUP); // duplicate context_manager twice; need one for __enter__, two for __exit__
+        methodVisitor.visitInsn(Opcodes.DUP);
+
+        // First load the method __exit__
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                true);
+        methodVisitor.visitLdcInsn("__exit__");
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getAttributeOrError",
+                Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(String.class)),
+                true);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeFunction.class));
+
+        // bind it to the context_manager
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(BoundPythonLikeFunction.class));
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(BoundPythonLikeFunction.class),
+                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class),
+                        Type.getType(PythonLikeFunction.class)),
+                false);
+
+        // Swap __exit__ method with duplicated context_manager
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        // Call __enter__
+        DunderOperatorImplementor.unaryOperator(methodVisitor, stackMetadata, PythonUnaryOperator.ENTER);
+
+        int enterResult = stackMetadata.localVariableHelper.newLocal();
+
+        // store enter result in temp, so it does not get saved in try block
+        stackMetadata.localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), enterResult);
+
+        // Create a try...finally block pointing to delta
+        StackMetadata currentStackMetadata = stackMetadata
+                .pop()
+                .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeFunction.getFunctionType(),
+                        stackMetadata.getTOSValueSource()));
+
+        createTryFinallyBlock(methodVisitor, functionMetadata.className, instruction.offset + instruction.arg + 1,
+                currentStackMetadata,
+                functionMetadata.bytecodeCounterToLabelMap,
+                (bytecodeIndex, runnable) -> {
+                    functionMetadata.bytecodeCounterToCodeArgumenterList
+                            .computeIfAbsent(bytecodeIndex, key -> new ArrayList<>()).add(runnable);
+                });
+
+        // Push enter result back to the stack
+        stackMetadata.localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), enterResult);
+        // cannot free, since try block store stack in locals => freeing enterResult messes up indexing of locals
+    }
+
+    public static void handleExceptionInWith(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+
+        // First, store the top 7 items in the stack to be restored later
+        int exceptionType = localVariableHelper.newLocal();
+        int exception = localVariableHelper.newLocal();
+        int traceback = localVariableHelper.newLocal();
+        int label = localVariableHelper.newLocal();
+        int stackSize = localVariableHelper.newLocal();
+        int instruction = localVariableHelper.newLocal();
+        int exitFunction = localVariableHelper.newLocal();
+
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), exceptionType);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), exception);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), traceback);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), label);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), stackSize);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), instruction);
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), exitFunction);
+
+        // load exitFunction
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), exitFunction);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeFunction.class));
+
+        // create the argument list
+        // (exc_type, exc_value, traceback)
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(ArrayList.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitLdcInsn(3);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(ArrayList.class),
+                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE),
+                false);
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), exceptionType);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
+                "add", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
+                true);
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), exception);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
+                "add", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
+                true);
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), traceback);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
+                "add", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(Object.class)),
+                true);
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        // Use null for keywords
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+
+        // Call the exit function
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class)),
+                true);
+
+        // Restore the stack, raising the returned value to the top of the stack
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), exitFunction);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), instruction);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), stackSize);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), label);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), traceback);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), exception);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), exceptionType);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        // Free the 7 temps
+        localVariableHelper.freeLocal();
+        localVariableHelper.freeLocal();
+        localVariableHelper.freeLocal();
+
+        localVariableHelper.freeLocal();
+        localVariableHelper.freeLocal();
+        localVariableHelper.freeLocal();
+
+        localVariableHelper.freeLocal();
     }
 }

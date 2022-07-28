@@ -304,6 +304,60 @@ public class PythonFunctionBuilder {
     }
 
     /**
+     * Use TOS as a context_manager, pushing the result of its __enter__ method to TOS, and calling its
+     * __exit__ method on exit of the with block (both normal and exceptional exits)
+     *
+     * @param blockBuilder The code inside the with block
+     */
+    public PythonFunctionBuilder with(Consumer<PythonFunctionBuilder> blockBuilder) {
+        PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
+        instruction.opcode = OpcodeIdentifier.SETUP_WITH;
+        instruction.offset = instructionList.size();
+        instructionList.add(instruction);
+
+        blockBuilder.accept(this);
+
+        // Call the exit function
+        loadConstant(null);
+        loadConstant(null);
+        loadConstant(null);
+        callFunction(3);
+        op(OpcodeIdentifier.POP_TOP);
+
+        PythonBytecodeInstruction skipExceptionHandler = new PythonBytecodeInstruction();
+        skipExceptionHandler.opcode = OpcodeIdentifier.JUMP_ABSOLUTE;
+        skipExceptionHandler.offset = instructionList.size();
+        instructionList.add(skipExceptionHandler);
+
+        PythonBytecodeInstruction exceptionHandler = new PythonBytecodeInstruction();
+        exceptionHandler.opcode = OpcodeIdentifier.WITH_EXCEPT_START;
+        exceptionHandler.offset = instructionList.size();
+        exceptionHandler.isJumpTarget = true;
+        instructionList.add(exceptionHandler);
+
+        instruction.arg = exceptionHandler.offset - instruction.offset - 1;
+
+        ifFalse(reraiseExceptionBlock -> reraiseExceptionBlock
+                .op(OpcodeIdentifier.POP_TOP).op(OpcodeIdentifier.RERAISE));
+
+        op(OpcodeIdentifier.POP_TOP);
+        op(OpcodeIdentifier.POP_TOP);
+        op(OpcodeIdentifier.POP_TOP);
+        op(OpcodeIdentifier.POP_EXCEPT);
+        op(OpcodeIdentifier.POP_TOP);
+
+        skipExceptionHandler.arg = instructionList.size();
+
+        PythonBytecodeInstruction afterWithInstruction = new PythonBytecodeInstruction();
+        afterWithInstruction.opcode = OpcodeIdentifier.NOP;
+        afterWithInstruction.offset = instructionList.size();
+        afterWithInstruction.isJumpTarget = true;
+        instructionList.add(afterWithInstruction);
+
+        return this;
+    }
+
+    /**
      * Create a list from the {@code count} top items on the stack. TOS is the last element in the list
      *
      * @param count The number of elements to pop and put into the list.

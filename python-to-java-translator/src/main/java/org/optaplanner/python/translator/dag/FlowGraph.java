@@ -135,7 +135,17 @@ public class FlowGraph {
                     if (opcodeIndexToJumpSourceMap.containsKey(indexBranchPair)) {
                         opcodeIndexToJumpSourceMap.get(indexBranchPair).setStackMetadata(nextStackMetadata);
                     }
-                    opcodeIndexToStackMetadata.merge(nextBytecodeIndex, nextStackMetadata, StackMetadata::unifyWith);
+                    try {
+                        opcodeIndexToStackMetadata.merge(nextBytecodeIndex, nextStackMetadata, StackMetadata::unifyWith);
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalStateException(
+                                "Cannot unify block starting at " + nextBytecodeIndex + ": different stack sizes;\n"
+                                        + basicBlockList.stream().flatMap(b -> b.getBlockOpcodeList().stream())
+                                                .map(Object::toString)
+                                                .collect(Collectors.joining("\n")),
+                                e);
+                    }
+
                 }
             }
         }
