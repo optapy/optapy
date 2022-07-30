@@ -13,6 +13,7 @@ import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonVersion;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
@@ -94,6 +95,7 @@ public class PythonFunctionBuilder {
         out.co_kwonlyargcount = co_kwonlyargcount;
         out.co_cellvars = co_cellvars;
         out.co_freevars = co_freevars;
+        out.pythonVersion = PythonVersion.PYTHON_3_10;
         return out;
     }
 
@@ -651,6 +653,10 @@ public class PythonFunctionBuilder {
         if (instruction.arg == -1) {
             co_cellvars.add(variableName);
             instruction.arg = co_cellvars.size() - 1;
+
+            if (!co_varnames.contains(variableName)) {
+                co_varnames.add(variableName);
+            }
         }
 
         instructionList.add(instruction);
@@ -672,6 +678,10 @@ public class PythonFunctionBuilder {
         if (instruction.arg == -1) {
             co_cellvars.add(variableName);
             instruction.arg = co_cellvars.size() - 1;
+
+            if (!co_varnames.contains(variableName)) {
+                co_varnames.add(variableName);
+            }
         }
 
         instructionList.add(instruction);
@@ -692,6 +702,10 @@ public class PythonFunctionBuilder {
         if (instruction.arg == -1) {
             co_freevars.add(variableName);
             instruction.arg = co_freevars.size() - 1;
+
+            if (!co_varnames.contains(variableName)) {
+                co_varnames.add(variableName);
+            }
         }
 
         instructionList.add(instruction);
@@ -712,6 +726,10 @@ public class PythonFunctionBuilder {
         if (instruction.arg == -1) {
             co_freevars.add(variableName);
             instruction.arg = co_freevars.size() - 1;
+
+            if (!co_varnames.contains(variableName)) {
+                co_varnames.add(variableName);
+            }
         }
 
         instructionList.add(instruction);

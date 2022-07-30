@@ -135,6 +135,11 @@ public class VariableImplementor {
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonCell.class), "<init>",
                 Type.getMethodDescriptor(Type.VOID_TYPE), false);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        localVariableHelper.readCellInitialValue(methodVisitor, cellIndex);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeObject.class));
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(PythonCell.class), "cellValue",
+                Type.getDescriptor(PythonLikeObject.class));
         localVariableHelper.writeCell(methodVisitor, cellIndex);
     }
 

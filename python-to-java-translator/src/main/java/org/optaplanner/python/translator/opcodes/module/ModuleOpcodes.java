@@ -3,10 +3,12 @@ package org.optaplanner.python.translator.opcodes.module;
 import java.util.Optional;
 
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.PythonVersion;
 import org.optaplanner.python.translator.opcodes.Opcode;
 
 public class ModuleOpcodes {
-    public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction, int pythonVersion) {
+    public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction,
+            PythonVersion pythonVersion) {
         switch (instruction.opcode) {
             case IMPORT_NAME: {
                 return Optional.of(new ImportNameOpcode(instruction));

@@ -2,7 +2,7 @@ import dis
 
 import sys
 import inspect
-from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, onJVMStart
+from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass
 
 global_dict_to_instance = dict()
 global_dict_to_key_set = dict()
@@ -128,6 +128,15 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
         try:
             from org.optaplanner.python.translator.types import PythonLikeFunction
             out = translate_python_bytecode_to_java_bytecode(value, PythonLikeFunction)
+            put_in_instance_map(instance_map, value, out)
+            return out
+        except:
+            return None
+    elif inspect.iscode(value):
+        try:
+            from org.optaplanner.python.translator.types import PythonLikeFunction, PythonCode
+            java_class = translate_python_code_to_java_class(value, PythonLikeFunction)
+            out = PythonCode(java_class)
             put_in_instance_map(instance_map, value, out)
             return out
         except:
@@ -402,7 +411,7 @@ def copy_globals(globals_dict):
 
 def get_function_bytecode_object(python_function):
     from java.util import ArrayList
-    from org.optaplanner.python.translator import PythonBytecodeInstruction, PythonCompiledFunction, OpcodeIdentifier # noqa
+    from org.optaplanner.python.translator import PythonBytecodeInstruction, PythonCompiledFunction, PythonVersion, OpcodeIdentifier # noqa
 
     init_type_to_compiled_java_class()
 
@@ -439,7 +448,50 @@ def get_function_bytecode_object(python_function):
     python_compiled_function.closure = copy_closure(python_function.__closure__)
     python_compiled_function.globalsMap = copy_globals(python_function.__globals__)
     python_compiled_function.typeAnnotations = copy_type_annotations(python_function.__annotations__)
-    python_compiled_function.pythonVersion = sys.hexversion
+    python_compiled_function.pythonVersion = PythonVersion(sys.hexversion)
+    return python_compiled_function
+
+
+def get_code_bytecode_object(python_code):
+    from java.util import ArrayList, HashMap
+    from org.optaplanner.python.translator import PythonBytecodeInstruction, PythonCompiledFunction, PythonVersion, OpcodeIdentifier # noqa
+
+    init_type_to_compiled_java_class()
+
+    python_compiled_function = PythonCompiledFunction()
+    instruction_list = ArrayList()
+    for instruction in dis.get_instructions(python_code):
+        java_instruction = PythonBytecodeInstruction()
+        java_instruction.opcode = OpcodeIdentifier.valueOf(instruction.opname)
+        java_instruction.opname = instruction.opname
+        java_instruction.offset = JInt(instruction.offset // 2)
+
+        if instruction.arg is not None:
+            java_instruction.arg = JInt(instruction.arg)
+        else:
+            java_instruction.arg = JInt(0)
+
+        if java_instruction.startsLine is not None:
+            java_instruction.startsLine = JInt(instruction.starts_line)
+
+        java_instruction.isJumpTarget = JBoolean(instruction.is_jump_target)
+
+        instruction_list.add(java_instruction)
+
+    python_compiled_function.module = '__code__'
+    python_compiled_function.qualifiedName = '__code__'
+    python_compiled_function.instructionList = instruction_list
+    python_compiled_function.co_names = copy_iterable(python_code.co_names)
+    python_compiled_function.co_varnames = copy_iterable(python_code.co_varnames)
+    python_compiled_function.co_cellvars = copy_iterable(python_code.co_cellvars)
+    python_compiled_function.co_freevars = copy_iterable(python_code.co_freevars)
+    python_compiled_function.co_constants = copy_constants(python_code.co_consts)
+    python_compiled_function.co_argcount = python_code.co_argcount
+    python_compiled_function.co_kwonlyargcount = python_code.co_kwonlyargcount
+    python_compiled_function.closure = copy_closure(None)
+    python_compiled_function.globalsMap = HashMap()
+    python_compiled_function.typeAnnotations = HashMap()
+    python_compiled_function.pythonVersion = PythonVersion(sys.hexversion)
     return python_compiled_function
 
 
@@ -454,6 +506,57 @@ def translate_python_bytecode_to_java_bytecode(python_function, java_function_ty
         return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecode(python_compiled_function,
                                                                               java_function_type,
                                                                               copy_iterable(type_args))
+
+
+def translate_python_code_to_java_class(python_function, java_function_type, *type_args):
+    from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
+    python_compiled_function = get_code_bytecode_object(python_function)
+
+    if len(type_args) == 0:
+        return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass(python_compiled_function,
+                                                                                     java_function_type)
+    else:
+        return PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass(python_compiled_function,
+                                                                                     java_function_type,
+                                                                                     copy_iterable(type_args))
+
+
+def wrap_java_function(java_function):
+    def wrapped_function(*args, **kwargs):
+        from org.optaplanner.python.translator.types import PythonLikeFunction
+        from java.util import ArrayList, HashMap
+
+        instance_map = HashMap()
+        if isinstance(java_function, PythonLikeFunction):
+            java_args = ArrayList(len(args))
+            java_kwargs = HashMap()
+
+            for arg in args:
+                java_args.add(convert_to_java_python_like_object(arg, instance_map))
+
+            for key, value in kwargs:
+                java_kwargs.put(convert_to_java_python_like_object(key, instance_map),
+                                convert_to_java_python_like_object(value, instance_map))
+
+            return unwrap_python_like_object(getattr(java_function, '$call')(java_args, java_kwargs))
+        else:
+            instance_map = HashMap()
+            java_args = [convert_to_java_python_like_object(arg, instance_map) for arg in args]
+            java_kwargs = {
+                convert_to_java_python_like_object(key, instance_map):
+                convert_to_java_python_like_object(value, instance_map)
+                for key, value in kwargs
+            }
+
+            return unwrap_python_like_object(java_function(*java_args, **java_kwargs))
+
+    return wrapped_function
+
+
+def as_java(python_function):
+    from org.optaplanner.python.translator.types import PythonLikeFunction
+    java_function = translate_python_bytecode_to_java_bytecode(python_function, PythonLikeFunction)
+    return wrap_java_function(java_function)
 
 
 class MethodTypeHelper:

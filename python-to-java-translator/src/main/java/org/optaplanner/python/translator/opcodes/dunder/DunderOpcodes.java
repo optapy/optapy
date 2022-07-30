@@ -5,10 +5,12 @@ import java.util.Optional;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.PythonVersion;
 import org.optaplanner.python.translator.opcodes.Opcode;
 
 public class DunderOpcodes {
-    public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction, int pythonVersion) {
+    public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction,
+            PythonVersion pythonVersion) {
         switch (instruction.opcode) {
             case COMPARE_OP: {
                 return Optional.of(new CompareOpcode(instruction));

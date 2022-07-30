@@ -10,7 +10,6 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.optaplanner.python.translator.FunctionMetadata;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.opcodes.Opcode;
 
@@ -119,11 +118,9 @@ public class FlowGraph {
                 StackMetadata currentStackMetadata =
                         opcodeIndexToStackMetadata.get(opcode.getBytecodeIndex());
                 if (currentStackMetadata == null) {
-                    throw new IllegalStateException(
-                            "Cannot get stack metadata at index " + opcode.getBytecodeIndex() + " for bytecode:\n" +
-                                    functionMetadata.pythonCompiledFunction.instructionList.stream()
-                                            .map(PythonBytecodeInstruction::toString)
-                                            .collect(Collectors.joining("\n")));
+                    // Python can generate dead code; use initial stack metadata
+                    currentStackMetadata = initialStackMetadata.copy();
+                    opcodeIndexToStackMetadata.put(opcode.getBytecodeIndex(), currentStackMetadata);
                 }
                 List<Integer> branchList = opcode.getPossibleNextBytecodeIndexList();
                 List<StackMetadata> nextStackMetadataList = opcode

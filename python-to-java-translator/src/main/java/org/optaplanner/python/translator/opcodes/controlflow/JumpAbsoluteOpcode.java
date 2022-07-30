@@ -9,19 +9,21 @@ import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.implementors.JumpImplementor;
 
 public class JumpAbsoluteOpcode extends AbstractControlFlowOpcode {
+    int jumpTarget;
 
-    public JumpAbsoluteOpcode(PythonBytecodeInstruction instruction) {
+    public JumpAbsoluteOpcode(PythonBytecodeInstruction instruction, int jumpTarget) {
         super(instruction);
+        this.jumpTarget = jumpTarget;
     }
 
     @Override
     public List<Integer> getPossibleNextBytecodeIndexList() {
-        return List.of(instruction.arg);
+        return List.of(jumpTarget);
     }
 
     @Override
     public void relabel(Map<Integer, Integer> originalBytecodeIndexToNewBytecodeIndex) {
-        instruction.arg = originalBytecodeIndexToNewBytecodeIndex.get(instruction.arg);
+        jumpTarget = originalBytecodeIndexToNewBytecodeIndex.get(jumpTarget);
         super.relabel(originalBytecodeIndexToNewBytecodeIndex);
     }
 
@@ -33,7 +35,7 @@ public class JumpAbsoluteOpcode extends AbstractControlFlowOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        JumpImplementor.jumpAbsolute(functionMetadata.methodVisitor, instruction,
+        JumpImplementor.jumpAbsolute(functionMetadata.methodVisitor, jumpTarget,
                 functionMetadata.bytecodeCounterToLabelMap);
     }
 

@@ -37,7 +37,7 @@ public class CollectionImplementor {
      * Note: {@link StopIteration} does not fill its stack trace, which make it much more efficient than
      * normal exceptions.
      */
-    public static void iterateIterator(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
+    public static void iterateIterator(MethodVisitor methodVisitor, int jumpTarget,
             StackMetadata stackMetadata,
             FunctionMetadata functionMetadata) {
         Label tryStartLabel = new Label();
@@ -45,7 +45,7 @@ public class CollectionImplementor {
         Label catchStartLabel = new Label();
         Label catchEndLabel = new Label();
         Label loopEndLabel =
-                functionMetadata.bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1,
+                functionMetadata.bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget,
                         key -> new Label());
 
         int[] storedStack = StackManipulationImplementor.storeStack(methodVisitor, stackMetadata);
@@ -66,7 +66,7 @@ public class CollectionImplementor {
         methodVisitor.visitLabel(catchEndLabel);
 
         functionMetadata.bytecodeCounterToCodeArgumenterList
-                .computeIfAbsent(instruction.offset + instruction.arg + 1, key -> new ArrayList<>())
+                .computeIfAbsent(jumpTarget, key -> new ArrayList<>())
                 .add(() -> {
                     StackManipulationImplementor.restoreStack(methodVisitor, stackMetadata, storedStack);
                     methodVisitor.visitInsn(Opcodes.POP);

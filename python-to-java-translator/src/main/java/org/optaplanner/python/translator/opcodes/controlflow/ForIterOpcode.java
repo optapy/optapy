@@ -11,26 +11,23 @@ import org.optaplanner.python.translator.implementors.CollectionImplementor;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class ForIterOpcode extends AbstractControlFlowOpcode {
+    int jumpTarget;
 
-    public ForIterOpcode(PythonBytecodeInstruction instruction) {
+    public ForIterOpcode(PythonBytecodeInstruction instruction, int jumpTarget) {
         super(instruction);
+        this.jumpTarget = jumpTarget;
     }
 
     @Override
     public List<Integer> getPossibleNextBytecodeIndexList() {
         return List.of(
                 getBytecodeIndex() + 1,
-                getBytecodeIndex() + instruction.arg + 1);
+                jumpTarget);
     }
 
     @Override
     public void relabel(Map<Integer, Integer> originalBytecodeIndexToNewBytecodeIndex) {
-        int originalBytecodeIndex = instruction.offset;
-        int originalTargetBytecodeIndex = originalBytecodeIndex + instruction.arg + 1;
-        int newBytecodeIndex = originalBytecodeIndexToNewBytecodeIndex.get(originalBytecodeIndex);
-        int newTargetBytecodeIndex = originalBytecodeIndexToNewBytecodeIndex.get(originalTargetBytecodeIndex);
-
-        instruction.arg = newTargetBytecodeIndex - newBytecodeIndex - 1;
+        jumpTarget = originalBytecodeIndexToNewBytecodeIndex.get(jumpTarget);
         super.relabel(originalBytecodeIndexToNewBytecodeIndex);
     }
 
@@ -44,7 +41,7 @@ public class ForIterOpcode extends AbstractControlFlowOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        CollectionImplementor.iterateIterator(functionMetadata.methodVisitor, instruction,
+        CollectionImplementor.iterateIterator(functionMetadata.methodVisitor, jumpTarget,
                 stackMetadata, functionMetadata);
     }
 }

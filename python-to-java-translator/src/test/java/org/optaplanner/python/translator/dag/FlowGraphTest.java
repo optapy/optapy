@@ -25,6 +25,7 @@ import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
+import org.optaplanner.python.translator.PythonVersion;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.opcodes.Opcode;
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -40,7 +41,7 @@ public class FlowGraphTest {
             PythonCompiledFunction function) {
         List<Opcode> out = new ArrayList<>(function.instructionList.size());
         for (PythonBytecodeInstruction instruction : function.instructionList) {
-            out.add(Opcode.lookupOpcodeForInstruction(instruction, Integer.MAX_VALUE));
+            out.add(Opcode.lookupOpcodeForInstruction(instruction, PythonVersion.PYTHON_3_10));
         }
         return FlowGraph.createFlowGraph(functionMetadata, initialStackMetadata, out);
     }

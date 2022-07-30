@@ -18,25 +18,22 @@ import org.optaplanner.python.translator.types.errors.PythonBaseException;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
 
 public class SetupFinallyOpcode extends AbstractControlFlowOpcode {
+    int jumpTarget;
 
-    public SetupFinallyOpcode(PythonBytecodeInstruction instruction) {
+    public SetupFinallyOpcode(PythonBytecodeInstruction instruction, int jumpTarget) {
         super(instruction);
+        this.jumpTarget = jumpTarget;
     }
 
     @Override
     public List<Integer> getPossibleNextBytecodeIndexList() {
         return List.of(getBytecodeIndex() + 1,
-                getBytecodeIndex() + instruction.arg + 1);
+                jumpTarget);
     }
 
     @Override
     public void relabel(Map<Integer, Integer> originalBytecodeIndexToNewBytecodeIndex) {
-        int originalBytecodeIndex = instruction.offset;
-        int originalTargetBytecodeIndex = originalBytecodeIndex + instruction.arg + 1;
-        int newBytecodeIndex = originalBytecodeIndexToNewBytecodeIndex.get(originalBytecodeIndex);
-        int newTargetBytecodeIndex = originalBytecodeIndexToNewBytecodeIndex.get(originalTargetBytecodeIndex);
-
-        instruction.arg = newTargetBytecodeIndex - newBytecodeIndex - 1;
+        jumpTarget = originalBytecodeIndexToNewBytecodeIndex.get(jumpTarget);
         super.relabel(originalBytecodeIndexToNewBytecodeIndex);
     }
 
@@ -56,7 +53,7 @@ public class SetupFinallyOpcode extends AbstractControlFlowOpcode {
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
         ExceptionImplementor.createTryFinallyBlock(functionMetadata.methodVisitor, functionMetadata.className,
-                getBytecodeIndex() + instruction.arg + 1,
+                jumpTarget,
                 stackMetadata,
                 functionMetadata.bytecodeCounterToLabelMap,
                 (bytecodeIndex, runnable) -> {

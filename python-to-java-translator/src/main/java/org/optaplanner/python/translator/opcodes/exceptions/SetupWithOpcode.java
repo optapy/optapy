@@ -17,16 +17,18 @@ import org.optaplanner.python.translator.types.errors.PythonBaseException;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
 
 public class SetupWithOpcode extends AbstractControlFlowOpcode {
+    int jumpTarget;
 
-    public SetupWithOpcode(PythonBytecodeInstruction instruction) {
+    public SetupWithOpcode(PythonBytecodeInstruction instruction, int jumpTarget) {
         super(instruction);
+        this.jumpTarget = jumpTarget;
     }
 
     @Override
     public List<Integer> getPossibleNextBytecodeIndexList() {
         return List.of(
                 getBytecodeIndex() + 1,
-                getBytecodeIndex() + instruction.arg + 1);
+                jumpTarget);
     }
 
     @Override
@@ -50,6 +52,6 @@ public class SetupWithOpcode extends AbstractControlFlowOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        ExceptionImplementor.startWith(instruction, functionMetadata, stackMetadata);
+        ExceptionImplementor.startWith(jumpTarget, functionMetadata, stackMetadata);
     }
 }

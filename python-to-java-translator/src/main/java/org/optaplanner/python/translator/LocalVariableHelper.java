@@ -1,6 +1,8 @@
 package org.optaplanner.python.translator;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -9,6 +11,7 @@ import org.objectweb.asm.Type;
 public class LocalVariableHelper {
 
     public final Type[] parameters;
+    public final int argcount;
     public final int parameterSlotsEnd;
     public final int pythonCellVariablesStart;
     public final int pythonFreeVariablesStart;
@@ -16,11 +19,13 @@ public class LocalVariableHelper {
 
     public final int pythonBoundVariables;
     public final int pythonFreeVariables;
+    public final Map<Integer, Integer> boundCellIndexToVariableIndex;
 
     public final int currentExceptionVariableSlot;
     int usedLocals;
 
     public LocalVariableHelper(Type[] parameters, PythonCompiledFunction compiledFunction) {
+        this.argcount = compiledFunction.co_argcount;
         this.parameters = parameters;
         int slotsUsedByParameters = 1;
         for (Type parameter : parameters) {
@@ -34,6 +39,15 @@ public class LocalVariableHelper {
         pythonBoundVariables = compiledFunction.co_cellvars.size();
         pythonFreeVariables = compiledFunction.co_freevars.size();
 
+        boundCellIndexToVariableIndex = new HashMap<>();
+        for (int i = 0; i < compiledFunction.co_cellvars.size(); i++) {
+            for (int j = 0; j < compiledFunction.co_varnames.size(); j++) {
+                if (compiledFunction.co_cellvars.get(i).equals(compiledFunction.co_varnames.get(j))) {
+                    boundCellIndexToVariableIndex.put(i, j);
+                }
+            }
+        }
+
         parameterSlotsEnd = slotsUsedByParameters;
         pythonCellVariablesStart = parameterSlotsEnd + compiledFunction.co_varnames.size();
         pythonFreeVariablesStart = pythonCellVariablesStart + pythonBoundVariables;
@@ -41,9 +55,11 @@ public class LocalVariableHelper {
         pythonLocalVariablesSlotEnd = currentExceptionVariableSlot + 1;
     }
 
-    LocalVariableHelper(Type[] parameters, int parameterSlotsEnd, int pythonCellVariablesStart,
+    LocalVariableHelper(Type[] parameters, int argcount, int parameterSlotsEnd, int pythonCellVariablesStart,
             int pythonFreeVariablesStart, int pythonLocalVariablesSlotEnd,
-            int pythonBoundVariables, int pythonFreeVariables, int currentExceptionVariableSlot) {
+            int pythonBoundVariables, int pythonFreeVariables, Map<Integer, Integer> boundCellIndexToVariableIndex,
+            int currentExceptionVariableSlot) {
+        this.argcount = argcount;
         this.parameters = parameters;
         this.parameterSlotsEnd = parameterSlotsEnd;
         this.pythonCellVariablesStart = pythonCellVariablesStart;
@@ -51,13 +67,14 @@ public class LocalVariableHelper {
         this.pythonLocalVariablesSlotEnd = pythonLocalVariablesSlotEnd;
         this.pythonBoundVariables = pythonBoundVariables;
         this.pythonFreeVariables = pythonFreeVariables;
+        this.boundCellIndexToVariableIndex = boundCellIndexToVariableIndex;
         this.currentExceptionVariableSlot = currentExceptionVariableSlot;
     }
 
     public LocalVariableHelper copy() {
-        LocalVariableHelper out = new LocalVariableHelper(parameters, parameterSlotsEnd, pythonCellVariablesStart,
+        LocalVariableHelper out = new LocalVariableHelper(parameters, argcount, parameterSlotsEnd, pythonCellVariablesStart,
                 pythonFreeVariablesStart, pythonLocalVariablesSlotEnd,
-                pythonBoundVariables, pythonFreeVariables, currentExceptionVariableSlot);
+                pythonBoundVariables, pythonFreeVariables, boundCellIndexToVariableIndex, currentExceptionVariableSlot);
         out.usedLocals = usedLocals;
         return out;
     }
@@ -127,6 +144,18 @@ public class LocalVariableHelper {
 
     public void writeLocal(MethodVisitor methodVisitor, int local) {
         methodVisitor.visitVarInsn(Opcodes.ASTORE, getPythonLocalVariableSlot(local));
+    }
+
+    public void readCellInitialValue(MethodVisitor methodVisitor, int cell) {
+        if (boundCellIndexToVariableIndex.containsKey(cell)) {
+            int boundedVariable = boundCellIndexToVariableIndex.get(cell);
+            if (boundedVariable >= argcount) { // not a parameter
+                methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+            } else { // it is a parameter
+                readLocal(methodVisitor, boundCellIndexToVariableIndex.get(cell));
+            }
+        }
+        // TODO: Free cells?
     }
 
     public void readCell(MethodVisitor methodVisitor, int cell) {

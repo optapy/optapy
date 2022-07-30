@@ -9,21 +9,23 @@ import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.implementors.JumpImplementor;
 
 public class PopJumpIfTrueOpcode extends AbstractControlFlowOpcode {
+    int jumpTarget;
 
-    public PopJumpIfTrueOpcode(PythonBytecodeInstruction instruction) {
+    public PopJumpIfTrueOpcode(PythonBytecodeInstruction instruction, int jumpTarget) {
         super(instruction);
+        this.jumpTarget = jumpTarget;
     }
 
     @Override
     public List<Integer> getPossibleNextBytecodeIndexList() {
         return List.of(
                 getBytecodeIndex() + 1,
-                instruction.arg);
+                jumpTarget);
     }
 
     @Override
     public void relabel(Map<Integer, Integer> originalBytecodeIndexToNewBytecodeIndex) {
-        instruction.arg = originalBytecodeIndexToNewBytecodeIndex.get(instruction.arg);
+        instruction.arg = originalBytecodeIndexToNewBytecodeIndex.get(jumpTarget);
         super.relabel(originalBytecodeIndexToNewBytecodeIndex);
     }
 
@@ -36,7 +38,7 @@ public class PopJumpIfTrueOpcode extends AbstractControlFlowOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        JumpImplementor.popAndJumpIfTrue(functionMetadata.methodVisitor, instruction,
+        JumpImplementor.popAndJumpIfTrue(functionMetadata.methodVisitor, jumpTarget,
                 stackMetadata, functionMetadata.bytecodeCounterToLabelMap);
     }
 }

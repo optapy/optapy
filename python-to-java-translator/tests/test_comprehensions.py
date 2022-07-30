@@ -1,0 +1,12 @@
+import javapython
+
+
+def test_list_comprehensions():
+    def my_function(predicate, iterable):
+        return [x for x in iterable if predicate(x)]
+
+    def my_predicate(x):
+        return x % 2 == 0
+
+    java_function = javapython.as_java(my_function)
+    assert java_function(my_predicate, [1, 2, 3, 4]) == my_function(my_predicate, [1, 2, 3, 4])

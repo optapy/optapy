@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.PythonVersion;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.opcodes.async.AsyncOpcodes;
 import org.optaplanner.python.translator.opcodes.collection.CollectionOpcodes;
@@ -86,7 +87,7 @@ public interface Opcode {
         return false;
     }
 
-    static Opcode lookupOpcodeForInstruction(PythonBytecodeInstruction instruction, int pythonVersion) {
+    static Opcode lookupOpcodeForInstruction(PythonBytecodeInstruction instruction, PythonVersion pythonVersion) {
         return Optional.<Opcode> empty() // For more readable code, start with empty
                 .or(() -> AsyncOpcodes.lookupOpcodeForInstruction(instruction, pythonVersion))
                 .or(() -> CollectionOpcodes.lookupOpcodeForInstruction(instruction, pythonVersion))

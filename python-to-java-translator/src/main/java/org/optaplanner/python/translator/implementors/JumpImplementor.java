@@ -6,7 +6,6 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.PythonBoolean;
@@ -16,33 +15,21 @@ import org.optaplanner.python.translator.types.PythonLikeType;
  * Implementations of jump opcodes
  */
 public class JumpImplementor {
-
-    /**
-     * Increment the bytecode counter by the {@code instruction} argument.
-     */
-    public static void jumpRelative(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            Map<Integer, Label> bytecodeCounterToLabelMap) {
-        Label jumpLocation =
-                bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset + instruction.arg + 1,
-                        key -> new Label());
-        methodVisitor.visitJumpInsn(Opcodes.GOTO, jumpLocation);
-    }
-
     /**
      * Set the bytecode counter to the {@code instruction} argument.
      */
-    public static void jumpAbsolute(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
+    public static void jumpAbsolute(MethodVisitor methodVisitor, int jumpTarget,
             Map<Integer, Label> bytecodeCounterToLabelMap) {
-        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
         methodVisitor.visitJumpInsn(Opcodes.GOTO, jumpLocation);
     }
 
     /**
      * Pops TOS. If TOS is true, set the bytecode counter to the {@code instruction} argument.
      */
-    public static void popAndJumpIfTrue(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
+    public static void popAndJumpIfTrue(MethodVisitor methodVisitor, int jumpTarget,
             StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
-        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
         if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
         }
@@ -53,9 +40,9 @@ public class JumpImplementor {
     /**
      * Pops TOS. If TOS is false, set the bytecode counter to the {@code instruction} argument.
      */
-    public static void popAndJumpIfFalse(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
+    public static void popAndJumpIfFalse(MethodVisitor methodVisitor, int jumpTarget,
             StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
-        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
         if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
         }
@@ -68,9 +55,9 @@ public class JumpImplementor {
      * {@code instruction} argument.
      * Pop TOS and TOS1 off the stack.
      */
-    public static void popAndJumpIfExceptionDoesNotMatch(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
+    public static void popAndJumpIfExceptionDoesNotMatch(MethodVisitor methodVisitor, int jumpTarget,
             Map<Integer, Label> bytecodeCounterToLabelMap) {
-        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
 
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeType.class));
         StackManipulationImplementor.swap(methodVisitor);
@@ -84,9 +71,9 @@ public class JumpImplementor {
      * If TOS is true, keep TOS on the stack and set the bytecode counter to the {@code instruction} argument.
      * Otherwise, pop TOS.
      */
-    public static void jumpIfTrueElsePop(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
+    public static void jumpIfTrueElsePop(MethodVisitor methodVisitor, int jumpTarget,
             StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
-        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
         methodVisitor.visitInsn(Opcodes.DUP);
         if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
@@ -100,9 +87,9 @@ public class JumpImplementor {
      * If TOS is false, keep TOS on the stack and set the bytecode counter to the {@code instruction} argument.
      * Otherwise, pop TOS.
      */
-    public static void jumpIfFalseElsePop(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
+    public static void jumpIfFalseElsePop(MethodVisitor methodVisitor, int jumpTarget,
             StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
-        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(instruction.arg, key -> new Label());
+        Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
         methodVisitor.visitInsn(Opcodes.DUP);
         if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);

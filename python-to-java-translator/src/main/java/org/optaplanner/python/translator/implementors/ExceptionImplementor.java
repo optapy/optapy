@@ -208,7 +208,7 @@ public class ExceptionImplementor {
         methodVisitor.visitInsn(Opcodes.POP);
     }
 
-    public static void startWith(PythonBytecodeInstruction instruction, FunctionMetadata functionMetadata,
+    public static void startWith(int jumpTarget, FunctionMetadata functionMetadata,
             StackMetadata stackMetadata) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
 
@@ -253,7 +253,7 @@ public class ExceptionImplementor {
                 .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeFunction.getFunctionType(),
                         stackMetadata.getTOSValueSource()));
 
-        createTryFinallyBlock(methodVisitor, functionMetadata.className, instruction.offset + instruction.arg + 1,
+        createTryFinallyBlock(methodVisitor, functionMetadata.className, jumpTarget,
                 currentStackMetadata,
                 functionMetadata.bytecodeCounterToLabelMap,
                 (bytecodeIndex, runnable) -> {

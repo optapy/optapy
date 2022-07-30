@@ -3,10 +3,12 @@ package org.optaplanner.python.translator.opcodes.stack;
 import java.util.Optional;
 
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
+import org.optaplanner.python.translator.PythonVersion;
 import org.optaplanner.python.translator.opcodes.Opcode;
 
 public class StackManipulationOpcodes {
-    public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction, int pythonVersion) {
+    public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction,
+            PythonVersion pythonVersion) {
         switch (instruction.opcode) {
             case NOP: {
                 return Optional.of(new NopOpcode(instruction));

@@ -54,15 +54,17 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
         }
     }
 
-    GeneratorLocalVariableHelper(Type[] parameters, int parameterSlotsEnd, int pythonCellVariablesStart,
+    GeneratorLocalVariableHelper(Type[] parameters, int argcount, int parameterSlotsEnd, int pythonCellVariablesStart,
             int pythonFreeVariablesStart, int pythonLocalVariablesSlotEnd,
-            int pythonBoundVariables, int pythonFreeVariables, int currentExceptionVariableSlot,
+            int pythonBoundVariables, int pythonFreeVariables, Map<Integer, Integer> boundCellIndexToVariableIndex,
+            int currentExceptionVariableSlot,
             ClassWriter classWriter, String classInternalName, int maxTemps,
             int cellStart, int freeStart, Map<Integer, String> slotToLocalName,
             Map<Integer, String> slotToLocalTypeDescriptor) {
-        super(parameters, parameterSlotsEnd, pythonCellVariablesStart,
+        super(parameters, argcount, parameterSlotsEnd, pythonCellVariablesStart,
                 pythonFreeVariablesStart, pythonLocalVariablesSlotEnd,
-                pythonBoundVariables, pythonFreeVariables, currentExceptionVariableSlot);
+                pythonBoundVariables, pythonFreeVariables, boundCellIndexToVariableIndex,
+                currentExceptionVariableSlot);
         this.classWriter = classWriter;
         this.classInternalName = classInternalName;
         this.maxTemps = maxTemps;
@@ -73,10 +75,10 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
     }
 
     public GeneratorLocalVariableHelper copy() {
-        GeneratorLocalVariableHelper out = new GeneratorLocalVariableHelper(parameters, parameterSlotsEnd,
+        GeneratorLocalVariableHelper out = new GeneratorLocalVariableHelper(parameters, argcount, parameterSlotsEnd,
                 pythonCellVariablesStart,
                 pythonFreeVariablesStart, pythonLocalVariablesSlotEnd,
-                pythonBoundVariables, pythonFreeVariables, currentExceptionVariableSlot,
+                pythonBoundVariables, pythonFreeVariables, boundCellIndexToVariableIndex, currentExceptionVariableSlot,
                 classWriter, classInternalName, maxTemps, cellStart, freeStart, slotToLocalName, slotToLocalTypeDescriptor);
         out.usedLocals = usedLocals;
         return out;

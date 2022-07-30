@@ -81,7 +81,10 @@ public class PythonCompiledFunction {
     /**
      * The python version this function was compiled in (see sys.hexversion)
      */
-    public int pythonVersion;
+    public PythonVersion pythonVersion;
+
+    public PythonCompiledFunction() {
+    }
 
     public PythonCompiledFunction copy() {
         PythonCompiledFunction out = new PythonCompiledFunction();
