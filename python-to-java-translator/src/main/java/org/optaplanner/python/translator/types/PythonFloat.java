@@ -46,6 +46,10 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
                 new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("negative")),
                         FLOAT_TYPE));
 
+        FLOAT_TYPE.addMethod(PythonUnaryOperator.ABS,
+                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("abs")),
+                        FLOAT_TYPE));
+
         // Binary
         FLOAT_TYPE.addMethod(PythonBinaryOperators.ADD,
                 new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonInteger.class)),
@@ -219,7 +223,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     }
 
     public PythonBoolean asBoolean() {
-        return value == 0 ? PythonBoolean.FALSE : PythonBoolean.TRUE;
+        return value == 0.0 ? PythonBoolean.FALSE : PythonBoolean.TRUE;
     }
 
     public PythonInteger asInteger() {
@@ -232,6 +236,10 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
 
     public PythonFloat negative() {
         return new PythonFloat(-value);
+    }
+
+    public PythonFloat abs() {
+        return new PythonFloat(Math.abs(value));
     }
 
     public PythonFloat add(PythonInteger other) {

@@ -24,6 +24,7 @@ import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
+import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonLikeType implements PythonLikeObject,
         PythonLikeFunction {
@@ -134,7 +135,35 @@ public class PythonLikeType implements PythonLikeObject,
         if (TYPE_TYPE != null) {
             return TYPE_TYPE;
         }
-        return new PythonLikeType("type", PythonLikeType.class);
+        PythonLikeType typeType = new PythonLikeType("type", PythonLikeType.class);
+        typeType.setConstructor((positional, keywords) -> {
+            if (positional.size() == 1) {
+                return positional.get(0).__getType();
+            } else if (positional.size() == 3) {
+                PythonString name = (PythonString) positional.get(0);
+                PythonLikeTuple baseClasses = (PythonLikeTuple) positional.get(1);
+                PythonLikeDict dict = (PythonLikeDict) positional.get(2);
+
+                PythonLikeType out;
+                if (baseClasses.isEmpty()) {
+                    out = new PythonLikeType(name.value, PythonLikeObject.class);
+                } else {
+                    out = new PythonLikeType(name.value, PythonLikeObject.class, (List) baseClasses);
+                }
+
+                for (Map.Entry<PythonLikeObject, PythonLikeObject> entry : dict.entrySet()) {
+                    PythonString attributeName = (PythonString) entry.getKey();
+
+                    out.__setAttribute(attributeName.value, entry.getValue());
+                }
+
+                return out;
+            } else {
+                throw new ValueError("type takes 1 or 3 positional arguments, got " + positional.size());
+            }
+        });
+
+        return typeType;
     }
 
     public void addMethod(PythonUnaryOperator operator, PythonFunctionSignature method) {

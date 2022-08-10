@@ -44,6 +44,7 @@ import org.optaplanner.python.translator.opcodes.variable.LoadFastOpcode;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.GeneratedFunctionMethodReference;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
+import org.optaplanner.python.translator.types.PythonGenerator;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
@@ -63,12 +64,19 @@ public class PythonClassTranslator {
         String className = maybeClassName;
         String internalClassName = className.replace('.', '/');
 
-        List<PythonLikeType> superTypeList = new ArrayList<>(pythonCompiledClass.superclassList.size());
-        for (int i = 0; i < pythonCompiledClass.superclassList.size(); i++) {
-            if (pythonCompiledClass.superclassList.get(i) == PythonLikeType.getBaseType()) {
-                superTypeList.add(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
-            } else {
-                superTypeList.add(pythonCompiledClass.superclassList.get(i));
+        List<PythonLikeType> superTypeList;
+
+        if (pythonCompiledClass.superclassList.isEmpty()) {
+            superTypeList = List.of(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
+        } else {
+            superTypeList = new ArrayList<>(pythonCompiledClass.superclassList.size());
+            for (int i = 0; i < pythonCompiledClass.superclassList.size(); i++) {
+                PythonLikeType superType = pythonCompiledClass.superclassList.get(i);
+                if (superType == PythonLikeType.getBaseType() || superType == null) {
+                    superTypeList.add(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
+                } else {
+                    superTypeList.add(pythonCompiledClass.superclassList.get(i));
+                }
             }
         }
 
@@ -86,9 +94,9 @@ public class PythonClassTranslator {
                 System.out.println("WARNING: Ignoring exception");
                 //e.printStackTrace();
                 //System.out.println("globals: " + instanceMethod.globalsMap);
-                System.out.println("co_constants: " + instanceMethod.co_constants);
-                System.out.println("co_names: " + instanceMethod.co_names);
-                System.out.println("co_varnames: " + instanceMethod.co_varnames);
+                //System.out.println("co_constants: " + instanceMethod.co_constants);
+                //System.out.println("co_names: " + instanceMethod.co_names);
+                //System.out.println("co_varnames: " + instanceMethod.co_varnames);
                 System.out.println("Instructions:");
                 System.out.println(instanceMethod.instructionList.stream()
                         .map(PythonBytecodeInstruction::toString)
@@ -190,8 +198,18 @@ public class PythonClassTranslator {
                     classMethodEntry.getValue());
         }
 
-        createCPythonOperationMethods(classWriter, internalClassName, superClassType.getJavaTypeInternalName(),
-                attributeNameToTypeMap);
+        boolean isCpythonBacked;
+
+        try {
+            isCpythonBacked = CPythonBackedPythonLikeObject.class.isAssignableFrom(superClassType.getJavaClass());
+        } catch (ClassNotFoundException e) {
+            isCpythonBacked = false;
+        }
+
+        if (isCpythonBacked) {
+            createCPythonOperationMethods(classWriter, internalClassName, superClassType.getJavaTypeInternalName(),
+                    attributeNameToTypeMap);
+        }
 
         classWriter.visitEnd();
 
@@ -239,16 +257,22 @@ public class PythonClassTranslator {
                     pythonCompiledClass.instanceFunctionNameToPythonBytecode.get("__init__")));
         }
 
+        PythonOverloadImplementor.createDispatchesFor(pythonLikeType);
         return pythonLikeType;
     }
 
     public static void setSelfStaticInstances(PythonCompiledClass pythonCompiledClass, Class<?> generatedClass,
             PythonLikeType pythonLikeType,
             Map<Number, PythonLikeObject> instanceMap) {
+        if (!CPythonBackedPythonLikeObject.class.isAssignableFrom(generatedClass)) {
+            return;
+        }
+
         pythonCompiledClass.staticAttributeNameToClassInstance.forEach((attributeName, instancePointer) -> {
             try {
                 CPythonBackedPythonLikeObject objectInstance =
                         (CPythonBackedPythonLikeObject) generatedClass.getConstructor().newInstance();
+                instanceMap.put(CPythonBackedPythonInterpreter.getPythonReferenceId(instancePointer), objectInstance);
                 objectInstance.$setCPythonReference(instancePointer);
                 objectInstance.$setInstanceMap(instanceMap);
                 objectInstance.$readFieldsFromCPythonReference();
@@ -539,8 +563,9 @@ public class PythonClassTranslator {
                 null, null);
         Type returnType = Type.getType('L' + function.getReturnType().map(PythonLikeType::getJavaTypeInternalName)
                 .orElseGet(() -> getPythonReturnTypeOfFunction(function, true).getJavaTypeInternalName()) + ';');
+
         List<PythonLikeType> parameterPythonTypeList = function.getParameterTypes();
-        Type[] javaParameterTypes = new Type[function.co_argcount - 1];
+        Type[] javaParameterTypes = new Type[Math.max(0, function.co_argcount - 1)];
 
         for (int i = 1; i < function.co_argcount; i++) {
             javaParameterTypes[i - 1] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
@@ -556,7 +581,8 @@ public class PythonClassTranslator {
                 new PythonFunctionSignature(new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.VIRTUAL,
                         javaMethodName, javaMethodDescriptor),
                         function.getReturnType().orElse(PythonLikeType.getBaseType()),
-                        function.getParameterTypes().subList(1, function.getParameterTypes().size())));
+                        function.co_argcount > 0 ? function.getParameterTypes().subList(1, function.getParameterTypes().size())
+                                : List.of()));
     }
 
     private static void createStaticMethod(PythonLikeType pythonLikeType, ClassWriter classWriter, String internalClassName,
@@ -885,7 +911,10 @@ public class PythonClassTranslator {
         List<PythonLikeType> parameterPythonTypeList = pythonCompiledFunction.getParameterTypes();
         String[] pythonParameterTypes = new String[pythonCompiledFunction.co_argcount];
 
-        pythonParameterTypes[0] = 'L' + instanceInternalClassName + ';';
+        if (pythonParameterTypes.length > 0) {
+            pythonParameterTypes[0] = 'L' + instanceInternalClassName + ';';
+        }
+
         for (int i = 1; i < pythonCompiledFunction.co_argcount; i++) {
             pythonParameterTypes[i] = 'L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';';
         }
@@ -978,6 +1007,11 @@ public class PythonClassTranslator {
     public static PythonLikeType getPythonReturnTypeOfFunction(PythonCompiledFunction pythonCompiledFunction,
             boolean isVirtual) {
         try {
+            if (PythonBytecodeToJavaBytecodeTranslator
+                    .getFunctionType(pythonCompiledFunction) == PythonFunctionType.GENERATOR) {
+                return PythonGenerator.GENERATOR_TYPE;
+            }
+
             FlowGraph flowGraph = createFlowGraph(pythonCompiledFunction, isVirtual);
 
             List<PythonLikeType> possibleReturnTypeList = new ArrayList<>();
@@ -994,9 +1028,9 @@ public class PythonClassTranslator {
         } catch (Exception e) {
             System.out.println("WARNING: Ignoring exception");
             //System.out.println("globals: " + pythonCompiledFunction.globalsMap);
-            System.out.println("co_constants: " + pythonCompiledFunction.co_constants);
-            System.out.println("co_names: " + pythonCompiledFunction.co_names);
-            System.out.println("co_varnames: " + pythonCompiledFunction.co_varnames);
+            //System.out.println("co_constants: " + pythonCompiledFunction.co_constants);
+            //System.out.println("co_names: " + pythonCompiledFunction.co_names);
+            //System.out.println("co_varnames: " + pythonCompiledFunction.co_varnames);
             System.out.println("Instructions:");
             System.out.println(pythonCompiledFunction.instructionList.stream()
                     .map(PythonBytecodeInstruction::toString)

@@ -8,8 +8,10 @@ import java.util.List;
 import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
     final BigInteger value;
@@ -34,6 +36,25 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     private static void registerMethods() throws NoSuchMethodException {
+        // Constructor
+        INT_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+            if (positionalArguments.size() == 0) {
+                return PythonInteger.valueOf(0);
+            } else if (positionalArguments.size() == 1) {
+                PythonLikeObject value = positionalArguments.get(0);
+                if (value instanceof PythonInteger) {
+                    return value;
+                } else if (value instanceof PythonFloat) {
+                    return ((PythonFloat) value).asInteger();
+                } else {
+                    PythonLikeType valueType = value.__getType();
+                    PythonLikeFunction asIntFunction = (PythonLikeFunction) (valueType.__getAttributeOrError("__int__"));
+                    return asIntFunction.__call__(List.of(value), null);
+                }
+            } else {
+                throw new ValueError("int expects 0 or 1 arguments, got " + positionalArguments.size());
+            }
+        }));
         // Unary
         INT_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN,
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("asBoolean")),
@@ -55,6 +76,9 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
                         INT_TYPE));
         INT_TYPE.addMethod(PythonUnaryOperator.INVERT,
                 new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("invert")),
+                        INT_TYPE));
+        INT_TYPE.addMethod(PythonUnaryOperator.ABS,
+                new PythonFunctionSignature(new MethodDescriptor(PythonInteger.class.getMethod("abs")),
                         INT_TYPE));
 
         // Binary
@@ -244,6 +268,16 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
                         PythonBoolean.getBooleanType(), FLOAT_TYPE));
     }
 
+    public PythonInteger(PythonLikeType type) {
+        super(type);
+        this.value = BigInteger.ZERO;
+    }
+
+    public PythonInteger(PythonLikeType type, BigInteger value) {
+        super(type);
+        this.value = value;
+    }
+
     public PythonInteger(long value) {
         this(BigInteger.valueOf(value));
     }
@@ -319,6 +353,10 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
 
     public PythonInteger invert() {
         return new PythonInteger(value.add(BigInteger.ONE).negate());
+    }
+
+    public PythonInteger abs() {
+        return new PythonInteger(value.abs());
     }
 
     public PythonInteger add(PythonInteger other) {

@@ -284,7 +284,8 @@ public class PythonOverloadImplementor {
                 methodVisitor.visitLdcInsn(0);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
                         Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE), true);
-                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type.getJavaTypeInternalName());
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                        matchingSignature.getMethodDescriptor().getDeclaringClassInternalName());
                 methodVisitor.visitInsn(Opcodes.SWAP);
             }
 

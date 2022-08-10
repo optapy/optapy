@@ -27,8 +27,11 @@ import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonVersion;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.opcodes.Opcode;
+import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.PythonAssertionError;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
@@ -399,14 +402,75 @@ public class FlowGraphTest {
         );
     }
 
+    @Test
+    public void testStackMetadataWithExceptionDeadCode() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("self", "resource")
+                .loadParameter("self")
+                .getAttribute("fullname")
+                .loadMethod("replace")
+                .loadConstant(".")
+                .loadConstant("/")
+                .callMethod(2)
+                .storeVariable("fullname_as_path")
+                .loadVariable("fullname_as_path")
+                .op(OpcodeIdentifier.FORMAT_VALUE, 0)
+                .loadConstant("/")
+                .loadParameter("resource")
+                .op(OpcodeIdentifier.FORMAT_VALUE, 0)
+                .op(OpcodeIdentifier.BUILD_STRING, 3)
+                .storeVariable("path")
+                .loadConstant(0)
+                .loadConstant(List.of(PythonString.valueOf("BytesIO")))
+                .op(OpcodeIdentifier.IMPORT_NAME, 2)
+                .op(OpcodeIdentifier.IMPORT_FROM, 3)
+                .storeVariable("BytesIO")
+                .op(OpcodeIdentifier.POP_TOP)
+                .op(OpcodeIdentifier.SETUP_FINALLY, 9)
+                .loadVariable("BytesIO")
+                .loadParameter("self")
+                .getAttribute("zipimporter")
+                .loadMethod("get_data")
+                .loadVariable("path")
+                .callMethod(1)
+                .callFunction(1)
+                .op(OpcodeIdentifier.POP_BLOCK)
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .op(OpcodeIdentifier.DUP_TOP)
+                .loadGlobalVariable("OSError")
+                .op(OpcodeIdentifier.JUMP_IF_NOT_EXC_MATCH, 42)
+                .op(OpcodeIdentifier.POP_TOP)
+                .op(OpcodeIdentifier.POP_TOP)
+                .op(OpcodeIdentifier.POP_TOP)
+                .loadGlobalVariable("FileNotFoundError")
+                .loadVariable("path")
+                .callFunction(1)
+                .op(OpcodeIdentifier.RAISE_VARARGS, 1)
+                .op(OpcodeIdentifier.POP_EXCEPT)
+                .op(OpcodeIdentifier.JUMP_FORWARD, 1)
+                .op(OpcodeIdentifier.RERAISE, 0)
+                .loadConstant(null)
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
+        StackMetadata metadata = getInitialStackMetadata(5, 0)
+                .setLocalVariableValueSource(0, ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeType.getBaseType()))
+                .setLocalVariableValueSource(1, ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeType.getBaseType()));
+        FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
+        getFrameData(flowGraph);
+        // simply test no exception is raised
+    }
+
     private static class FrameData {
         int index;
+        boolean isDead;
         List<PythonLikeType> stackTypes;
         List<PythonLikeType> localVariableTypes;
         List<PythonLikeType> cellTypes;
 
         public FrameData(int index) {
             this.index = index;
+            isDead = false;
             stackTypes = new ArrayList<>();
             localVariableTypes = new ArrayList<>();
             cellTypes = new ArrayList<>();
@@ -414,6 +478,11 @@ public class FlowGraphTest {
 
         public static FrameData from(int index, StackMetadata stackMetadata) {
             FrameData out = new FrameData(index);
+
+            if (stackMetadata.isDeadCode()) {
+                out.isDead = true;
+                return out;
+            }
             stackMetadata.stackValueSources.forEach(valueSourceInfo -> {
                 if (valueSourceInfo != null) {
                     out.stackTypes.add(valueSourceInfo.getValueType());
@@ -440,6 +509,7 @@ public class FlowGraphTest {
 
         public FrameData copy() {
             FrameData out = new FrameData(index);
+            out.isDead = isDead;
             out.stackTypes.addAll(stackTypes);
             out.localVariableTypes.addAll(localVariableTypes);
             out.cellTypes.addAll(cellTypes);
@@ -474,6 +544,7 @@ public class FlowGraphTest {
             }
             FrameData frameData = (FrameData) o;
             return index == frameData.index
+                    && isDead == frameData.isDead
                     && Objects.equals(stackTypes, frameData.stackTypes)
                     && Objects.equals(localVariableTypes, frameData.localVariableTypes)
                     && Objects.equals(cellTypes, frameData.cellTypes);
@@ -481,13 +552,14 @@ public class FlowGraphTest {
 
         @Override
         public int hashCode() {
-            return Objects.hash(index, stackTypes, localVariableTypes, cellTypes);
+            return Objects.hash(index, isDead, stackTypes, localVariableTypes, cellTypes);
         }
 
         @Override
         public String toString() {
             return "FrameData{" +
                     "index=" + index +
+                    ", isDead=" + isDead +
                     ", stackTypes=" + stackTypes +
                     ", localVariableTypes=" + localVariableTypes +
                     ", cellTypes=" + cellTypes +

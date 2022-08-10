@@ -160,7 +160,7 @@ public class FunctionImplementor {
             }
             knownFunctionType.getFunctionForParameters(parameterTypes)
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.callMethod(methodVisitor, instruction.arg);
+                        functionSignature.callMethod(methodVisitor, localVariableHelper, instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
                         if (knownFunctionType.isStatic()) {

@@ -231,7 +231,7 @@ public enum OpcodeIdentifier {
     /**
      * Implements del TOS1[TOS].
      */
-    DEL_SUBSCR,
+    DELETE_SUBSCR,
 
     // *****************************
     // Coroutine opcodes

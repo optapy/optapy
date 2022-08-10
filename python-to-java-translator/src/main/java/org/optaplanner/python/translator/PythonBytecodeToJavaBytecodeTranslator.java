@@ -591,6 +591,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             }
 
             bytecodeIndexToArgumentorsMap.getOrDefault(instruction.offset, List.of()).forEach(Runnable::run);
+
+            if (stackMetadata.isDeadCode()) {
+                continue;
+            }
             opcodeList.get(i).implement(functionMetadata, stackMetadata);
         }
 

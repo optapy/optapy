@@ -9,6 +9,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.LocalVariableHelper;
+import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -34,6 +35,12 @@ public class DunderOperatorImplementor {
             Optional<PythonFunctionSignature> maybeFunctionSignature = knownFunctionType.getFunctionForParameters();
             if (maybeFunctionSignature.isPresent()) {
                 PythonFunctionSignature functionSignature = maybeFunctionSignature.get();
+                MethodDescriptor methodDescriptor = functionSignature.getMethodDescriptor();
+                if (methodDescriptor.getParameterTypes().length < 1) {
+                    methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
+                } else {
+                    methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getParameterTypes()[0].getInternalName());
+                }
                 functionSignature.getMethodDescriptor().callMethod(methodVisitor);
             } else {
                 unaryOperator(methodVisitor, operator);
@@ -103,6 +110,19 @@ public class DunderOperatorImplementor {
             Optional<PythonFunctionSignature> maybeFunctionSignature = knownFunctionType.getFunctionForParameters(rightOperand);
             if (maybeFunctionSignature.isPresent()) {
                 PythonFunctionSignature functionSignature = maybeFunctionSignature.get();
+                MethodDescriptor methodDescriptor = functionSignature.getMethodDescriptor();
+
+                if (methodDescriptor.getParameterTypes().length < 2) {
+                    methodVisitor.visitInsn(Opcodes.SWAP);
+                    methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
+                    methodVisitor.visitInsn(Opcodes.SWAP);
+                    methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getParameterTypes()[0].getInternalName());
+                } else {
+                    methodVisitor.visitInsn(Opcodes.SWAP);
+                    methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getParameterTypes()[0].getInternalName());
+                    methodVisitor.visitInsn(Opcodes.SWAP);
+                    methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getParameterTypes()[1].getInternalName());
+                }
                 functionSignature.getMethodDescriptor().callMethod(methodVisitor);
             } else {
                 binaryOperator(methodVisitor, operator);

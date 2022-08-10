@@ -50,6 +50,7 @@ public class ExceptionImplementor {
      */
     public static void reraiseLast(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper) {
         localVariableHelper.readCurrentException(methodVisitor);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Throwable.class));
         methodVisitor.visitInsn(Opcodes.ATHROW);
     }
 
@@ -79,7 +80,10 @@ public class ExceptionImplementor {
         FunctionImplementor.callGenericFunction(methodVisitor, instruction); // a type is callable; calling it results in calling its constructor
 
         methodVisitor.visitLabel(ifExceptionIsInstanceStart);
+
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Throwable.class));
         StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Throwable.class));
         methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Throwable.class),
                 "initCause", Type.getMethodDescriptor(Type.getType(Throwable.class),
                         Type.getType(Throwable.class)),

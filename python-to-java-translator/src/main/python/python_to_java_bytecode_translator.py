@@ -2,7 +2,7 @@ import dis
 
 import sys
 import inspect
-from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass
+from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, JArray
 
 global_dict_to_instance = dict()
 global_dict_to_key_set = dict()
@@ -27,6 +27,7 @@ def init_type_to_compiled_java_class():
 
     type_to_compiled_java_class[int] = java_types.PythonInteger.INT_TYPE
     type_to_compiled_java_class[float] = java_types.PythonFloat.FLOAT_TYPE
+    type_to_compiled_java_class[complex] = java_types.PythonComplex.COMPLEX_TYPE
     type_to_compiled_java_class[bool] = java_types.PythonBoolean.BOOLEAN_TYPE
 
     type_to_compiled_java_class[type(None)] = java_types.PythonNone.NONE_TYPE
@@ -101,6 +102,15 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
         out = PythonTimeDelta.of(value.days, value.seconds, value.microseconds)
         put_in_instance_map(instance_map, value, out)
         return out
+    elif inspect.iscode(value):
+        try:
+            from org.optaplanner.python.translator.types import PythonLikeFunction, PythonCode
+            java_class = translate_python_code_to_java_class(value, PythonLikeFunction)
+            out = PythonCode(java_class)
+            put_in_instance_map(instance_map, value, out)
+            return out
+        except:
+            return None
     elif type(value) is object:
         java_type = type_to_compiled_java_class[type(value)]
         out = CPythonBackedPythonLikeObject(java_type)
@@ -111,6 +121,8 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
                                                                         instance_map)
         return out
     elif type(value) in type_to_compiled_java_class:
+        if type_to_compiled_java_class[type(value)] is None:
+            return None
         java_type = type_to_compiled_java_class[type(value)]
         if isinstance(java_type, CPythonType):
             return None
@@ -128,15 +140,6 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
         try:
             from org.optaplanner.python.translator.types import PythonLikeFunction
             out = translate_python_bytecode_to_java_bytecode(value, PythonLikeFunction)
-            put_in_instance_map(instance_map, value, out)
-            return out
-        except:
-            return None
-    elif inspect.iscode(value):
-        try:
-            from org.optaplanner.python.translator.types import PythonLikeFunction, PythonCode
-            java_class = translate_python_code_to_java_class(value, PythonLikeFunction)
-            out = PythonCode(java_class)
             put_in_instance_map(instance_map, value, out)
             return out
         except:
@@ -177,7 +180,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
     from types import ModuleType
     from org.optaplanner.python.translator import PythonLikeObject, CPythonBackedPythonInterpreter
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
-        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper, CPythonType, \
+        PythonComplex, PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper, CPythonType, \
         OpaquePythonReference, PythonModule
 
     global type_to_compiled_java_class
@@ -200,6 +203,11 @@ def convert_to_java_python_like_object(value, instance_map=None):
         return out
     elif isinstance(value, float):
         out = PythonFloat.valueOf(JFloat(value))
+        put_in_instance_map(instance_map, value, out)
+        return out
+    elif isinstance(value, complex):
+        out = PythonComplex.valueOf(convert_to_java_python_like_object(value.real, instance_map),
+                                    convert_to_java_python_like_object(value.imag, instance_map))
         put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, str):
@@ -232,19 +240,23 @@ def convert_to_java_python_like_object(value, instance_map=None):
                     convert_to_java_python_like_object(map_value, instance_map))
         return out
     elif isinstance(value, type):
-        if value in type_to_compiled_java_class:
-            return type_to_compiled_java_class[value]
+        raw_type = erase_generic_args(value)
+        if raw_type in type_to_compiled_java_class:
+            if type_to_compiled_java_class[raw_type] is None:
+                return None
+            out = type_to_compiled_java_class[raw_type]
+            put_in_instance_map(instance_map, value, out)
+            return out
         else:
-            out = CPythonType.getType(JProxy(OpaquePythonReference, inst=value, convert=True))
+            out = translate_python_class_to_java_class(raw_type)
             put_in_instance_map(instance_map, value, out)
             return out
     elif isinstance(value, ModuleType) and repr(value).startswith('<module \'') and not \
             is_banned_module(value.__name__):  # should not convert java modules
-        out = PythonModule()
+        out = PythonModule(instance_map)
         out.setPythonReference(JProxy(OpaquePythonReference, inst=value, convert=True))
         put_in_instance_map(instance_map, value, out)
-        for item_name, item_value in tuple(value.__dict__.items()):
-            out.addItem(item_name, convert_to_java_python_like_object(item_value, instance_map))
+        # Module is populated lazily
         return out
     else:
         out = convert_object_to_java_python_like_object(value, instance_map)
@@ -262,19 +274,25 @@ def convert_to_java_python_like_object(value, instance_map=None):
 def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from org.optaplanner.python.translator import PythonLikeObject
     from java.util import List, Map, Set
-    from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
-        PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonModule, PythonObjectWrapper, \
-        JavaObjectWrapper
+    from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonComplex, PythonBoolean, \
+        PythonString, PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonModule, \
+        PythonObjectWrapper, JavaObjectWrapper
 
     if isinstance(python_like_object, (PythonObjectWrapper, JavaObjectWrapper)):
         out = python_like_object.getWrappedObject()
         return out
     elif isinstance(python_like_object, PythonNone):
         return None
-    elif isinstance(python_like_object, (PythonBoolean, PythonFloat, PythonString)):
+    elif isinstance(python_like_object, (PythonFloat, PythonString)):
         return python_like_object.getValue()
+    elif isinstance(python_like_object, PythonBoolean):
+        return python_like_object == PythonBoolean.TRUE
     elif isinstance(python_like_object, PythonInteger):
         return python_like_object.getValue().longValue()
+    elif isinstance(python_like_object, PythonComplex):
+        real = unwrap_python_like_object(python_like_object.getReal())
+        imaginary = unwrap_python_like_object(python_like_object.getImaginary())
+        return complex(real, imaginary)
     elif isinstance(python_like_object, (PythonLikeTuple, tuple)):
         out = []
         for item in python_like_object:
@@ -342,7 +360,7 @@ def copy_type_annotations(annotations_dict):
     global type_to_compiled_java_class
 
     out = HashMap()
-    if annotations_dict is None:
+    if annotations_dict is None or not isinstance(annotations_dict, dict):
         return out
 
     for name, value in annotations_dict.items():
@@ -384,7 +402,7 @@ def copy_closure(closure):
         return out
 
 
-def copy_globals(globals_dict):
+def copy_globals(globals_dict, co_names):
     global global_dict_to_instance
     global global_dict_to_key_set
     from java.util import HashMap
@@ -402,7 +420,7 @@ def copy_globals(globals_dict):
 
     instance_map = CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap
     for key, value in globals_dict.items():
-        if key not in key_set:
+        if key not in key_set and key in co_names:
             key_set.add(key)
             out.put(key, convert_to_java_python_like_object(value, instance_map))
 
@@ -446,7 +464,7 @@ def get_function_bytecode_object(python_function):
     python_compiled_function.co_argcount = python_function.__code__.co_argcount
     python_compiled_function.co_kwonlyargcount = python_function.__code__.co_kwonlyargcount
     python_compiled_function.closure = copy_closure(python_function.__closure__)
-    python_compiled_function.globalsMap = copy_globals(python_function.__globals__)
+    python_compiled_function.globalsMap = copy_globals(python_function.__globals__, python_function.__code__.co_names)
     python_compiled_function.typeAnnotations = copy_type_annotations(python_function.__annotations__)
     python_compiled_function.pythonVersion = PythonVersion(sys.hexversion)
     return python_compiled_function
@@ -541,13 +559,13 @@ def wrap_java_function(java_function):
             return unwrap_python_like_object(getattr(java_function, '$call')(java_args, java_kwargs))
         else:
             instance_map = HashMap()
+
             java_args = [convert_to_java_python_like_object(arg, instance_map) for arg in args]
             java_kwargs = {
                 convert_to_java_python_like_object(key, instance_map):
                 convert_to_java_python_like_object(value, instance_map)
                 for key, value in kwargs
             }
-
             return unwrap_python_like_object(java_function(*java_args, **java_kwargs))
 
     return wrapped_function
@@ -582,8 +600,8 @@ def erase_generic_args(python_type):
     from typing import get_origin
     if isinstance(python_type, type):
         out = python_type
-        while get_origin(out) is not None:
-            out = get_origin(out)
+        if get_origin(out) is not None:
+            return get_origin(out)
         return out
     elif isinstance(python_type, str):
         try:
@@ -605,18 +623,31 @@ def translate_python_class_to_java_class(python_class):
 
     init_type_to_compiled_java_class()
 
-    if erase_generic_args(python_class) in type_to_compiled_java_class:
-        return type_to_compiled_java_class[python_class]
+    raw_type = erase_generic_args(python_class)
+    if raw_type in type_to_compiled_java_class:
+        return type_to_compiled_java_class[raw_type]
 
-    if isinstance(python_class, (JClass, JavaClass)):
-        out = JavaObjectWrapper.getPythonTypeForClass(python_class)
-        type_to_compiled_java_class[python_class] = out
-        return out
-
-    if python_class.__module__ is not None and is_banned_module(python_class.__module__):
+    if hasattr(python_class, '__module__') and python_class.__module__ is not None \
+            and is_banned_module(python_class.__module__):
         python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
         type_to_compiled_java_class[python_class] = python_class_java_type
         return python_class_java_type
+
+    if isinstance(python_class, JArray):
+        python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
+        type_to_compiled_java_class[python_class] = python_class_java_type
+        return python_class_java_type
+
+    if isinstance(python_class, (JClass, JavaClass)):
+        try:
+            out = JavaObjectWrapper.getPythonTypeForClass(python_class)
+            type_to_compiled_java_class[python_class] = out
+            return out
+        except TypeError:
+            print(f'Bad type: {type(python_class)}, from {python_class}')
+            python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
+            type_to_compiled_java_class[python_class] = python_class_java_type
+            return python_class_java_type
 
     type_to_compiled_java_class[python_class] = None
     methods = []

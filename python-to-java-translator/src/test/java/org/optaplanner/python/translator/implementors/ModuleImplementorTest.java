@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.createInstance;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -37,7 +38,7 @@ public class ModuleImplementorTest {
                 .build();
 
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
-        PythonModule module = new PythonModule();
+        PythonModule module = new PythonModule(new HashMap<>());
 
         when(interpreter.importModule(PythonInteger.ZERO, List.of(), globalsMap, Map.of(), "module")).thenReturn(module);
 
@@ -61,7 +62,7 @@ public class ModuleImplementorTest {
                 .build();
 
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
-        PythonModule module = new PythonModule();
+        PythonModule module = new PythonModule(new HashMap<>());
 
         when(interpreter.importModule(PythonInteger.ZERO, List.of(PythonString.valueOf("item")), globalsMap, Map.of(),
                 "module")).thenReturn(module);
@@ -95,7 +96,7 @@ public class ModuleImplementorTest {
                 .build();
 
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
-        PythonModule module = new PythonModule();
+        PythonModule module = new PythonModule(new HashMap<>());
         module.addItem("item1", PythonInteger.valueOf(1));
         module.addItem("item2", PythonInteger.valueOf(2));
 

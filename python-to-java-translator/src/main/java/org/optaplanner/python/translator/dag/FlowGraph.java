@@ -45,7 +45,10 @@ public class FlowGraph {
             for (Opcode opcode : basicBlock.getBlockOpcodeList()) {
                 if (opcodeClass.isAssignableFrom(opcode.getClass())) {
                     StackMetadata stackMetadata = stackMetadataForOperations.get(opcode.getBytecodeIndex());
-                    visitor.accept((T) opcode, stackMetadata);
+
+                    if (!stackMetadata.isDeadCode()) {
+                        visitor.accept((T) opcode, stackMetadata);
+                    }
                 }
             }
         }
@@ -116,15 +119,13 @@ public class FlowGraph {
         for (BasicBlock basicBlock : basicBlockList) {
             for (Opcode opcode : basicBlock.getBlockOpcodeList()) {
                 StackMetadata currentStackMetadata =
-                        opcodeIndexToStackMetadata.get(opcode.getBytecodeIndex());
-                if (currentStackMetadata == null) {
-                    // Python can generate dead code; use initial stack metadata
-                    currentStackMetadata = initialStackMetadata.copy();
-                    opcodeIndexToStackMetadata.put(opcode.getBytecodeIndex(), currentStackMetadata);
-                }
+                        opcodeIndexToStackMetadata.computeIfAbsent(opcode.getBytecodeIndex(), k -> StackMetadata.DEAD_CODE);
+
                 List<Integer> branchList = opcode.getPossibleNextBytecodeIndexList();
-                List<StackMetadata> nextStackMetadataList = opcode
-                        .getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);
+                List<StackMetadata> nextStackMetadataList = currentStackMetadata.isDeadCode()
+                        ? branchList.stream().map(i -> StackMetadata.DEAD_CODE).collect(Collectors.toList())
+                        : opcode.getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);
+
                 for (int i = 0; i < branchList.size(); i++) {
                     IndexBranchPair indexBranchPair = new IndexBranchPair(opcode.getBytecodeIndex(), i);
                     int nextBytecodeIndex = branchList.get(i);
@@ -161,8 +162,9 @@ public class FlowGraph {
                 for (Opcode opcode : basicBlock.getBlockOpcodeList()) {
                     StackMetadata currentStackMetadata = opcodeIndexToStackMetadata.get(opcode.getBytecodeIndex());
                     List<Integer> branchList = opcode.getPossibleNextBytecodeIndexList();
-                    List<StackMetadata> nextStackMetadataList = opcode
-                            .getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);
+                    List<StackMetadata> nextStackMetadataList = currentStackMetadata.isDeadCode()
+                            ? branchList.stream().map(i -> StackMetadata.DEAD_CODE).collect(Collectors.toList())
+                            : opcode.getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);
                     for (int i = 0; i < branchList.size(); i++) {
                         IndexBranchPair indexBranchPair = new IndexBranchPair(opcode.getBytecodeIndex(), i);
                         int nextBytecodeIndex = branchList.get(i);

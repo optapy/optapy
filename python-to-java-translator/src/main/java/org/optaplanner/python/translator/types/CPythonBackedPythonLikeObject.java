@@ -1,11 +1,12 @@
 package org.optaplanner.python.translator.types;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 
-public class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject {
+public class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject implements PythonLikeFunction {
     public static final PythonLikeType CPYTHON_BACKED_OBJECT_TYPE =
             new PythonLikeType("object", CPythonBackedPythonLikeObject.class);
 
@@ -56,5 +57,11 @@ public class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject {
     }
 
     public void $writeFieldsToCPythonReference() {
+    }
+
+    @Override
+    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments) {
+        return PythonNone.INSTANCE;
     }
 }

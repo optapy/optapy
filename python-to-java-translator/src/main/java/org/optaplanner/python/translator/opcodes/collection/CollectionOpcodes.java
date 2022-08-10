@@ -16,7 +16,7 @@ public class CollectionOpcodes {
             case STORE_SUBSCR: {
                 return Optional.of(new SetItemOpcode(instruction));
             }
-            case DEL_SUBSCR: {
+            case DELETE_SUBSCR: {
                 return Optional.of(new DeleteItemOpcode(instruction));
             }
             case CONTAINS_OP: {

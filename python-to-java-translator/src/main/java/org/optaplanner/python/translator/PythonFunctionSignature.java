@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.implementors.CollectionImplementor;
 import org.optaplanner.python.translator.implementors.StackManipulationImplementor;
 import org.optaplanner.python.translator.types.BoundPythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
@@ -142,9 +143,31 @@ public class PythonFunctionSignature {
         }
     }
 
-    public void callMethod(MethodVisitor methodVisitor, int argumentCount) {
+    public void callMethod(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int argumentCount) {
         if (argumentCount != parameterTypes.length && defaultArgumentHolderClass == null) {
             throw new IllegalStateException("Cannot call " + this + " because there are not enough arguments");
+        }
+
+        int[] argumentLocals = new int[argumentCount];
+
+        for (int i = 0; i < argumentCount; i++) {
+            argumentLocals[argumentCount - i - 1] = localVariableHelper.newLocal();
+            localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class),
+                    argumentLocals[argumentCount - i - 1]);
+        }
+
+        if (methodDescriptor.getMethodType() != MethodDescriptor.MethodType.STATIC
+                || methodDescriptor.getMethodType() != MethodDescriptor.MethodType.STATIC_AS_VIRTUAL) {
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
+        }
+
+        for (int i = 0; i < argumentCount; i++) {
+            localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), argumentLocals[i]);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, parameterTypes[i].getJavaTypeInternalName());
+        }
+
+        for (int i = 0; i < argumentCount; i++) {
+            localVariableHelper.freeLocal();
         }
 
         for (int i = parameterTypes.length - 1; i >= argumentCount; i--) {
@@ -153,12 +176,13 @@ public class PythonFunctionSignature {
                     PythonDefaultArgumentImplementor.getConstantName(defaultIndex),
                     Type.getDescriptor(defaultArgumentList.get(defaultIndex).getClass()));
         }
+
         methodDescriptor.callMethod(methodVisitor);
     }
 
     public void callWithoutKeywords(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int argumentCount) {
-        unwrapBoundMethod(methodVisitor, localVariableHelper, argumentCount);
-        callMethod(methodVisitor, argumentCount);
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+        callWithKeywords(methodVisitor, localVariableHelper, argumentCount);
     }
 
     public void callWithKeywords(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper,

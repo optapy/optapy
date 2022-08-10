@@ -19,6 +19,7 @@ public enum PythonUnaryOperator {
     AS_STRING("__str__"),
     REPRESENTATION("__repr__"),
     ENTER("__enter__"),
+    LENGTH("__len__"),
     NEXT("__next__"),
     HASH("__hash__");
 

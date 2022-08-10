@@ -1,5 +1,8 @@
 package org.optaplanner.python.translator.types;
 
+import java.util.Map;
+
+import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 
 public class PythonModule extends AbstractPythonLikeObject {
@@ -7,9 +10,11 @@ public class PythonModule extends AbstractPythonLikeObject {
     public static PythonLikeType $TYPE = MODULE_TYPE;
 
     private OpaquePythonReference pythonReference;
+    private Map<Number, PythonLikeObject> referenceMap;
 
-    public PythonModule() {
+    public PythonModule(Map<Number, PythonLikeObject> referenceMap) {
         super(MODULE_TYPE);
+        this.referenceMap = referenceMap;
     }
 
     public void addItem(String itemName, PythonLikeObject itemValue) {
@@ -22,5 +27,17 @@ public class PythonModule extends AbstractPythonLikeObject {
 
     public void setPythonReference(OpaquePythonReference pythonReference) {
         this.pythonReference = pythonReference;
+    }
+
+    @Override
+    public PythonLikeObject __getAttributeOrNull(String attributeName) {
+        PythonLikeObject result = super.__getAttributeOrNull(attributeName);
+        if (result == null) {
+            PythonLikeObject actual = CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
+                    attributeName, referenceMap);
+            __setAttribute(attributeName, actual);
+            return actual;
+        }
+        return result;
     }
 }

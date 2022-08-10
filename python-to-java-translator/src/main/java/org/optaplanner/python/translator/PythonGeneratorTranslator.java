@@ -486,6 +486,11 @@ public class PythonGeneratorTranslator {
 
             generatorMethodPart.functionMetadata.bytecodeCounterToCodeArgumenterList.getOrDefault(instruction.offset, List.of())
                     .forEach(Runnable::run);
+
+            if (stackMetadata.isDeadCode()) {
+                continue;
+            }
+
             opcodeList.get(i).implement(generatorMethodPart.functionMetadata, stackMetadata);
         }
 
@@ -706,6 +711,11 @@ public class PythonGeneratorTranslator {
 
             generatorMethodPart.functionMetadata.bytecodeCounterToCodeArgumenterList.getOrDefault(instruction.offset, List.of())
                     .forEach(Runnable::run);
+
+            if (stackMetadata.isDeadCode()) {
+                continue;
+            }
+
             opcodeList.get(i).implement(generatorMethodPart.functionMetadata, stackMetadata);
         }
 

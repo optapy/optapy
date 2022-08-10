@@ -9,12 +9,18 @@ import java.util.stream.Collectors;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class StackMetadata {
+    public static final StackMetadata DEAD_CODE = new StackMetadata();
+
     public LocalVariableHelper localVariableHelper;
     public List<ValueSourceInfo> stackValueSources;
 
     public List<ValueSourceInfo> localVariableValueSources;
 
     public List<ValueSourceInfo> cellVariableValueSources;
+
+    public boolean isDeadCode() {
+        return this == DEAD_CODE;
+    }
 
     public int getStackSize() {
         return stackValueSources.size();
@@ -123,6 +129,14 @@ public class StackMetadata {
     }
 
     public StackMetadata unifyWith(StackMetadata other) {
+        if (this == DEAD_CODE) {
+            return other;
+        }
+
+        if (other == DEAD_CODE) {
+            return this;
+        }
+
         StackMetadata out = copy();
         if (out.stackValueSources.size() != other.stackValueSources.size() ||
                 out.localVariableValueSources.size() != other.localVariableValueSources.size() ||
@@ -274,6 +288,10 @@ public class StackMetadata {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
+        if (this == DEAD_CODE || o == DEAD_CODE) {
+            return false; // this != o and one is DEAD_CODE
+        }
+
         StackMetadata that = (StackMetadata) o;
         return stackValueSources.equals(that.stackValueSources)
                 && localVariableValueSources.equals(that.localVariableValueSources)
