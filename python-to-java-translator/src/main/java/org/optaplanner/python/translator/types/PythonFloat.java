@@ -1,14 +1,14 @@
 package org.optaplanner.python.translator.types;
 
-import static org.optaplanner.python.translator.types.PythonInteger.INT_TYPE;
-
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 
-import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
-import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonFloat extends AbstractPythonLikeObject implements PythonNumber {
     final double value;
@@ -32,163 +32,128 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     }
 
     private static void registerMethods() throws NoSuchMethodException {
+        // Constructor
+        FLOAT_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+            if (positionalArguments.isEmpty()) {
+                return new PythonFloat(0.0);
+            } else if (positionalArguments.size() == 1) {
+                PythonLikeObject value = positionalArguments.get(0);
+                if (value instanceof PythonInteger) {
+                    return ((PythonInteger) value).asFloat();
+                } else if (value instanceof PythonFloat) {
+                    return value;
+                } else {
+                    PythonLikeType valueType = value.__getType();
+                    PythonLikeFunction asFloatFunction = (PythonLikeFunction) (valueType.__getAttributeOrError("__float__"));
+                    return asFloatFunction.__call__(List.of(value), null);
+                }
+            } else {
+                throw new ValueError("float takes 0 or 1 arguments, got " + positionalArguments.size());
+            }
+        });
         // Unary
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("asBoolean")),
-                        PythonBoolean.BOOLEAN_TYPE));
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.AS_INT,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("asInteger")),
-                        INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.POSITIVE,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("asFloat")),
-                        FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.NEGATIVE,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("negative")),
-                        FLOAT_TYPE));
-
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.ABS,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("abs")),
-                        FLOAT_TYPE));
+        FLOAT_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN, PythonFloat.class.getMethod("asBoolean"));
+        FLOAT_TYPE.addMethod(PythonUnaryOperator.AS_INT, PythonFloat.class.getMethod("asInteger"));
+        FLOAT_TYPE.addMethod(PythonUnaryOperator.POSITIVE, PythonFloat.class.getMethod("asFloat"));
+        FLOAT_TYPE.addMethod(PythonUnaryOperator.NEGATIVE, PythonFloat.class.getMethod("negative"));
+        FLOAT_TYPE.addMethod(PythonUnaryOperator.ABS, PythonFloat.class.getMethod("abs"));
+        FLOAT_TYPE.addMethod(PythonUnaryOperator.HASH, PythonFloat.class.getMethod("computePythonHash"));
 
         // Binary
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.ADD,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.ADD,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("subtract", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("subtract", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.MULTIPLY,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("multiply", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.MULTIPLY,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("multiply", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("trueDivide", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("trueDivide", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.ADD, PythonFloat.class.getMethod("add", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.ADD, PythonFloat.class.getMethod("add", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.SUBTRACT, PythonFloat.class.getMethod("subtract", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.SUBTRACT, PythonFloat.class.getMethod("subtract", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.MULTIPLY, PythonFloat.class.getMethod("multiply", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.MULTIPLY, PythonFloat.class.getMethod("multiply", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE, PythonFloat.class.getMethod("trueDivide", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE, PythonFloat.class.getMethod("trueDivide", PythonFloat.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.FLOOR_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("floorDivide", PythonInteger.class)),
-                        INT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.FLOOR_DIVIDE,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("floorDivide", PythonFloat.class)),
-                        INT_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.MODULO,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("modulo", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.MODULO,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("modulo", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.POWER,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("power", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.POWER,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("power", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
+                PythonFloat.class.getMethod("floorDivide", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.FLOOR_DIVIDE, PythonFloat.class.getMethod("floorDivide", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.DIVMOD, PythonFloat.class.getMethod("divmod", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.DIVMOD, PythonFloat.class.getMethod("divmod", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonFloat.class.getMethod("modulo", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonFloat.class.getMethod("modulo", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.POWER, PythonFloat.class.getMethod("power", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.POWER, PythonFloat.class.getMethod("power", PythonFloat.class));
 
         // Inplace Binary (identical to Binary)
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("add", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD, PythonFloat.class.getMethod("add", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD, PythonFloat.class.getMethod("add", PythonFloat.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("subtract", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
+                PythonFloat.class.getMethod("subtract", PythonInteger.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("subtract", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
+                PythonFloat.class.getMethod("subtract", PythonFloat.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("multiply", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
+                PythonFloat.class.getMethod("multiply", PythonInteger.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("multiply", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
+                PythonFloat.class.getMethod("multiply", PythonFloat.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("trueDivide", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
+                PythonFloat.class.getMethod("trueDivide", PythonInteger.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("trueDivide", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
+                PythonFloat.class.getMethod("trueDivide", PythonFloat.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("floorDivide", PythonInteger.class)),
-                        INT_TYPE, INT_TYPE));
+                PythonFloat.class.getMethod("floorDivide", PythonInteger.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("floorDivide", PythonFloat.class)),
-                        INT_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MODULO,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("modulo", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MODULO,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("modulo", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_POWER,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("power", PythonInteger.class)),
-                        FLOAT_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_POWER,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("power", PythonFloat.class)),
-                        FLOAT_TYPE, FLOAT_TYPE));
+                PythonFloat.class.getMethod("floorDivide", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MODULO, PythonFloat.class.getMethod("modulo", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MODULO, PythonFloat.class.getMethod("modulo", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_POWER, PythonFloat.class.getMethod("power", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_POWER, PythonFloat.class.getMethod("power", PythonFloat.class));
 
         // Comparisons
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.EQUAL,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("equal", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.EQUAL,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("equal", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("notEqual", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("notEqual", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("lessThan", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("lessThan", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.EQUAL, PythonFloat.class.getMethod("equal", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.EQUAL, PythonFloat.class.getMethod("equal", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL, PythonFloat.class.getMethod("notEqual", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL, PythonFloat.class.getMethod("notEqual", PythonFloat.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN, PythonFloat.class.getMethod("lessThan", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN, PythonFloat.class.getMethod("lessThan", PythonFloat.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("lessThanOrEqual", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
+                PythonFloat.class.getMethod("lessThanOrEqual", PythonInteger.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("lessThanOrEqual", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+                PythonFloat.class.getMethod("lessThanOrEqual", PythonFloat.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("greaterThan", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
-                new PythonFunctionSignature(new MethodDescriptor(PythonFloat.class.getMethod("greaterThan", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+                PythonFloat.class.getMethod("greaterThan", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN, PythonFloat.class.getMethod("greaterThan", PythonFloat.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("greaterThanOrEqual", PythonInteger.class)),
-                        PythonBoolean.BOOLEAN_TYPE, INT_TYPE));
+                PythonFloat.class.getMethod("greaterThanOrEqual", PythonInteger.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonFloat.class.getMethod("greaterThanOrEqual", PythonFloat.class)),
-                        PythonBoolean.BOOLEAN_TYPE, FLOAT_TYPE));
+                PythonFloat.class.getMethod("greaterThanOrEqual", PythonFloat.class));
     }
 
     @Override
     public Number getValue() {
         return value;
+    }
+
+    public PythonLikeTuple asFraction() {
+        final BigInteger FIVE = BigInteger.valueOf(5L);
+
+        BigDecimal bigDecimal = BigDecimal.valueOf(value);
+        BigInteger numerator = bigDecimal.movePointRight(bigDecimal.scale()).toBigIntegerExact();
+        BigInteger denominator;
+        if (bigDecimal.scale() < 0) {
+            denominator = BigInteger.ONE;
+            numerator = numerator.multiply(BigInteger.TEN.pow(-bigDecimal.scale()));
+        } else {
+            denominator = BigInteger.TEN.pow(bigDecimal.scale());
+        }
+
+        // denominator is a multiple of 10, thus only have 5 and 2 as prime factors
+
+        while (denominator.remainder(BigInteger.TWO).equals(BigInteger.ZERO)
+                && numerator.remainder(BigInteger.TWO).equals(BigInteger.ZERO)) {
+            denominator = denominator.shiftRight(1);
+            numerator = numerator.shiftRight(1);
+        }
+
+        while (denominator.remainder(FIVE).equals(BigInteger.ZERO) && numerator.remainder(FIVE).equals(BigInteger.ZERO)) {
+            denominator = denominator.divide(FIVE);
+            numerator = numerator.divide(FIVE);
+        }
+
+        return PythonLikeTuple.fromList(List.of(PythonInteger.valueOf(numerator), PythonInteger.valueOf(denominator)));
     }
 
     @Override
@@ -212,6 +177,20 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     @Override
     public int hashCode() {
         return Double.hashCode(value);
+    }
+
+    public PythonInteger computePythonHash() {
+        if (Double.isNaN(value)) {
+            return PythonInteger.valueOf(hashCode());
+        } else if (Double.isInfinite(value)) {
+            if (value > 0) {
+                return INFINITY_HASH_VALUE;
+            } else {
+                return INFINITY_HASH_VALUE.negative();
+            }
+        }
+        PythonLikeTuple fractionTuple = asFraction();
+        return PythonNumber.computeHash((PythonInteger) fractionTuple.get(0), (PythonInteger) fractionTuple.get(1));
     }
 
     public static PythonFloat valueOf(float value) {
@@ -282,12 +261,77 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         return PythonInteger.valueOf((long) Math.floor(value / other.value));
     }
 
+    public PythonInteger ceilDivide(PythonInteger other) {
+        return new PythonInteger((long) Math.ceil(value / other.value.doubleValue()));
+    }
+
+    public PythonInteger ceilDivide(PythonFloat other) {
+        return PythonInteger.valueOf((long) Math.ceil(value / other.value));
+    }
+
     public PythonFloat modulo(PythonInteger other) {
         return new PythonFloat(value % other.value.doubleValue());
     }
 
     public PythonFloat modulo(PythonFloat other) {
         return new PythonFloat(value % other.value);
+    }
+
+    public PythonLikeTuple divmod(PythonInteger other) {
+        PythonInteger quotient;
+
+        if (value < 0 == other.value.compareTo(BigInteger.ZERO) < 0) {
+            // Same sign, use floor division
+            quotient = floorDivide(other);
+        } else {
+            // Different sign, use ceil division
+            quotient = ceilDivide(other);
+        }
+        PythonInteger.valueOf(Math.round(value / other.value.doubleValue()));
+        PythonFloat remainder = modulo(other);
+
+        // Python remainder has sign of divisor
+        if (other.value.compareTo(BigInteger.ZERO) < 0) {
+            if (remainder.value > 0) {
+                quotient = quotient.subtract(PythonInteger.ONE);
+                remainder = remainder.add(other);
+            }
+        } else {
+            if (remainder.value < 0) {
+                quotient = quotient.subtract(PythonInteger.ONE);
+                remainder = remainder.add(other);
+            }
+        }
+        return PythonLikeTuple.fromList(List.of(quotient.asFloat(),
+                remainder));
+    }
+
+    public PythonLikeTuple divmod(PythonFloat other) {
+        PythonInteger quotient;
+
+        if (value < 0 == other.value < 0) {
+            // Same sign, use floor division
+            quotient = floorDivide(other);
+        } else {
+            // Different sign, use ceil division
+            quotient = ceilDivide(other);
+        }
+        PythonFloat remainder = modulo(other);
+
+        // Python remainder has sign of divisor
+        if (other.value < 0) {
+            if (remainder.value > 0) {
+                quotient = quotient.subtract(PythonInteger.ONE);
+                remainder = remainder.add(other);
+            }
+        } else {
+            if (remainder.value < 0) {
+                quotient = quotient.subtract(PythonInteger.ONE);
+                remainder = remainder.add(other);
+            }
+        }
+        return PythonLikeTuple.fromList(List.of(quotient.asFloat(),
+                remainder));
     }
 
     public PythonFloat power(PythonInteger other) {

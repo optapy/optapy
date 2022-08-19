@@ -20,7 +20,19 @@ public interface PythonInterpreter {
     PythonModule importModule(PythonInteger level, List<PythonString> fromList, Map<String, PythonLikeObject> globalsMap,
             Map<String, PythonLikeObject> localsMap, String moduleName);
 
-    void print(PythonLikeObject object);
+    /**
+     * Writes output without a trailing newline to standard output
+     *
+     * @param output the text to write
+     */
+    void write(String output);
+
+    /**
+     * Reads a line from standard input
+     *
+     * @return A line read from standard input
+     */
+    String readLine();
 
     PythonTraceback getTraceback();
 }

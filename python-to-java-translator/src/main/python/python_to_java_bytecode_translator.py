@@ -8,12 +8,53 @@ global_dict_to_instance = dict()
 global_dict_to_key_set = dict()
 type_to_compiled_java_class = dict()
 
-def is_c_native(object):
-    try:
-        dis.code_info(object)
+
+# Taken from https://stackoverflow.com/a/60953150
+def is_c_native(item):
+    import importlib
+    import importlib.machinery
+    import inspect
+
+    QUALIFIER = '.'
+    EXTENSION_SUFFIXES = tuple(suffix.lstrip(QUALIFIER)
+                               for suffix
+                               in importlib.machinery.EXTENSION_SUFFIXES)
+    moduleof = lambda thing: getattr(thing, '__module__', '')
+    suffix = lambda filename: QUALIFIER in filename \
+                              and filename.rpartition(QUALIFIER)[-1] \
+                              or ''
+
+    def isnativemodule(module):
+        """ isnativemodule(thing) -> boolean predicate, True if `module`
+            is a native-compiled ("extension") module.
+
+            Q.v. this fine StackOverflow answer on this subject:
+                https://stackoverflow.com/a/39304199/298171
+        """
+        # Step one: modules only beyond this point:
+        if not inspect.ismodule(module):
+            return False
+
+        # Step two: return truly when “__loader__” is set:
+        if isinstance(getattr(module, '__loader__', None),
+                      importlib.machinery.ExtensionFileLoader):
+            return True
+
+        # Step three: in leu of either of those indicators,
+        # check the module path’s file suffix:
+        try:
+            ext = suffix(inspect.getfile(module))
+        except TypeError as exc:
+            return 'is a built-in' in str(exc)
+
+        return ext in EXTENSION_SUFFIXES
+
+    module = moduleof(item)
+    if module == 'builtins':
         return False
-    except TypeError:
-        return True
+    return isnativemodule(
+        importlib.import_module(
+            module))
 
 
 def init_type_to_compiled_java_class():
@@ -75,7 +116,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
     from java.lang import Object
     from java.util import HashMap
     from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
-    from org.optaplanner.python.translator.types import OpaquePythonReference, PythonLikeType, CPythonType, JavaObjectWrapper, CPythonBackedPythonLikeObject
+    from org.optaplanner.python.translator.types import OpaquePythonReference, PythonLikeType, CPythonType, JavaObjectWrapper, AbstractPythonLikeObject, CPythonBackedPythonLikeObject
     from org.optaplanner.python.translator.types.datetime import PythonDate, PythonDateTime, PythonTime, PythonTimeDelta
 
     if instance_map is None:
@@ -133,6 +174,11 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
                                                                         JProxy(OpaquePythonReference, inst=value,
                                                                                convert=True),
                                                                         instance_map)
+
+        if isinstance(out, AbstractPythonLikeObject):
+            for (key, value) in getattr(value, '__dict__', dict()).items():
+                out.setAttribute(key, convert_to_java_python_like_object(value, instance_map))
+
         return out
     elif inspect.isbuiltin(value) or is_c_native(value):
         return None
@@ -156,6 +202,11 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
                                                                             JProxy(OpaquePythonReference, inst=value,
                                                                                    convert=True),
                                                                             instance_map)
+
+            if isinstance(out, AbstractPythonLikeObject):
+                for (key, value) in getattr(value, '__dict__', dict()).items():
+                    out.setAttribute(key, convert_to_java_python_like_object(value, instance_map))
+
             return out
         except:
             return None
@@ -273,7 +324,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
 
 def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from org.optaplanner.python.translator import PythonLikeObject
-    from java.util import List, Map, Set
+    from java.util import List, Map, Set, Iterator
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonComplex, PythonBoolean, \
         PythonString, PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonModule, \
         PythonObjectWrapper, JavaObjectWrapper
@@ -283,12 +334,14 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
         return out
     elif isinstance(python_like_object, PythonNone):
         return None
-    elif isinstance(python_like_object, (PythonFloat, PythonString)):
+    elif isinstance(python_like_object, PythonFloat):
+        return float(python_like_object.getValue())
+    elif isinstance(python_like_object, PythonString):
         return python_like_object.getValue()
     elif isinstance(python_like_object, PythonBoolean):
         return python_like_object == PythonBoolean.TRUE
     elif isinstance(python_like_object, PythonInteger):
-        return python_like_object.getValue().longValue()
+        return int(python_like_object.getValue().longValue())
     elif isinstance(python_like_object, PythonComplex):
         real = unwrap_python_like_object(python_like_object.getReal())
         imaginary = unwrap_python_like_object(python_like_object.getImaginary())
@@ -314,6 +367,20 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
             out[unwrap_python_like_object(entry.getKey(), default)] = unwrap_python_like_object(entry.getValue(),
                                                                                                 default)
         return out
+    elif isinstance(python_like_object, Iterator):
+        class JavaIterator:
+            def __init__(self, iterator):
+                self.iterator = iterator
+
+            def __iter__(self):
+                return self
+            def __next__(self):
+                if not self.iterator.hasNext():
+                    raise StopIteration()
+                else:
+                    return unwrap_python_like_object(self.iterator.next())
+
+        return JavaIterator(python_like_object)
     elif isinstance(python_like_object, PythonModule):
         return python_like_object.getPythonReference()
     elif hasattr(python_like_object, 'get__optapy_Id'):

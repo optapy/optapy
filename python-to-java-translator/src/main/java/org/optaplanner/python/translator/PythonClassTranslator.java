@@ -45,6 +45,7 @@ import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.GeneratedFunctionMethodReference;
 import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonGenerator;
+import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
@@ -272,8 +273,10 @@ public class PythonClassTranslator {
             try {
                 CPythonBackedPythonLikeObject objectInstance =
                         (CPythonBackedPythonLikeObject) generatedClass.getConstructor().newInstance();
-                instanceMap.put(CPythonBackedPythonInterpreter.getPythonReferenceId(instancePointer), objectInstance);
+                Number pythonReferenceId = CPythonBackedPythonInterpreter.getPythonReferenceId(instancePointer);
+                instanceMap.put(pythonReferenceId, objectInstance);
                 objectInstance.$setCPythonReference(instancePointer);
+                objectInstance.$setCPythonId(PythonInteger.valueOf(pythonReferenceId.longValue()));
                 objectInstance.$setInstanceMap(instanceMap);
                 objectInstance.$readFieldsFromCPythonReference();
                 pythonLikeType.__setAttribute(attributeName, objectInstance);

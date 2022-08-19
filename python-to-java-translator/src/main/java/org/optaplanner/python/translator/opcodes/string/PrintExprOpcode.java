@@ -20,6 +20,6 @@ public class PrintExprOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        StringImplementor.print(functionMetadata.methodVisitor, functionMetadata.className);
+        StringImplementor.print(functionMetadata, stackMetadata);
     }
 }

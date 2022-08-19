@@ -1,5 +1,6 @@
 package org.optaplanner.python.translator;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.implementors.CollectionImplementor;
+import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.python.translator.implementors.StackManipulationImplementor;
 import org.optaplanner.python.translator.types.BoundPythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
@@ -35,6 +37,16 @@ public class PythonFunctionSignature {
             out.put("arg" + index, index);
         }
         return out;
+    }
+
+    public static PythonFunctionSignature forMethod(Method method) {
+        MethodDescriptor methodDescriptor = new MethodDescriptor(method);
+        PythonLikeType returnType = JavaPythonTypeConversionImplementor.getPythonLikeType(method.getReturnType());
+        PythonLikeType[] parameterTypes = new PythonLikeType[method.getParameterCount()];
+        for (int i = 0; i < parameterTypes.length; i++) {
+            parameterTypes[i] = JavaPythonTypeConversionImplementor.getPythonLikeType(method.getParameterTypes()[i]);
+        }
+        return new PythonFunctionSignature(methodDescriptor, returnType, parameterTypes);
     }
 
     public PythonFunctionSignature(MethodDescriptor methodDescriptor,

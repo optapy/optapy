@@ -41,4 +41,8 @@ public abstract class AbstractPythonLikeObject implements PythonLikeObject {
     public PythonLikeType __getType() {
         return __type__;
     }
+
+    public void setAttribute(String attributeName, PythonLikeObject value) {
+        __dir__.put(attributeName, value);
+    }
 }

@@ -70,7 +70,10 @@ public enum PythonBinaryOperators {
     DELETE_ATTRIBUTE("__delattr__"),
 
     // Format string: https://peps.python.org/pep-3101/
-    FORMAT("__format__");
+    FORMAT("__format__"),
+
+    // global builtins
+    DIVMOD("__divmod__");
 
     public final String dunderMethod;
 

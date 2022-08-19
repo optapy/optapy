@@ -6,6 +6,7 @@ import java.util.List;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
+import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
@@ -15,7 +16,8 @@ import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.AttributeError;
 
 public class ObjectBuiltinOperations {
-    public static PythonLikeObject getAttribute(PythonLikeObject object, String name) {
+    public static PythonLikeObject getAttribute(PythonLikeObject object, PythonString pythonName) {
+        String name = pythonName.value;
         PythonLikeObject objectResult = object.__getAttributeOrNull(name);
         if (objectResult != null) {
             return objectResult;
@@ -42,12 +44,16 @@ public class ObjectBuiltinOperations {
         throw new AttributeError("object '" + object + "' does not have attribute '" + name + "'");
     }
 
-    public static void setAttribute(PythonLikeObject object, String name, PythonLikeObject value) {
+    public static PythonNone setAttribute(PythonLikeObject object, PythonString pythonName, PythonLikeObject value) {
+        String name = pythonName.value;
         object.__setAttribute(name, value);
+        return PythonNone.INSTANCE;
     }
 
-    public static void deleteAttribute(PythonLikeObject object, String name) {
+    public static PythonNone deleteAttribute(PythonLikeObject object, PythonString pythonName) {
+        String name = pythonName.value;
         object.__deleteAttribute(name);
+        return PythonNone.INSTANCE;
     }
 
     // Based on https://github.com/python/cpython/blob/d44815cabc0a8d9932df2fa95cb374eadddb7c17/Objects/abstract.c#L768-L827
@@ -107,5 +113,20 @@ public class ObjectBuiltinOperations {
 
     public static PythonBoolean notEqual(PythonLikeObject a, PythonLikeObject b) {
         return PythonBoolean.valueOf(!a.equals(b));
+    }
+
+    public static PythonString repr(PythonLikeObject object) {
+        String position;
+        if (object instanceof CPythonBackedPythonLikeObject) {
+            PythonInteger id = ((CPythonBackedPythonLikeObject) object).$cpythonId;
+            if (id != null) {
+                position = id.toString();
+            } else {
+                position = String.valueOf(System.identityHashCode(object));
+            }
+        } else {
+            position = String.valueOf(System.identityHashCode(object));
+        }
+        return PythonString.valueOf("<" + object.__getType().getTypeName() + " object at " + position + ">");
     }
 }

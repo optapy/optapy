@@ -29,7 +29,16 @@ public class PythonBoolean extends PythonInteger {
                     new PythonFunctionSignature(new MethodDescriptor(
                             PythonBoolean.class.getMethod("asBoolean")),
                             BOOLEAN_TYPE));
+            BOOLEAN_TYPE.addMethod(PythonUnaryOperator.AS_STRING,
+                    new PythonFunctionSignature(new MethodDescriptor(
+                            PythonBoolean.class.getMethod("asString")),
+                            PythonString.STRING_TYPE));
+            BOOLEAN_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION,
+                    new PythonFunctionSignature(new MethodDescriptor(
+                            PythonBoolean.class.getMethod("asString")),
+                            PythonString.STRING_TYPE));
             BOOLEAN_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+                namedArguments = (namedArguments != null) ? namedArguments : Map.of();
                 if (!namedArguments.isEmpty()) {
                     throw new ValueError("bool does not take named arguments");
                 }
@@ -133,5 +142,9 @@ public class PythonBoolean extends PythonInteger {
     @Override
     public int hashCode() {
         return Objects.hash(booleanValue);
+    }
+
+    public PythonString asString() {
+        return PythonString.valueOf(toString());
     }
 }

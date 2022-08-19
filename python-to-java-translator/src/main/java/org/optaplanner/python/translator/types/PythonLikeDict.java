@@ -3,11 +3,14 @@ package org.optaplanner.python.translator.types;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonLikeDict extends AbstractPythonLikeObject
         implements Map<PythonLikeObject, PythonLikeObject>, Iterable<PythonLikeObject> {
@@ -33,9 +36,38 @@ public class PythonLikeDict extends AbstractPythonLikeObject
                     Map.of()));
             DICT_TYPE.__dir__.put("clear", new JavaMethodReference(Map.class.getMethod("clear"), Map.of()));
             DICT_TYPE.__dir__.put("copy", new JavaMethodReference(PythonLikeDict.class.getMethod("copy"), Map.of()));
+
+            registerMethods();
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }
+    }
+
+    private static void registerMethods() throws NoSuchMethodException {
+        DICT_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+            namedArguments = (namedArguments != null) ? namedArguments : Map.of();
+
+            PythonLikeDict out = new PythonLikeDict();
+            if (positionalArguments.isEmpty()) {
+                out.putAll(namedArguments);
+                return out;
+            } else if (positionalArguments.size() == 1) {
+                PythonLikeObject from = positionalArguments.get(0);
+                if (from instanceof Map) {
+                    out.putAll((Map) from);
+                } else {
+                    Iterator iterator = (Iterator) UnaryDunderBuiltin.ITERATOR.invoke(from);
+                    while (iterator.hasNext()) {
+                        List item = (List) iterator.next();
+                        out.put((PythonLikeObject) item.get(0), (PythonLikeObject) item.get(1));
+                    }
+                }
+                out.putAll(namedArguments);
+                return out;
+            } else {
+                throw new ValueError("dict takes 0 or 1 positional arguments, got " + positionalArguments.size());
+            }
+        }));
     }
 
     public PythonLikeDict() {
@@ -46,6 +78,15 @@ public class PythonLikeDict extends AbstractPythonLikeObject
     public PythonLikeDict(int size) {
         super(DICT_TYPE);
         delegate = new HashMap<>(size);
+    }
+
+    public PythonLikeDict(Map<PythonLikeObject, PythonLikeObject> source) {
+        super(DICT_TYPE);
+        delegate = source;
+    }
+
+    public static PythonLikeDict mirror(Map<String, PythonLikeObject> globals) {
+        return new PythonLikeDict(new JavaStringMapMirror(globals));
     }
 
     public PythonLikeDict copy() {

@@ -12,6 +12,8 @@ public class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject impl
 
     public OpaquePythonReference $cpythonReference;
 
+    public PythonInteger $cpythonId;
+
     public Map<Number, PythonLikeObject> $instanceMap;
 
     public CPythonBackedPythonLikeObject(PythonLikeType __type__) {
@@ -43,6 +45,14 @@ public class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject impl
 
     public void $setCPythonReference(OpaquePythonReference pythonReference) {
         this.$cpythonReference = pythonReference;
+    }
+
+    public PythonInteger $getCPythonId() {
+        return $cpythonId;
+    }
+
+    public void $setCPythonId(PythonInteger $cpythonId) {
+        this.$cpythonId = $cpythonId;
     }
 
     public Map<Number, PythonLikeObject> $getInstanceMap() {

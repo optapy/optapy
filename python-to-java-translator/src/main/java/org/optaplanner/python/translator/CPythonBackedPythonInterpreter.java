@@ -1,10 +1,12 @@
 package org.optaplanner.python.translator;
 
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -18,7 +20,9 @@ import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
 
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
+    InputStream standardInput;
     PrintStream standardOutput;
+    Scanner inputScanner;
 
     Map<ModuleSpec, PythonModule> moduleSpecToModuleMap = new HashMap<>();
 
@@ -37,11 +41,13 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     public static PentaFunction<String, Map<String, PythonLikeObject>, Map<String, PythonLikeObject>, List<String>, Long, PythonModule> importModuleFunction;
 
     public CPythonBackedPythonInterpreter() {
-        this(System.out);
+        this(System.in, System.out);
     }
 
-    public CPythonBackedPythonInterpreter(PrintStream standardOutput) {
+    public CPythonBackedPythonInterpreter(InputStream standardInput, PrintStream standardOutput) {
+        this.standardInput = standardInput;
         this.standardOutput = standardOutput;
+        this.inputScanner = new Scanner(standardInput);
     }
 
     public static Number getPythonReferenceId(OpaquePythonReference reference) {
@@ -74,6 +80,7 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
             Map<Number, PythonLikeObject> instanceMap) {
         javaObject.$setInstanceMap(instanceMap);
         javaObject.$setCPythonReference(pythonObject);
+        javaObject.$setCPythonId(PythonInteger.valueOf(getPythonReferenceId(pythonObject).longValue()));
         javaObject.$readFieldsFromCPythonReference();
     }
 
@@ -119,8 +126,14 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     }
 
     @Override
-    public void print(PythonLikeObject object) {
-        standardOutput.println(object);
+    public void write(String output) {
+        standardOutput.println(output);
+    }
+
+    @Override
+    public String readLine() {
+        // TODO: Raise EOFError on end of file
+        return inputScanner.nextLine();
     }
 
     @Override

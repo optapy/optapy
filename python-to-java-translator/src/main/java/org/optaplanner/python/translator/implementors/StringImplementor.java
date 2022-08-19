@@ -1,15 +1,22 @@
 package org.optaplanner.python.translator.implementors;
 
+import java.util.List;
+import java.util.Map;
+
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonString;
 
 public class StringImplementor {
@@ -113,15 +120,32 @@ public class StringImplementor {
     /**
      * TOS is an PythonLikeObject to be printed. Pop TOS off the stack and print it.
      */
-    public static void print(MethodVisitor methodVisitor, String className) {
+    public static void print(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        String className = functionMetadata.className;
+        String globalName = "print";
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, className);
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className,
                 PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
-        StackManipulationImplementor.swap(methodVisitor);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className,
+                PythonBytecodeToJavaBytecodeTranslator.GLOBALS_MAP_STATIC_FIELD_NAME,
+                Type.getDescriptor(Map.class));
+        methodVisitor.visitLdcInsn(globalName);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonInterpreter.class),
-                "print",
-                Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
+                "getGlobal", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(Map.class),
+                        Type.getType(String.class)),
+                true);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeFunction.class));
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 1);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class), "__call__",
+                Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(List.class),
+                        Type.getType(Map.class)),
                 true);
     }
 }

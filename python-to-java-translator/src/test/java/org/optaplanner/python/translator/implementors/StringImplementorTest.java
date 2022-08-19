@@ -15,8 +15,9 @@ import org.mockito.Mockito;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
-import org.optaplanner.python.translator.types.PythonInteger;
-import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -77,18 +78,24 @@ public class StringImplementorTest {
 
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
 
+        Mockito.when(interpreter.getGlobal(Mockito.anyMap(), Mockito.same("print")))
+                .thenReturn(((PythonLikeFunction) (pos, keywords) -> {
+                    interpreter.write(UnaryDunderBuiltin.STR.invoke(pos.get(0)) + "\n");
+                    return PythonNone.INSTANCE;
+                }));
+
         Class<? extends Consumer> functionClass = translatePythonBytecodeToClass(compiledFunction, Consumer.class);
 
         Consumer consumer = createInstance(functionClass, interpreter);
 
         consumer.accept("Value 1");
 
-        Mockito.verify(interpreter).print(PythonString.valueOf("Value 1"));
+        Mockito.verify(interpreter).write("Value 1\n");
 
-        Mockito.reset(interpreter);
+        Mockito.clearInvocations(interpreter);
 
         consumer.accept(10);
 
-        Mockito.verify(interpreter).print(PythonInteger.valueOf(10));
+        Mockito.verify(interpreter).write("10\n");
     }
 }

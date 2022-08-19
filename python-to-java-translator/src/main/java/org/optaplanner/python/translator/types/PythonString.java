@@ -25,16 +25,17 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
             STRING_TYPE.__dir__.put(PythonBinaryOperators.GET_ITEM.getDunderMethod(),
                     new JavaMethodReference(PythonString.class.getMethod("getCharAt", PythonInteger.class),
                             Map.of()));
-            STRING_TYPE.addMethod(PythonUnaryOperator.ITERATOR, new PythonFunctionSignature(
-                    new MethodDescriptor(PythonString.class.getMethod("getIterator")),
-                    PythonIterator.ITERATOR_TYPE));
-            STRING_TYPE.__dir__.put(PythonUnaryOperator.ITERATOR.getDunderMethod(),
-                    new JavaMethodReference(PythonString.class.getMethod("getIterator"),
-                            Map.of()));
+            registerMethods();
             PythonOverloadImplementor.createDispatchesFor(STRING_TYPE);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void registerMethods() throws NoSuchMethodException {
+        STRING_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonString.class.getMethod("repr"));
+        STRING_TYPE.addMethod(PythonUnaryOperator.AS_STRING, PythonString.class.getMethod("asString"));
+        STRING_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonString.class.getMethod("getIterator"));
     }
 
     public PythonString(String value) {
@@ -90,5 +91,15 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     @Override
     public int compareTo(PythonString pythonString) {
         return value.compareTo(pythonString.value);
+    }
+
+    public PythonString repr() {
+        return PythonString.valueOf("'" + value
+                .replaceAll("\n", "\\\\n")
+                .replaceAll("\t", "\\\\t") + "'");
+    }
+
+    public PythonString asString() {
+        return this;
     }
 }

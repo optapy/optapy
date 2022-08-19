@@ -1,5 +1,6 @@
 package org.optaplanner.python.translator.types;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -88,28 +89,21 @@ public class PythonLikeType implements PythonLikeObject,
         if (BASE_TYPE == null) {
             BASE_TYPE = new PythonLikeType("base-object", PythonLikeObject.class, Collections.emptyList());
             try {
-                BASE_TYPE.__dir__.put(PythonBinaryOperators.GET_ATTRIBUTE.getDunderMethod(),
-                        new JavaMethodReference(
-                                ObjectBuiltinOperations.class.getMethod("getAttribute", PythonLikeObject.class, String.class),
-                                Map.of("self", 0, "name", 1)));
-                BASE_TYPE.__dir__.put(PythonTernaryOperators.SET_ATTRIBUTE.getDunderMethod(),
-                        new JavaMethodReference(
-                                ObjectBuiltinOperations.class.getMethod("setAttribute", PythonLikeObject.class, String.class,
-                                        PythonLikeObject.class),
-                                Map.of("self", 0, "name", 1, "value", 2)));
-                BASE_TYPE.__dir__.put(PythonBinaryOperators.DELETE_ATTRIBUTE.getDunderMethod(),
-                        new JavaMethodReference(
-                                ObjectBuiltinOperations.class.getMethod("deleteAttribute", PythonLikeObject.class,
-                                        String.class),
-                                Map.of("self", 0, "name", 1)));
-                BASE_TYPE.__dir__.put(PythonBinaryOperators.FORMAT.getDunderMethod(),
-                        new JavaMethodReference(
-                                ObjectBuiltinOperations.class.getMethod("formatPythonObject", PythonLikeObject.class,
-                                        PythonLikeObject.class),
-                                Map.of("self", 0, "format", 1)));
                 BASE_TYPE.__dir__.put(PythonUnaryOperator.AS_STRING.getDunderMethod(),
                         new JavaMethodReference(Object.class.getMethod("toString"), Map.of()));
 
+                BASE_TYPE.addMethod(PythonBinaryOperators.GET_ATTRIBUTE, new PythonFunctionSignature(
+                        MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("getAttribute",
+                                PythonLikeObject.class, PythonString.class)),
+                        BASE_TYPE, BASE_TYPE, PythonString.STRING_TYPE));
+                BASE_TYPE.addMethod(PythonTernaryOperators.SET_ATTRIBUTE, new PythonFunctionSignature(
+                        MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("setAttribute",
+                                PythonLikeObject.class, PythonString.class, PythonLikeObject.class)),
+                        PythonNone.NONE_TYPE, BASE_TYPE, PythonString.STRING_TYPE, BASE_TYPE));
+                BASE_TYPE.addMethod(PythonBinaryOperators.DELETE_ATTRIBUTE, new PythonFunctionSignature(
+                        MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("deleteAttribute",
+                                PythonLikeObject.class, PythonString.class)),
+                        PythonNone.NONE_TYPE, BASE_TYPE, PythonString.STRING_TYPE));
                 BASE_TYPE.addMethod(PythonBinaryOperators.EQUAL, new PythonFunctionSignature(
                         MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("equal",
                                 PythonLikeObject.class, PythonLikeObject.class)),
@@ -118,6 +112,14 @@ public class PythonLikeType implements PythonLikeObject,
                         MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("notEqual",
                                 PythonLikeObject.class, PythonLikeObject.class)),
                         PythonBoolean.getBooleanType(), BASE_TYPE, BASE_TYPE));
+                BASE_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, new PythonFunctionSignature(
+                        MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("repr",
+                                PythonLikeObject.class)),
+                        PythonString.STRING_TYPE, BASE_TYPE));
+                BASE_TYPE.addMethod(PythonBinaryOperators.FORMAT, new PythonFunctionSignature(
+                        MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("formatPythonObject",
+                                PythonLikeObject.class, PythonLikeObject.class)),
+                        PythonString.STRING_TYPE, BASE_TYPE, PythonString.STRING_TYPE));
                 BASE_TYPE.__dir__.put(PythonUnaryOperator.HASH.getDunderMethod(),
                         new JavaMethodReference(Object.class.getMethod("hashCode"), Map.of()));
                 BASE_TYPE.setConstructor((vargs, kwargs) -> new AbstractPythonLikeObject(BASE_TYPE) {
@@ -164,6 +166,22 @@ public class PythonLikeType implements PythonLikeObject,
         });
 
         return typeType;
+    }
+
+    public void addMethod(String methodName, Method method) {
+        addMethod(methodName, PythonFunctionSignature.forMethod(method));
+    }
+
+    public void addMethod(PythonUnaryOperator operator, Method method) {
+        addMethod(operator.getDunderMethod(), PythonFunctionSignature.forMethod(method));
+    }
+
+    public void addMethod(PythonBinaryOperators operator, Method method) {
+        addMethod(operator.getDunderMethod(), PythonFunctionSignature.forMethod(method));
+    }
+
+    public void addMethod(PythonTernaryOperators operator, Method method) {
+        addMethod(operator.getDunderMethod(), PythonFunctionSignature.forMethod(method));
     }
 
     public void addMethod(PythonUnaryOperator operator, PythonFunctionSignature method) {

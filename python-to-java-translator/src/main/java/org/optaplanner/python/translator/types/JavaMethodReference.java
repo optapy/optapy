@@ -38,7 +38,7 @@ public class JavaMethodReference implements PythonLikeFunction {
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Method (" + method + ") is not accessible.", e);
         } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
+            throw (RuntimeException) e.getCause();
         }
     }
 

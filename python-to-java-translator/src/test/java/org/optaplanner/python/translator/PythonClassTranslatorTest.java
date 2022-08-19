@@ -60,7 +60,8 @@ public class PythonClassTranslatorTest {
         assertThat(generatedClass.getMethod(PythonClassTranslator.getJavaMethodName("get_age")).getParameterTypes()).isEmpty();
 
         PythonLikeObject classObject = classType.__call__(List.of(PythonInteger.valueOf(10)), Map.of());
-        PythonLikeFunction getAgeFunction = (PythonLikeFunction) ObjectBuiltinOperations.getAttribute(classObject, "get_age");
+        PythonLikeFunction getAgeFunction =
+                (PythonLikeFunction) ObjectBuiltinOperations.getAttribute(classObject, PythonString.valueOf("get_age"));
         assertThat(getAgeFunction.__call__(List.of(), Map.of())).isEqualTo(PythonInteger.valueOf(10));
     }
 }
