@@ -28,6 +28,7 @@ import org.optaplanner.python.translator.types.PythonLikeDict;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeSet;
+import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonNumber;
@@ -128,6 +129,10 @@ public class JavaPythonTypeConversionImplementor {
             return PythonNone.NONE_TYPE;
         }
 
+        if (PythonLikeObject.class.equals(javaClass)) {
+            return PythonLikeType.getBaseType();
+        }
+
         if (byte.class.equals(javaClass) || short.class.equals(javaClass) || int.class.equals(javaClass)
                 || long.class.equals(javaClass) ||
                 Byte.class.equals(javaClass) || Short.class.equals(javaClass) || Integer.class.equals(javaClass)
@@ -161,6 +166,10 @@ public class JavaPythonTypeConversionImplementor {
         if (List.class.equals(javaClass) ||
                 PythonLikeList.class.equals(javaClass)) {
             return PythonLikeList.LIST_TYPE;
+        }
+
+        if (PythonLikeTuple.class.equals(javaClass)) {
+            return PythonLikeTuple.TUPLE_TYPE;
         }
 
         if (Set.class.equals(javaClass) ||

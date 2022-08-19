@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 
 import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
@@ -36,6 +37,8 @@ public class PythonRange extends AbstractPythonLikeObject implements List<Python
             PythonLikeObject start;
             PythonLikeObject stop;
             PythonLikeObject step;
+
+            namedArguments = (namedArguments != null) ? namedArguments : Map.of();
 
             if (positionalArguments.size() == 3) {
                 start = positionalArguments.get(0);

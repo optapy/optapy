@@ -1,4 +1,5 @@
 import javapython
+import pytest
 
 
 def test_abs():
@@ -307,3 +308,291 @@ def test_issubclass():
     assert java_function(int, bool) == my_function(int, bool)
     assert java_function(int, (float, int)) == my_function(int, (float, int))
 
+
+def test_iter():
+    def my_function(x):
+        return iter(x)
+
+    java_function = javapython.as_java(my_function)
+    java_iter = java_function([1, 2, 3, 4])
+    python_iter = my_function([1, 2, 3, 4])
+
+    for item in python_iter:
+        assert next(java_iter) == item
+
+    with pytest.raises(StopIteration):
+        next(java_iter)
+
+
+def test_len():
+    def my_function(x):
+        return len(x)
+
+    java_function = javapython.as_java(my_function)
+    assert java_function([1, 2, 3]) == my_function([1, 2, 3])
+    assert java_function((1, 2)) == my_function((1, 2))
+    assert java_function({1}) == my_function({1})
+
+    a_dict = {
+        'a': 1,
+        'b': 2,
+        'c': 3
+    }
+    assert java_function(a_dict) == my_function(a_dict)
+
+
+def test_list():
+    def my_function(x):
+        return list(x)
+
+    def my_function_no_args():
+        return list()
+
+    java_function = javapython.as_java(my_function)
+    java_function_no_args = javapython.as_java(my_function_no_args)
+
+    assert java_function_no_args() == my_function_no_args()
+    assert java_function((1, 2, 3)) == my_function((1, 2, 3))
+
+
+def test_locals():
+    def my_function():
+        return locals()
+
+
+    java_function = javapython.as_java(my_function)
+
+    with pytest.raises(ValueError) as excinfo:
+        java_function()
+
+    assert 'builtin locals is not supported when executed in Java bytecode' == str(excinfo.value)
+
+
+def test_map():
+    def my_function(function, iterable):
+        return map(function, iterable)
+
+    def my_function_two_args(function, iterable1, iterable2):
+        return map(function, iterable1, iterable2)
+
+    java_function = javapython.as_java(my_function)
+    java_function_two_args = javapython.as_java(my_function_two_args)
+
+    assert list(java_function(lambda x: x + 1, [1, 2, 3])) == list(my_function(lambda x: x + 1, [1, 2, 3]))
+    assert list(java_function_two_args(lambda x, y: x + y,
+                                       [1, 2, 3],
+                                       [2, 3, 4])) == \
+           list(my_function_two_args(lambda x, y: x + y,
+                                     [1, 2, 3],
+                                     [2, 3, 4]))
+
+    assert list(java_function_two_args(lambda x, y: x + y,
+                                       [1, 2],
+                                       [2, 3, 4])) == \
+           list(my_function_two_args(lambda x, y: x + y,
+                                     [1, 2],
+                                     [2, 3, 4]))
+
+    assert list(java_function_two_args(lambda x, y: x + y,
+                                       [1, 2, 3],
+                                       [2, 3])) == \
+           list(my_function_two_args(lambda x, y: x + y,
+                                     [1, 2, 3],
+                                     [2, 3]))
+
+
+def test_min():
+    def my_function(x):
+        return min(x)
+
+    def my_function_two_args(x, y):
+        return min(x, y)
+
+    java_function = javapython.as_java(my_function)
+    java_function_two_args = javapython.as_java(my_function_two_args)
+
+    assert java_function([1, 2, 3]) == my_function([1, 2, 3])
+    assert java_function([3, 2, 1]) == my_function([3, 2, 1])
+    assert java_function_two_args(1, 2) == my_function_two_args(1, 2)
+    assert java_function_two_args(2, 1) == my_function_two_args(2, 1)
+
+
+def test_max():
+    def my_function(x):
+        return max(x)
+
+    def my_function_two_args(x, y):
+        return max(x, y)
+
+    java_function = javapython.as_java(my_function)
+    java_function_two_args = javapython.as_java(my_function_two_args)
+
+    assert java_function([1, 2, 3]) == my_function([1, 2, 3])
+    assert java_function([3, 2, 1]) == my_function([3, 2, 1])
+    assert java_function_two_args(1, 2) == my_function_two_args(1, 2)
+    assert java_function_two_args(2, 1) == my_function_two_args(2, 1)
+
+
+def test_next():
+    def my_function(x):
+        i = iter(x)
+        return next(i)
+
+    java_function = javapython.as_java(my_function)
+    assert java_function([1, 2, 3]) == my_function([1, 2, 3])
+
+
+def test_object():
+    def my_function(x):
+        # cannot really do anything with a plain object
+        return isinstance(x, object)
+
+    java_function = javapython.as_java(my_function)
+    assert java_function(1) == my_function(1)
+    assert java_function('a') == my_function('a')
+    assert java_function(int) == my_function(int)
+
+
+def test_oct():
+    def my_function(x):
+        return oct(x)
+
+    java_function = javapython.as_java(my_function)
+    assert java_function(15) == my_function(15)
+    assert java_function(-15) == my_function(-15)
+
+
+def test_ord():
+    def my_function(x):
+        return ord(x)
+
+    java_function = javapython.as_java(my_function)
+    assert java_function('a') == my_function('a')
+    assert java_function('\n') == my_function('\n')
+
+
+def test_pow():
+    def my_function(x, y):
+        return pow(x, y)
+
+    def my_function_with_mod(x, y, z):
+        return pow(x, y, z)
+
+    java_function = javapython.as_java(my_function)
+    java_function_with_mod = javapython.as_java(my_function_with_mod)
+    assert java_function(2, 3) == my_function(2, 3)
+    assert java_function(2, -3) == my_function(2, -3)
+    assert java_function_with_mod(2, 3, 3) == my_function_with_mod(2, 3, 3)
+    assert java_function_with_mod(2, -1, 3) == my_function_with_mod(2, -1, 3)
+
+
+def test_range():
+    def my_function(x):
+        return range(x)
+
+    def my_function_with_start(start, stop):
+        return range(start, stop)
+
+    def my_function_with_start_and_step(start, stop, step):
+        return range(start, stop, step)
+
+    java_function = javapython.as_java(my_function)
+    java_function_with_start = javapython.as_java(my_function_with_start)
+    java_function_with_start_and_step = javapython.as_java(my_function_with_start_and_step)
+
+    assert list(java_function(5)) == list(my_function(5))
+    assert list(java_function_with_start(5, 10)) == list(my_function_with_start(5, 10))
+    assert list(java_function_with_start_and_step(5, 10, 2)) == list(my_function_with_start_and_step(5, 10, 2))
+    assert list(java_function_with_start_and_step(10, 5, -2)) == list(my_function_with_start_and_step(10, 5, -2))
+
+
+def test_repr():
+    def my_function(x):
+        return repr(x)
+
+    java_function = javapython.as_java(my_function)
+
+    assert java_function(10) == my_function(10)
+    assert java_function('a\nstring\nwith\nnew lines') == my_function('a\nstring\nwith\nnew lines')
+    assert java_function([1, '2', 3]) == my_function([1, '2', 3])
+
+
+def test_set():
+    def my_function():
+        return set()
+
+    def my_function_with_arg(x):
+        return set(x)
+
+    java_function = javapython.as_java(my_function)
+    java_function_with_arg = javapython.as_java(my_function_with_arg)
+
+    assert java_function() == my_function()
+    assert java_function_with_arg([1, 2, 2, 3]) == my_function_with_arg([1, 2, 2, 3])
+
+
+def test_setattr():
+    def my_function(x, name, value):
+        setattr(x, name, value)
+        return getattr(x, name)
+
+    class TestObject:
+        pass
+
+    java_function = javapython.as_java(my_function)
+
+    a = TestObject()
+    a.test = 'value 1'
+
+    b = TestObject()
+    b.test = 'value 1'
+
+    assert java_function(a, 'test', 'value 2') == my_function(b, 'test', 'value 2')
+
+
+def test_str():
+    def my_function(x):
+        return str(x)
+
+    class TestObject:
+        def __str__(self):
+            return 'A TestObject Instance'
+
+    java_function = javapython.as_java(my_function)
+    assert java_function(10) == my_function(10)
+    assert java_function(1.0) == my_function(1.0)
+    assert java_function('text') == my_function('text')
+    assert java_function([1, '2', 3]) == my_function([1, '2', 3])
+
+    a = TestObject()
+    assert java_function(a) == my_function(a)
+
+
+def test_tuple():
+    def my_function():
+        return tuple()
+
+    def my_function_with_arg(x):
+        return tuple(x)
+
+    java_function = javapython.as_java(my_function)
+    java_function_with_arg = javapython.as_java(my_function_with_arg)
+
+    assert java_function() == my_function()
+    assert java_function_with_arg([1, 2, 2, 3]) == my_function_with_arg([1, 2, 2, 3])
+
+
+def test_type():
+    def my_function(x):
+        return type(x)
+
+    class MyObject:
+        pass
+
+    java_function = javapython.as_java(my_function)
+
+    assert java_function(10) == my_function(10)
+    assert java_function('text') == my_function('text')
+    assert java_function([1, 2]) == my_function([1, 2])
+    assert java_function(MyObject()) == my_function(MyObject())
+    assert java_function(MyObject) == my_function(MyObject)

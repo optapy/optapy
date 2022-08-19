@@ -1,14 +1,20 @@
 package org.optaplanner.python.translator.types;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.Objects;
 
+import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.PythonTernaryOperators;
+import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<T> {
     final List delegate;
@@ -18,42 +24,55 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
 
     static {
         try {
-            LIST_TYPE.__dir__.put("append", new JavaMethodReference(List.class.getMethod("add", Object.class), Map.of("x", 1)));
-            LIST_TYPE.__dir__.put("extend", new JavaMethodReference(List.class.getMethod("addAll", Collection.class),
-                    Map.of("iterable", 1)));
-            LIST_TYPE.__dir__.put("insert", new JavaMethodReference(List.class.getMethod("add", int.class, Object.class),
-                    Map.of("i", 1, "x", 2)));
-            LIST_TYPE.__dir__.put("remove", new JavaMethodReference(List.class.getMethod("remove", Object.class),
-                    Map.of("x", 1)));
-            LIST_TYPE.__dir__.put("clear", new JavaMethodReference(List.class.getMethod("clear"), Map.of()));
-            LIST_TYPE.__dir__.put("copy", new JavaMethodReference(PythonLikeList.class.getMethod("copy"), Map.of()));
-            LIST_TYPE.__dir__.put("index", new JavaMethodReference(List.class.getMethod("indexOf", Object.class),
-                    Map.of("x", 1)));
-            LIST_TYPE.__dir__.put("count",
-                    new JavaMethodReference(PythonLikeList.class.getMethod("count", PythonLikeObject.class),
-                            Map.of("x", 1)));
-            LIST_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonLikeList.class.getMethod("size"),
-                    Map.of()));
-            LIST_TYPE.__dir__.put("__add__",
-                    new JavaMethodReference(PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class),
-                            Map.of()));
-            LIST_TYPE.__dir__.put("__iadd__",
-                    new JavaMethodReference(PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class),
-                            Map.of()));
-            LIST_TYPE.__dir__.put("__getitem__", new JavaMethodReference(List.class.getMethod("get", int.class),
-                    Map.of()));
-            LIST_TYPE.__dir__.put("__setitem__", new JavaMethodReference(List.class.getMethod("set", int.class, Object.class),
-                    Map.of()));
-            LIST_TYPE.__dir__.put("__delitem__", new JavaMethodReference(List.class.getMethod("remove", int.class),
-                    Map.of()));
-            LIST_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeList.class.getMethod("iterator"),
-                    Map.of()));
-            LIST_TYPE.__dir__.put("__contains__",
-                    new JavaMethodReference(PythonLikeList.class.getMethod("contains", Object.class),
-                            Map.of()));
+            registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(LIST_TYPE);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }
+    }
+
+    private static void registerMethods() throws NoSuchMethodException {
+        // Constructor
+        LIST_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+            if (positionalArguments.size() == 0) {
+                return new PythonLikeList();
+            } else if (positionalArguments.size() == 1) {
+                PythonLikeList out = new PythonLikeList();
+                out.extend(positionalArguments.get(0));
+                return out;
+            } else {
+                throw new ValueError("list expects 0 or 1 arguments, got " + positionalArguments.size());
+            }
+        });
+
+        // Unary methods
+        LIST_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonLikeList.class.getMethod("length"));
+        LIST_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonLikeList.class.getMethod("getIterator"));
+        LIST_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonLikeList.class.getMethod("getRepresentation"));
+
+        // Binary methods
+        LIST_TYPE.addMethod(PythonBinaryOperators.ADD, PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class));
+        LIST_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
+                PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class));
+        LIST_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeList.class.getMethod("getItem", PythonInteger.class));
+        LIST_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
+                PythonLikeList.class.getMethod("deleteItem", PythonInteger.class));
+        LIST_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+                PythonLikeList.class.getMethod("containsItem", PythonLikeObject.class));
+
+        // Ternary methods
+        LIST_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
+                PythonLikeList.class.getMethod("setItem", PythonInteger.class, PythonLikeObject.class));
+
+        // Other
+        LIST_TYPE.addMethod("append", PythonLikeList.class.getMethod("append", PythonLikeObject.class));
+        LIST_TYPE.addMethod("extend", PythonLikeList.class.getMethod("extend", PythonLikeObject.class));
+        LIST_TYPE.addMethod("insert", PythonLikeList.class.getMethod("insert", PythonInteger.class, PythonLikeObject.class));
+        LIST_TYPE.addMethod("remove", PythonLikeList.class.getMethod("remove", PythonLikeObject.class));
+        LIST_TYPE.addMethod("clear", PythonLikeList.class.getMethod("clearList"));
+        LIST_TYPE.addMethod("copy", PythonLikeList.class.getMethod("copy"));
+        LIST_TYPE.addMethod("count", PythonLikeList.class.getMethod("count", PythonLikeObject.class));
+        LIST_TYPE.addMethod("index", PythonLikeList.class.getMethod("index", PythonLikeObject.class));
     }
 
     public PythonLikeList() {
@@ -115,6 +134,10 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return delegate.size();
     }
 
+    public PythonInteger length() {
+        return PythonInteger.valueOf(delegate.size());
+    }
+
     @Override
     public boolean isEmpty() {
         return delegate.isEmpty();
@@ -125,9 +148,17 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return delegate.contains(o);
     }
 
+    public PythonBoolean containsItem(PythonLikeObject item) {
+        return PythonBoolean.valueOf(delegate.contains(item));
+    }
+
     @Override
     public Iterator<T> iterator() {
         return delegate.iterator();
+    }
+
+    public PythonIterator getIterator() {
+        return new PythonIterator(delegate.iterator());
     }
 
     @Override
@@ -144,6 +175,11 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return delegate.add(pythonLikeObject);
     }
 
+    public PythonNone append(PythonLikeObject item) {
+        delegate.add(item);
+        return PythonNone.INSTANCE;
+    }
+
     @Override
     public boolean remove(Object o) {
         return delegate.remove(o);
@@ -157,6 +193,16 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
     @Override
     public boolean addAll(Collection collection) {
         return delegate.addAll(collection);
+    }
+
+    public PythonNone extend(PythonLikeObject item) {
+        if (item instanceof Collection) {
+            delegate.addAll((List) item);
+        } else {
+            Iterator iterator = (Iterator) UnaryDunderBuiltin.ITERATOR.invoke(item);
+            iterator.forEachRemaining(this::add);
+        }
+        return PythonNone.INSTANCE;
     }
 
     @Override
@@ -179,9 +225,22 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         delegate.clear();
     }
 
+    public PythonNone clearList() {
+        delegate.clear();
+        return PythonNone.INSTANCE;
+    }
+
     @Override
     public T get(int i) {
         return (T) delegate.get(i);
+    }
+
+    public PythonLikeObject getItem(PythonInteger index) {
+        if (index.value.compareTo(BigInteger.ZERO) < 0) {
+            return (PythonLikeObject) delegate.get(delegate.size() + index.value.intValueExact());
+        } else {
+            return (PythonLikeObject) delegate.get(index.value.intValueExact());
+        }
     }
 
     @Override
@@ -189,9 +248,23 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return delegate.set(i, pythonLikeObject);
     }
 
+    public PythonLikeObject setItem(PythonInteger index, PythonLikeObject value) {
+        if (index.value.compareTo(BigInteger.ZERO) < 0) {
+            delegate.set(delegate.size() + index.value.intValueExact(), value);
+        } else {
+            delegate.set(index.value.intValueExact(), value);
+        }
+        return PythonNone.INSTANCE;
+    }
+
     @Override
     public void add(int i, Object pythonLikeObject) {
         delegate.add(i, pythonLikeObject);
+    }
+
+    public PythonNone insert(PythonInteger index, PythonLikeObject item) {
+        delegate.add(index.value.intValueExact(), item);
+        return PythonNone.INSTANCE;
     }
 
     @Override
@@ -199,9 +272,27 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return (T) delegate.remove(i);
     }
 
+    public PythonNone deleteItem(PythonInteger index) {
+        if (index.value.compareTo(BigInteger.ZERO) < 0) {
+            delegate.remove(delegate.size() + index.value.intValueExact());
+        } else {
+            delegate.remove(index.value.intValueExact());
+        }
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone remove(PythonLikeObject item) {
+        delegate.remove(item);
+        return PythonNone.INSTANCE;
+    }
+
     @Override
     public int indexOf(Object o) {
         return delegate.indexOf(o);
+    }
+
+    public PythonInteger index(PythonLikeObject item) {
+        return PythonInteger.valueOf(delegate.indexOf(item));
     }
 
     @Override
@@ -226,7 +317,20 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
 
     @Override
     public String toString() {
-        return delegate.toString();
+        StringBuilder out = new StringBuilder();
+        out.append('[');
+        for (int i = 0; i < delegate.size() - 1; i++) {
+            out.append(UnaryDunderBuiltin.REPRESENTATION.invoke((PythonLikeObject) delegate.get(i)));
+            out.append(", ");
+        }
+        out.append(UnaryDunderBuiltin.REPRESENTATION.invoke((PythonLikeObject) delegate.get(delegate.size() - 1)));
+        out.append(']');
+
+        return out.toString();
+    }
+
+    public PythonString getRepresentation() {
+        return PythonString.valueOf(toString());
     }
 
     @Override
@@ -250,5 +354,9 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
     @Override
     public int hashCode() {
         return Objects.hash(delegate);
+    }
+
+    public List getDelegate() {
+        return delegate;
     }
 }

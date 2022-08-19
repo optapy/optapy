@@ -122,6 +122,10 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         INT_TYPE.addMethod(PythonBinaryOperators.INPLACE_OR, PythonInteger.class.getMethod("bitwiseOr", PythonInteger.class));
         INT_TYPE.addMethod(PythonBinaryOperators.INPLACE_XOR, PythonInteger.class.getMethod("bitwiseXor", PythonInteger.class));
 
+        // Ternary
+        INT_TYPE.addMethod(PythonBinaryOperators.POWER,
+                PythonInteger.class.getMethod("power", PythonInteger.class, PythonInteger.class));
+
         // Comparisons
         INT_TYPE.addMethod(PythonBinaryOperators.EQUAL, PythonInteger.class.getMethod("equal", PythonInteger.class));
         INT_TYPE.addMethod(PythonBinaryOperators.EQUAL, PythonInteger.class.getMethod("equal", PythonFloat.class));

@@ -1,7 +1,9 @@
+import builtins
+import ctypes
 import dis
-
-import sys
 import inspect
+import sys
+
 from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, JArray
 
 global_dict_to_instance = dict()
@@ -327,7 +329,7 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from java.util import List, Map, Set, Iterator
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonComplex, PythonBoolean, \
         PythonString, PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonModule, \
-        PythonObjectWrapper, JavaObjectWrapper
+        PythonObjectWrapper, JavaObjectWrapper, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType
 
     if isinstance(python_like_object, (PythonObjectWrapper, JavaObjectWrapper)):
         out = python_like_object.getWrappedObject()
@@ -383,6 +385,22 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
         return JavaIterator(python_like_object)
     elif isinstance(python_like_object, PythonModule):
         return python_like_object.getPythonReference()
+    elif isinstance(python_like_object, CPythonBackedPythonLikeObject) and getattr(python_like_object, '$cpythonReference') is not None:
+        return getattr(python_like_object, '$cpythonReference')
+    elif isinstance(python_like_object, Exception):
+        exception_name = getattr(python_like_object, '$TYPE').getTypeName()
+        exception_python_type = getattr(builtins, exception_name)
+        message = python_like_object.getMessage()
+        return exception_python_type(message)
+    elif isinstance(python_like_object, PythonLikeType):
+        if python_like_object.getClass() == PythonLikeGenericType:
+            return type
+
+        for (key, value) in type_to_compiled_java_class.items():
+            if value == python_like_object:
+                return key
+        else:
+            raise KeyError(f'Cannot find corresponding Python type for Java class {python_like_object.getClass().getName()}')
     elif hasattr(python_like_object, 'get__optapy_Id'):
         return python_like_object.get__optapy_Id()
     elif not isinstance(python_like_object, PythonLikeObject):
@@ -612,6 +630,8 @@ def wrap_java_function(java_function):
         from java.util import ArrayList, HashMap
 
         instance_map = HashMap()
+        java_args = None
+        java_kwargs = None
         if isinstance(java_function, PythonLikeFunction):
             java_args = ArrayList(len(args))
             java_kwargs = HashMap()
@@ -622,18 +642,18 @@ def wrap_java_function(java_function):
             for key, value in kwargs:
                 java_kwargs.put(convert_to_java_python_like_object(key, instance_map),
                                 convert_to_java_python_like_object(value, instance_map))
-
-            return unwrap_python_like_object(getattr(java_function, '$call')(java_args, java_kwargs))
         else:
-            instance_map = HashMap()
-
             java_args = [convert_to_java_python_like_object(arg, instance_map) for arg in args]
             java_kwargs = {
                 convert_to_java_python_like_object(key, instance_map):
                 convert_to_java_python_like_object(value, instance_map)
                 for key, value in kwargs
             }
-            return unwrap_python_like_object(java_function(*java_args, **java_kwargs))
+
+        try:
+            return unwrap_python_like_object(getattr(java_function, '$call')(java_args, java_kwargs))
+        except Exception as e:
+            raise unwrap_python_like_object(e)
 
     return wrapped_function
 

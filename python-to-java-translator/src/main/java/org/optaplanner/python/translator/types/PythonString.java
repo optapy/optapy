@@ -3,11 +3,11 @@ package org.optaplanner.python.translator.types;
 import java.math.BigInteger;
 import java.util.Map;
 
-import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
-import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonString extends AbstractPythonLikeObject implements PythonLikeComparable<PythonString> {
     public final String value;
@@ -19,9 +19,6 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
             PythonLikeComparable.setup(STRING_TYPE);
             STRING_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonString.class.getMethod("length"),
                     Map.of()));
-            STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, new PythonFunctionSignature(
-                    new MethodDescriptor(PythonString.class.getMethod("getCharAt", PythonInteger.class)),
-                    STRING_TYPE, PythonInteger.INT_TYPE));
             STRING_TYPE.__dir__.put(PythonBinaryOperators.GET_ITEM.getDunderMethod(),
                     new JavaMethodReference(PythonString.class.getMethod("getCharAt", PythonInteger.class),
                             Map.of()));
@@ -33,6 +30,17 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     }
 
     private static void registerMethods() throws NoSuchMethodException {
+        STRING_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+            if (positionalArguments.size() == 1) {
+                return UnaryDunderBuiltin.STR.invoke(positionalArguments.get(0));
+            } else if (positionalArguments.size() == 3) {
+                // TODO Support byte array strings
+                throw new ValueError("three argument str not supported");
+            } else {
+                throw new ValueError("str expects");
+            }
+        });
+        STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonString.class.getMethod("getCharAt", PythonInteger.class));
         STRING_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonString.class.getMethod("repr"));
         STRING_TYPE.addMethod(PythonUnaryOperator.AS_STRING, PythonString.class.getMethod("asString"));
         STRING_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonString.class.getMethod("getIterator"));

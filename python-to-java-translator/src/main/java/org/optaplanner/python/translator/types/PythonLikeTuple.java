@@ -1,14 +1,19 @@
 package org.optaplanner.python.translator.types;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.Objects;
 
+import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonLikeTuple extends AbstractPythonLikeObject implements List<PythonLikeObject> {
     final List<PythonLikeObject> delegate;
@@ -18,27 +23,46 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
 
     static {
         try {
-            TUPLE_TYPE.__dir__.put("index", new JavaMethodReference(List.class.getMethod("indexOf", Object.class),
-                    Map.of("x", 1)));
-            TUPLE_TYPE.__dir__.put("count",
-                    new JavaMethodReference(PythonLikeTuple.class.getMethod("count", PythonLikeObject.class),
-                            Map.of("x", 1)));
-            TUPLE_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonLikeTuple.class.getMethod("size"),
-                    Map.of()));
-            TUPLE_TYPE.__dir__.put("__add__",
-                    new JavaMethodReference(PythonLikeTuple.class.getMethod("concatToNew", PythonLikeTuple.class),
-                            Map.of()));
-            TUPLE_TYPE.__dir__.put("__getitem__",
-                    new JavaMethodReference(PythonLikeTuple.class.getMethod("get", int.class),
-                            Map.of()));
-            TUPLE_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeTuple.class.getMethod("iterator"),
-                    Map.of()));
-            TUPLE_TYPE.__dir__.put("__contains__",
-                    new JavaMethodReference(PythonLikeTuple.class.getMethod("contains", Object.class),
-                            Map.of()));
+            registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(TUPLE_TYPE);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }
+    }
+
+    private static void registerMethods() throws NoSuchMethodException {
+        // Constructor
+        TUPLE_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+            if (positionalArguments.isEmpty()) {
+                return new PythonLikeTuple();
+            } else if (positionalArguments.size() == 1) {
+                PythonLikeTuple out = new PythonLikeTuple();
+                PythonLikeObject iterable = positionalArguments.get(0);
+                if (iterable instanceof Collection) {
+                    out.delegate.addAll((Collection<? extends PythonLikeObject>) iterable);
+                } else {
+                    Iterator<PythonLikeObject> iterator =
+                            (Iterator<PythonLikeObject>) UnaryDunderBuiltin.ITERATOR.invoke(iterable);
+                    iterator.forEachRemaining(out.delegate::add);
+                }
+                return out;
+            } else {
+                throw new ValueError("tuple takes 0 or 1 arguments, got " + positionalArguments.size());
+            }
+        });
+        // Unary
+        TUPLE_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonLikeTuple.class.getMethod("getLength"));
+        TUPLE_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonLikeTuple.class.getMethod("getIterator"));
+
+        // Binary
+        TUPLE_TYPE.addMethod(PythonBinaryOperators.ADD, PythonLikeTuple.class.getMethod("concatToNew", PythonLikeTuple.class));
+        TUPLE_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeTuple.class.getMethod("getItem", PythonInteger.class));
+        TUPLE_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+                PythonLikeTuple.class.getMethod("containsItem", PythonLikeObject.class));
+
+        // Other
+        TUPLE_TYPE.addMethod("index", PythonLikeTuple.class.getMethod("index", PythonLikeObject.class));
+        TUPLE_TYPE.addMethod("count", PythonLikeTuple.class.getMethod("count", PythonLikeObject.class));
     }
 
     public PythonLikeTuple() {
@@ -89,6 +113,10 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
         return delegate.size();
     }
 
+    public PythonInteger getLength() {
+        return PythonInteger.valueOf(delegate.size());
+    }
+
     @Override
     public boolean isEmpty() {
         return delegate.isEmpty();
@@ -99,9 +127,17 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
         return delegate.contains(o);
     }
 
+    public PythonBoolean containsItem(PythonLikeObject item) {
+        return PythonBoolean.valueOf(delegate.contains(item));
+    }
+
     @Override
     public Iterator<PythonLikeObject> iterator() {
         return delegate.iterator();
+    }
+
+    public PythonIterator getIterator() {
+        return new PythonIterator(delegate.iterator());
     }
 
     @Override
@@ -159,6 +195,14 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
         return delegate.get(i);
     }
 
+    public PythonLikeObject getItem(PythonInteger index) {
+        if (index.value.compareTo(BigInteger.ZERO) < 0) {
+            return delegate.get(delegate.size() + index.value.intValueExact());
+        } else {
+            return delegate.get(index.value.intValueExact());
+        }
+    }
+
     @Override
     public PythonLikeObject set(int i, PythonLikeObject pythonLikeObject) {
         return delegate.set(i, pythonLikeObject);
@@ -177,6 +221,10 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
     @Override
     public int indexOf(Object o) {
         return delegate.indexOf(o);
+    }
+
+    public PythonInteger index(PythonLikeObject item) {
+        return PythonInteger.valueOf(delegate.indexOf(item));
     }
 
     @Override

@@ -1,6 +1,5 @@
 package org.optaplanner.optapy;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -86,7 +85,7 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
         this.idMap = idMap;
         this.pythonSetter = pythonSetter;
         int size = getPythonListLength.apply(pythonListOpaqueReference);
-        this.cachedObjectList = new ArrayList<>(size);
+        this.cachedObjectList = getDelegate();
         for (int i = 0; i < size; i++) {
             cachedObjectList.add(null);
         }
