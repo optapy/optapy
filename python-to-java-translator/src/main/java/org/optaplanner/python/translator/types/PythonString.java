@@ -1,8 +1,5 @@
 package org.optaplanner.python.translator.types;
 
-import java.math.BigInteger;
-import java.util.Map;
-
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
@@ -17,11 +14,6 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     static {
         try {
             PythonLikeComparable.setup(STRING_TYPE);
-            STRING_TYPE.__dir__.put("__len__", new JavaMethodReference(PythonString.class.getMethod("length"),
-                    Map.of()));
-            STRING_TYPE.__dir__.put(PythonBinaryOperators.GET_ITEM.getDunderMethod(),
-                    new JavaMethodReference(PythonString.class.getMethod("getCharAt", PythonInteger.class),
-                            Map.of()));
             registerMethods();
             PythonOverloadImplementor.createDispatchesFor(STRING_TYPE);
         } catch (NoSuchMethodException e) {
@@ -40,10 +32,16 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
                 throw new ValueError("str expects");
             }
         });
-        STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonString.class.getMethod("getCharAt", PythonInteger.class));
+
+        // Unary
         STRING_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonString.class.getMethod("repr"));
         STRING_TYPE.addMethod(PythonUnaryOperator.AS_STRING, PythonString.class.getMethod("asString"));
         STRING_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonString.class.getMethod("getIterator"));
+        STRING_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonString.class.getMethod("getLength"));
+
+        // Binary
+        STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonString.class.getMethod("getCharAt", PythonInteger.class));
+        STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonString.class.getMethod("getSubstring", PythonSlice.class));
     }
 
     public PythonString(String value) {
@@ -84,11 +82,52 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         return value.length();
     }
 
+    public PythonInteger getLength() {
+        return PythonInteger.valueOf(value.length());
+    }
+
     public PythonString getCharAt(PythonInteger position) {
-        if (position.value.compareTo(BigInteger.valueOf(value.length())) >= 0) {
-            throw new IndexOutOfBoundsException("position " + position + " larger than string length " + value.length());
+        int index;
+        if (position.compareTo(PythonInteger.ZERO) < 0) {
+            index = value.length() - position.value.intValueExact();
+        } else {
+            index = position.value.intValueExact();
         }
-        return new PythonString(Character.toString(value.charAt(position.value.intValue())));
+
+        if (index >= value.length()) {
+            throw new IndexOutOfBoundsException("position " + position + " larger than string length " + value.length());
+        } else if (index < 0) {
+            throw new IndexOutOfBoundsException("position " + position + " is less than 0");
+        }
+
+        return new PythonString(Character.toString(value.charAt(index)));
+    }
+
+    public PythonString getSubstring(PythonSlice slice) {
+        int length = value.length();
+        int start = slice.getStartIndex(length);
+        int stop = slice.getStopIndex(length);
+        int step = slice.getStrideLength();
+
+        if (step == 1) {
+            if (stop <= start) {
+                return PythonString.valueOf("");
+            } else {
+                return PythonString.valueOf(value.substring(start, stop));
+            }
+        } else {
+            StringBuilder out = new StringBuilder();
+            if (step > 0) {
+                for (int i = start; i < stop; i += step) {
+                    out.append(value.charAt(i));
+                }
+            } else {
+                for (int i = start; i > stop; i += step) {
+                    out.append(value.charAt(i));
+                }
+            }
+            return PythonString.valueOf(out.toString());
+        }
     }
 
     public PythonIterator getIterator() {

@@ -19,8 +19,10 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
+import org.optaplanner.python.translator.types.PythonSlice;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 
 /**
@@ -601,5 +603,41 @@ public class CollectionImplementor {
                 "putAll",
                 Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Map.class)),
                 true);
+    }
+
+    public static void buildSlice(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int argCount) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+
+        if (argCount == 2) {
+            // Push 1 as the third argument (step)
+            methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonInteger.class), "ONE",
+                    Type.getDescriptor(PythonInteger.class));
+        } else if (argCount == 3) {
+            // do nothing; third argument already on stack
+        } else {
+            throw new IllegalArgumentException("arg for BUILD_SLICE must be 2 or 3");
+        }
+
+        // Store step in temp variable (need to move slice down 2)
+        int stepTemp = localVariableHelper.newLocal();
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), stepTemp);
+
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonSlice.class));
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        // Restore step
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), stepTemp);
+        localVariableHelper.freeLocal();
+
+        // Create the slice
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonSlice.class), "<init>",
+                Type.getMethodDescriptor(Type.VOID_TYPE,
+                        Type.getType(PythonLikeObject.class),
+                        Type.getType(PythonLikeObject.class),
+                        Type.getType(PythonLikeObject.class)),
+                false);
     }
 }

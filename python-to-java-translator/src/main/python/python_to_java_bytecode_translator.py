@@ -234,7 +234,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
     from org.optaplanner.python.translator import PythonLikeObject, CPythonBackedPythonInterpreter
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonBoolean, PythonString, \
         PythonComplex, PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonObjectWrapper, CPythonType, \
-        OpaquePythonReference, PythonModule
+        OpaquePythonReference, PythonModule, PythonSlice, PythonRange
 
     global type_to_compiled_java_class
 
@@ -292,6 +292,18 @@ def convert_to_java_python_like_object(value, instance_map=None):
             out.put(convert_to_java_python_like_object(map_key, instance_map),
                     convert_to_java_python_like_object(map_value, instance_map))
         return out
+    elif isinstance(value, slice):
+        out = PythonSlice(convert_to_java_python_like_object(value.start, instance_map),
+                          convert_to_java_python_like_object(value.stop, instance_map),
+                          convert_to_java_python_like_object(value.step, instance_map))
+        put_in_instance_map(instance_map, value, out)
+        return out
+    elif isinstance(value, range):
+        out = PythonRange(convert_to_java_python_like_object(value.start, instance_map),
+                          convert_to_java_python_like_object(value.stop, instance_map),
+                          convert_to_java_python_like_object(value.step, instance_map))
+        put_in_instance_map(instance_map, value, out)
+        return out
     elif isinstance(value, type):
         raw_type = erase_generic_args(value)
         if raw_type in type_to_compiled_java_class:
@@ -329,7 +341,8 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from java.util import List, Map, Set, Iterator
     from org.optaplanner.python.translator.types import PythonInteger, PythonFloat, PythonComplex, PythonBoolean, \
         PythonString, PythonLikeList, PythonLikeTuple, PythonLikeSet, PythonLikeDict, PythonNone, PythonModule, \
-        PythonObjectWrapper, JavaObjectWrapper, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType
+        PythonObjectWrapper, JavaObjectWrapper, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType, \
+        PythonSlice, PythonRange
 
     if isinstance(python_like_object, (PythonObjectWrapper, JavaObjectWrapper)):
         out = python_like_object.getWrappedObject()
@@ -369,6 +382,14 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
             out[unwrap_python_like_object(entry.getKey(), default)] = unwrap_python_like_object(entry.getValue(),
                                                                                                 default)
         return out
+    elif isinstance(python_like_object, PythonSlice):
+        return slice(unwrap_python_like_object(python_like_object.start),
+                     unwrap_python_like_object(python_like_object.stop),
+                     unwrap_python_like_object(python_like_object.step))
+    elif isinstance(python_like_object, PythonRange):
+        return range(unwrap_python_like_object(python_like_object.start),
+                     unwrap_python_like_object(python_like_object.stop),
+                     unwrap_python_like_object(python_like_object.step))
     elif isinstance(python_like_object, Iterator):
         class JavaIterator:
             def __init__(self, iterator):

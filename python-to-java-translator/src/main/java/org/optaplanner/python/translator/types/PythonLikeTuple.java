@@ -57,6 +57,7 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
         // Binary
         TUPLE_TYPE.addMethod(PythonBinaryOperators.ADD, PythonLikeTuple.class.getMethod("concatToNew", PythonLikeTuple.class));
         TUPLE_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeTuple.class.getMethod("getItem", PythonInteger.class));
+        TUPLE_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeTuple.class.getMethod("getSlice", PythonSlice.class));
         TUPLE_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
                 PythonLikeTuple.class.getMethod("containsItem", PythonLikeObject.class));
 
@@ -201,6 +202,27 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
         } else {
             return delegate.get(index.value.intValueExact());
         }
+    }
+
+    public PythonLikeTuple getSlice(PythonSlice slice) {
+        int length = size();
+        int start = slice.getStartIndex(length);
+        int stop = slice.getStopIndex(length);
+        int step = slice.getStrideLength();
+
+        PythonLikeTuple out = new PythonLikeTuple();
+
+        if (step > 0) {
+            for (int i = start; i < stop; i += step) {
+                out.add(delegate.get(i));
+            }
+        } else {
+            for (int i = start; i > stop; i += step) {
+                out.add(delegate.get(i));
+            }
+        }
+
+        return out;
     }
 
     @Override

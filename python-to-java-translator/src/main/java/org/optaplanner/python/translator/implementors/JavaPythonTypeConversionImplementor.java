@@ -147,6 +147,10 @@ public class JavaPythonTypeConversionImplementor {
             return PythonFloat.FLOAT_TYPE;
         }
 
+        if (PythonNumber.class.equals(javaClass)) {
+            return PythonNumber.NUMBER_TYPE;
+        }
+
         if (boolean.class.equals(javaClass) ||
                 Boolean.class.equals(javaClass) ||
                 PythonBoolean.class.equals(javaClass)) {

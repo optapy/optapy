@@ -15,8 +15,11 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
+import org.optaplanner.python.translator.TriFunction;
 import org.optaplanner.python.translator.types.PythonInteger;
+import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
+import org.optaplanner.python.translator.types.PythonSlice;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -399,5 +402,61 @@ public class CollectionImplementorTest {
 
         javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
         assertThat(javaFunction.apply(1, 0)).isEqualTo(List.of(PythonInteger.valueOf(1), PythonInteger.valueOf(0)));
+    }
+
+    @Test
+    public void testBuildSliceTwoArgs() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("start", "stop")
+                .loadParameter("start")
+                .loadParameter("stop")
+                .op(OpcodeIdentifier.BUILD_SLICE, 2)
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        BiFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, BiFunction.class);
+        assertThat(javaFunction.apply(1, 2))
+                .isEqualTo(new PythonSlice(PythonInteger.valueOf(1), PythonInteger.valueOf(2), PythonInteger.valueOf(1)));
+    }
+
+    @Test
+    public void testBuildSliceThreeArgs() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("start", "stop", "step")
+                .loadParameter("start")
+                .loadParameter("stop")
+                .loadParameter("step")
+                .op(OpcodeIdentifier.BUILD_SLICE, 3)
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        TriFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, TriFunction.class);
+        assertThat(javaFunction.apply(1, 2, 3))
+                .isEqualTo(new PythonSlice(PythonInteger.valueOf(1), PythonInteger.valueOf(2), PythonInteger.valueOf(3)));
+    }
+
+    @Test
+    public void testSequenceSlice() {
+        PythonCompiledFunction pythonCompiledFunction = PythonFunctionBuilder.newFunction("sequence", "start", "stop")
+                .loadParameter("sequence")
+                .loadParameter("start")
+                .loadParameter("stop")
+                .op(OpcodeIdentifier.BUILD_SLICE, 2)
+                .op(OpcodeIdentifier.BINARY_SUBSCR)
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        TriFunction javaFunction = translatePythonBytecode(pythonCompiledFunction, TriFunction.class);
+        assertThat(javaFunction.apply(new PythonLikeList(List.of(PythonInteger.valueOf(1),
+                PythonInteger.valueOf(2),
+                PythonInteger.valueOf(3),
+                PythonInteger.valueOf(4),
+                PythonInteger.valueOf(5))), 1, 2))
+                        .isEqualTo(new PythonLikeList(List.of(PythonInteger.valueOf(2))));
+
+        assertThat(javaFunction.apply(PythonLikeTuple.fromList(List.of(PythonInteger.valueOf(1),
+                PythonInteger.valueOf(2),
+                PythonInteger.valueOf(3),
+                PythonInteger.valueOf(4),
+                PythonInteger.valueOf(5))), 1, 2))
+                        .isEqualTo(PythonLikeTuple.fromList(List.of(PythonInteger.valueOf(2))));
     }
 }

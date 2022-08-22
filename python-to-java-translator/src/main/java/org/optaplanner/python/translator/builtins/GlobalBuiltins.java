@@ -31,6 +31,7 @@ import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonRange;
+import org.optaplanner.python.translator.types.PythonSlice;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.AttributeError;
 import org.optaplanner.python.translator.types.errors.StopIteration;
@@ -129,6 +130,8 @@ public class GlobalBuiltins {
                 return PythonLikeSet.SET_TYPE;
             case "setattr":
                 return ((PythonLikeFunction) GlobalBuiltins::setattr);
+            case "slice":
+                return PythonSlice.SLICE_TYPE;
             case "str":
                 return PythonString.STRING_TYPE;
             case "tuple":

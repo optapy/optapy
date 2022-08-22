@@ -550,6 +550,31 @@ def test_setattr():
     assert java_function(a, 'test', 'value 2') == my_function(b, 'test', 'value 2')
 
 
+def test_slice():
+    def my_function(start, stop):
+        return slice(start, stop)
+
+    def my_function_with_step(start, stop, step):
+        return slice(start, stop, step)
+
+    class MyClassWithIndex:
+        def __init__(self, index):
+            self.index = index
+
+        def __index__(self):
+            return self.index
+
+        def __eq__(self, other):
+            return self.index == other.index
+
+    java_function = javapython.as_java(my_function)
+    java_function_with_step = javapython.as_java(my_function_with_step)
+
+    assert java_function(1, 5) == my_function(1, 5)
+    assert java_function(1, MyClassWithIndex(3)) == my_function(1, MyClassWithIndex(3))
+    assert java_function_with_step(1, 5, 2) == my_function_with_step(1, 5, 2)
+
+
 def test_str():
     def my_function(x):
         return str(x)

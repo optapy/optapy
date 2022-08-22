@@ -18,10 +18,11 @@ import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonRange extends AbstractPythonLikeObject implements List<PythonInteger> {
     public static PythonLikeType RANGE_TYPE = new PythonLikeType("range", PythonRange.class);
+    public static PythonLikeType $TYPE = RANGE_TYPE;
 
-    final PythonInteger start;
-    final PythonInteger stop;
-    final PythonInteger step;
+    public final PythonInteger start;
+    public final PythonInteger stop;
+    public final PythonInteger step;
 
     static {
         try {

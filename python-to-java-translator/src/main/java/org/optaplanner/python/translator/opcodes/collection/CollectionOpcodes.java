@@ -33,7 +33,7 @@ public class CollectionOpcodes {
             // Collection Construction Operations
             // **************************************************
             case BUILD_SLICE: {
-                return Optional.empty(); // TODO
+                return Optional.of(new BuildSliceOpcode(instruction));
             }
 
             case BUILD_TUPLE: {

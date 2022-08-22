@@ -55,6 +55,7 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         LIST_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
                 PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class));
         LIST_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeList.class.getMethod("getItem", PythonInteger.class));
+        LIST_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeList.class.getMethod("getSlice", PythonSlice.class));
         LIST_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
                 PythonLikeList.class.getMethod("deleteItem", PythonInteger.class));
         LIST_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
@@ -241,6 +242,27 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         } else {
             return (PythonLikeObject) delegate.get(index.value.intValueExact());
         }
+    }
+
+    public PythonLikeList getSlice(PythonSlice slice) {
+        int length = size();
+        int start = slice.getStartIndex(length);
+        int stop = slice.getStopIndex(length);
+        int step = slice.getStrideLength();
+
+        PythonLikeList out = new PythonLikeList();
+
+        if (step > 0) {
+            for (int i = start; i < stop; i += step) {
+                out.add(delegate.get(i));
+            }
+        } else {
+            for (int i = start; i > stop; i += step) {
+                out.add(delegate.get(i));
+            }
+        }
+
+        return out;
     }
 
     @Override
