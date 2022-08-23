@@ -1,5 +1,6 @@
 import javapython
 import pytest
+import sys
 
 
 def test_abs():
@@ -233,6 +234,8 @@ def test_getattr():
 
 
 global_variable = 10
+
+
 def test_globals():
     def my_function():
         global global_variable
@@ -266,6 +269,7 @@ def test_hash():
     assert java_function(1) == my_function(1)
     assert java_function(1.0) == my_function(1.0)
     assert java_function(True) == my_function(True)
+
 
 def test_id():
     def my_function(x):
@@ -517,6 +521,52 @@ def test_repr():
     assert java_function([1, '2', 3]) == my_function([1, '2', 3])
 
 
+def test_reversed():
+    def my_function(x):
+        return reversed(x)
+
+    class TestClass:
+        def __reversed__(self):
+            yield from range(10, 1, -1)
+
+    java_function = javapython.as_java(my_function)
+
+    assert list(java_function([1, 2, 3])) == list(my_function([1, 2, 3]))
+    assert list(java_function((1, 2, 3))) == list(my_function((1, 2, 3)))
+    assert list(java_function(TestClass())) == list(my_function(TestClass()))
+
+
+def test_round():
+    def my_function(x):
+        return round(x)
+
+    def my_function_with_precision(x, y):
+        return round(x, y)
+
+    java_function = javapython.as_java(my_function)
+    java_function_with_precision = javapython.as_java(my_function_with_precision)
+    assert java_function(15) == my_function(15)
+    assert java_function(1.5) == my_function(1.5)
+    assert java_function(1.2) == my_function(1.2)
+    assert java_function(1.7) == my_function(1.7)
+    assert java_function(2.5) == my_function(2.5)
+
+    assert java_function_with_precision(15, 0) == my_function_with_precision(15, 0)
+    assert java_function_with_precision(15, 2) == my_function_with_precision(15, 2)
+    assert java_function_with_precision(15, -1) == my_function_with_precision(15, -1)
+    assert java_function_with_precision(25, -1) == my_function_with_precision(25, -1)
+
+    assert java_function_with_precision(1.076, 2) == my_function_with_precision(1.076, 2)
+    assert java_function_with_precision(1.024, 2) == my_function_with_precision(1.024, 2)
+    assert java_function_with_precision(1.045, 2) == my_function_with_precision(1.045, 2)
+    assert java_function_with_precision(1.055, 2) == my_function_with_precision(1.055, 2)
+
+    assert java_function_with_precision(176.0, -1) == my_function_with_precision(176.0, -1)
+    assert java_function_with_precision(124.0, -1) == my_function_with_precision(124.0, -1)
+    assert java_function_with_precision(145.0, -1) == my_function_with_precision(145.0, -1)
+    assert java_function_with_precision(155.0, -1) == my_function_with_precision(155.0, -1)
+
+
 def test_set():
     def my_function():
         return set()
@@ -575,6 +625,31 @@ def test_slice():
     assert java_function_with_step(1, 5, 2) == my_function_with_step(1, 5, 2)
 
 
+def test_sorted():
+    def my_function(x):
+        return sorted(x)
+
+    def my_function_with_key(x, y):
+        return sorted(x, key=y)
+
+    def my_function_with_reverse(x, y):
+        return sorted(x, reverse=y)
+
+    def my_function_with_key_and_reverse(x, y, z):
+        return sorted(x, key=y, reverse=z)
+
+    java_function = javapython.as_java(my_function)
+    java_function_with_key = javapython.as_java(my_function_with_key)
+    java_function_with_reverse = javapython.as_java(my_function_with_reverse)
+    java_function_with_key_and_reverse = javapython.as_java(my_function_with_key_and_reverse)
+
+    assert java_function([2, 3, 1, 4]) == my_function([2, 3, 1, 4])
+    assert java_function_with_key([2, 3, 1, 4], lambda x: -x) == my_function_with_key([2, 3, 1, 4], lambda x: -x)
+    assert java_function_with_reverse([2, 3, 1, 4], True) == my_function_with_reverse([2, 3, 1, 4], True)
+    assert java_function_with_key_and_reverse([2, 3, 1, 4], lambda x: -x, True) == \
+           my_function_with_key_and_reverse([2, 3, 1, 4], lambda x: -x, True)
+
+
 def test_str():
     def my_function(x):
         return str(x)
@@ -591,6 +666,24 @@ def test_str():
 
     a = TestObject()
     assert java_function(a) == my_function(a)
+
+
+def test_sum():
+    def my_function(x):
+        return sum(x)
+
+    def my_function_with_start(x, y):
+        return sum(x, y)
+
+    java_function = javapython.as_java(my_function)
+    java_function_with_start = javapython.as_java(my_function_with_start)
+
+    assert java_function([]) == my_function([])
+    assert java_function([1, 3, 5]) == my_function([1, 3, 5])
+    assert java_function([1.0, 3.0, 5.0]) == my_function([1.0, 3.0, 5.0])
+    assert java_function_with_start([], 1.5) == my_function_with_start([], 1.5)
+    assert java_function_with_start([1, 3, 5], 1.5) == my_function_with_start([1, 3, 5], 1.5)
+    assert java_function_with_start([1.0, 3.0, 5.0], 1.5) == my_function_with_start([1.0, 3.0, 5.0], 1.5)
 
 
 def test_tuple():
@@ -621,3 +714,36 @@ def test_type():
     assert java_function([1, 2]) == my_function([1, 2])
     assert java_function(MyObject()) == my_function(MyObject())
     assert java_function(MyObject) == my_function(MyObject)
+
+
+def test_zip():
+    def my_function(iterables):
+        return zip(*iterables)
+
+    def my_function_strict(iterables, is_strict):
+        return zip(*iterables, strict=is_strict)
+
+    java_function = javapython.as_java(my_function)
+    java_function_strict = javapython.as_java(my_function_strict)
+
+    assert list(java_function([])) == list(my_function([]))
+    assert list(java_function(((1, 2, 3),))) == list(my_function(((1, 2, 3),)))
+    assert list(java_function(((1, 2, 3), (4, 5, 6)))) == list(my_function(((1, 2, 3), (4, 5, 6))))
+    assert list(java_function(((1, 2, 3), (4, 5)))) == list(my_function(((1, 2, 3), (4, 5))))
+    assert list(java_function(((1, 2), (4, 5, 6)))) == list(my_function(((1, 2), (4, 5, 6))))
+
+    if sys.version_info >= (3, 10):
+        assert list(java_function_strict(((1, 2, 3),), True)) == list(my_function_strict(((1, 2, 3),), True))
+        assert list(java_function_strict(((1, 2, 3), (4, 5, 6)), True)) == list(my_function_strict(((1, 2, 3), (4, 5, 6)), True))
+
+        with pytest.raises(ValueError):
+            try:
+                list(java_function_strict(((1, 2, 3), (4, 5)), True))
+            except Exception as e:
+                raise javapython.unwrap_python_like_object(e)
+
+        with pytest.raises(ValueError):
+            try:
+                list(java_function_strict(((1, 2), (4, 5, 6)), True))
+            except Exception as e:
+                raise javapython.unwrap_python_like_object(e)

@@ -14,6 +14,8 @@ public class BinaryDunderBuiltin implements PythonLikeFunction {
 
     public static final BinaryDunderBuiltin DIVMOD = new BinaryDunderBuiltin(PythonBinaryOperators.DIVMOD);
     public static final BinaryDunderBuiltin ADD = new BinaryDunderBuiltin(PythonBinaryOperators.ADD);
+    public static final BinaryDunderBuiltin LESS_THAN = new BinaryDunderBuiltin(PythonBinaryOperators.LESS_THAN);
+    public static final BinaryDunderBuiltin GET_ITEM = new BinaryDunderBuiltin(PythonBinaryOperators.GET_ITEM);
     public static final BinaryDunderBuiltin POWER = new BinaryDunderBuiltin(PythonBinaryOperators.POWER);
     public static final BinaryDunderBuiltin FORMAT = new BinaryDunderBuiltin(PythonBinaryOperators.FORMAT);
 

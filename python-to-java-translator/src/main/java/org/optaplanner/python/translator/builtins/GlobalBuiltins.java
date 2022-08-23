@@ -5,19 +5,26 @@ import static java.lang.StackWalker.Option.RETAIN_CLASS_REFERENCE;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
+import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonFloat;
@@ -126,18 +133,32 @@ public class GlobalBuiltins {
                 return PythonRange.RANGE_TYPE;
             case "repr":
                 return UnaryDunderBuiltin.REPRESENTATION;
+            case "reversed":
+                return ((PythonLikeFunction) GlobalBuiltins::reversed);
+            case "round":
+                return ((PythonLikeFunction) GlobalBuiltins::round);
             case "set":
                 return PythonLikeSet.SET_TYPE;
             case "setattr":
                 return ((PythonLikeFunction) GlobalBuiltins::setattr);
             case "slice":
                 return PythonSlice.SLICE_TYPE;
+            case "sorted":
+                return ((PythonLikeFunction) GlobalBuiltins::sorted);
             case "str":
                 return PythonString.STRING_TYPE;
+            case "sum":
+                return ((PythonLikeFunction) GlobalBuiltins::sum);
             case "tuple":
                 return PythonLikeTuple.TUPLE_TYPE;
             case "type":
                 return PythonLikeType.getTypeType();
+            case "vars":
+                return ((PythonLikeFunction) GlobalBuiltins::vars);
+            case "zip":
+                return ((PythonLikeFunction) GlobalBuiltins::zip);
+            case "__import__":
+                return GlobalBuiltins.importFunction(interpreter);
             default:
                 return null;
         }
@@ -986,6 +1007,63 @@ public class GlobalBuiltins {
         };
     };
 
+    public static PythonLikeObject reversed(List<PythonLikeObject> positionalArgs,
+            Map<PythonString, PythonLikeObject> keywordArgs) {
+        keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
+
+        PythonLikeObject sequence;
+        if (positionalArgs.size() != 1) {
+            throw new ValueError("reversed() expects 1 argument, got " + positionalArgs.size());
+        }
+
+        sequence = positionalArgs.get(0);
+        PythonLikeType sequenceType = sequence.__getType();
+        if (sequenceType.__getAttributeOrNull(PythonUnaryOperator.REVERSED.getDunderMethod()) != null) {
+            return UnaryDunderBuiltin.REVERSED.invoke(sequence);
+        }
+
+        if (sequenceType.__getAttributeOrNull(PythonUnaryOperator.LENGTH.getDunderMethod()) != null &&
+                sequenceType.__getAttributeOrNull(PythonBinaryOperators.GET_ITEM.getDunderMethod()) != null) {
+            PythonInteger length = (PythonInteger) UnaryDunderBuiltin.LENGTH.invoke(sequence);
+            Iterator<PythonLikeObject> reversedIterator = new Iterator<>() {
+                PythonInteger current = length.subtract(PythonInteger.ONE);
+
+                @Override
+                public boolean hasNext() {
+                    return current.compareTo(PythonInteger.ZERO) >= 0;
+                }
+
+                @Override
+                public PythonLikeObject next() {
+                    PythonLikeObject out = BinaryDunderBuiltin.GET_ITEM.invoke(sequence, current);
+                    current = current.subtract(PythonInteger.ONE);
+                    return out;
+                }
+            };
+
+            return new PythonIterator(reversedIterator);
+        }
+
+        throw new ValueError(sequenceType + " does not has a __reversed__ method and does not implement the Sequence protocol");
+    }
+
+    public static PythonLikeObject round(List<PythonLikeObject> positionalArgs,
+            Map<PythonString, PythonLikeObject> keywordArgs) {
+        keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
+
+        if (!(positionalArgs.size() == 1 || positionalArgs.size() == 2)) {
+            throw new ValueError("round() expects 1 or 2 arguments, got " + positionalArgs.size());
+        }
+
+        PythonLikeObject number = positionalArgs.get(0);
+        PythonLikeType numberType = number.__getType();
+        if (numberType.__getAttributeOrNull("__round__") != null) {
+            return ((PythonLikeFunction) numberType.__getAttributeOrNull("__round__")).__call__(positionalArgs, keywordArgs);
+        }
+
+        throw new ValueError(numberType + " does not has a __round__ method");
+    }
+
     public static PythonLikeObject setattr(List<PythonLikeObject> positionalArgs,
             Map<PythonString, PythonLikeObject> keywordArgs) {
         PythonLikeObject object;
@@ -1018,5 +1096,280 @@ public class GlobalBuiltins {
         }
 
         return TernaryDunderBuiltin.SETATTR.invoke(object, name, value);
+    }
+
+    public static PythonLikeObject sorted(List<PythonLikeObject> positionalArgs,
+            Map<PythonString, PythonLikeObject> keywordArgs) {
+        keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
+
+        PythonLikeObject iterable = positionalArgs.get(0);
+
+        boolean isReversed = false;
+        if (keywordArgs.containsKey(PythonString.valueOf("reverse"))) {
+            isReversed = ((PythonBoolean) keywordArgs.get(PythonString.valueOf("reverse"))).getBooleanValue();
+        }
+
+        PythonLikeList out = new PythonLikeList();
+        if (iterable instanceof Collection) {
+            out.addAll((Collection) iterable);
+        } else {
+            Iterator<PythonLikeObject> iterator = (Iterator<PythonLikeObject>) UnaryDunderBuiltin.ITERATOR.invoke(iterable);
+            iterator.forEachRemaining(out::add);
+        }
+
+        Comparator keyComparator = isReversed ? Comparator.reverseOrder() : Comparator.naturalOrder();
+        List<KeyTuple> decoratedList = null;
+
+        if (keywordArgs.containsKey(PythonString.valueOf("key"))) {
+            PythonLikeObject key = keywordArgs.get(PythonString.valueOf("key"));
+            if (key != PythonNone.INSTANCE) {
+                final PythonLikeFunction keyFunction = (PythonLikeFunction) key;
+                final Function keyExtractor = item -> keyFunction.__call__(List.of((PythonLikeObject) item), null);
+                decoratedList = new ArrayList<>(out.size());
+                for (int i = 0; i < out.size(); i++) {
+                    decoratedList.add(
+                            new KeyTuple((PythonLikeObject) keyExtractor.apply(out.get(i)), i, (PythonLikeObject) out.get(i)));
+                }
+            } else {
+                keyComparator = isReversed ? Comparator.reverseOrder() : Comparator.naturalOrder();
+            }
+        } else {
+            keyComparator = isReversed ? Comparator.reverseOrder() : Comparator.naturalOrder();
+        }
+
+        if (decoratedList != null) {
+            Collections.sort(decoratedList, keyComparator);
+            out.clear();
+            for (KeyTuple keyTuple : decoratedList) {
+                out.add(keyTuple.source);
+            }
+        } else {
+            Collections.sort(out, keyComparator);
+        }
+
+        return out;
+    }
+
+    public static PythonLikeObject sum(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs) {
+        keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
+
+        PythonLikeObject iterable;
+        PythonLikeObject start;
+
+        if (positionalArgs.size() == 2) {
+            iterable = positionalArgs.get(0);
+            start = positionalArgs.get(1);
+        } else if (positionalArgs.size() == 1) {
+            iterable = positionalArgs.get(0);
+            start = keywordArgs.getOrDefault(PythonString.valueOf("start"), PythonInteger.ZERO);
+        } else if (positionalArgs.size() == 0) {
+            iterable = keywordArgs.get(PythonString.valueOf("iterable"));
+            start = keywordArgs.getOrDefault(PythonString.valueOf("start"), PythonInteger.ZERO);
+        } else {
+            throw new ValueError("sum() expects 1 or 2 arguments, got " + positionalArgs.size());
+        }
+
+        PythonLikeObject current = start;
+
+        Iterator<PythonLikeObject> iterator = (Iterator<PythonLikeObject>) UnaryDunderBuiltin.ITERATOR.invoke(iterable);
+        while (iterator.hasNext()) {
+            PythonLikeObject item = iterator.next();
+            current = BinaryDunderBuiltin.ADD.invoke(current, item);
+        }
+
+        return current;
+    }
+
+    public static PythonLikeObject vars(List<PythonLikeObject> positionalArgs,
+            Map<PythonString, PythonLikeObject> keywordArgs) {
+        if (positionalArgs.isEmpty()) {
+            throw new ValueError("0-argument version of vars is not supported when executed in Java bytecode");
+        }
+
+        return positionalArgs.get(0).__getAttributeOrError("__dict__");
+    }
+
+    public static PythonIterator zip(List<PythonLikeObject> positionalArgs,
+            Map<PythonString, PythonLikeObject> keywordArgs) {
+        keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
+        List<PythonLikeObject> iterableList = positionalArgs;
+        boolean isStrict = false;
+
+        if (keywordArgs.containsKey(PythonString.valueOf("strict"))) {
+            isStrict = ((PythonBoolean) keywordArgs.get(PythonString.valueOf("strict"))).getBooleanValue();
+        }
+
+        final List<Iterator> iteratorList = new ArrayList<>(iterableList.size());
+
+        for (PythonLikeObject iterable : iterableList) {
+            Iterator iterator;
+            if (iterable instanceof Collection) {
+                iterator = ((Collection) iterable).iterator();
+            } else if (iterable instanceof Iterator) {
+                iterator = (Iterator) iterable;
+            } else {
+                iterator = (Iterator) UnaryDunderBuiltin.ITERATOR.invoke(iterable);
+            }
+            iteratorList.add(iterator);
+        }
+
+        final boolean isStrictFinal = isStrict;
+
+        if (iteratorList.isEmpty()) {
+            // Return an empty iterator if there are no iterators
+            return new PythonIterator(iteratorList.iterator());
+        }
+
+        Iterator<List<PythonLikeObject>> iteratorIterator = new Iterator<List<PythonLikeObject>>() {
+            @Override
+            public boolean hasNext() {
+                if (isStrictFinal) {
+                    int firstWithoutNext = -1;
+                    int firstWithNext = -1;
+                    for (int i = 0; i < iteratorList.size(); i++) {
+                        if (iteratorList.get(i).hasNext() && firstWithNext == -1) {
+                            firstWithNext = i;
+                        } else if (!iteratorList.get(i).hasNext() && firstWithoutNext == -1) {
+                            firstWithoutNext = i;
+                        }
+
+                        if (firstWithNext != -1 && firstWithoutNext != -1) {
+                            throw new ValueError(
+                                    "zip() argument " + firstWithNext + " longer than argument " + firstWithoutNext);
+                        }
+                    }
+                    return firstWithoutNext == -1;
+                } else {
+                    return iteratorList.stream().allMatch(Iterator::hasNext);
+                }
+            }
+
+            @Override
+            public List<PythonLikeObject> next() {
+                PythonLikeTuple out = new PythonLikeTuple();
+                for (Iterator iterator : iteratorList) {
+                    out.add((PythonLikeObject) iterator.next());
+                }
+                return out;
+            }
+        };
+
+        return new PythonIterator(iteratorIterator);
+    }
+
+    public static PythonLikeFunction importFunction(PythonInterpreter pythonInterpreter) {
+        return (positionalArguments, namedArguments) -> {
+            namedArguments = (namedArguments) != null ? namedArguments : Map.of();
+
+            PythonString name;
+            PythonLikeDict globals;
+            PythonLikeDict locals;
+            PythonLikeTuple fromlist;
+            PythonInteger level;
+
+            if (positionalArguments.size() == 0) {
+                name = (PythonString) namedArguments.get(PythonString.valueOf("name"));
+                if (name == null) {
+                    throw new ValueError("name is required for __import__()");
+                }
+                globals = (PythonLikeDict) namedArguments.getOrDefault(PythonString.valueOf("globals"), new PythonLikeDict());
+                locals = (PythonLikeDict) namedArguments.getOrDefault(PythonString.valueOf("locals"), new PythonLikeDict());
+                fromlist =
+                        (PythonLikeTuple) namedArguments.getOrDefault(PythonString.valueOf("fromlist"), new PythonLikeTuple());
+                level = (PythonInteger) namedArguments.getOrDefault(PythonString.valueOf("level"), PythonInteger.ZERO);
+            } else if (positionalArguments.size() == 1) {
+                name = (PythonString) positionalArguments.get(0);
+                globals = (PythonLikeDict) namedArguments.getOrDefault(PythonString.valueOf("globals"), new PythonLikeDict());
+                locals = (PythonLikeDict) namedArguments.getOrDefault(PythonString.valueOf("locals"), new PythonLikeDict());
+                fromlist =
+                        (PythonLikeTuple) namedArguments.getOrDefault(PythonString.valueOf("fromlist"), new PythonLikeTuple());
+                level = (PythonInteger) namedArguments.getOrDefault(PythonString.valueOf("level"), PythonInteger.ZERO);
+            } else if (positionalArguments.size() == 2) {
+                name = (PythonString) positionalArguments.get(0);
+                globals = (PythonLikeDict) positionalArguments.get(1);
+                locals = (PythonLikeDict) namedArguments.getOrDefault(PythonString.valueOf("locals"), new PythonLikeDict());
+                fromlist =
+                        (PythonLikeTuple) namedArguments.getOrDefault(PythonString.valueOf("fromlist"), new PythonLikeTuple());
+                level = (PythonInteger) namedArguments.getOrDefault(PythonString.valueOf("level"), PythonInteger.ZERO);
+            } else if (positionalArguments.size() == 3) {
+                name = (PythonString) positionalArguments.get(0);
+                globals = (PythonLikeDict) positionalArguments.get(1);
+                locals = (PythonLikeDict) positionalArguments.get(2);
+                fromlist =
+                        (PythonLikeTuple) namedArguments.getOrDefault(PythonString.valueOf("fromlist"), new PythonLikeTuple());
+                level = (PythonInteger) namedArguments.getOrDefault(PythonString.valueOf("level"), PythonInteger.ZERO);
+            } else if (positionalArguments.size() == 4) {
+                name = (PythonString) positionalArguments.get(0);
+                globals = (PythonLikeDict) positionalArguments.get(1);
+                locals = (PythonLikeDict) positionalArguments.get(2);
+                fromlist = (PythonLikeTuple) positionalArguments.get(3);
+                level = (PythonInteger) namedArguments.getOrDefault(PythonString.valueOf("level"), PythonInteger.ZERO);
+            } else if (positionalArguments.size() == 5) {
+                name = (PythonString) positionalArguments.get(0);
+                globals = (PythonLikeDict) positionalArguments.get(1);
+                locals = (PythonLikeDict) positionalArguments.get(2);
+                fromlist = (PythonLikeTuple) positionalArguments.get(3);
+                level = (PythonInteger) positionalArguments.get(4);
+            } else {
+                throw new ValueError("__import__ expects 1 to 5 arguments, got " + positionalArguments.size());
+            }
+
+            Map<String, PythonLikeObject> stringGlobals = new HashMap<>();
+            Map<String, PythonLikeObject> stringLocals = new HashMap<>();
+
+            for (PythonLikeObject key : globals.keySet()) {
+                stringGlobals.put(((PythonString) key).value, globals.get(key));
+            }
+
+            for (PythonLikeObject key : locals.keySet()) {
+                stringLocals.put(((PythonString) key).value, globals.get(key));
+            }
+
+            return pythonInterpreter.importModule(level, (List) fromlist, stringGlobals, stringLocals, name.value);
+        };
+    }
+
+    private final static class KeyTuple implements Comparable<KeyTuple> {
+        final PythonLikeObject key;
+        final int index;
+        final PythonLikeObject source;
+
+        public KeyTuple(PythonLikeObject key, int index, PythonLikeObject source) {
+            this.key = key;
+            this.index = index;
+            this.source = source;
+        }
+
+        @Override
+        public int compareTo(KeyTuple other) {
+            PythonBoolean result = (PythonBoolean) BinaryDunderBuiltin.LESS_THAN.invoke(key, other.key);
+            if (result.getBooleanValue()) {
+                return -1;
+            }
+
+            result = (PythonBoolean) BinaryDunderBuiltin.LESS_THAN.invoke(other.key, key);
+            if (result.getBooleanValue()) {
+                return 1;
+            }
+
+            return index - other.index;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            KeyTuple keyTuple = (KeyTuple) o;
+            return index == keyTuple.index && key.equals(keyTuple.key);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, index);
+        }
     }
 }

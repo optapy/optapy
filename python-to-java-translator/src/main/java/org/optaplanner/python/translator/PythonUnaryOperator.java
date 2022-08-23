@@ -21,6 +21,7 @@ public enum PythonUnaryOperator {
     ENTER("__enter__"),
     LENGTH("__len__"),
     NEXT("__next__"),
+    REVERSED("__reversed__"),
     HASH("__hash__");
 
     final String dunderMethod;

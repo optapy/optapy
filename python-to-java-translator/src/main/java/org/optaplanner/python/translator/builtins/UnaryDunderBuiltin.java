@@ -19,6 +19,7 @@ public class UnaryDunderBuiltin implements PythonLikeFunction {
     public static final UnaryDunderBuiltin ITERATOR = new UnaryDunderBuiltin(PythonUnaryOperator.ITERATOR);
     public static final UnaryDunderBuiltin LENGTH = new UnaryDunderBuiltin(PythonUnaryOperator.LENGTH);
     public static final UnaryDunderBuiltin NEXT = new UnaryDunderBuiltin(PythonUnaryOperator.NEXT);
+    public static final UnaryDunderBuiltin REVERSED = new UnaryDunderBuiltin(PythonUnaryOperator.REVERSED);
     public static final UnaryDunderBuiltin REPRESENTATION = new UnaryDunderBuiltin(PythonUnaryOperator.REPRESENTATION);
     public static final UnaryDunderBuiltin STR = new UnaryDunderBuiltin(PythonUnaryOperator.AS_STRING);
 

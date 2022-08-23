@@ -1,21 +1,31 @@
 package org.optaplanner.python.translator.types;
 
 import java.util.Iterator;
-import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 
-public class PythonIterator extends AbstractPythonLikeObject implements Iterator {
+public class PythonIterator<T> extends AbstractPythonLikeObject implements Iterator<T> {
     public static final PythonLikeType ITERATOR_TYPE = new PythonLikeType("iterator", PythonIterator.class);
-    private final Iterator delegate;
+    private final Iterator<T> delegate;
 
     static {
-        ITERATOR_TYPE.__dir__.put("__next__",
-                new UnaryLambdaReference((self) -> (PythonLikeObject) ((PythonIterator) self).next(), Map.of()));
+        try {
+            registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(ITERATOR_TYPE);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public PythonIterator(Iterator delegate) {
+    private static void registerMethods() throws NoSuchMethodException {
+        ITERATOR_TYPE.addMethod(PythonUnaryOperator.NEXT, PythonIterator.class.getMethod("nextPythonItem"));
+        ITERATOR_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonIterator.class.getMethod("getIterator"));
+    }
+
+    public PythonIterator(Iterator<T> delegate) {
         super(ITERATOR_TYPE);
         this.delegate = delegate;
     }
@@ -26,10 +36,21 @@ public class PythonIterator extends AbstractPythonLikeObject implements Iterator
     }
 
     @Override
-    public Object next() {
+    public T next() {
         if (!delegate.hasNext()) {
             throw new StopIteration();
         }
         return delegate.next();
+    }
+
+    public PythonLikeObject nextPythonItem() {
+        if (!delegate.hasNext()) {
+            throw new StopIteration();
+        }
+        return (PythonLikeObject) delegate.next();
+    }
+
+    public PythonIterator<T> getIterator() {
+        return this;
     }
 }

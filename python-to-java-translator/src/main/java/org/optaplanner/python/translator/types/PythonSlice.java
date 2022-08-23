@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
 import org.optaplanner.python.translator.types.errors.ValueError;
@@ -21,6 +22,7 @@ public class PythonSlice extends AbstractPythonLikeObject {
     static {
         try {
             registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(SLICE_TYPE);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }

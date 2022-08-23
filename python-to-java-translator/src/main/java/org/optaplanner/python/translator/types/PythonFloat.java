@@ -2,6 +2,7 @@ package org.optaplanner.python.translator.types;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.util.List;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
@@ -120,6 +121,10 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
                 PythonFloat.class.getMethod("greaterThanOrEqual", PythonInteger.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 PythonFloat.class.getMethod("greaterThanOrEqual", PythonFloat.class));
+
+        // Other
+        FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round"));
+        FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round", PythonInteger.class));
     }
 
     @Override
@@ -332,6 +337,28 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         }
         return PythonLikeTuple.fromList(List.of(quotient.asFloat(),
                 remainder));
+    }
+
+    public PythonInteger round() {
+        if (value % 1.0 == 0.5) {
+            long floor = (long) Math.floor(value);
+            if (floor % 2 == 0) {
+                return PythonInteger.valueOf(floor);
+            } else {
+                return PythonInteger.valueOf(floor + 1);
+            }
+        }
+        return PythonInteger.valueOf(Math.round(value));
+    }
+
+    public PythonNumber round(PythonInteger digitsAfterDecimal) {
+        if (digitsAfterDecimal.equals(PythonInteger.ZERO)) {
+            return round();
+        }
+
+        BigDecimal asDecimal = BigDecimal.valueOf(value);
+        return new PythonFloat(
+                asDecimal.setScale(digitsAfterDecimal.value.intValueExact(), RoundingMode.HALF_EVEN).doubleValue());
     }
 
     public PythonFloat power(PythonInteger other) {

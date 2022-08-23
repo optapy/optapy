@@ -144,6 +144,10 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
                 PythonInteger.class.getMethod("greaterThanOrEqual", PythonInteger.class));
         INT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 PythonInteger.class.getMethod("greaterThanOrEqual", PythonFloat.class));
+
+        // Other
+        INT_TYPE.addMethod("__round__", PythonInteger.class.getMethod("round"));
+        INT_TYPE.addMethod("__round__", PythonInteger.class.getMethod("round", PythonInteger.class));
     }
 
     public PythonInteger(PythonLikeType type) {
@@ -338,6 +342,39 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         }
         return PythonLikeTuple.fromList(List.of(quotient.asFloat(),
                 remainder));
+    }
+
+    public PythonInteger round() {
+        return this;
+    }
+
+    public PythonInteger round(PythonInteger digitsAfterDecimal) {
+        if (digitsAfterDecimal.compareTo(PythonInteger.ZERO) >= 0) {
+            return this;
+        }
+
+        BigInteger powerOfTen = BigInteger.TEN.pow(-digitsAfterDecimal.value.intValueExact());
+        BigInteger halfPowerOfTen = powerOfTen.shiftRight(1);
+        BigInteger remainder = value.mod(powerOfTen);
+
+        BigInteger previous = value.subtract(remainder);
+        BigInteger next = value.add(powerOfTen.subtract(remainder));
+
+        if (remainder.equals(halfPowerOfTen)) {
+            if (previous.divide(powerOfTen).mod(BigInteger.TWO).equals(BigInteger.ZERO)) {
+                // previous even
+                return PythonInteger.valueOf(previous);
+            } else {
+                // next even
+                return PythonInteger.valueOf(next);
+            }
+        } else if (remainder.compareTo(halfPowerOfTen) < 0) {
+            // previous closer
+            return PythonInteger.valueOf(previous);
+        } else {
+            // next closer
+            return PythonInteger.valueOf(next);
+        }
     }
 
     public PythonNumber power(PythonInteger other) {

@@ -12,6 +12,7 @@ import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
 import org.optaplanner.python.translator.types.errors.ValueError;
@@ -27,6 +28,7 @@ public class PythonRange extends AbstractPythonLikeObject implements List<Python
     static {
         try {
             registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(RANGE_TYPE);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }
