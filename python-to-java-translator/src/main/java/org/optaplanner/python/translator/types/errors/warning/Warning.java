@@ -1,0 +1,37 @@
+package org.optaplanner.python.translator.types.errors.warning;
+
+import java.util.List;
+
+import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.errors.PythonException;
+
+public class Warning extends PythonException {
+    public final static PythonLikeType WARNING_TYPE =
+            new PythonLikeType("Warning", Warning.class, List.of(PythonException.EXCEPTION_TYPE)),
+            $TYPE = WARNING_TYPE;
+
+    static {
+        WARNING_TYPE.setConstructor(((positionalArguments, namedArguments) -> new Warning(WARNING_TYPE, positionalArguments)));
+    }
+
+    public Warning() {
+        super(WARNING_TYPE);
+    }
+
+    public Warning(String message) {
+        super(WARNING_TYPE, message);
+    }
+
+    public Warning(PythonLikeType type, List<PythonLikeObject> args) {
+        super(type, args);
+    }
+
+    public Warning(PythonLikeType type) {
+        super(type);
+    }
+
+    public Warning(PythonLikeType type, String message) {
+        super(type, message);
+    }
+}

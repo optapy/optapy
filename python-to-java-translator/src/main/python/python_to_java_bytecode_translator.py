@@ -60,10 +60,11 @@ def is_c_native(item):
 
 
 def init_type_to_compiled_java_class():
+    from org.optaplanner.python.translator.builtins import GlobalBuiltins
     import org.optaplanner.python.translator.types as java_types
-    import org.optaplanner.python.translator.types.errors as java_errors_types
     import org.optaplanner.python.translator.types.datetime as java_datetime_types
     import datetime
+    import builtins
 
     if len(type_to_compiled_java_class) > 0:
         return
@@ -83,15 +84,18 @@ def init_type_to_compiled_java_class():
     type_to_compiled_java_class[set] = java_types.PythonLikeSet.SET_TYPE
     type_to_compiled_java_class[dict] = java_types.PythonLikeDict.DICT_TYPE
 
-    type_to_compiled_java_class[BaseException] = java_errors_types.PythonBaseException.BASE_EXCEPTION_TYPE
-    type_to_compiled_java_class[Exception] = java_errors_types.PythonException.EXCEPTION_TYPE
-    type_to_compiled_java_class[StopIteration] = java_errors_types.StopIteration.STOP_ITERATION_TYPE
-    type_to_compiled_java_class[AttributeError] = java_errors_types.AttributeError.ATTRIBUTE_ERROR_TYPE
-
     type_to_compiled_java_class[datetime.datetime] = java_datetime_types.PythonDateTime.DATE_TIME_TYPE
     type_to_compiled_java_class[datetime.date] = java_datetime_types.PythonDate.DATE_TYPE
     type_to_compiled_java_class[datetime.time] = java_datetime_types.PythonTime.TIME_TYPE
     type_to_compiled_java_class[datetime.timedelta] = java_datetime_types.PythonTimeDelta.TIME_DELTA_TYPE
+
+    for java_type in GlobalBuiltins.getBuiltinTypes():
+        try:
+            type_to_compiled_java_class[getattr(builtins, java_type.getTypeName())] = java_type
+        except AttributeError:
+            # This version of python does not have this builtin type; pass
+            pass
+
 
 
 def copy_iterable(iterable):
@@ -411,8 +415,8 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     elif isinstance(python_like_object, Exception):
         exception_name = getattr(python_like_object, '$TYPE').getTypeName()
         exception_python_type = getattr(builtins, exception_name)
-        message = python_like_object.getMessage()
-        return exception_python_type(message)
+        args = unwrap_python_like_object(getattr(python_like_object, '$getArgs')())
+        return exception_python_type(*args)
     elif isinstance(python_like_object, PythonLikeType):
         if python_like_object.getClass() == PythonLikeGenericType:
             return type

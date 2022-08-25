@@ -702,7 +702,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
 
-        for (int i = 0; i < method.getParameterTypes().length; i++) {
+        for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
             localVariableHelper.readLocal(methodVisitor, i);
         }
 

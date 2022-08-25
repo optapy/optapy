@@ -747,3 +747,26 @@ def test_zip():
                 list(java_function_strict(((1, 2), (4, 5, 6)), True))
             except Exception as e:
                 raise javapython.unwrap_python_like_object(e)
+
+
+def test_builtin_exceptions():
+    import builtins
+
+    for key in dir(builtins):
+        value = getattr(builtins, key)
+        if isinstance(value, type) and issubclass(value, BaseException):
+            exception_class = value
+
+            if issubclass(exception_class, OSError) or issubclass(exception_class, SyntaxError) or \
+                    issubclass(exception_class, UnicodeError):
+                # these errors take a different number of arguments, and thus the below code will not work
+                continue
+
+            def my_function():
+                return exception_class("my argument")
+
+            java_function = javapython.as_java(my_function)
+            java_out = java_function()
+            my_function_out = my_function()
+            assert type(java_out) == type(my_function_out)
+            assert java_out.args == my_function_out.args

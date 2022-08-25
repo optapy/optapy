@@ -14,6 +14,11 @@ public class GeneratorExit extends PythonException {
             GeneratorExit.class, List.of(EXCEPTION_TYPE)),
             $TYPE = GENERATOR_EXIT_TYPE;
 
+    static {
+        GENERATOR_EXIT_TYPE.setConstructor(
+                ((positionalArguments, namedArguments) -> new GeneratorExit(GENERATOR_EXIT_TYPE, positionalArguments)));
+    }
+
     private final PythonLikeObject value;
 
     public GeneratorExit() {
@@ -21,7 +26,15 @@ public class GeneratorExit extends PythonException {
     }
 
     public GeneratorExit(PythonLikeObject value) {
-        super(GENERATOR_EXIT_TYPE);
-        this.value = value;
+        this(GENERATOR_EXIT_TYPE, List.of(value));
+    }
+
+    public GeneratorExit(PythonLikeType type, List<PythonLikeObject> args) {
+        super(type, args);
+        if (args.size() > 0) {
+            value = args.get(0);
+        } else {
+            value = PythonNone.INSTANCE;
+        }
     }
 }

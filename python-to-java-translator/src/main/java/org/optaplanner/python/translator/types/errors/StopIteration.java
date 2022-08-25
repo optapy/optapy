@@ -14,6 +14,11 @@ public class StopIteration extends PythonException {
             StopIteration.class, List.of(EXCEPTION_TYPE)),
             $TYPE = STOP_ITERATION_TYPE;
 
+    static {
+        STOP_ITERATION_TYPE.setConstructor(
+                ((positionalArguments, namedArguments) -> new StopIteration(STOP_ITERATION_TYPE, positionalArguments)));
+    }
+
     private final PythonLikeObject value;
 
     public StopIteration() {
@@ -21,8 +26,16 @@ public class StopIteration extends PythonException {
     }
 
     public StopIteration(PythonLikeObject value) {
-        super(STOP_ITERATION_TYPE);
-        this.value = value;
+        this(STOP_ITERATION_TYPE, List.of(value));
+    }
+
+    public StopIteration(PythonLikeType type, List<PythonLikeObject> args) {
+        super(type, args);
+        if (args.size() > 0) {
+            value = args.get(0);
+        } else {
+            value = PythonNone.INSTANCE;
+        }
     }
 
     public PythonLikeObject getValue() {

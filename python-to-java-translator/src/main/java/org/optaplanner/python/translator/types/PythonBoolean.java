@@ -11,6 +11,7 @@ import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.builtins.GlobalBuiltins;
 import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonBoolean extends PythonInteger {
@@ -18,6 +19,11 @@ public class PythonBoolean extends PythonInteger {
     public final static PythonBoolean FALSE = new PythonBoolean(false);
 
     public static PythonLikeType BOOLEAN_TYPE = getBooleanType();
+
+    static {
+        GlobalBuiltins.addBuiltinConstant("True", TRUE);
+        GlobalBuiltins.addBuiltinConstant("False", FALSE);
+    }
 
     public static PythonLikeType getBooleanType() {
         if (BOOLEAN_TYPE != null) {

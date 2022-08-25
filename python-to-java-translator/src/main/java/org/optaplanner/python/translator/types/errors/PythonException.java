@@ -2,6 +2,7 @@ package org.optaplanner.python.translator.types.errors;
 
 import java.util.List;
 
+import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 /**
@@ -12,8 +13,17 @@ public class PythonException extends PythonBaseException {
             new PythonLikeType("Exception", PythonException.class, List.of(PythonBaseException.BASE_EXCEPTION_TYPE)),
             $TYPE = EXCEPTION_TYPE;
 
+    static {
+        EXCEPTION_TYPE.setConstructor(
+                ((positionalArguments, namedArguments) -> new PythonException(EXCEPTION_TYPE, positionalArguments)));
+    }
+
     public PythonException(PythonLikeType type) {
         super(type);
+    }
+
+    public PythonException(PythonLikeType type, List<PythonLikeObject> args) {
+        super(type, args);
     }
 
     public PythonException(PythonLikeType type, String message) {

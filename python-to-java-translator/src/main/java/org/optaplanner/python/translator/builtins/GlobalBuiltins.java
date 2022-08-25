@@ -26,6 +26,8 @@ import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
+import org.optaplanner.python.translator.types.Ellipsis;
+import org.optaplanner.python.translator.types.NotImplemented;
 import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonFloat;
 import org.optaplanner.python.translator.types.PythonInteger;
@@ -41,14 +43,182 @@ import org.optaplanner.python.translator.types.PythonRange;
 import org.optaplanner.python.translator.types.PythonSlice;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.AttributeError;
+import org.optaplanner.python.translator.types.errors.BufferError;
+import org.optaplanner.python.translator.types.errors.GeneratorExit;
+import org.optaplanner.python.translator.types.errors.ImportError;
+import org.optaplanner.python.translator.types.errors.ModuleNotFoundError;
+import org.optaplanner.python.translator.types.errors.NameError;
+import org.optaplanner.python.translator.types.errors.NotImplementedError;
+import org.optaplanner.python.translator.types.errors.PythonAssertionError;
+import org.optaplanner.python.translator.types.errors.PythonBaseException;
+import org.optaplanner.python.translator.types.errors.PythonException;
+import org.optaplanner.python.translator.types.errors.RecursionError;
+import org.optaplanner.python.translator.types.errors.ReferenceError;
+import org.optaplanner.python.translator.types.errors.RuntimeError;
+import org.optaplanner.python.translator.types.errors.StopAsyncIteration;
 import org.optaplanner.python.translator.types.errors.StopIteration;
+import org.optaplanner.python.translator.types.errors.TypeError;
+import org.optaplanner.python.translator.types.errors.UnboundLocalError;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.types.errors.arithmetic.ArithmeticError;
+import org.optaplanner.python.translator.types.errors.arithmetic.FloatingPointError;
+import org.optaplanner.python.translator.types.errors.arithmetic.OverflowError;
+import org.optaplanner.python.translator.types.errors.arithmetic.ZeroDivisionError;
+import org.optaplanner.python.translator.types.errors.io.BlockingIOError;
+import org.optaplanner.python.translator.types.errors.io.ChildProcessError;
+import org.optaplanner.python.translator.types.errors.io.EOFError;
+import org.optaplanner.python.translator.types.errors.io.FileExistsError;
+import org.optaplanner.python.translator.types.errors.io.FileNotFoundError;
+import org.optaplanner.python.translator.types.errors.io.InterruptedError;
+import org.optaplanner.python.translator.types.errors.io.IsADirectoryError;
+import org.optaplanner.python.translator.types.errors.io.KeyboardInterrupt;
+import org.optaplanner.python.translator.types.errors.io.MemoryError;
+import org.optaplanner.python.translator.types.errors.io.NotADirectoryError;
+import org.optaplanner.python.translator.types.errors.io.OSError;
+import org.optaplanner.python.translator.types.errors.io.PermissionError;
+import org.optaplanner.python.translator.types.errors.io.ProcessLookupError;
+import org.optaplanner.python.translator.types.errors.io.SystemError;
+import org.optaplanner.python.translator.types.errors.io.SystemExit;
+import org.optaplanner.python.translator.types.errors.io.TimeoutError;
+import org.optaplanner.python.translator.types.errors.io.connection.BrokenPipeError;
+import org.optaplanner.python.translator.types.errors.io.connection.ConnectionAbortedError;
+import org.optaplanner.python.translator.types.errors.io.connection.ConnectionError;
+import org.optaplanner.python.translator.types.errors.io.connection.ConnectionRefusedError;
+import org.optaplanner.python.translator.types.errors.io.connection.ConnectionResetError;
+import org.optaplanner.python.translator.types.errors.lookup.IndexError;
+import org.optaplanner.python.translator.types.errors.lookup.KeyError;
+import org.optaplanner.python.translator.types.errors.lookup.LookupError;
+import org.optaplanner.python.translator.types.errors.syntax.IndentationError;
+import org.optaplanner.python.translator.types.errors.syntax.SyntaxError;
+import org.optaplanner.python.translator.types.errors.syntax.TabError;
+import org.optaplanner.python.translator.types.errors.unicode.UnicodeDecodeError;
+import org.optaplanner.python.translator.types.errors.unicode.UnicodeEncodeError;
+import org.optaplanner.python.translator.types.errors.unicode.UnicodeError;
+import org.optaplanner.python.translator.types.errors.unicode.UnicodeTranslateError;
+import org.optaplanner.python.translator.types.errors.warning.BytesWarning;
+import org.optaplanner.python.translator.types.errors.warning.DeprecationWarning;
+import org.optaplanner.python.translator.types.errors.warning.EncodingWarning;
+import org.optaplanner.python.translator.types.errors.warning.FutureWarning;
+import org.optaplanner.python.translator.types.errors.warning.ImportWarning;
+import org.optaplanner.python.translator.types.errors.warning.PendingDeprecationWarning;
+import org.optaplanner.python.translator.types.errors.warning.ResourceWarning;
+import org.optaplanner.python.translator.types.errors.warning.RuntimeWarning;
+import org.optaplanner.python.translator.types.errors.warning.SyntaxWarning;
+import org.optaplanner.python.translator.types.errors.warning.UnicodeWarning;
+import org.optaplanner.python.translator.types.errors.warning.UserWarning;
+import org.optaplanner.python.translator.types.errors.warning.Warning;
 
 public class GlobalBuiltins {
-    final static StackWalker stackWalker = getInstance();
+    private final static StackWalker stackWalker = getStackWalkerInstance();
+    private final static Map<String, PythonLikeObject> builtinConstantMap = new HashMap<>();
 
-    private static StackWalker getInstance() {
+    static {
+        loadBuiltinConstants();
+    }
+
+    private static StackWalker getStackWalkerInstance() {
         return StackWalker.getInstance(RETAIN_CLASS_REFERENCE);
+    }
+
+    public static void addBuiltinType(PythonLikeType type) {
+        addBuiltinConstant(type.getTypeName(), type);
+    }
+
+    public static void addBuiltinConstant(String builtinName, PythonLikeObject value) {
+        builtinConstantMap.put(builtinName, value);
+    }
+
+    public static List<PythonLikeType> getBuiltinTypes() {
+        List<PythonLikeType> out = new ArrayList<>();
+        for (PythonLikeObject constant : builtinConstantMap.values()) {
+            if (constant instanceof PythonLikeType) {
+                out.add((PythonLikeType) constant);
+            }
+        }
+        return out;
+    }
+
+    public static void loadBuiltinConstants() {
+        // Constants
+        addBuiltinConstant("None", PythonNone.INSTANCE);
+        addBuiltinConstant("Ellipsis", Ellipsis.INSTANCE);
+        addBuiltinConstant("NotImplemented", NotImplemented.INSTANCE);
+        addBuiltinConstant("True", PythonBoolean.TRUE);
+        addBuiltinConstant("False", PythonBoolean.FALSE);
+
+        // Exceptions
+        addBuiltinType(ArithmeticError.ARITHMETIC_ERROR_TYPE);
+        addBuiltinType(FloatingPointError.FLOATING_POINT_ERROR_TYPE);
+        addBuiltinType(OverflowError.OVERFLOW_ERROR_TYPE);
+        addBuiltinType(ZeroDivisionError.ZERO_DIVISION_ERROR_TYPE);
+
+        addBuiltinType(BrokenPipeError.BROKEN_PIPE_ERROR_TYPE);
+        addBuiltinType(ConnectionAbortedError.CONNECTION_ABORTED_ERROR_TYPE);
+        addBuiltinType(ConnectionError.CONNECTION_ERROR_TYPE);
+        addBuiltinType(ConnectionRefusedError.CONNECTION_REFUSED_ERROR_TYPE);
+        addBuiltinType(ConnectionResetError.CONNECTION_RESET_ERROR_TYPE);
+
+        addBuiltinType(BlockingIOError.BLOCKING_IO_ERROR_TYPE);
+        addBuiltinType(ChildProcessError.CHILD_PROCESS_ERROR_TYPE);
+        addBuiltinType(EOFError.EOF_ERROR_TYPE);
+        addBuiltinType(FileExistsError.FILE_EXISTS_ERROR_TYPE);
+        addBuiltinType(FileNotFoundError.FILE_NOT_FOUND_ERROR_TYPE);
+        addBuiltinType(InterruptedError.INTERRUPTED_ERROR_TYPE);
+        addBuiltinType(IsADirectoryError.IS_A_DIRECTORY_ERROR_TYPE);
+        addBuiltinType(KeyboardInterrupt.KEYBOARD_INTERRUPT_TYPE);
+        addBuiltinType(MemoryError.MEMORY_ERROR_TYPE);
+        addBuiltinType(NotADirectoryError.NOT_A_DIRECTORY_ERROR_TYPE);
+        addBuiltinType(OSError.OS_ERROR_TYPE);
+        addBuiltinType(PermissionError.PERMISSION_ERROR_TYPE);
+        addBuiltinType(ProcessLookupError.PROCESS_LOOKUP_ERROR_TYPE);
+        addBuiltinType(SystemError.SYSTEM_ERROR_TYPE);
+        addBuiltinType(SystemExit.SYSTEM_EXIT_TYPE);
+        addBuiltinType(TimeoutError.TIMEOUT_ERROR_TYPE);
+
+        addBuiltinType(IndexError.INDEX_ERROR_TYPE);
+        addBuiltinType(KeyError.KEY_ERROR_TYPE);
+        addBuiltinType(LookupError.LOOKUP_ERROR_TYPE);
+
+        addBuiltinType(IndentationError.INDENTATION_ERROR_TYPE);
+        addBuiltinType(SyntaxError.SYNTAX_ERROR_TYPE);
+        addBuiltinType(TabError.TAB_ERROR_TYPE);
+
+        addBuiltinType(UnicodeDecodeError.UNICODE_DECODE_ERROR_TYPE);
+        addBuiltinType(UnicodeEncodeError.UNICODE_ENCODE_ERROR_TYPE);
+        addBuiltinType(UnicodeError.UNICODE_ERROR_TYPE);
+        addBuiltinType(UnicodeTranslateError.UNICODE_TRANSLATE_ERROR_TYPE);
+
+        addBuiltinType(BytesWarning.BYTES_WARNING_TYPE);
+        addBuiltinType(DeprecationWarning.DEPRECATION_WARNING_TYPE);
+        addBuiltinType(EncodingWarning.ENCODING_WARNING_TYPE);
+        addBuiltinType(FutureWarning.FUTURE_WARNING_TYPE);
+        addBuiltinType(ImportWarning.IMPORT_WARNING_TYPE);
+        addBuiltinType(PendingDeprecationWarning.PENDING_DEPRECATION_WARNING_TYPE);
+        addBuiltinType(ResourceWarning.RESOURCE_WARNING_TYPE);
+        addBuiltinType(RuntimeWarning.RUNTIME_WARNING_TYPE);
+        addBuiltinType(SyntaxWarning.SYNTAX_WARNING_TYPE);
+        addBuiltinType(UnicodeWarning.UNICODE_WARNING_TYPE);
+        addBuiltinType(UserWarning.USER_WARNING_TYPE);
+        addBuiltinType(Warning.WARNING_TYPE);
+
+        addBuiltinType(AttributeError.ATTRIBUTE_ERROR_TYPE);
+        addBuiltinType(BufferError.BUFFER_ERROR_TYPE);
+        addBuiltinType(GeneratorExit.GENERATOR_EXIT_TYPE);
+        addBuiltinType(ImportError.IMPORT_ERROR_TYPE);
+        addBuiltinType(ModuleNotFoundError.MODULE_NOT_FOUND_ERROR_TYPE);
+        addBuiltinType(NameError.NAME_ERROR_TYPE);
+        addBuiltinType(NotImplementedError.NOT_IMPLEMENTED_ERROR_TYPE);
+        addBuiltinType(PythonAssertionError.ASSERTION_ERROR_TYPE);
+        addBuiltinType(PythonBaseException.BASE_EXCEPTION_TYPE);
+        addBuiltinType(PythonException.EXCEPTION_TYPE);
+        addBuiltinType(RecursionError.RECURSION_ERROR_TYPE);
+        addBuiltinType(ReferenceError.REFERENCE_ERROR_TYPE);
+        addBuiltinType(RuntimeError.RUNTIME_ERROR_TYPE);
+        addBuiltinType(StopAsyncIteration.STOP_ASYNC_ITERATION_TYPE);
+        addBuiltinType(StopIteration.STOP_ITERATION_TYPE);
+        addBuiltinType(UnboundLocalError.UNBOUND_LOCAL_ERROR_TYPE);
+        addBuiltinType(TypeError.TYPE_ERROR_TYPE);
+        addBuiltinType(ValueError.VALUE_ERROR_TYPE);
     }
 
     public static PythonLikeObject lookup(PythonInterpreter interpreter, String builtinName) {
@@ -160,7 +330,7 @@ public class GlobalBuiltins {
             case "__import__":
                 return GlobalBuiltins.importFunction(interpreter);
             default:
-                return null;
+                return builtinConstantMap.get(builtinName);
         }
     }
 

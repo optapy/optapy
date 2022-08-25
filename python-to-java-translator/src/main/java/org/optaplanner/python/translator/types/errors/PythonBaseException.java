@@ -1,9 +1,13 @@
 package org.optaplanner.python.translator.types.errors;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonString;
 
 /**
  * Python base class for all exceptions. Equivalent to Java's {@link Throwable}.
@@ -12,17 +16,46 @@ public class PythonBaseException extends RuntimeException implements PythonLikeO
     final public static PythonLikeType BASE_EXCEPTION_TYPE = new PythonLikeType("BaseException", PythonBaseException.class),
             $TYPE = BASE_EXCEPTION_TYPE;
 
+    static {
+        BASE_EXCEPTION_TYPE.setConstructor(
+                ((positionalArguments, namedArguments) -> new PythonBaseException(BASE_EXCEPTION_TYPE, positionalArguments)));
+    }
+
     Map<String, PythonLikeObject> dict;
 
     final PythonLikeType type;
+    final List<PythonLikeObject> args;
+
+    private static String getMessageFromArgs(List<PythonLikeObject> args) {
+        if (args.size() < 1) {
+            return null;
+        }
+
+        if (args.get(0) instanceof PythonString) {
+            return ((PythonString) args.get(0)).getValue();
+        }
+
+        return null;
+    }
 
     public PythonBaseException(PythonLikeType type) {
+        this(type, List.of());
+    }
+
+    public PythonBaseException(PythonLikeType type, List<PythonLikeObject> args) {
+        super(getMessageFromArgs(args));
         this.type = type;
+        this.args = args;
+        this.dict = new HashMap<>();
+        __setAttribute("args", PythonLikeTuple.fromList(args));
     }
 
     public PythonBaseException(PythonLikeType type, String message) {
         super(message);
         this.type = type;
+        this.args = List.of(PythonString.valueOf(message));
+        this.dict = new HashMap<>();
+        __setAttribute("args", PythonLikeTuple.fromList(args));
     }
 
     /**
@@ -52,6 +85,10 @@ public class PythonBaseException extends RuntimeException implements PythonLikeO
     @Override
     public void __deleteAttribute(String attributeName) {
         dict.remove(attributeName);
+    }
+
+    public PythonLikeTuple $getArgs() {
+        return (PythonLikeTuple) __getAttributeOrError("args");
     }
 
     @Override
