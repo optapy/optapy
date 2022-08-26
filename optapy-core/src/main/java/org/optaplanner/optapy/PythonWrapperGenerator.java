@@ -117,6 +117,9 @@ public class PythonWrapperGenerator {
     @SuppressWarnings("unused")
     public static void setListValueOnPythonObject(OpaquePythonReference objectId, String attributeName, List javaList,
             Map<Number, Object> idMap, TriFunction updatePythonValue) {
+        if (javaList instanceof PythonObject) {
+            ((PythonObject) javaList).forceUpdate();
+        }
         pythonObjectIdAndAttributeSetter.apply(objectId, attributeName, javaList);
     }
 
@@ -930,10 +933,11 @@ public class PythonWrapperGenerator {
                         }
                     } else {
                         // Collection
+                        ResultHandle collection = methodCreator.readInstanceField(planningEntityCollectionField, thisObject);
                         ResultHandle iterator = methodCreator.invokeInterfaceMethod(
                                 MethodDescriptor.ofMethod(Collection.class, "iterator",
                                         Iterator.class),
-                                methodCreator.readInstanceField(planningEntityCollectionField, thisObject));
+                                collection);
                         WhileLoop iteratorLoop = methodCreator.whileLoop(condition -> condition.ifTrue(condition
                                 .invokeInterfaceMethod(MethodDescriptor.ofMethod(Iterator.class, "hasNext", boolean.class),
                                         iterator)));
@@ -944,6 +948,10 @@ public class PythonWrapperGenerator {
                             iteratorLoopBlock.invokeInterfaceMethod(
                                     MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate", void.class), element);
                         }
+                        BytecodeCreator bytecodeCreator =
+                                methodCreator.ifTrue(methodCreator.instanceOf(collection, PythonObject.class)).trueBranch();
+                        bytecodeCreator.invokeInterfaceMethod(
+                                MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate", void.class), collection);
                     }
                 }
                 break;

@@ -122,7 +122,16 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     @Override
     public void forceUpdate() {
-
+        clearPythonList.apply(pythonListOpaqueReference);
+        for (Object o : cachedObjectList) {
+            if (o instanceof OpaquePythonReference) {
+                addItemToPythonList.apply(pythonListOpaqueReference, o);
+            } else if (o instanceof PythonObject) {
+                addItemToPythonList.apply(pythonListOpaqueReference, ((PythonObject) o).get__optapy_Id());
+            } else {
+                addItemToPythonList.apply(pythonListOpaqueReference, o);
+            }
+        }
     }
 
     @Override
@@ -152,17 +161,7 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
 
     @Override
     public boolean contains(Object o) {
-        if (cachedObjectList.contains(o)) {
-            return true;
-        }
-
-        if (o instanceof OpaquePythonReference) {
-            return doesPythonListContainItem.apply(pythonListOpaqueReference, o);
-        } else if (o instanceof PythonObject) {
-            return doesPythonListContainItem.apply(pythonListOpaqueReference, ((PythonObject) o).get__optapy_Id());
-        } else {
-            return doesPythonListContainItem.apply(pythonListOpaqueReference, o);
-        }
+        return cachedObjectList.contains(o);
     }
 
     @Override
@@ -212,26 +211,34 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
     public boolean add(Object t) {
         cachedObjectList.add(t);
         cachedPythonLikeObjectList.add(JavaPythonTypeConversionImplementor.wrapJavaObject(t));
-        if (t instanceof OpaquePythonReference) {
-            addItemToPythonList.apply(pythonListOpaqueReference, t);
-        } else if (t instanceof PythonObject) {
-            addItemToPythonList.apply(pythonListOpaqueReference, ((PythonObject) t).get__optapy_Id());
-        } else {
-            addItemToPythonList.apply(pythonListOpaqueReference, t);
+
+        if (pythonSetter != PythonWrapperGenerator.NONE_PYTHON_SETTER) {
+            if (t instanceof OpaquePythonReference) {
+                addItemToPythonList.apply(pythonListOpaqueReference, t);
+            } else if (t instanceof PythonObject) {
+                addItemToPythonList.apply(pythonListOpaqueReference, ((PythonObject) t).get__optapy_Id());
+            } else {
+                addItemToPythonList.apply(pythonListOpaqueReference, t);
+            }
         }
         return true;
     }
 
     @Override
     public boolean remove(Object t) {
-        cachedObjectList.remove(t);
+        boolean out = cachedObjectList.remove(t);
         cachedPythonLikeObjectList.remove(JavaPythonTypeConversionImplementor.wrapJavaObject(t));
-        if (t instanceof OpaquePythonReference) {
-            return removeItemFromPythonList.apply(pythonListOpaqueReference, t);
-        } else if (t instanceof PythonObject) {
-            return removeItemFromPythonList.apply(pythonListOpaqueReference, ((PythonObject) t).get__optapy_Id());
+
+        if (pythonSetter != PythonWrapperGenerator.NONE_PYTHON_SETTER) {
+            if (t instanceof OpaquePythonReference) {
+                return removeItemFromPythonList.apply(pythonListOpaqueReference, t);
+            } else if (t instanceof PythonObject) {
+                return removeItemFromPythonList.apply(pythonListOpaqueReference, ((PythonObject) t).get__optapy_Id());
+            } else {
+                return removeItemFromPythonList.apply(pythonListOpaqueReference, t);
+            }
         } else {
-            return removeItemFromPythonList.apply(pythonListOpaqueReference, t);
+            return out;
         }
     }
 
@@ -287,7 +294,10 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
     public void clear() {
         cachedObjectList.clear();
         cachedPythonLikeObjectList.clear();
-        clearPythonList.apply(pythonListOpaqueReference);
+
+        if (pythonSetter != PythonWrapperGenerator.NONE_PYTHON_SETTER) {
+            clearPythonList.apply(pythonListOpaqueReference);
+        }
     }
 
     @Override
@@ -333,12 +343,15 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
         Object old = get(i);
         cachedObjectList.set(i, t);
         cachedPythonLikeObjectList.set(i, JavaPythonTypeConversionImplementor.wrapJavaObject(t));
-        if (t instanceof OpaquePythonReference) {
-            setItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
-        } else if (t instanceof PythonObject) {
-            setItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, ((PythonObject) t).get__optapy_Id());
-        } else {
-            setItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
+
+        if (pythonSetter != PythonWrapperGenerator.NONE_PYTHON_SETTER) {
+            if (t instanceof OpaquePythonReference) {
+                setItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
+            } else if (t instanceof PythonObject) {
+                setItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, ((PythonObject) t).get__optapy_Id());
+            } else {
+                setItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
+            }
         }
         return old;
     }
@@ -347,12 +360,15 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
     public void add(int i, Object t) {
         cachedObjectList.add(i, t);
         cachedPythonLikeObjectList.add(i, JavaPythonTypeConversionImplementor.wrapJavaObject(t));
-        if (t instanceof OpaquePythonReference) {
-            addItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
-        } else if (t instanceof PythonObject) {
-            addItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, ((PythonObject) t).get__optapy_Id());
-        } else {
-            addItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
+
+        if (pythonSetter != PythonWrapperGenerator.NONE_PYTHON_SETTER) {
+            if (t instanceof OpaquePythonReference) {
+                addItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
+            } else if (t instanceof PythonObject) {
+                addItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, ((PythonObject) t).get__optapy_Id());
+            } else {
+                addItemAtIndexInPythonList.apply(pythonListOpaqueReference, i, t);
+            }
         }
     }
 
@@ -361,7 +377,10 @@ public class PythonList<T> extends PythonLikeList<T> implements PythonObject, Li
         T out = get(i);
         cachedObjectList.remove(i);
         cachedPythonLikeObjectList.remove(i);
-        removeItemAtIndexFromPythonList.apply(pythonListOpaqueReference, i);
+
+        if (pythonSetter != PythonWrapperGenerator.NONE_PYTHON_SETTER) {
+            removeItemAtIndexFromPythonList.apply(pythonListOpaqueReference, i);
+        }
         return out;
     }
 
