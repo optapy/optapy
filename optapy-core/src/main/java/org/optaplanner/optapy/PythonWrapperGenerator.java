@@ -948,10 +948,6 @@ public class PythonWrapperGenerator {
                             iteratorLoopBlock.invokeInterfaceMethod(
                                     MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate", void.class), element);
                         }
-                        BytecodeCreator bytecodeCreator =
-                                methodCreator.ifTrue(methodCreator.instanceOf(collection, PythonObject.class)).trueBranch();
-                        bytecodeCreator.invokeInterfaceMethod(
-                                MethodDescriptor.ofMethod(PythonObject.class, "forceUpdate", void.class), collection);
                     }
                 }
                 break;
