@@ -436,7 +436,7 @@ public class PythonGeneratorTranslator {
         // Now generate bytecode for method
         StackMetadata initialStackMetadata =
                 getInitialStackMetadata(generatorMethodPart.initialStackMetadata.localVariableHelper,
-                        generatorMethodPart.functionMetadata.method, false);
+                        generatorMethodPart.originalMethodDescriptor, false);
         List<Opcode> opcodeList = getOpcodeList(generatorMethodPart.functionMetadata.pythonCompiledFunction);
         FlowGraph flowGraph = FlowGraph.createFlowGraph(generatorMethodPart.functionMetadata, initialStackMetadata, opcodeList);
         List<StackMetadata> stackMetadataForOpcodeIndex = flowGraph.getStackMetadataForOperations();
@@ -507,7 +507,7 @@ public class PythonGeneratorTranslator {
         // Generate bytecode for method
         StackMetadata initialStackMetadata =
                 getInitialStackMetadata(generatorMethodPart.initialStackMetadata.localVariableHelper,
-                        generatorMethodPart.functionMetadata.method, false);
+                        generatorMethodPart.originalMethodDescriptor, false);
         List<Opcode> opcodeList = getOpcodeList(generatorMethodPart.functionMetadata.pythonCompiledFunction);
         FlowGraph flowGraph = FlowGraph.createFlowGraph(generatorMethodPart.functionMetadata, initialStackMetadata, opcodeList);
         List<StackMetadata> stackMetadataForOpcodeIndex = flowGraph.getStackMetadataForOperations();
@@ -747,7 +747,9 @@ public class PythonGeneratorTranslator {
         GeneratorLocalVariableHelper localVariableHelper =
                 new GeneratorLocalVariableHelper(classWriter, internalClassName, new Type[] {}, pythonCompiledFunction);
 
-        StackMetadata initialStackMetadata = getInitialStackMetadata(localVariableHelper, functionMetadata.method, false);
+        MethodDescriptor stackMetadataMethod = new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.STATIC,
+                pythonCompiledFunction.qualifiedName, pythonCompiledFunction.getAsmMethodDescriptorString());
+        StackMetadata initialStackMetadata = getInitialStackMetadata(localVariableHelper, stackMetadataMethod, false);
 
         List<Opcode> opcodeList = getOpcodeList(pythonCompiledFunction);
 
@@ -755,6 +757,7 @@ public class PythonGeneratorTranslator {
         flowGraph.visitOperations(YieldValueOpcode.class, (yieldValueOpcode, priorStackMetadata) -> {
             generatorStateToMethod.put(yieldValueOpcode.getBytecodeIndex() + 1,
                     getGeneratorMethodPartForYield(internalClassName, classWriter, pythonCompiledFunction,
+                            stackMetadataMethod,
                             priorStackMetadata.pop(),
                             yieldValueOpcode));
         });
@@ -762,6 +765,7 @@ public class PythonGeneratorTranslator {
         flowGraph.visitOperations(YieldFromOpcode.class, (yieldFromOpcode, priorStackMetadata) -> {
             generatorStateToMethod.put(yieldFromOpcode.getBytecodeIndex() + 1,
                     getGeneratorMethodPartForYield(internalClassName, classWriter, pythonCompiledFunction,
+                            stackMetadataMethod,
                             priorStackMetadata.pop(2),
                             yieldFromOpcode));
         });
@@ -770,6 +774,7 @@ public class PythonGeneratorTranslator {
         start.initialStackMetadata = initialStackMetadata;
         start.functionMetadata = functionMetadata;
         start.afterYield = 0;
+        start.originalMethodDescriptor = stackMetadataMethod;
         start.instruction = new PythonBytecodeInstruction();
         start.instruction.opcode = OpcodeIdentifier.YIELD_VALUE;
         start.instruction.offset = 0;
@@ -781,6 +786,7 @@ public class PythonGeneratorTranslator {
     private static GeneratorMethodPart getGeneratorMethodPartForYield(String internalClassName,
             ClassWriter classWriter,
             PythonCompiledFunction pythonCompiledFunction,
+            MethodDescriptor originalMethodDescriptor,
             StackMetadata stackMetadata,
             AbstractOpcode opcode) {
         final String methodName = "advance" + (opcode.getBytecodeIndex() + 1);
@@ -789,6 +795,7 @@ public class PythonGeneratorTranslator {
         out.initialStackMetadata = stackMetadata;
         out.afterYield = opcode.getBytecodeIndex() + 1;
         out.instruction = opcode.getInstruction();
+        out.originalMethodDescriptor = originalMethodDescriptor;
 
         FunctionMetadata functionMetadata = new FunctionMetadata();
         out.functionMetadata = functionMetadata;
@@ -810,6 +817,7 @@ public class PythonGeneratorTranslator {
     private static class GeneratorMethodPart {
         FunctionMetadata functionMetadata;
         StackMetadata initialStackMetadata;
+        MethodDescriptor originalMethodDescriptor;
         int afterYield;
         PythonBytecodeInstruction instruction;
     }
