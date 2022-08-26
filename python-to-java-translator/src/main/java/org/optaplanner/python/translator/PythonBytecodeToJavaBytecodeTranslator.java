@@ -482,7 +482,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             initialStackMetadata.localVariableValueSources.add(null);
         }
 
-        if (isVirtual) {
+        if (isVirtual && method.getParameterTypes().length > 0) {
             try {
                 Class<?> typeClass = Class.forName(method.getParameterTypes()[0].getClassName(), false, asmClassLoader);
                 initialStackMetadata.localVariableValueSources.set(0, ValueSourceInfo.of(new SelfOpcodeWithoutSource(),
