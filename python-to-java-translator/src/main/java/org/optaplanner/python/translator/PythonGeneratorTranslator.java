@@ -27,10 +27,12 @@ import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.dag.FlowGraph;
 import org.optaplanner.python.translator.implementors.DunderOperatorImplementor;
 import org.optaplanner.python.translator.implementors.PythonConstantsImplementor;
+import org.optaplanner.python.translator.implementors.VariableImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.opcodes.Opcode;
 import org.optaplanner.python.translator.opcodes.generator.YieldFromOpcode;
 import org.optaplanner.python.translator.opcodes.generator.YieldValueOpcode;
+import org.optaplanner.python.translator.types.PythonCell;
 import org.optaplanner.python.translator.types.PythonGenerator;
 import org.optaplanner.python.translator.types.PythonLikeDict;
 import org.optaplanner.python.translator.types.PythonLikeTuple;
@@ -100,7 +102,7 @@ public class PythonGeneratorTranslator {
         // Create fields for translated functions
         PythonBytecodeToJavaBytecodeTranslator.createFields(classWriter);
 
-        // Create fields for parameters and local variables
+        // Create fields for parameters, cells and local variables
         {
             int variable = 0;
             for (; variable < pythonCompiledFunction.getParameterTypes().size(); variable++) {
@@ -111,6 +113,16 @@ public class PythonGeneratorTranslator {
             for (; variable < pythonCompiledFunction.co_varnames.size(); variable++) {
                 classWriter.visitField(Modifier.PRIVATE, pythonCompiledFunction.co_varnames.get(variable),
                         Type.getDescriptor(PythonLikeObject.class),
+                        null, null);
+            }
+            for (int i = 0; i < pythonCompiledFunction.co_cellvars.size(); i++) {
+                classWriter.visitField(Modifier.PRIVATE, pythonCompiledFunction.co_cellvars.get(i),
+                        Type.getDescriptor(PythonCell.class),
+                        null, null);
+            }
+            for (int i = 0; i < pythonCompiledFunction.co_freevars.size(); i++) {
+                classWriter.visitField(Modifier.PRIVATE, pythonCompiledFunction.co_freevars.get(i),
+                        Type.getDescriptor(PythonCell.class),
                         null, null);
             }
         }
@@ -214,6 +226,19 @@ public class PythonGeneratorTranslator {
                         pythonCompiledFunction.getParameterTypes().get(parameter).getJavaTypeDescriptor());
             }
         }
+
+        GeneratorLocalVariableHelper localVariableHelper =
+                new GeneratorLocalVariableHelper(classWriter, internalClassName, new Type[] {}, pythonCompiledFunction);
+
+        // Load cells
+        for (int i = 0; i < localVariableHelper.getNumberOfBoundCells(); i++) {
+            VariableImplementor.createCell(methodVisitor, localVariableHelper, i);
+        }
+
+        for (int i = 0; i < localVariableHelper.getNumberOfFreeCells(); i++) {
+            VariableImplementor.setupFreeVariableCell(methodVisitor, internalClassName, localVariableHelper, i);
+        }
+
         methodVisitor.visitInsn(Opcodes.RETURN);
 
         methodVisitor.visitMaxs(-1, -1);

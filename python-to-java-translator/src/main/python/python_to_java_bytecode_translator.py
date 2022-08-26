@@ -108,6 +108,18 @@ def copy_iterable(iterable):
     return iterable_copy
 
 
+def copy_variable_names(iterable):
+    from java.util import ArrayList
+    from org.optaplanner.python.translator.util import JavaIdentifierUtils
+
+    if iterable is None:
+        return None
+    iterable_copy = ArrayList()
+    for item in iterable:
+        iterable_copy.add(JavaIdentifierUtils.sanitizeFieldName(item))
+    return iterable_copy
+
+
 def remove_from_instance_map(instance_map, object_id):
     instance_map.remove(object_id)
 
@@ -331,6 +343,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
         out = convert_object_to_java_python_like_object(value, instance_map)
         if out is not None:
             return out
+
         proxy = JProxy(OpaquePythonReference, inst=value, convert=True)
         out = PythonObjectWrapper(proxy)
         put_in_instance_map(instance_map, value, out)
@@ -567,9 +580,9 @@ def get_function_bytecode_object(python_function):
     python_compiled_function.qualifiedName = python_function.__qualname__
     python_compiled_function.instructionList = instruction_list
     python_compiled_function.co_names = copy_iterable(python_function.__code__.co_names)
-    python_compiled_function.co_varnames = copy_iterable(python_function.__code__.co_varnames)
-    python_compiled_function.co_cellvars = copy_iterable(python_function.__code__.co_cellvars)
-    python_compiled_function.co_freevars = copy_iterable(python_function.__code__.co_freevars)
+    python_compiled_function.co_varnames = copy_variable_names(python_function.__code__.co_varnames)
+    python_compiled_function.co_cellvars = copy_variable_names(python_function.__code__.co_cellvars)
+    python_compiled_function.co_freevars = copy_variable_names(python_function.__code__.co_freevars)
     python_compiled_function.co_constants = copy_constants(python_function.__code__.co_consts)
     python_compiled_function.co_argcount = python_function.__code__.co_argcount
     python_compiled_function.co_kwonlyargcount = python_function.__code__.co_kwonlyargcount
@@ -610,9 +623,9 @@ def get_code_bytecode_object(python_code):
     python_compiled_function.qualifiedName = '__code__'
     python_compiled_function.instructionList = instruction_list
     python_compiled_function.co_names = copy_iterable(python_code.co_names)
-    python_compiled_function.co_varnames = copy_iterable(python_code.co_varnames)
-    python_compiled_function.co_cellvars = copy_iterable(python_code.co_cellvars)
-    python_compiled_function.co_freevars = copy_iterable(python_code.co_freevars)
+    python_compiled_function.co_varnames = copy_variable_names(python_code.co_varnames)
+    python_compiled_function.co_cellvars = copy_variable_names(python_code.co_cellvars)
+    python_compiled_function.co_freevars = copy_variable_names(python_code.co_freevars)
     python_compiled_function.co_constants = copy_constants(python_code.co_consts)
     python_compiled_function.co_argcount = python_code.co_argcount
     python_compiled_function.co_kwonlyargcount = python_code.co_kwonlyargcount

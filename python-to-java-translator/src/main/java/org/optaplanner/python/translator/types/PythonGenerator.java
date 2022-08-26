@@ -6,6 +6,7 @@ import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.types.errors.GeneratorExit;
 import org.optaplanner.python.translator.types.errors.PythonBaseException;
 
@@ -22,7 +23,11 @@ public abstract class PythonGenerator extends AbstractPythonLikeObject implement
     }
 
     private static void registerMethods() throws NoSuchMethodException {
-        GENERATOR_TYPE.addMethod("__next__",
+        GENERATOR_TYPE.addMethod(PythonUnaryOperator.ITERATOR,
+                new PythonFunctionSignature(
+                        new MethodDescriptor(PythonGenerator.class.getMethod("asPythonIterator")),
+                        GENERATOR_TYPE));
+        GENERATOR_TYPE.addMethod(PythonUnaryOperator.NEXT,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("next")),
                         PythonLikeType.getBaseType()));
@@ -63,5 +68,9 @@ public abstract class PythonGenerator extends AbstractPythonLikeObject implement
     public PythonLikeObject throwValue(Throwable thrownValue) {
         this.thrownValue = thrownValue;
         return next();
+    }
+
+    public PythonGenerator asPythonIterator() {
+        return this;
     }
 }

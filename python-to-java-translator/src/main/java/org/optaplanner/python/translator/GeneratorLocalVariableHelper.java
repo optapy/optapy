@@ -11,6 +11,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.types.PythonCell;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class GeneratorLocalVariableHelper extends LocalVariableHelper {
@@ -35,13 +36,22 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
         this.classWriter = classWriter;
         this.classInternalName = classInternalName;
         cellStart =
-                compiledFunction.co_varnames.size() - compiledFunction.co_freevars.size() - compiledFunction.co_cellvars.size();
-        freeStart = compiledFunction.co_varnames.size() - compiledFunction.co_cellvars.size();
+                compiledFunction.co_varnames.size();
+        freeStart = compiledFunction.co_varnames.size() + compiledFunction.co_cellvars.size();
         slotToLocalName = new HashMap<>();
         slotToLocalTypeDescriptor = new HashMap<>();
 
         for (int i = 0; i < compiledFunction.co_varnames.size(); i++) {
             slotToLocalName.put(i, compiledFunction.co_varnames.get(i));
+        }
+
+        for (int i = 0; i < compiledFunction.co_cellvars.size(); i++) {
+            slotToLocalName.put(i + compiledFunction.co_varnames.size(), compiledFunction.co_cellvars.get(i));
+        }
+
+        for (int i = 0; i < compiledFunction.co_freevars.size(); i++) {
+            slotToLocalName.put(i + compiledFunction.co_varnames.size() + compiledFunction.co_cellvars.size(),
+                    compiledFunction.co_freevars.get(i));
         }
 
         List<PythonLikeType> parameterTypes = compiledFunction.getParameterTypes();
@@ -51,6 +61,15 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
 
         for (int i = parameterTypes.size(); i < compiledFunction.co_varnames.size(); i++) {
             slotToLocalTypeDescriptor.put(i, Type.getDescriptor(PythonLikeObject.class));
+        }
+
+        for (int i = 0; i < compiledFunction.co_cellvars.size(); i++) {
+            slotToLocalTypeDescriptor.put(i + compiledFunction.co_varnames.size(), Type.getDescriptor(PythonCell.class));
+        }
+
+        for (int i = 0; i < compiledFunction.co_freevars.size(); i++) {
+            slotToLocalTypeDescriptor.put(i + compiledFunction.co_varnames.size() + compiledFunction.co_cellvars.size(),
+                    Type.getDescriptor(PythonCell.class));
         }
     }
 
