@@ -1,16 +1,16 @@
 package org.optaplanner.python.translator.dag;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.optaplanner.python.translator.types.PythonBoolean.BOOLEAN_TYPE;
-import static org.optaplanner.python.translator.types.PythonInteger.INT_TYPE;
-import static org.optaplanner.python.translator.types.PythonIterator.ITERATOR_TYPE;
-import static org.optaplanner.python.translator.types.PythonLikeTuple.TUPLE_TYPE;
 import static org.optaplanner.python.translator.types.PythonLikeType.TYPE_TYPE;
 import static org.optaplanner.python.translator.types.PythonNone.NONE_TYPE;
 import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
+import static org.optaplanner.python.translator.types.collections.PythonIterator.ITERATOR_TYPE;
+import static org.optaplanner.python.translator.types.collections.PythonLikeTuple.TUPLE_TYPE;
 import static org.optaplanner.python.translator.types.errors.PythonAssertionError.ASSERTION_ERROR_TYPE;
 import static org.optaplanner.python.translator.types.errors.PythonBaseException.BASE_EXCEPTION_TYPE;
 import static org.optaplanner.python.translator.types.errors.PythonTraceback.TRACEBACK_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonBoolean.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -1,20 +1,20 @@
 package org.optaplanner.python.translator;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.optaplanner.python.translator.types.PythonBoolean.BOOLEAN_TYPE;
-import static org.optaplanner.python.translator.types.PythonInteger.INT_TYPE;
 import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonBoolean.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
 
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
-import org.optaplanner.python.translator.types.PythonBoolean;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class PythonOverloadImplementorTest {
 

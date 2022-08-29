@@ -28,7 +28,7 @@ All OptaPlanner Python annotations work like this:
        - annotation parameter -> parameter value or None if unset
 4. Return the modified function/class
 
-For classes, JImplements('org.optaplanner.python.translator.types.OpaquePythonReference')(the_class)
+For classes, JImplements('org.optaplanner.python.translator.types.wrappers.OpaquePythonReference')(the_class)
 is called and used (which allows __getattr__ to work w/o casting to a Java Proxy).
 """
 
@@ -445,7 +445,7 @@ def value_range_provider(range_id: str, value_range_type: type = list) -> Callab
     def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, '_ValueRange']]):
         ensure_init()
         from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
-        from org.optaplanner.python.translator.types import OpaquePythonReference # noqa
+        from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference # noqa
         from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
 
         getter_function.__optaplannerValueRangeProvider = {
@@ -539,7 +539,7 @@ def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = 
 
     def planning_entity_wrapper(entity_class_argument):
         from javapython import force_update_type
-        out = JImplements('org.optaplanner.python.translator.types.OpaquePythonReference')(entity_class_argument)
+        out = JImplements('org.optaplanner.python.translator.types.wrappers.OpaquePythonReference')(entity_class_argument)
         out.__optapy_java_class = _generate_planning_entity_class(entity_class_argument, annotation_data)
         out.__optapy_is_planning_clone = True
         _add_shallow_copy_to_class(out)
@@ -562,7 +562,7 @@ def problem_fact(fact_class: Type) -> Type:
     """
     ensure_init()
     from javapython import force_update_type
-    out = JImplements('org.optaplanner.python.translator.types.OpaquePythonReference')(fact_class)
+    out = JImplements('org.optaplanner.python.translator.types.wrappers.OpaquePythonReference')(fact_class)
     out.__optapy_java_class = _generate_problem_fact_class(fact_class)
     force_update_type(out, out.__optapy_java_class.getField('$TYPE').get(None))
     return out
@@ -596,7 +596,7 @@ def planning_solution(planning_solution_class: Type) -> Type:
     """
     ensure_init()
     from javapython import force_update_type
-    out = JImplements('org.optaplanner.python.translator.types.OpaquePythonReference')(planning_solution_class)
+    out = JImplements('org.optaplanner.python.translator.types.wrappers.OpaquePythonReference')(planning_solution_class)
     out.__optapy_java_class = _generate_planning_solution_class(planning_solution_class)
     out.__optapy_is_planning_solution = True
     out.__optapy_is_planning_clone = True

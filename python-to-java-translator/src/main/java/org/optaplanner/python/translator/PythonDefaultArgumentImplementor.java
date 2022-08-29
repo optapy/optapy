@@ -18,8 +18,8 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 
 /**
  * Implement classes that hold static constants used for default arguments when calling

@@ -7,7 +7,7 @@ import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.DunderOperatorImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
-import org.optaplanner.python.translator.types.PythonIterator;
+import org.optaplanner.python.translator.types.collections.PythonIterator;
 
 public class GetIterOpcode extends AbstractOpcode {
 

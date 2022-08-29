@@ -1,8 +1,10 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.numeric;
 
 import java.util.List;
 
 import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class PythonComplex extends AbstractPythonLikeObject implements PythonNumber {
     final PythonNumber real;
@@ -12,7 +14,6 @@ public class PythonComplex extends AbstractPythonLikeObject implements PythonNum
 
     static {
         try {
-            PythonNumericOperations.setup(COMPLEX_TYPE.__dir__);
             registerMethods();
             PythonOverloadImplementor.createDispatchesFor(COMPLEX_TYPE);
         } catch (NoSuchMethodException e) {

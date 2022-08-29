@@ -3,10 +3,10 @@ package org.optaplanner.python.translator;
 import java.util.List;
 import java.util.Map;
 
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonModule;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public interface PythonInterpreter {
     PythonInterpreter DEFAULT = new CPythonBackedPythonInterpreter();

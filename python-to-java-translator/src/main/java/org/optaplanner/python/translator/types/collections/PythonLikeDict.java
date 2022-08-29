@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.collections;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -10,7 +10,11 @@ import java.util.Set;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.types.wrappers.JavaMethodReference;
+import org.optaplanner.python.translator.util.JavaStringMapMirror;
 
 public class PythonLikeDict extends AbstractPythonLikeObject
         implements Map<PythonLikeObject, PythonLikeObject>, Iterable<PythonLikeObject> {

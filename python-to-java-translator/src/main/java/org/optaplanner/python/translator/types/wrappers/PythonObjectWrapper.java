@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.wrappers;
 
 import java.util.HashMap;
 import java.util.List;
@@ -6,9 +6,16 @@ import java.util.Map;
 
 import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
-        implements PythonLikeObject, PythonLikeFunction, Comparable<PythonObjectWrapper> {
+        implements PythonLikeObject,
+        PythonLikeFunction, Comparable<PythonObjectWrapper> {
 
     private final static PythonLikeType PYTHON_REFERENCE_TYPE =
             new PythonLikeType("python-reference", PythonObjectWrapper.class),

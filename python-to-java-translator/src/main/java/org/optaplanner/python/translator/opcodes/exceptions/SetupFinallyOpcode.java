@@ -11,11 +11,11 @@ import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.ExceptionImplementor;
 import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
 import org.optaplanner.python.translator.opcodes.controlflow.AbstractControlFlowOpcode;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.errors.PythonBaseException;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class SetupFinallyOpcode extends AbstractControlFlowOpcode {
     int jumpTarget;

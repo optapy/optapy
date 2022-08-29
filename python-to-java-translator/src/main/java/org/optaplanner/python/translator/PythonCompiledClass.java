@@ -3,9 +3,9 @@ package org.optaplanner.python.translator;
 import java.util.List;
 import java.util.Map;
 
-import org.optaplanner.python.translator.types.CPythonType;
-import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.wrappers.CPythonType;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
 import org.optaplanner.python.translator.util.JavaIdentifierUtils;
 
 public class PythonCompiledClass {

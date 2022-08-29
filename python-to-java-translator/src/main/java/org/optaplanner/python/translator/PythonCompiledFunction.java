@@ -7,8 +7,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.objectweb.asm.Type;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.util.JavaIdentifierUtils;
 
 public class PythonCompiledFunction {

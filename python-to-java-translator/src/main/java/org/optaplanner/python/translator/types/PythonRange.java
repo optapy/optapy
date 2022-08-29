@@ -15,7 +15,10 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.collections.PythonIterator;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class PythonRange extends AbstractPythonLikeObject implements List<PythonInteger> {
     public static PythonLikeType RANGE_TYPE = new PythonLikeType("range", PythonRange.class);

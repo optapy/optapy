@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.numeric;
 
 import java.math.BigInteger;
 import java.util.Collection;
@@ -12,6 +12,10 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.GlobalBuiltins;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonBoolean extends PythonInteger {

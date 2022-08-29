@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.wrappers;
 
 import java.util.HashMap;
 import java.util.List;
@@ -6,6 +6,8 @@ import java.util.Map;
 
 import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonString;
 
 public class CPythonType extends PythonLikeType {
 

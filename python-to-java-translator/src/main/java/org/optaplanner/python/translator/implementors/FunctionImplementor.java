@@ -20,12 +20,12 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.PythonCode;
 import org.optaplanner.python.translator.types.PythonKnownFunctionType;
-import org.optaplanner.python.translator.types.PythonLikeDict;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeGenericType;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.collections.PythonLikeDict;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 
 /**
  * Implements opcodes related to functions

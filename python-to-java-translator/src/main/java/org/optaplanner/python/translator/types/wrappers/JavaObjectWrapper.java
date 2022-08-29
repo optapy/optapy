@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.wrappers;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class JavaObjectWrapper implements PythonLikeObject, Comparable<JavaObjectWrapper> {
 

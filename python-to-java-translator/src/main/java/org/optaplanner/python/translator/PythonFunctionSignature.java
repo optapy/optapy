@@ -15,8 +15,8 @@ import org.optaplanner.python.translator.implementors.CollectionImplementor;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.python.translator.implementors.StackManipulationImplementor;
 import org.optaplanner.python.translator.types.BoundPythonLikeFunction;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 
 public class PythonFunctionSignature {
     final PythonLikeType returnType;

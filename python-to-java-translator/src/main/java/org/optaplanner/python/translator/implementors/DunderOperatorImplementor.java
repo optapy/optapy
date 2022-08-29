@@ -18,8 +18,8 @@ import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.PythonKnownFunctionType;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
-import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.collections.PythonLikeList;
 
 /**
  * Implementations of opcodes that delegate to dunder/magic methods.

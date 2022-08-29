@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.numeric;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -9,17 +9,23 @@ import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.builtins.NumberBuiltinOperations;
+import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeComparable;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonFloat extends AbstractPythonLikeObject implements PythonNumber {
-    final double value;
+    public final double value;
 
     public final static PythonLikeType FLOAT_TYPE = new PythonLikeType("float", PythonFloat.class, List.of(NUMBER_TYPE));
 
     static {
         try {
             PythonLikeComparable.setup(FLOAT_TYPE);
-            PythonNumericOperations.setup(FLOAT_TYPE.__dir__);
             registerMethods();
             PythonOverloadImplementor.createDispatchesFor(FLOAT_TYPE);
         } catch (NoSuchMethodException e) {
@@ -125,6 +131,8 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         // Other
         FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round"));
         FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round", PythonInteger.class));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format"));
+        FLOAT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format", PythonString.class));
     }
 
     @Override
@@ -415,5 +423,13 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
 
     public PythonBoolean greaterThanOrEqual(PythonFloat other) {
         return PythonBoolean.valueOf(value >= other.value);
+    }
+
+    public PythonString format() {
+        return NumberBuiltinOperations.format(this, PythonString.valueOf(""));
+    }
+
+    public PythonString format(PythonString spec) {
+        return NumberBuiltinOperations.format(this, spec);
     }
 }

@@ -5,6 +5,7 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.GlobalBuiltins;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 
 public class PythonNone extends AbstractPythonLikeObject {
     public static final PythonNone INSTANCE;

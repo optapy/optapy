@@ -14,8 +14,8 @@ import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.StackMetadata;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonModule;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class ModuleImplementor {
 

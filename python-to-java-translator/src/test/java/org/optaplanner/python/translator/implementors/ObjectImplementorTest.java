@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.MyObject;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
-import org.optaplanner.python.translator.types.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })

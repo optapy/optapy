@@ -18,9 +18,9 @@ import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonModule;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })

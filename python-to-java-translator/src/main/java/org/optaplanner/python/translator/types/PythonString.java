@@ -4,7 +4,9 @@ import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.collections.PythonIterator;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class PythonString extends AbstractPythonLikeObject implements PythonLikeComparable<PythonString> {
     public final String value;

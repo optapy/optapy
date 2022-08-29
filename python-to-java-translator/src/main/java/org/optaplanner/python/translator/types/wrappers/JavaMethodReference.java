@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.wrappers;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -8,6 +8,8 @@ import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonString;
 
 public class JavaMethodReference implements PythonLikeFunction {
     private final Method method;

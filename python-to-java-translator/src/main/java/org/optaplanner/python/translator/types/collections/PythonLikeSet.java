@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.collections;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -11,7 +11,12 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class PythonLikeSet extends AbstractPythonLikeObject implements Set<PythonLikeObject> {
     final Set<PythonLikeObject> delegate;

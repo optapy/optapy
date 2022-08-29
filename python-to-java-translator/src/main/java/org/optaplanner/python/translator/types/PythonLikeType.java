@@ -25,7 +25,11 @@ import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
+import org.optaplanner.python.translator.types.collections.PythonLikeDict;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.wrappers.JavaMethodReference;
 
 public class PythonLikeType implements PythonLikeObject,
         PythonLikeFunction {

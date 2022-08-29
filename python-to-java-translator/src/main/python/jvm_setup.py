@@ -58,7 +58,7 @@ class GetPythonObjectId:
 class GetPythonObjectType:
     @jpype.JOverride()
     def apply(self, python_object):
-        from org.optaplanner.python.translator.types import OpaquePythonReference
+        from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference
         return jpype.JProxy(OpaquePythonReference, inst=type(python_object), convert=True)
 
 

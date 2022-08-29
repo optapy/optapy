@@ -7,10 +7,10 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 public class PythonClassTranslatorTest {

@@ -1,10 +1,10 @@
 package org.optaplanner.python.translator.types.datetime;
 
-import static org.optaplanner.python.translator.types.PythonBoolean.BOOLEAN_TYPE;
-import static org.optaplanner.python.translator.types.PythonFloat.FLOAT_TYPE;
-import static org.optaplanner.python.translator.types.PythonInteger.INT_TYPE;
-import static org.optaplanner.python.translator.types.PythonNumber.NUMBER_TYPE;
 import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonBoolean.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonFloat.FLOAT_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonNumber.NUMBER_TYPE;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -18,13 +18,13 @@ import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
-import org.optaplanner.python.translator.types.PythonBoolean;
-import org.optaplanner.python.translator.types.PythonFloat;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeComparable;
 import org.optaplanner.python.translator.types.PythonLikeType;
-import org.optaplanner.python.translator.types.PythonNumber;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonFloat;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
+import org.optaplanner.python.translator.types.numeric.PythonNumber;
 
 /**
  * Python docs: <a href="https://docs.python.org/3/library/datetime.html#timedelta-objects">timedelta-objects</a>

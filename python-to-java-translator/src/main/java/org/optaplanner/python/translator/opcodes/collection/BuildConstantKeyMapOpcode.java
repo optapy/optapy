@@ -6,7 +6,7 @@ import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.CollectionImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
-import org.optaplanner.python.translator.types.PythonLikeDict;
+import org.optaplanner.python.translator.types.collections.PythonLikeDict;
 
 public class BuildConstantKeyMapOpcode extends AbstractOpcode {
 

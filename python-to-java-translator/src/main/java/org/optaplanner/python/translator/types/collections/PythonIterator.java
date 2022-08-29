@@ -1,10 +1,12 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.collections;
 
 import java.util.Iterator;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 
 public class PythonIterator<T> extends AbstractPythonLikeObject implements Iterator<T> {

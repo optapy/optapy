@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.util;
 
 import java.util.Collection;
 import java.util.Map;
@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonString;
 
 public class JavaStringMapMirror implements Map<PythonLikeObject, PythonLikeObject> {
     final Map<String, PythonLikeObject> delegate;

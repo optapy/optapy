@@ -15,11 +15,10 @@ import org.optaplanner.python.translator.MyObject;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
-import org.optaplanner.python.translator.types.JavaMethodReference;
 import org.optaplanner.python.translator.types.PythonCode;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonString;
-import org.optaplanner.python.translator.types.UnaryLambdaReference;
+import org.optaplanner.python.translator.types.wrappers.JavaMethodReference;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -131,7 +130,7 @@ public class FunctionImplementorTest {
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
         MyObject object = new MyObject();
-        object.attributeFunction = new UnaryLambdaReference((suffix) -> PythonString.valueOf("My name" + suffix), Map.of());
+        object.attributeFunction = (positionalArgs, namedArgs) -> PythonString.valueOf("My name" + positionalArgs.get(0));
 
         assertThat(javaFunction.apply(object)).isEqualTo("My name is awesome!");
     }

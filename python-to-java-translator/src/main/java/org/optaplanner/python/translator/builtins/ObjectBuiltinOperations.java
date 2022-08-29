@@ -7,13 +7,13 @@ import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
-import org.optaplanner.python.translator.types.PythonBoolean;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.AttributeError;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class ObjectBuiltinOperations {
     public static PythonLikeObject getAttribute(PythonLikeObject object, PythonString pythonName) {

@@ -8,8 +8,8 @@ import java.util.List;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 
 /**
  * Implementations of loading Python constants

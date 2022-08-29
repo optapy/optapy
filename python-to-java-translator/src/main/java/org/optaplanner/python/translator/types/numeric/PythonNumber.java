@@ -1,8 +1,10 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.numeric;
 
 import java.math.BigInteger;
 
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeComparable;
+import org.optaplanner.python.translator.types.PythonLikeType;
 
 public interface PythonNumber extends PythonLikeComparable<PythonNumber>, PythonLikeObject {
 

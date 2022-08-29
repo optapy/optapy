@@ -16,24 +16,24 @@ import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.StackMetadata;
-import org.optaplanner.python.translator.types.JavaObjectWrapper;
-import org.optaplanner.python.translator.types.OpaqueJavaReference;
-import org.optaplanner.python.translator.types.OpaquePythonReference;
-import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonCode;
-import org.optaplanner.python.translator.types.PythonFloat;
-import org.optaplanner.python.translator.types.PythonInteger;
-import org.optaplanner.python.translator.types.PythonIterator;
-import org.optaplanner.python.translator.types.PythonLikeDict;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
-import org.optaplanner.python.translator.types.PythonLikeList;
-import org.optaplanner.python.translator.types.PythonLikeSet;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
-import org.optaplanner.python.translator.types.PythonNumber;
-import org.optaplanner.python.translator.types.PythonObjectWrapper;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.collections.PythonIterator;
+import org.optaplanner.python.translator.types.collections.PythonLikeDict;
+import org.optaplanner.python.translator.types.collections.PythonLikeList;
+import org.optaplanner.python.translator.types.collections.PythonLikeSet;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonFloat;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
+import org.optaplanner.python.translator.types.numeric.PythonNumber;
+import org.optaplanner.python.translator.types.wrappers.JavaObjectWrapper;
+import org.optaplanner.python.translator.types.wrappers.OpaqueJavaReference;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
+import org.optaplanner.python.translator.types.wrappers.PythonObjectWrapper;
 
 /**
  * Implementations of opcodes and operations that require Java to Python or Python to Java conversions.

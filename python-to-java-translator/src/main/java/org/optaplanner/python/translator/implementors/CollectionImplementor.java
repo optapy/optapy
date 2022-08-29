@@ -19,11 +19,11 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
-import org.optaplanner.python.translator.types.PythonInteger;
-import org.optaplanner.python.translator.types.PythonLikeList;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonSlice;
+import org.optaplanner.python.translator.types.collections.PythonLikeList;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.StopIteration;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 /**
  * Implementations of opcodes related to collections (list, tuple, set, dict).

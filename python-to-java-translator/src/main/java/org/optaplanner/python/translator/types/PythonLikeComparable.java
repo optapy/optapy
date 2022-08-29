@@ -3,6 +3,7 @@ package org.optaplanner.python.translator.types;
 import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 
 public interface PythonLikeComparable<T> extends Comparable<T> {
     static void setup(PythonLikeType type) {

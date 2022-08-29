@@ -12,9 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.CompareOp;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
-import org.optaplanner.python.translator.types.PythonFloat;
-import org.optaplanner.python.translator.types.PythonInteger;
-import org.optaplanner.python.translator.types.PythonNumber;
+import org.optaplanner.python.translator.types.numeric.PythonFloat;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
+import org.optaplanner.python.translator.types.numeric.PythonNumber;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 public class PythonTimeDeltaTest {

@@ -6,7 +6,7 @@ import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.GeneratorImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
-import org.optaplanner.python.translator.types.PythonIterator;
+import org.optaplanner.python.translator.types.collections.PythonIterator;
 
 public class GetYieldFromIterOpcode extends AbstractOpcode {
 

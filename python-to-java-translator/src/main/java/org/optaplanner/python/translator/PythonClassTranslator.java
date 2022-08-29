@@ -43,12 +43,12 @@ import org.optaplanner.python.translator.opcodes.object.StoreAttrOpcode;
 import org.optaplanner.python.translator.opcodes.variable.LoadFastOpcode;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.GeneratedFunctionMethodReference;
-import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonGenerator;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
 
 public class PythonClassTranslator {
     static Map<FunctionSignature, InterfaceDeclaration> functionSignatureToInterfaceName = new HashMap<>();

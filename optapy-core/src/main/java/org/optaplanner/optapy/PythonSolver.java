@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 
 import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
-import org.optaplanner.python.translator.types.OpaquePythonReference;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
 
 @SuppressWarnings("unused")
 public class PythonSolver {

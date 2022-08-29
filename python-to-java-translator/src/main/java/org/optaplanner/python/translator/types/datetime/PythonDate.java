@@ -1,9 +1,9 @@
 package org.optaplanner.python.translator.types.datetime;
 
-import static org.optaplanner.python.translator.types.PythonInteger.INT_TYPE;
-import static org.optaplanner.python.translator.types.PythonLikeTuple.TUPLE_TYPE;
 import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
+import static org.optaplanner.python.translator.types.collections.PythonLikeTuple.TUPLE_TYPE;
 import static org.optaplanner.python.translator.types.datetime.PythonTimeDelta.TIME_DELTA_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -19,11 +19,11 @@ import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
-import org.optaplanner.python.translator.types.PythonFloat;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeComparable;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonFloat;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 /**
  * Python docs: <a href="https://docs.python.org/3/library/datetime.html#datetime.date">date objects</a>

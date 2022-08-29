@@ -8,15 +8,15 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
-import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonGenerator;
-import org.optaplanner.python.translator.types.PythonInteger;
-import org.optaplanner.python.translator.types.PythonLikeList;
 import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.collections.PythonLikeList;
 import org.optaplanner.python.translator.types.errors.AttributeError;
 import org.optaplanner.python.translator.types.errors.PythonAssertionError;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 public class PythonGeneratorTranslatorTest {

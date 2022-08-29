@@ -6,7 +6,7 @@ import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.CollectionImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
-import org.optaplanner.python.translator.types.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 
 public class ContainsOpcode extends AbstractOpcode {
 

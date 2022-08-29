@@ -76,7 +76,7 @@ def _get_python_object_attribute(object_id, name):
             out = JObject(python_object, java.lang.Object)
             return out
         else:
-            return JProxy(org.optaplanner.python.translator.types.OpaquePythonReference, inst=python_object,
+            return JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference, inst=python_object,
                           convert=True)
     except Exception as e:
         from org.optaplanner.optapy import OptaPyException  # noqa
@@ -86,8 +86,8 @@ def _get_python_object_attribute(object_id, name):
 
 def _get_python_array_to_id_array(the_object: List):
     """Maps a Python List to a Java List of OpaquePythonReference"""
-    import org.optaplanner.python.translator.types.OpaquePythonReference
-    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.python.translator.types.OpaquePythonReference,
+    import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference
+    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference,
                                                   inst=x, convert=True), the_object)))
     return out
 
@@ -123,7 +123,7 @@ def _deep_clone_python_object(the_object: Any):
     :parameter the_object: the object to be cloned.
     :return: An OpaquePythonReference of the cloned Python Object
     """
-    import org.optaplanner.python.translator.types.OpaquePythonReference
+    import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     item = PythonWrapperGenerator.getPythonObject(the_object)
     run_id = item._optapy_solver_run_id  # noqa ; cannot use __ since then we cannot access it here
@@ -132,7 +132,7 @@ def _deep_clone_python_object(the_object: Any):
     # Only need to keep two references: the best solution, and the working solution
     solver_run_id_to_refs[run_id].append(the_clone)  # add the new working solution
     solver_run_id_to_refs[run_id].pop(0)  # pop the old best solution
-    return JProxy(org.optaplanner.python.translator.types.OpaquePythonReference, inst=the_clone, convert=True)
+    return JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference, inst=the_clone, convert=True)
 
 
 def _is_deep_planning_clone(object):

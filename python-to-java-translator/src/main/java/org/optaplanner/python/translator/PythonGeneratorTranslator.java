@@ -34,10 +34,10 @@ import org.optaplanner.python.translator.opcodes.generator.YieldFromOpcode;
 import org.optaplanner.python.translator.opcodes.generator.YieldValueOpcode;
 import org.optaplanner.python.translator.types.PythonCell;
 import org.optaplanner.python.translator.types.PythonGenerator;
-import org.optaplanner.python.translator.types.PythonLikeDict;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.collections.PythonLikeDict;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 import org.optaplanner.python.translator.util.MethodVisitorAdapters;
 

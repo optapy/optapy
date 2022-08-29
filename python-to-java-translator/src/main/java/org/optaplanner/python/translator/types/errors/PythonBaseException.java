@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 
 /**
  * Python base class for all exceptions. Equivalent to Java's {@link Throwable}.

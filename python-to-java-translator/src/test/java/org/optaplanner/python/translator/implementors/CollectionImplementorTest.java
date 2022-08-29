@@ -16,10 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.OpcodeIdentifier;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.TriFunction;
-import org.optaplanner.python.translator.types.PythonInteger;
-import org.optaplanner.python.translator.types.PythonLikeList;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonSlice;
+import org.optaplanner.python.translator.types.collections.PythonLikeList;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })

@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.util;
 
 import java.util.Collection;
 import java.util.HashMap;

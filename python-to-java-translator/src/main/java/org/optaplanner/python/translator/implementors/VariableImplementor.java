@@ -14,8 +14,8 @@ import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.PythonCell;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 
 /**
  * Implementations of local variable manipulation opcodes.

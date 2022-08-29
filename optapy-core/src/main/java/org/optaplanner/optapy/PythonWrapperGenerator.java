@@ -51,9 +51,9 @@ import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
-import org.optaplanner.python.translator.types.OpaquePythonReference;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
 
 import io.quarkus.gizmo.AnnotationCreator;
 import io.quarkus.gizmo.AssignableResultHandle;

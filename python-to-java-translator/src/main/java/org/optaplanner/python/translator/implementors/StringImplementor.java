@@ -16,8 +16,8 @@ import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
-import org.optaplanner.python.translator.types.PythonLikeTuple;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 
 public class StringImplementor {
 

@@ -8,8 +8,8 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
-import org.optaplanner.python.translator.types.PythonBoolean;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 
 /**
  * Implementations of jump opcodes

@@ -1,7 +1,7 @@
 package org.optaplanner.python.translator.types.datetime;
 
-import static org.optaplanner.python.translator.types.PythonInteger.INT_TYPE;
 import static org.optaplanner.python.translator.types.datetime.PythonTzinfo.TZ_INFO_TYPE;
+import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -18,10 +18,10 @@ import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class PythonTime extends AbstractPythonLikeObject {
     // Taken from https://docs.python.org/3/library/datetime.html#datetime.time.fromisoformat

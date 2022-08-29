@@ -7,9 +7,9 @@ import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.VariableImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
-import org.optaplanner.python.translator.types.CPythonType;
 import org.optaplanner.python.translator.types.PythonLikeType;
-import org.optaplanner.python.translator.types.PythonObjectWrapper;
+import org.optaplanner.python.translator.types.wrappers.CPythonType;
+import org.optaplanner.python.translator.types.wrappers.PythonObjectWrapper;
 
 public class LoadGlobalOpcode extends AbstractOpcode {
 

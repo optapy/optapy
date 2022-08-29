@@ -4,9 +4,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.OpaqueJavaReference;
-import org.optaplanner.python.translator.types.OpaquePythonReference;
-import org.optaplanner.python.translator.types.PythonObjectWrapper;
+import org.optaplanner.python.translator.types.wrappers.OpaqueJavaReference;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
+import org.optaplanner.python.translator.types.wrappers.PythonObjectWrapper;
 
 @SuppressWarnings("unused")
 public class PythonComparable implements Comparable<PythonComparable>, OpaqueJavaReference {

@@ -3,8 +3,8 @@ package org.optaplanner.python.translator.builtins;
 import java.util.Formatter;
 
 import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.PythonNumber;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonNumber;
 
 public class NumberBuiltinOperations {
     public static PythonString format(PythonLikeObject number, PythonLikeObject formatString) {

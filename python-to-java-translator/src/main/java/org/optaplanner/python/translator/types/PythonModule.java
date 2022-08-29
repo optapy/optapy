@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
 
 public class PythonModule extends AbstractPythonLikeObject {
     public static PythonLikeType MODULE_TYPE = new PythonLikeType("module", PythonModule.class);

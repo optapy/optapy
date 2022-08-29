@@ -13,8 +13,8 @@ import java.util.function.Function;
 import org.optaplanner.core.api.function.TriFunction;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
-import org.optaplanner.python.translator.types.OpaquePythonReference;
-import org.optaplanner.python.translator.types.PythonLikeList;
+import org.optaplanner.python.translator.types.collections.PythonLikeList;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
 
 public class PythonList<T> extends PythonLikeList<T> implements PythonObject, List<T> {
     private static Function<OpaquePythonReference, Object> clearPythonList;

@@ -19,14 +19,14 @@ import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonCompiledFunction;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.PythonBoolean;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.errors.PythonAssertionError;
 import org.optaplanner.python.translator.types.errors.PythonException;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
 import org.optaplanner.python.translator.types.errors.StopIteration;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })

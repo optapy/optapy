@@ -1,4 +1,4 @@
-package org.optaplanner.python.translator.types;
+package org.optaplanner.python.translator.types.numeric;
 
 import java.math.BigInteger;
 import java.util.List;
@@ -7,6 +7,13 @@ import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
+import org.optaplanner.python.translator.builtins.NumberBuiltinOperations;
+import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeComparable;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
@@ -25,7 +32,6 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         INT_TYPE = new PythonLikeType("int", PythonInteger.class, List.of(NUMBER_TYPE));
         try {
             PythonLikeComparable.setup(INT_TYPE);
-            PythonNumericOperations.setup(INT_TYPE.__dir__);
             registerMethods();
             PythonOverloadImplementor.createDispatchesFor(INT_TYPE);
             return INT_TYPE;
@@ -148,6 +154,8 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         // Other
         INT_TYPE.addMethod("__round__", PythonInteger.class.getMethod("round"));
         INT_TYPE.addMethod("__round__", PythonInteger.class.getMethod("round", PythonInteger.class));
+        INT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonInteger.class.getMethod("format"));
+        INT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonInteger.class.getMethod("format", PythonString.class));
     }
 
     public PythonInteger(PythonLikeType type) {
@@ -462,5 +470,13 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
 
     public PythonString asString() {
         return PythonString.valueOf(value.toString());
+    }
+
+    public PythonString format() {
+        return NumberBuiltinOperations.format(this, PythonString.valueOf(""));
+    }
+
+    public PythonString format(PythonString spec) {
+        return NumberBuiltinOperations.format(this, spec);
     }
 }

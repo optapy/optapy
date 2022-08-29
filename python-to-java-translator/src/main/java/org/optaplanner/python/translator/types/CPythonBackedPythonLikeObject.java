@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
 
 public class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject implements PythonLikeFunction {
     public static final PythonLikeType CPYTHON_BACKED_OBJECT_TYPE =

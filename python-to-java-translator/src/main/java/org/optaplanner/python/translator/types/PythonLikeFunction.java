@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.builtins.FunctionBuiltinOperations;
+import org.optaplanner.python.translator.types.wrappers.JavaMethodReference;
 
 public interface PythonLikeFunction extends PythonLikeObject {
 

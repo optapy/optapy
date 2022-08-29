@@ -13,11 +13,11 @@ import java.util.function.Function;
 
 import org.optaplanner.python.translator.builtins.GlobalBuiltins;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
-import org.optaplanner.python.translator.types.OpaquePythonReference;
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonModule;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
+import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
 
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     InputStream standardInput;

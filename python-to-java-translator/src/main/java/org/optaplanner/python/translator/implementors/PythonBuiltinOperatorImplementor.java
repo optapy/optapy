@@ -5,7 +5,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
-import org.optaplanner.python.translator.types.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 
 /**
  * Implementations of opcodes/operations that do not use dunder methods / are builtin.

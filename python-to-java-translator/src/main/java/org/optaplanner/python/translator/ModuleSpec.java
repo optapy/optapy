@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.optaplanner.python.translator.types.PythonInteger;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public final class ModuleSpec {
     final PythonInteger level;
