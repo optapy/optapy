@@ -23,6 +23,7 @@ import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonIterator;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
+import org.optaplanner.python.translator.types.collections.PythonLikeFrozenSet;
 import org.optaplanner.python.translator.types.collections.PythonLikeList;
 import org.optaplanner.python.translator.types.collections.PythonLikeSet;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
@@ -179,6 +180,10 @@ public class JavaPythonTypeConversionImplementor {
         if (Set.class.equals(javaClass) ||
                 PythonLikeSet.class.equals(javaClass)) {
             return PythonLikeSet.SET_TYPE;
+        }
+
+        if (PythonLikeFrozenSet.class.equals(javaClass)) {
+            return PythonLikeFrozenSet.FROZEN_SET_TYPE;
         }
 
         if (Map.class.equals(javaClass) ||

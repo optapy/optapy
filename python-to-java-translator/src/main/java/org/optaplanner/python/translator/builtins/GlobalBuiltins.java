@@ -36,6 +36,7 @@ import org.optaplanner.python.translator.types.PythonSlice;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonIterator;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
+import org.optaplanner.python.translator.types.collections.PythonLikeFrozenSet;
 import org.optaplanner.python.translator.types.collections.PythonLikeList;
 import org.optaplanner.python.translator.types.collections.PythonLikeSet;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
@@ -253,6 +254,8 @@ public class GlobalBuiltins {
                 return PythonFloat.FLOAT_TYPE;
             case "format":
                 return ((PythonLikeFunction) GlobalBuiltins::format);
+            case "frozenset":
+                return PythonLikeFrozenSet.FROZEN_SET_TYPE;
             case "getattr":
                 return ((PythonLikeFunction) GlobalBuiltins::getattr);
             case "globals":

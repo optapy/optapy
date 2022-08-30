@@ -22,6 +22,10 @@ public class KeyError extends LookupError {
         super(type);
     }
 
+    public KeyError(String message) {
+        super(KEY_ERROR_TYPE, message);
+    }
+
     public KeyError(PythonLikeType type, List<PythonLikeObject> args) {
         super(type, args);
     }

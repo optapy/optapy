@@ -1,5 +1,4 @@
 import builtins
-import ctypes
 import dis
 import inspect
 import sys
@@ -84,6 +83,7 @@ def init_type_to_compiled_java_class():
     type_to_compiled_java_class[list] = java_collection_types.PythonLikeList.LIST_TYPE
     type_to_compiled_java_class[tuple] = java_collection_types.PythonLikeTuple.TUPLE_TYPE
     type_to_compiled_java_class[set] = java_collection_types.PythonLikeSet.SET_TYPE
+    type_to_compiled_java_class[frozenset] = java_collection_types.PythonLikeFrozenSet.FROZEN_SET_TYPE
     type_to_compiled_java_class[dict] = java_collection_types.PythonLikeDict.DICT_TYPE
 
     type_to_compiled_java_class[datetime.datetime] = java_datetime_types.PythonDateTime.DATE_TIME_TYPE
@@ -254,7 +254,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
     from org.optaplanner.python.translator.types import PythonString, PythonNone, \
         PythonModule, PythonSlice, PythonRange
     from org.optaplanner.python.translator.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
-        PythonLikeDict
+        PythonLikeFrozenSet, PythonLikeDict
     from org.optaplanner.python.translator.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
     from org.optaplanner.python.translator.types.wrappers import PythonObjectWrapper, CPythonType, OpaquePythonReference
 
@@ -306,6 +306,12 @@ def convert_to_java_python_like_object(value, instance_map=None):
         put_in_instance_map(instance_map, value, out)
         for item in value:
             out.add(convert_to_java_python_like_object(item, instance_map))
+        return out
+    elif isinstance(value, frozenset):
+        out = PythonLikeFrozenSet()
+        put_in_instance_map(instance_map, value, out)
+        for item in value:
+            out.delegate.add(convert_to_java_python_like_object(item, instance_map))
         return out
     elif isinstance(value, dict):
         out = PythonLikeDict()
@@ -365,7 +371,7 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from org.optaplanner.python.translator.types import PythonString, PythonNone, \
         PythonModule, PythonSlice, PythonRange, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType
     from org.optaplanner.python.translator.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
-        PythonLikeDict
+        PythonLikeFrozenSet, PythonLikeDict
     from org.optaplanner.python.translator.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
     from org.optaplanner.python.translator.types.wrappers import JavaObjectWrapper, PythonObjectWrapper, CPythonType, \
         OpaquePythonReference
@@ -401,6 +407,10 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
         out = set()
         for item in python_like_object:
             out.add(unwrap_python_like_object(item, default))
+
+        if isinstance(python_like_object, PythonLikeFrozenSet):
+            return frozenset(out)
+
         return out
     elif isinstance(python_like_object, Map):
         out = dict()
