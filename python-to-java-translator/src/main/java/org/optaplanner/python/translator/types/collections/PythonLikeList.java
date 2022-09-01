@@ -3,6 +3,7 @@ package org.optaplanner.python.translator.types.collections;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -20,6 +21,7 @@ import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonSlice;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.types.errors.lookup.IndexError;
 import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
@@ -61,16 +63,24 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         LIST_TYPE.addMethod(PythonBinaryOperators.ADD, PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class));
         LIST_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
                 PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class));
+        LIST_TYPE.addMethod(PythonBinaryOperators.MULTIPLY,
+                PythonLikeList.class.getMethod("multiplyToNew", PythonInteger.class));
+        LIST_TYPE.addMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
+                PythonLikeList.class.getMethod("multiplyToSelf", PythonInteger.class));
         LIST_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeList.class.getMethod("getItem", PythonInteger.class));
         LIST_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeList.class.getMethod("getSlice", PythonSlice.class));
         LIST_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
                 PythonLikeList.class.getMethod("deleteItem", PythonInteger.class));
+        LIST_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
+                PythonLikeList.class.getMethod("deleteSlice", PythonSlice.class));
         LIST_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
                 PythonLikeList.class.getMethod("containsItem", PythonLikeObject.class));
 
         // Ternary methods
         LIST_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
                 PythonLikeList.class.getMethod("setItem", PythonInteger.class, PythonLikeObject.class));
+        LIST_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
+                PythonLikeList.class.getMethod("setSlice", PythonSlice.class, PythonLikeObject.class));
 
         // Other
         LIST_TYPE.addMethod("append", PythonLikeList.class.getMethod("append", PythonLikeObject.class));
@@ -81,6 +91,13 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         LIST_TYPE.addMethod("copy", PythonLikeList.class.getMethod("copy"));
         LIST_TYPE.addMethod("count", PythonLikeList.class.getMethod("count", PythonLikeObject.class));
         LIST_TYPE.addMethod("index", PythonLikeList.class.getMethod("index", PythonLikeObject.class));
+        LIST_TYPE.addMethod("index", PythonLikeList.class.getMethod("index", PythonLikeObject.class, PythonInteger.class));
+        LIST_TYPE.addMethod("index",
+                PythonLikeList.class.getMethod("index", PythonLikeObject.class, PythonInteger.class, PythonInteger.class));
+        LIST_TYPE.addMethod("pop", PythonLikeList.class.getMethod("pop"));
+        LIST_TYPE.addMethod("pop", PythonLikeList.class.getMethod("pop", PythonInteger.class));
+        LIST_TYPE.addMethod("reverse", PythonLikeList.class.getMethod("reverse"));
+        LIST_TYPE.addMethod("sort", PythonLikeList.class.getMethod("sort"));
     }
 
     public PythonLikeList() {
@@ -104,6 +121,17 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         remainderToAdd = 0;
     }
 
+    // Required for bytecode generation
+    @SuppressWarnings("unused")
+    public void reverseAdd(PythonLikeObject object) {
+        delegate.set(remainderToAdd - 1, object);
+        remainderToAdd--;
+    }
+
+    public PythonIterator getIterator() {
+        return new PythonIterator(delegate.iterator());
+    }
+
     public PythonLikeList copy() {
         PythonLikeList copy = new PythonLikeList();
         copy.addAll(delegate);
@@ -122,6 +150,248 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return this;
     }
 
+    public PythonLikeList multiplyToNew(PythonInteger times) {
+        if (times.value.compareTo(BigInteger.ZERO) <= 0) {
+            return new PythonLikeList();
+        }
+
+        PythonLikeList result = new PythonLikeList();
+        int timesAsInt = times.value.intValueExact();
+
+        for (int i = 0; i < timesAsInt; i++) {
+            result.addAll(delegate);
+        }
+
+        return result;
+    }
+
+    public PythonLikeList multiplyToSelf(PythonInteger times) {
+        if (times.value.compareTo(BigInteger.ZERO) <= 0) {
+            delegate.clear();
+            return this;
+        }
+        List<PythonLikeObject> copy = new ArrayList<>(delegate);
+        int timesAsInt = times.value.intValueExact() - 1;
+
+        for (int i = 0; i < timesAsInt; i++) {
+            delegate.addAll(copy);
+        }
+
+        return this;
+    }
+
+    public PythonInteger length() {
+        return PythonInteger.valueOf(delegate.size());
+    }
+
+    public PythonInteger index(PythonLikeObject item) {
+        int result = delegate.indexOf(item);
+
+        if (result != -1) {
+            return PythonInteger.valueOf(result);
+        } else {
+            throw new ValueError(item + " is not in list");
+        }
+    }
+
+    public PythonInteger index(PythonLikeObject item, PythonInteger start) {
+        int startAsInt = start.value.intValueExact();
+        if (startAsInt < 0) {
+            startAsInt = delegate.size() + startAsInt;
+        }
+
+        List<PythonLikeObject> searchList = delegate.subList(startAsInt, delegate.size());
+        int result = searchList.indexOf(item);
+        if (result != -1) {
+            return PythonInteger.valueOf(startAsInt + result);
+        } else {
+            throw new ValueError(item + " is not in list");
+        }
+    }
+
+    public PythonInteger index(PythonLikeObject item, PythonInteger start, PythonInteger end) {
+        int startAsInt = start.value.intValueExact();
+        int endAsInt = end.value.intValueExact();
+
+        if (startAsInt < 0) {
+            startAsInt = delegate.size() + startAsInt;
+        }
+
+        if (endAsInt < 0) {
+            endAsInt = delegate.size() + endAsInt;
+        }
+
+        List<PythonLikeObject> searchList = delegate.subList(startAsInt, endAsInt);
+        int result = searchList.indexOf(item);
+        if (result != -1) {
+            return PythonInteger.valueOf(startAsInt + result);
+        } else {
+            throw new ValueError(item + " is not in list");
+        }
+    }
+
+    public PythonLikeObject getItem(PythonInteger index) {
+        int indexAsInt = index.value.intValueExact();
+
+        if (indexAsInt < 0) {
+            indexAsInt = delegate.size() + index.value.intValueExact();
+        }
+
+        if (indexAsInt < 0 || indexAsInt >= delegate.size()) {
+            throw new IndexError("list index out of range");
+        }
+
+        return (PythonLikeObject) delegate.get(indexAsInt);
+    }
+
+    public PythonLikeList getSlice(PythonSlice slice) {
+        int length = delegate.size();
+
+        PythonLikeList out = new PythonLikeList();
+
+        slice.iterate(length, (i, processed) -> {
+            out.add(delegate.get(i));
+        });
+
+        return out;
+    }
+
+    public PythonLikeObject setItem(PythonInteger index, PythonLikeObject value) {
+        int indexAsInt = index.value.intValueExact();
+
+        if (indexAsInt < 0) {
+            indexAsInt = delegate.size() + index.value.intValueExact();
+        }
+
+        if (indexAsInt < 0 || indexAsInt >= delegate.size()) {
+            throw new IndexError("list index out of range");
+        }
+
+        delegate.set(indexAsInt, value);
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonLikeObject setSlice(PythonSlice slice, PythonLikeObject iterable) {
+        int length = delegate.size();
+        int start = slice.getStartIndex(length);
+        int stop = slice.getStopIndex(length);
+        int step = slice.getStrideLength();
+        Iterator<PythonLikeObject> iterator = (Iterator<PythonLikeObject>) UnaryDunderBuiltin.ITERATOR.invoke(iterable);
+
+        if (step == 1) {
+            delegate.subList(start, stop).clear();
+            int offset = 0;
+            while (iterator.hasNext()) {
+                PythonLikeObject item = iterator.next();
+                delegate.add(start + offset, item);
+                offset++;
+            }
+        } else {
+            List<PythonLikeObject> temp = new ArrayList<>();
+            iterator.forEachRemaining(temp::add);
+            if (temp.size() != slice.getSliceSize(length)) {
+                throw new ValueError("attempt to assign sequence of size " + temp.size() + " to extended slice of size "
+                        + slice.getSliceSize(length));
+            }
+
+            slice.iterate(length, (i, processed) -> {
+                delegate.set(i, temp.get(processed));
+            });
+        }
+
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone deleteItem(PythonInteger index) {
+        if (index.value.compareTo(BigInteger.ZERO) < 0) {
+            delegate.remove(delegate.size() + index.value.intValueExact());
+        } else {
+            delegate.remove(index.value.intValueExact());
+        }
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone deleteSlice(PythonSlice slice) {
+        int length = delegate.size();
+        int start = slice.getStartIndex(length);
+        int stop = slice.getStopIndex(length);
+        int step = slice.getStrideLength();
+
+        if (step == 1) {
+            delegate.subList(start, stop).clear();
+        } else {
+            if (step > 0) {
+                // need to account for removed items because we are moving up the list,
+                // (as removing items shift elements down)
+                slice.iterate(length, (i, processed) -> {
+                    delegate.remove(i - processed);
+                });
+            } else {
+                // Since we are moving down the list (starting at the higher value),
+                // the elements being removed stay in the same place, so we do not need
+                // to account for processed elements
+                slice.iterate(length, (i, processed) -> {
+                    delegate.remove(i);
+                });
+            }
+        }
+
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone remove(PythonLikeObject item) {
+        if (!delegate.remove(item)) {
+            throw new ValueError("list.remove(x): x not in list");
+        }
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone insert(PythonInteger index, PythonLikeObject item) {
+        int indexAsInt = index.value.intValueExact();
+        if (indexAsInt < 0) {
+            indexAsInt = delegate.size() + indexAsInt;
+        }
+
+        if (indexAsInt < 0) {
+            indexAsInt = 0;
+        }
+
+        if (indexAsInt > delegate.size()) {
+            indexAsInt = delegate.size();
+        }
+
+        delegate.add(indexAsInt, item);
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonLikeObject pop() {
+        if (delegate.isEmpty()) {
+            throw new IndexError("pop from empty list");
+        }
+        return (PythonLikeObject) delegate.remove(delegate.size() - 1);
+    }
+
+    public PythonLikeObject pop(PythonInteger index) {
+        if (delegate.isEmpty()) {
+            throw new IndexError("pop from empty list");
+        }
+
+        int indexAsInt = index.value.intValueExact();
+        if (indexAsInt < 0) {
+            indexAsInt = delegate.size() + indexAsInt;
+        }
+
+        if (indexAsInt >= delegate.size() || indexAsInt < 0) {
+            throw new IndexError("pop index out of range");
+        }
+
+        return (PythonLikeObject) delegate.remove(indexAsInt);
+    }
+
+    public PythonBoolean containsItem(PythonLikeObject item) {
+        return PythonBoolean.valueOf(delegate.contains(item));
+    }
+
     public PythonInteger count(PythonLikeObject search) {
         long count = 0;
         for (Object x : delegate) {
@@ -132,18 +402,43 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return new PythonInteger(count);
     }
 
-    public void reverseAdd(PythonLikeObject object) {
-        delegate.set(remainderToAdd - 1, object);
-        remainderToAdd--;
+    public PythonNone append(PythonLikeObject item) {
+        delegate.add(item);
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone extend(PythonLikeObject item) {
+        if (item instanceof Collection) {
+            delegate.addAll((List) item);
+        } else {
+            Iterator iterator = (Iterator) UnaryDunderBuiltin.ITERATOR.invoke(item);
+            iterator.forEachRemaining(this::add);
+        }
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone reverse() {
+        Collections.reverse(delegate);
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone sort() {
+        Collections.sort(delegate);
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone clearList() {
+        delegate.clear();
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonString getRepresentation() {
+        return PythonString.valueOf(toString());
     }
 
     @Override
     public int size() {
         return delegate.size();
-    }
-
-    public PythonInteger length() {
-        return PythonInteger.valueOf(delegate.size());
     }
 
     @Override
@@ -156,17 +451,9 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return delegate.contains(o);
     }
 
-    public PythonBoolean containsItem(PythonLikeObject item) {
-        return PythonBoolean.valueOf(delegate.contains(item));
-    }
-
     @Override
     public Iterator<T> iterator() {
         return delegate.iterator();
-    }
-
-    public PythonIterator getIterator() {
-        return new PythonIterator(delegate.iterator());
     }
 
     @Override
@@ -183,11 +470,6 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return delegate.add(pythonLikeObject);
     }
 
-    public PythonNone append(PythonLikeObject item) {
-        delegate.add(item);
-        return PythonNone.INSTANCE;
-    }
-
     @Override
     public boolean remove(Object o) {
         return delegate.remove(o);
@@ -201,16 +483,6 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
     @Override
     public boolean addAll(Collection collection) {
         return delegate.addAll(collection);
-    }
-
-    public PythonNone extend(PythonLikeObject item) {
-        if (item instanceof Collection) {
-            delegate.addAll((List) item);
-        } else {
-            Iterator iterator = (Iterator) UnaryDunderBuiltin.ITERATOR.invoke(item);
-            iterator.forEachRemaining(this::add);
-        }
-        return PythonNone.INSTANCE;
     }
 
     @Override
@@ -233,43 +505,9 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         delegate.clear();
     }
 
-    public PythonNone clearList() {
-        delegate.clear();
-        return PythonNone.INSTANCE;
-    }
-
     @Override
     public T get(int i) {
         return (T) delegate.get(i);
-    }
-
-    public PythonLikeObject getItem(PythonInteger index) {
-        if (index.value.compareTo(BigInteger.ZERO) < 0) {
-            return (PythonLikeObject) delegate.get(delegate.size() + index.value.intValueExact());
-        } else {
-            return (PythonLikeObject) delegate.get(index.value.intValueExact());
-        }
-    }
-
-    public PythonLikeList getSlice(PythonSlice slice) {
-        int length = size();
-        int start = slice.getStartIndex(length);
-        int stop = slice.getStopIndex(length);
-        int step = slice.getStrideLength();
-
-        PythonLikeList out = new PythonLikeList();
-
-        if (step > 0) {
-            for (int i = start; i < stop; i += step) {
-                out.add(delegate.get(i));
-            }
-        } else {
-            for (int i = start; i > stop; i += step) {
-                out.add(delegate.get(i));
-            }
-        }
-
-        return out;
     }
 
     @Override
@@ -277,23 +515,9 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return delegate.set(i, pythonLikeObject);
     }
 
-    public PythonLikeObject setItem(PythonInteger index, PythonLikeObject value) {
-        if (index.value.compareTo(BigInteger.ZERO) < 0) {
-            delegate.set(delegate.size() + index.value.intValueExact(), value);
-        } else {
-            delegate.set(index.value.intValueExact(), value);
-        }
-        return PythonNone.INSTANCE;
-    }
-
     @Override
     public void add(int i, Object pythonLikeObject) {
         delegate.add(i, pythonLikeObject);
-    }
-
-    public PythonNone insert(PythonInteger index, PythonLikeObject item) {
-        delegate.add(index.value.intValueExact(), item);
-        return PythonNone.INSTANCE;
     }
 
     @Override
@@ -301,27 +525,9 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return (T) delegate.remove(i);
     }
 
-    public PythonNone deleteItem(PythonInteger index) {
-        if (index.value.compareTo(BigInteger.ZERO) < 0) {
-            delegate.remove(delegate.size() + index.value.intValueExact());
-        } else {
-            delegate.remove(index.value.intValueExact());
-        }
-        return PythonNone.INSTANCE;
-    }
-
-    public PythonNone remove(PythonLikeObject item) {
-        delegate.remove(item);
-        return PythonNone.INSTANCE;
-    }
-
     @Override
     public int indexOf(Object o) {
         return delegate.indexOf(o);
-    }
-
-    public PythonInteger index(PythonLikeObject item) {
-        return PythonInteger.valueOf(delegate.indexOf(item));
     }
 
     @Override
@@ -358,18 +564,14 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         return out.toString();
     }
 
-    public PythonString getRepresentation() {
-        return PythonString.valueOf(toString());
-    }
-
     @Override
     public boolean equals(Object o) {
         if (o instanceof List) {
             List other = (List) o;
-            if (other.size() != this.size()) {
+            if (other.size() != delegate.size()) {
                 return false;
             }
-            int itemCount = size();
+            int itemCount = delegate.size();
             for (int i = 0; i < itemCount; i++) {
                 if (!Objects.equals(get(i), other.get(i))) {
                     return false;

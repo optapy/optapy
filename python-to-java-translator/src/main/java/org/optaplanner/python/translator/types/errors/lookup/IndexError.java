@@ -22,6 +22,10 @@ public class IndexError extends LookupError {
         super(type);
     }
 
+    public IndexError(String message) {
+        super(INDEX_ERROR_TYPE, message);
+    }
+
     public IndexError(PythonLikeType type, List<PythonLikeObject> args) {
         super(type, args);
     }
