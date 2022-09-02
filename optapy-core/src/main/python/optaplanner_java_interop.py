@@ -60,6 +60,7 @@ def _get_python_object_attribute(object_id, name):
     import java.lang.Object
     import java.util.Collection
     import org.optaplanner.core.api.score.Score
+    from org.optaplanner.optapy import PythonComparable
     the_object = object_id
     python_object_getter = getattr(the_object, str(name))
     if not callable(python_object_getter):
@@ -75,6 +76,10 @@ def _get_python_object_attribute(object_id, name):
                                         org.optaplanner.core.api.score.Score)):
             out = JObject(python_object, java.lang.Object)
             return out
+        elif hasattr(python_object_getter, '__optaplannerPlanningId'):
+            return PythonComparable(
+                JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference, inst=python_object,
+                       convert=True))
         else:
             return JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference, inst=python_object,
                           convert=True)
