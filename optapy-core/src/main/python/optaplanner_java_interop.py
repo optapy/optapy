@@ -934,8 +934,10 @@ def _to_java_map(python_dict: Dict):
     import java.util.HashMap
     out = java.util.HashMap()
     for key, value in python_dict.items():
-        if isinstance(value, list):
+        if isinstance(value, (list, tuple)):
             out.put(JObject(key, java.lang.Object), _to_java_list(value).toArray())
+        elif isinstance(value, Mapping):
+            out.put(JObject(key, java.lang.Object), _to_java_map(value))
         else:
             out.put(JObject(key, java.lang.Object), JObject(value, java.lang.Object))
     return out
@@ -947,7 +949,9 @@ def _to_java_list(python_list: List):
     import java.util.ArrayList
     out = java.util.ArrayList()
     for item in python_list:
-        if isinstance(item, dict):
+        if isinstance(item, (list, tuple)):
+            out.add(_to_java_list(item))
+        elif isinstance(item, Mapping):
             out.add(_to_java_map(item))
         else:
             out.add(JObject(item, java.lang.Object))

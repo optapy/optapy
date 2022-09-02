@@ -200,9 +200,13 @@ def custom_shadow_variable(shadow_variable_type: Type, *,
         custom_variable_getter_function.__optaplannerCustomShadowVariable = {
             'annotationType': JavaCustomShadowVariable,
             'sources': sources,
-            'variableListenerClass': get_class(variable_listener_class),
             'variableListenerRef': variable_listener_ref,
         }
+
+        if variable_listener_class is not None:
+            custom_variable_getter_function.__optaplannerCustomShadowVariable['variableListenerClass'] = \
+                get_class(variable_listener_class)
+
         custom_variable_getter_function.__optapy_return = get_class(shadow_variable_type)
         return custom_variable_getter_function
 
