@@ -51,7 +51,7 @@ def is_c_native(item):
         return ext in EXTENSION_SUFFIXES
 
     module = moduleof(item)
-    if module == 'builtins':
+    if module == 'builtins' or module == '':  # if we cannot find module, assume it is not native
         return False
     return isnativemodule(
         importlib.import_module(
@@ -182,7 +182,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
                                                                                convert=True),
                                                                         instance_map)
         return out
-    elif type(value) in type_to_compiled_java_class:
+    elif not inspect.isfunction(value) and type(value) in type_to_compiled_java_class:
         if type_to_compiled_java_class[type(value)] is None:
             return None
         java_type = type_to_compiled_java_class[type(value)]
