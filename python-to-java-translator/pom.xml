@@ -26,10 +26,16 @@
         <artifactId>asm-tree</artifactId>
         <version>${version.org.ow2.asm}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-collections4</artifactId>
+        <version>4.2</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
   <dependencies>
+    <!-- ASM -->
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
@@ -42,6 +48,14 @@
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm-tree</artifactId>
     </dependency>
+
+    <!-- Utilities -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-collections4</artifactId>
+    </dependency>
+
+    <!-- Logging -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>

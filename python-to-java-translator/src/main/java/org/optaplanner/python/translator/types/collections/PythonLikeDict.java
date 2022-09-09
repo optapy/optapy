@@ -1,47 +1,43 @@
 package org.optaplanner.python.translator.types.collections;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.commons.collections4.OrderedMap;
+import org.apache.commons.collections4.map.LinkedMap;
+import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.PythonTernaryOperators;
+import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.collections.view.DictItemView;
+import org.optaplanner.python.translator.types.collections.view.DictKeyView;
+import org.optaplanner.python.translator.types.collections.view.DictValueView;
 import org.optaplanner.python.translator.types.errors.ValueError;
-import org.optaplanner.python.translator.types.wrappers.JavaMethodReference;
+import org.optaplanner.python.translator.types.errors.lookup.KeyError;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.JavaStringMapMirror;
 
 public class PythonLikeDict extends AbstractPythonLikeObject
         implements Map<PythonLikeObject, PythonLikeObject>, Iterable<PythonLikeObject> {
-    final Map<PythonLikeObject, PythonLikeObject> delegate;
+    public final OrderedMap<PythonLikeObject, PythonLikeObject> delegate;
 
     public final static PythonLikeType DICT_TYPE = new PythonLikeType("dict", PythonLikeDict.class);
 
     static {
         try {
-            // TODO: Add remaining operations from https://docs.python.org/3/library/stdtypes.html#dict
-
-            DICT_TYPE.__dir__.put("__len__", new JavaMethodReference(Map.class.getMethod("size"),
-                    Map.of()));
-            DICT_TYPE.__dir__.put("__getitem__",
-                    new JavaMethodReference(Map.class.getMethod("get", Object.class), Map.of("key", 1)));
-            DICT_TYPE.__dir__.put("__setitem__", new JavaMethodReference(Map.class.getMethod("put", Object.class, Object.class),
-                    Map.of("key", 1, "value", 2)));
-            DICT_TYPE.__dir__.put("__delitem__", new JavaMethodReference(Map.class.getMethod("remove", Object.class),
-                    Map.of("key", 1)));
-            DICT_TYPE.__dir__.put("__iter__", new JavaMethodReference(PythonLikeDict.class.getMethod("iterator"),
-                    Map.of()));
-            DICT_TYPE.__dir__.put("__contains__", new JavaMethodReference(Map.class.getMethod("containsKey", Object.class),
-                    Map.of()));
-            DICT_TYPE.__dir__.put("clear", new JavaMethodReference(Map.class.getMethod("clear"), Map.of()));
-            DICT_TYPE.__dir__.put("copy", new JavaMethodReference(PythonLikeDict.class.getMethod("copy"), Map.of()));
-
             registerMethods();
+            PythonOverloadImplementor.createDispatchesFor(DICT_TYPE);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Unable to find method.", e);
         }
@@ -72,19 +68,59 @@ public class PythonLikeDict extends AbstractPythonLikeObject
                 throw new ValueError("dict takes 0 or 1 positional arguments, got " + positionalArguments.size());
             }
         }));
+
+        // Unary operators
+        DICT_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonLikeDict.class.getMethod("getKeyIterator"));
+        DICT_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonLikeDict.class.getMethod("getSize"));
+        DICT_TYPE.addMethod(PythonUnaryOperator.REVERSED, PythonLikeDict.class.getMethod("reversed"));
+
+        // Binary operators
+        DICT_TYPE.addMethod(PythonBinaryOperators.GET_ITEM,
+                PythonLikeDict.class.getMethod("getItemOrError", PythonLikeObject.class));
+        DICT_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
+                PythonLikeDict.class.getMethod("removeItemOrError", PythonLikeObject.class));
+        DICT_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+                PythonLikeDict.class.getMethod("isKeyInDict", PythonLikeObject.class));
+        DICT_TYPE.addMethod(PythonBinaryOperators.OR, PythonLikeDict.class.getMethod("binaryOr", PythonLikeDict.class));
+        DICT_TYPE.addMethod(PythonBinaryOperators.INPLACE_OR,
+                PythonLikeDict.class.getMethod("binaryInplaceOr", PythonLikeDict.class));
+
+        // Ternary operators
+        DICT_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
+                PythonLikeDict.class.getMethod("setItem", PythonLikeObject.class, PythonLikeObject.class));
+
+        // Other
+        DICT_TYPE.addMethod("clear", PythonLikeDict.class.getMethod("clearDict"));
+        DICT_TYPE.addMethod("copy", PythonLikeDict.class.getMethod("copy"));
+        DICT_TYPE.addMethod("get", PythonLikeDict.class.getMethod("getItemOrNone", PythonLikeObject.class));
+        DICT_TYPE.addMethod("get",
+                PythonLikeDict.class.getMethod("getItemOrDefault", PythonLikeObject.class, PythonLikeObject.class));
+        DICT_TYPE.addMethod("items", PythonLikeDict.class.getMethod("getItems"));
+        DICT_TYPE.addMethod("keys", PythonLikeDict.class.getMethod("getKeyView"));
+        DICT_TYPE.addMethod("pop", PythonLikeDict.class.getMethod("popItemOrError", PythonLikeObject.class));
+        DICT_TYPE.addMethod("pop",
+                PythonLikeDict.class.getMethod("popItemOrDefault", PythonLikeObject.class, PythonLikeObject.class));
+        DICT_TYPE.addMethod("popitem", PythonLikeDict.class.getMethod("popLast"));
+        DICT_TYPE.addMethod("setdefault", PythonLikeDict.class.getMethod("setIfAbsent", PythonLikeObject.class));
+        DICT_TYPE.addMethod("setdefault",
+                PythonLikeDict.class.getMethod("setIfAbsent", PythonLikeObject.class, PythonLikeObject.class));
+        DICT_TYPE.addMethod("update", PythonLikeDict.class.getMethod("update", PythonLikeDict.class));
+        DICT_TYPE.addMethod("update", PythonLikeDict.class.getMethod("update", PythonLikeObject.class));
+        // TODO: Keyword update
+        DICT_TYPE.addMethod("values", PythonLikeDict.class.getMethod("getValueView"));
     }
 
     public PythonLikeDict() {
         super(DICT_TYPE);
-        delegate = new HashMap<>();
+        delegate = new LinkedMap<>();
     }
 
     public PythonLikeDict(int size) {
         super(DICT_TYPE);
-        delegate = new HashMap<>(size);
+        delegate = new LinkedMap<>(size);
     }
 
-    public PythonLikeDict(Map<PythonLikeObject, PythonLikeObject> source) {
+    public PythonLikeDict(OrderedMap<PythonLikeObject, PythonLikeObject> source) {
         super(DICT_TYPE);
         delegate = source;
     }
@@ -94,9 +130,7 @@ public class PythonLikeDict extends AbstractPythonLikeObject
     }
 
     public PythonLikeDict copy() {
-        PythonLikeDict copy = new PythonLikeDict();
-        copy.putAll(delegate);
-        return copy;
+        return new PythonLikeDict(new LinkedMap<>(delegate));
     }
 
     public PythonLikeDict concatToNew(PythonLikeDict other) {
@@ -108,6 +142,166 @@ public class PythonLikeDict extends AbstractPythonLikeObject
 
     public PythonLikeDict concatToSelf(PythonLikeDict other) {
         this.putAll(other);
+        return this;
+    }
+
+    public PythonInteger getSize() {
+        return PythonInteger.valueOf(delegate.size());
+    }
+
+    public PythonIterator<PythonLikeObject> getKeyIterator() {
+        return new PythonIterator<>(delegate.keySet().iterator());
+    }
+
+    public PythonLikeObject getItemOrError(PythonLikeObject key) {
+        PythonLikeObject out = delegate.get(key);
+        if (out == null) {
+            throw new KeyError(key.toString());
+        }
+        return out;
+    }
+
+    public PythonLikeObject getItemOrNone(PythonLikeObject key) {
+        PythonLikeObject out = delegate.get(key);
+        if (out == null) {
+            return PythonNone.INSTANCE;
+        }
+        return out;
+    }
+
+    public PythonLikeObject getItemOrDefault(PythonLikeObject key, PythonLikeObject defaultValue) {
+        PythonLikeObject out = delegate.get(key);
+        if (out == null) {
+            return defaultValue;
+        }
+        return out;
+    }
+
+    public DictItemView getItems() {
+        return new DictItemView(this);
+    }
+
+    public DictKeyView getKeyView() {
+        return new DictKeyView(this);
+    }
+
+    public PythonNone setItem(PythonLikeObject key, PythonLikeObject value) {
+        delegate.put(key, value);
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone removeItemOrError(PythonLikeObject key) {
+        if (delegate.remove(key) == null) {
+            throw new KeyError(key.toString());
+        }
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonBoolean isKeyInDict(PythonLikeObject key) {
+        return PythonBoolean.valueOf(delegate.containsKey(key));
+    }
+
+    public PythonNone clearDict() {
+        delegate.clear();
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonLikeObject popItemOrError(PythonLikeObject key) {
+        PythonLikeObject out = delegate.remove(key);
+        if (out == null) {
+            throw new KeyError(key.toString());
+        }
+        return out;
+    }
+
+    public PythonLikeObject popItemOrDefault(PythonLikeObject key, PythonLikeObject defaultValue) {
+        PythonLikeObject out = delegate.remove(key);
+        if (out == null) {
+            return defaultValue;
+        }
+        return out;
+    }
+
+    public PythonLikeObject popLast() {
+        if (delegate.isEmpty()) {
+            throw new KeyError("popitem(): dictionary is empty");
+        }
+
+        PythonLikeObject lastKey = delegate.lastKey();
+        return PythonLikeTuple.fromList(List.of(lastKey, delegate.remove(lastKey)));
+    }
+
+    public PythonIterator<PythonLikeObject> reversed() {
+        if (delegate.isEmpty()) {
+            return new PythonIterator<>(Collections.emptyIterator());
+        }
+
+        final PythonLikeObject lastKey = delegate.lastKey();
+        return new PythonIterator<>(new Iterator<>() {
+            PythonLikeObject current = lastKey;
+
+            @Override
+            public boolean hasNext() {
+                return current != null;
+            }
+
+            @Override
+            public PythonLikeObject next() {
+                PythonLikeObject out = current;
+                current = delegate.previousKey(current);
+                return out;
+            }
+        });
+    }
+
+    public PythonLikeObject setIfAbsent(PythonLikeObject key) {
+        PythonLikeObject value = delegate.get(key);
+        if (value != null) {
+            return value;
+        }
+        delegate.put(key, PythonNone.INSTANCE);
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonLikeObject setIfAbsent(PythonLikeObject key, PythonLikeObject defaultValue) {
+        PythonLikeObject value = delegate.get(key);
+        if (value != null) {
+            return value;
+        }
+        delegate.put(key, defaultValue);
+        return defaultValue;
+    }
+
+    public PythonNone update(PythonLikeDict other) {
+        delegate.putAll(other.delegate);
+        return PythonNone.INSTANCE;
+    }
+
+    public PythonNone update(PythonLikeObject iterable) {
+        Iterator<List<PythonLikeObject>> iterator =
+                (Iterator<List<PythonLikeObject>>) UnaryDunderBuiltin.ITERATOR.invoke(iterable);
+
+        while (iterator.hasNext()) {
+            List<PythonLikeObject> keyValuePair = iterator.next();
+            delegate.put(keyValuePair.get(0), keyValuePair.get(1));
+        }
+
+        return PythonNone.INSTANCE;
+    }
+
+    public DictValueView getValueView() {
+        return new DictValueView(this);
+    }
+
+    public PythonLikeDict binaryOr(PythonLikeDict other) {
+        PythonLikeDict out = new PythonLikeDict();
+        out.delegate.putAll(delegate);
+        out.delegate.putAll(other.delegate);
+        return out;
+    }
+
+    public PythonLikeDict binaryInplaceOr(PythonLikeDict other) {
+        delegate.putAll(other.delegate);
         return this;
     }
 

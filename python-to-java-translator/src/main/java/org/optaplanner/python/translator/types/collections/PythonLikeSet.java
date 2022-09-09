@@ -22,7 +22,7 @@ import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class PythonLikeSet extends AbstractPythonLikeObject implements Set<PythonLikeObject> {
-    final Set<PythonLikeObject> delegate;
+    public final Set<PythonLikeObject> delegate;
 
     public final static PythonLikeType SET_TYPE = new PythonLikeType("set", PythonLikeSet.class);
 
