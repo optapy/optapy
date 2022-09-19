@@ -1,5 +1,8 @@
 package org.optaplanner.python.translator.types;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
+
 import java.util.Iterator;
 
 import org.optaplanner.python.translator.MethodDescriptor;
@@ -30,19 +33,19 @@ public abstract class PythonGenerator extends AbstractPythonLikeObject implement
         GENERATOR_TYPE.addMethod(PythonUnaryOperator.NEXT,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("next")),
-                        PythonLikeType.getBaseType()));
+                        BASE_TYPE));
         GENERATOR_TYPE.addMethod("send",
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("send", PythonLikeObject.class)),
-                        PythonLikeType.getBaseType(), PythonLikeType.getBaseType()));
+                        BASE_TYPE, BASE_TYPE));
         GENERATOR_TYPE.addMethod("throw",
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("throwValue", Throwable.class)),
-                        PythonLikeType.getBaseType(), PythonBaseException.BASE_EXCEPTION_TYPE));
+                        BASE_TYPE, PythonBaseException.BASE_EXCEPTION_TYPE));
         GENERATOR_TYPE.addMethod("close",
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("close")),
-                        PythonLikeType.getBaseType()));
+                        BASE_TYPE));
     }
 
     public PythonLikeObject sentValue;
@@ -50,7 +53,7 @@ public abstract class PythonGenerator extends AbstractPythonLikeObject implement
 
     public PythonGenerator() {
         super(GENERATOR_TYPE);
-        sentValue = PythonNone.NONE_TYPE;
+        sentValue = NONE_TYPE;
         thrownValue = null;
     }
 

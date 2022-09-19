@@ -1,9 +1,9 @@
 package org.optaplanner.python.translator.types.datetime;
 
-import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonBoolean.BOOLEAN_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonFloat.FLOAT_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.FLOAT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
 import static org.optaplanner.python.translator.types.numeric.PythonNumber.NUMBER_TYPE;
 
 import java.time.Duration;

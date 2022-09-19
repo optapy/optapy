@@ -1,12 +1,13 @@
 package org.optaplanner.python.translator.opcodes.generator;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.GeneratorImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
-import org.optaplanner.python.translator.types.PythonLikeType;
 
 public class YieldValueOpcode extends AbstractOpcode {
 
@@ -16,7 +17,7 @@ public class YieldValueOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop().push(ValueSourceInfo.of(this, PythonLikeType.getBaseType()));
+        return stackMetadata.pop().push(ValueSourceInfo.of(this, BASE_TYPE));
     }
 
     @Override

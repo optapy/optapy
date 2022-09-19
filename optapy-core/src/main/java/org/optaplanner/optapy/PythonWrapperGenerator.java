@@ -1,7 +1,7 @@
 package org.optaplanner.optapy;
 
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.asmClassLoader;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToBytecode;
+import static org.optaplanner.python.translator.types.BuiltinTypes.asmClassLoader;
+import static org.optaplanner.python.translator.types.BuiltinTypes.classNameToBytecode;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
 
 import java.io.PrintStream;

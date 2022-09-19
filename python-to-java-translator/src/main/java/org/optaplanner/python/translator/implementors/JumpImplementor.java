@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.implementors;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+
 import java.util.Map;
 
 import org.objectweb.asm.Label;
@@ -9,7 +11,6 @@ import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.PythonLikeType;
-import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 
 /**
  * Implementations of jump opcodes
@@ -30,7 +31,7 @@ public class JumpImplementor {
     public static void popAndJumpIfTrue(MethodVisitor methodVisitor, int jumpTarget,
             StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
-        if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
+        if (stackMetadata.getTOSType() != BOOLEAN_TYPE) {
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
         }
         PythonConstantsImplementor.loadTrue(methodVisitor);
@@ -43,7 +44,7 @@ public class JumpImplementor {
     public static void popAndJumpIfFalse(MethodVisitor methodVisitor, int jumpTarget,
             StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
-        if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
+        if (stackMetadata.getTOSType() != BOOLEAN_TYPE) {
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
         }
         PythonConstantsImplementor.loadFalse(methodVisitor);
@@ -75,7 +76,7 @@ public class JumpImplementor {
             StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
         methodVisitor.visitInsn(Opcodes.DUP);
-        if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
+        if (stackMetadata.getTOSType() != BOOLEAN_TYPE) {
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
         }
         PythonConstantsImplementor.loadTrue(methodVisitor);
@@ -91,7 +92,7 @@ public class JumpImplementor {
             StackMetadata stackMetadata, Map<Integer, Label> bytecodeCounterToLabelMap) {
         Label jumpLocation = bytecodeCounterToLabelMap.computeIfAbsent(jumpTarget, key -> new Label());
         methodVisitor.visitInsn(Opcodes.DUP);
-        if (stackMetadata.getTOSType() != PythonBoolean.BOOLEAN_TYPE) {
+        if (stackMetadata.getTOSType() != BOOLEAN_TYPE) {
             DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.AS_BOOLEAN);
         }
         PythonConstantsImplementor.loadFalse(methodVisitor);

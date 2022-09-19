@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections.view;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_ITEM_VIEW_TYPE;
+
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,22 +27,16 @@ import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.IteratorUtils;
 
 public class DictItemView extends AbstractPythonLikeObject {
-    public final static PythonLikeType DICT_ITEM_VIEW_TYPE = new PythonLikeType("dict_items", DictItemView.class);
     public final static PythonLikeType $TYPE = DICT_ITEM_VIEW_TYPE;
 
     final PythonLikeDict mapping;
     final Set<Map.Entry<PythonLikeObject, PythonLikeObject>> entrySet;
 
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(DICT_ITEM_VIEW_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(DictItemView::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Unary
         DICT_ITEM_VIEW_TYPE.addMethod(PythonUnaryOperator.LENGTH, DictItemView.class.getMethod("getItemsSize"));
         DICT_ITEM_VIEW_TYPE.addMethod(PythonUnaryOperator.ITERATOR, DictItemView.class.getMethod("getItemsIterator"));
@@ -69,6 +65,8 @@ public class DictItemView extends AbstractPythonLikeObject {
                 DictItemView.class.getMethod("difference", DictItemView.class));
         DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.XOR,
                 DictItemView.class.getMethod("symmetricDifference", DictItemView.class));
+
+        return DICT_ITEM_VIEW_TYPE;
     }
 
     public DictItemView(PythonLikeDict mapping) {

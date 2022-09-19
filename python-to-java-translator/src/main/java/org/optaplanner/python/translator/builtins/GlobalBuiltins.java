@@ -1,6 +1,21 @@
 package org.optaplanner.python.translator.builtins;
 
 import static java.lang.StackWalker.Option.RETAIN_CLASS_REFERENCE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.COMPLEX_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.FLOAT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.FROZEN_SET_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.LIST_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.RANGE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.SET_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.SLICE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.TUPLE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.TYPE_TYPE;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -24,6 +39,7 @@ import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.Ellipsis;
@@ -31,14 +47,11 @@ import org.optaplanner.python.translator.types.NotImplemented;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
-import org.optaplanner.python.translator.types.PythonRange;
 import org.optaplanner.python.translator.types.PythonSlice;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonIterator;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
-import org.optaplanner.python.translator.types.collections.PythonLikeFrozenSet;
 import org.optaplanner.python.translator.types.collections.PythonLikeList;
-import org.optaplanner.python.translator.types.collections.PythonLikeSet;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.AttributeError;
 import org.optaplanner.python.translator.types.errors.BufferError;
@@ -106,7 +119,6 @@ import org.optaplanner.python.translator.types.errors.warning.UnicodeWarning;
 import org.optaplanner.python.translator.types.errors.warning.UserWarning;
 import org.optaplanner.python.translator.types.errors.warning.Warning;
 import org.optaplanner.python.translator.types.numeric.PythonBoolean;
-import org.optaplanner.python.translator.types.numeric.PythonFloat;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class GlobalBuiltins {
@@ -146,6 +158,24 @@ public class GlobalBuiltins {
         addBuiltinConstant("NotImplemented", NotImplemented.INSTANCE);
         addBuiltinConstant("True", PythonBoolean.TRUE);
         addBuiltinConstant("False", PythonBoolean.FALSE);
+
+        // Types
+        addBuiltinType(BOOLEAN_TYPE);
+        addBuiltinType(INT_TYPE);
+        addBuiltinType(FLOAT_TYPE);
+        addBuiltinType(COMPLEX_TYPE);
+
+        addBuiltinType(TUPLE_TYPE);
+        addBuiltinType(LIST_TYPE);
+        addBuiltinType(SET_TYPE);
+        addBuiltinType(FROZEN_SET_TYPE);
+        addBuiltinType(DICT_TYPE);
+
+        addBuiltinType(STRING_TYPE);
+
+        addBuiltinType(NONE_TYPE);
+        addBuiltinType(RANGE_TYPE);
+        addBuiltinType(SLICE_TYPE);
 
         // Exceptions
         addBuiltinType(ArithmeticError.ARITHMETIC_ERROR_TYPE);
@@ -220,6 +250,8 @@ public class GlobalBuiltins {
         addBuiltinType(UnboundLocalError.UNBOUND_LOCAL_ERROR_TYPE);
         addBuiltinType(TypeError.TYPE_ERROR_TYPE);
         addBuiltinType(ValueError.VALUE_ERROR_TYPE);
+
+        PythonOverloadImplementor.createDeferredDispatches();
     }
 
     public static PythonLikeObject lookup(PythonInterpreter interpreter, String builtinName) {
@@ -235,7 +267,7 @@ public class GlobalBuiltins {
             case "bin":
                 return ((PythonLikeFunction) GlobalBuiltins::bin);
             case "bool":
-                return PythonBoolean.getBooleanType();
+                return BOOLEAN_TYPE;
             case "callable":
                 return ((PythonLikeFunction) GlobalBuiltins::callable);
             case "chr":
@@ -245,17 +277,17 @@ public class GlobalBuiltins {
             case "divmod":
                 return BinaryDunderBuiltin.DIVMOD;
             case "dict":
-                return PythonLikeDict.DICT_TYPE;
+                return DICT_TYPE;
             case "enumerate":
                 return ((PythonLikeFunction) GlobalBuiltins::enumerate);
             case "filter":
                 return ((PythonLikeFunction) GlobalBuiltins::filter);
             case "float":
-                return PythonFloat.FLOAT_TYPE;
+                return FLOAT_TYPE;
             case "format":
                 return ((PythonLikeFunction) GlobalBuiltins::format);
             case "frozenset":
-                return PythonLikeFrozenSet.FROZEN_SET_TYPE;
+                return FROZEN_SET_TYPE;
             case "getattr":
                 return ((PythonLikeFunction) GlobalBuiltins::getattr);
             case "globals":
@@ -271,7 +303,7 @@ public class GlobalBuiltins {
             case "input":
                 return GlobalBuiltins.input(interpreter);
             case "int":
-                return PythonInteger.getIntType();
+                return INT_TYPE;
             case "isinstance":
                 return ((PythonLikeFunction) GlobalBuiltins::isinstance);
             case "issubclass":
@@ -281,7 +313,7 @@ public class GlobalBuiltins {
             case "len":
                 return UnaryDunderBuiltin.LENGTH;
             case "list":
-                return PythonLikeList.LIST_TYPE;
+                return LIST_TYPE;
             case "locals":
                 return ((PythonLikeFunction) GlobalBuiltins::locals);
             case "map":
@@ -293,7 +325,7 @@ public class GlobalBuiltins {
             case "next":
                 return UnaryDunderBuiltin.NEXT;
             case "object":
-                return PythonLikeType.getBaseType();
+                return BASE_TYPE;
             case "oct":
                 return ((PythonLikeFunction) GlobalBuiltins::oct);
             case "ord":
@@ -303,7 +335,7 @@ public class GlobalBuiltins {
             case "print":
                 return GlobalBuiltins.print(interpreter);
             case "range":
-                return PythonRange.RANGE_TYPE;
+                return RANGE_TYPE;
             case "repr":
                 return UnaryDunderBuiltin.REPRESENTATION;
             case "reversed":
@@ -311,7 +343,7 @@ public class GlobalBuiltins {
             case "round":
                 return ((PythonLikeFunction) GlobalBuiltins::round);
             case "set":
-                return PythonLikeSet.SET_TYPE;
+                return SET_TYPE;
             case "setattr":
                 return ((PythonLikeFunction) GlobalBuiltins::setattr);
             case "slice":
@@ -319,13 +351,13 @@ public class GlobalBuiltins {
             case "sorted":
                 return ((PythonLikeFunction) GlobalBuiltins::sorted);
             case "str":
-                return PythonString.STRING_TYPE;
+                return STRING_TYPE;
             case "sum":
                 return ((PythonLikeFunction) GlobalBuiltins::sum);
             case "tuple":
-                return PythonLikeTuple.TUPLE_TYPE;
+                return TUPLE_TYPE;
             case "type":
-                return PythonLikeType.getTypeType();
+                return TYPE_TYPE;
             case "vars":
                 return ((PythonLikeFunction) GlobalBuiltins::vars);
             case "zip":

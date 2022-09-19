@@ -60,9 +60,7 @@ def is_c_native(item):
 
 def init_type_to_compiled_java_class():
     from org.optaplanner.python.translator.builtins import GlobalBuiltins
-    import org.optaplanner.python.translator.types as java_types
-    import org.optaplanner.python.translator.types.numeric as java_numeric_types
-    import org.optaplanner.python.translator.types.collections as java_collection_types
+    from org.optaplanner.python.translator.types import BuiltinTypes
     import org.optaplanner.python.translator.types.datetime as java_datetime_types
     import datetime
     import builtins
@@ -70,21 +68,21 @@ def init_type_to_compiled_java_class():
     if len(type_to_compiled_java_class) > 0:
         return
 
-    type_to_compiled_java_class[int] = java_numeric_types.PythonInteger.INT_TYPE
-    type_to_compiled_java_class[float] = java_numeric_types.PythonFloat.FLOAT_TYPE
-    type_to_compiled_java_class[complex] = java_numeric_types.PythonComplex.COMPLEX_TYPE
-    type_to_compiled_java_class[bool] = java_numeric_types.PythonBoolean.BOOLEAN_TYPE
+    type_to_compiled_java_class[int] = BuiltinTypes.INT_TYPE
+    type_to_compiled_java_class[float] = BuiltinTypes.FLOAT_TYPE
+    type_to_compiled_java_class[complex] = BuiltinTypes.COMPLEX_TYPE
+    type_to_compiled_java_class[bool] = BuiltinTypes.BOOLEAN_TYPE
 
-    type_to_compiled_java_class[type(None)] = java_types.PythonNone.NONE_TYPE
-    type_to_compiled_java_class[str] = java_types.PythonString.STRING_TYPE
-    type_to_compiled_java_class[object] = java_types.PythonLikeType.getBaseType()
-    type_to_compiled_java_class[any] = java_types.PythonLikeType.getBaseType()
+    type_to_compiled_java_class[type(None)] = BuiltinTypes.NONE_TYPE
+    type_to_compiled_java_class[str] = BuiltinTypes.STRING_TYPE
+    type_to_compiled_java_class[object] = BuiltinTypes.BASE_TYPE
+    type_to_compiled_java_class[any] = BuiltinTypes.BASE_TYPE
 
-    type_to_compiled_java_class[list] = java_collection_types.PythonLikeList.LIST_TYPE
-    type_to_compiled_java_class[tuple] = java_collection_types.PythonLikeTuple.TUPLE_TYPE
-    type_to_compiled_java_class[set] = java_collection_types.PythonLikeSet.SET_TYPE
-    type_to_compiled_java_class[frozenset] = java_collection_types.PythonLikeFrozenSet.FROZEN_SET_TYPE
-    type_to_compiled_java_class[dict] = java_collection_types.PythonLikeDict.DICT_TYPE
+    type_to_compiled_java_class[list] = BuiltinTypes.LIST_TYPE
+    type_to_compiled_java_class[tuple] = BuiltinTypes.TUPLE_TYPE
+    type_to_compiled_java_class[set] = BuiltinTypes.SET_TYPE
+    type_to_compiled_java_class[frozenset] = BuiltinTypes.FROZEN_SET_TYPE
+    type_to_compiled_java_class[dict] = BuiltinTypes.DICT_TYPE
 
     type_to_compiled_java_class[datetime.datetime] = java_datetime_types.PythonDateTime.DATE_TIME_TYPE
     type_to_compiled_java_class[datetime.date] = java_datetime_types.PythonDate.DATE_TYPE

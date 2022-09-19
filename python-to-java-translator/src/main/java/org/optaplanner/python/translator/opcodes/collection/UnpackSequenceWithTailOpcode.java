@@ -1,13 +1,14 @@
 package org.optaplanner.python.translator.opcodes.collection;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.LIST_TYPE;
+
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.CollectionImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
-import org.optaplanner.python.translator.types.PythonLikeType;
-import org.optaplanner.python.translator.types.collections.PythonLikeList;
 
 public class UnpackSequenceWithTailOpcode extends AbstractOpcode {
 
@@ -20,9 +21,9 @@ public class UnpackSequenceWithTailOpcode extends AbstractOpcode {
         StackMetadata newStackMetadata = stackMetadata.pop();
 
         newStackMetadata = newStackMetadata
-                .push(ValueSourceInfo.of(this, PythonLikeList.LIST_TYPE, stackMetadata.getValueSourcesUpToStackIndex(1)));
+                .push(ValueSourceInfo.of(this, LIST_TYPE, stackMetadata.getValueSourcesUpToStackIndex(1)));
         for (int i = 0; i < instruction.arg; i++) {
-            newStackMetadata = newStackMetadata.push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(),
+            newStackMetadata = newStackMetadata.push(ValueSourceInfo.of(this, BASE_TYPE,
                     stackMetadata.getValueSourcesUpToStackIndex(1)));
         }
         return newStackMetadata;

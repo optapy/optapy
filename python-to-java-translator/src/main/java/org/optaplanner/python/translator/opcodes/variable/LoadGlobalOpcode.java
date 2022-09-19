@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.variable;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -7,7 +9,6 @@ import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.ValueSourceInfo;
 import org.optaplanner.python.translator.implementors.VariableImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
-import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.wrappers.CPythonType;
 import org.optaplanner.python.translator.types.wrappers.PythonObjectWrapper;
 
@@ -24,7 +25,7 @@ public class LoadGlobalOpcode extends AbstractOpcode {
         if (global != null) {
             return stackMetadata.push(ValueSourceInfo.of(this, global.__getType()));
         } else {
-            return stackMetadata.push(ValueSourceInfo.of(this, PythonLikeType.getBaseType()));
+            return stackMetadata.push(ValueSourceInfo.of(this, BASE_TYPE));
         }
     }
 
@@ -38,6 +39,6 @@ public class LoadGlobalOpcode extends AbstractOpcode {
         }
         VariableImplementor.loadGlobalVariable(functionMetadata.methodVisitor, functionMetadata.className,
                 functionMetadata.pythonCompiledFunction, instruction,
-                (global != null) ? global.__getType() : PythonLikeType.getBaseType());
+                (global != null) ? global.__getType() : BASE_TYPE);
     }
 }

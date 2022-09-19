@@ -1,5 +1,8 @@
 package org.optaplanner.python.translator.types.numeric;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
+
 import java.math.BigInteger;
 import java.util.Collection;
 import java.util.List;
@@ -22,18 +25,11 @@ public class PythonBoolean extends PythonInteger {
     public final static PythonBoolean TRUE = new PythonBoolean(true);
     public final static PythonBoolean FALSE = new PythonBoolean(false);
 
-    public static PythonLikeType BOOLEAN_TYPE = getBooleanType();
-
     static {
-        GlobalBuiltins.addBuiltinConstant("True", TRUE);
-        GlobalBuiltins.addBuiltinConstant("False", FALSE);
+        PythonOverloadImplementor.deferDispatchesFor(PythonBoolean::registerMethods);
     }
 
-    public static PythonLikeType getBooleanType() {
-        if (BOOLEAN_TYPE != null) {
-            return BOOLEAN_TYPE;
-        }
-        BOOLEAN_TYPE = new PythonLikeType("bool", PythonBoolean.class, List.of(getIntType()));
+    public static PythonLikeType registerMethods() {
         try {
             BOOLEAN_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN,
                     new PythonFunctionSignature(new MethodDescriptor(
@@ -42,11 +38,11 @@ public class PythonBoolean extends PythonInteger {
             BOOLEAN_TYPE.addMethod(PythonUnaryOperator.AS_STRING,
                     new PythonFunctionSignature(new MethodDescriptor(
                             PythonBoolean.class.getMethod("asString")),
-                            PythonString.STRING_TYPE));
+                            STRING_TYPE));
             BOOLEAN_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION,
                     new PythonFunctionSignature(new MethodDescriptor(
                             PythonBoolean.class.getMethod("asString")),
-                            PythonString.STRING_TYPE));
+                            STRING_TYPE));
             BOOLEAN_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
                 namedArguments = (namedArguments != null) ? namedArguments : Map.of();
                 if (!namedArguments.isEmpty()) {
@@ -60,7 +56,9 @@ public class PythonBoolean extends PythonInteger {
                     throw new ValueError("bool expects 0 or 1 arguments, got " + positionalArguments.size());
                 }
             }));
-            PythonOverloadImplementor.createDispatchesFor(BOOLEAN_TYPE);
+
+            GlobalBuiltins.addBuiltinConstant("True", TRUE);
+            GlobalBuiltins.addBuiltinConstant("False", FALSE);
             return BOOLEAN_TYPE;
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);

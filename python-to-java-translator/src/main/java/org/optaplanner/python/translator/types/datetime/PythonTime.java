@@ -1,7 +1,7 @@
 package org.optaplanner.python.translator.types.datetime;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
 import static org.optaplanner.python.translator.types.datetime.PythonTzinfo.TZ_INFO_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
 
 import java.time.Duration;
 import java.time.Instant;

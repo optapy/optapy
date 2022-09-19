@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -110,7 +112,7 @@ public class PythonCompiledFunction {
 
     public List<PythonLikeType> getParameterTypes() {
         List<PythonLikeType> out = new ArrayList<>(co_argcount);
-        PythonLikeType defaultType = PythonLikeType.getBaseType();
+        PythonLikeType defaultType = BASE_TYPE;
 
         for (int i = 0; i < co_argcount; i++) {
             String parameterName = co_varnames.get(i);
@@ -129,7 +131,7 @@ public class PythonCompiledFunction {
 
     public String getAsmMethodDescriptorString() {
         Type returnType = Type.getType('L' + getReturnType().map(PythonLikeType::getJavaTypeInternalName)
-                .orElseGet(() -> PythonLikeType.getBaseType().getJavaTypeInternalName()) + ';');
+                .orElseGet(BASE_TYPE::getJavaTypeInternalName) + ';');
         List<PythonLikeType> parameterPythonTypeList = getParameterTypes();
         Type[] parameterTypes = new Type[co_argcount];
 

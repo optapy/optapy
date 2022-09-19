@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.function;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
@@ -29,10 +31,10 @@ public class CallFunctionOpcode extends AbstractOpcode {
                             functionSignature.getReturnType(),
                             stackMetadata.getValueSourcesUpToStackIndex(instruction.arg + 1))))
                     .orElseGet(() -> stackMetadata.pop(instruction.arg + 1)
-                            .push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(),
+                            .push(ValueSourceInfo.of(this, BASE_TYPE,
                                     stackMetadata.getValueSourcesUpToStackIndex(instruction.arg + 1))));
         }
-        return stackMetadata.pop(instruction.arg + 1).push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(),
+        return stackMetadata.pop(instruction.arg + 1).push(ValueSourceInfo.of(this, BASE_TYPE,
                 stackMetadata.getValueSourcesUpToStackIndex(instruction.arg + 1)));
     }
 

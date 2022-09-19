@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.object;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
@@ -21,7 +23,7 @@ public class LoadAttrOpcode extends AbstractOpcode {
                 .map(fieldDescriptor -> stackMetadata.pop()
                         .push(ValueSourceInfo.of(this, fieldDescriptor.getFieldPythonLikeType(),
                                 stackMetadata.getValueSourcesUpToStackIndex(1))))
-                .orElseGet(() -> stackMetadata.pop().push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(),
+                .orElseGet(() -> stackMetadata.pop().push(ValueSourceInfo.of(this, BASE_TYPE,
                         stackMetadata.getValueSourcesUpToStackIndex(1))));
     }
 

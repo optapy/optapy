@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections.view;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_KEY_VIEW_TYPE;
+
 import java.util.Collections;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -19,22 +21,16 @@ import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class DictKeyView extends AbstractPythonLikeObject {
-    public final static PythonLikeType DICT_KEY_VIEW_TYPE = new PythonLikeType("dict_keys", DictKeyView.class);
     public final static PythonLikeType $TYPE = DICT_KEY_VIEW_TYPE;
 
     final PythonLikeDict mapping;
     final Set<PythonLikeObject> keySet;
 
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(DICT_KEY_VIEW_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(DictKeyView::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Unary
         DICT_KEY_VIEW_TYPE.addMethod(PythonUnaryOperator.LENGTH, DictKeyView.class.getMethod("getKeysSize"));
         DICT_KEY_VIEW_TYPE.addMethod(PythonUnaryOperator.ITERATOR, DictKeyView.class.getMethod("getKeysIterator"));
@@ -63,6 +59,8 @@ public class DictKeyView extends AbstractPythonLikeObject {
                 DictKeyView.class.getMethod("difference", DictKeyView.class));
         DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.XOR,
                 DictKeyView.class.getMethod("symmetricDifference", DictKeyView.class));
+
+        return DICT_KEY_VIEW_TYPE;
     }
 
     public DictKeyView(PythonLikeDict mapping) {

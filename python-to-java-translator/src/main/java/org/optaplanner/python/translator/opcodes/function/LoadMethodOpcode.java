@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.function;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
@@ -34,7 +36,7 @@ public class LoadMethodOpcode extends AbstractOpcode {
                 .orElseGet(() -> stackMetadata.pop()
                         .push(ValueSourceInfo.of(this, PythonLikeFunction.getFunctionType(),
                                 stackMetadata.getValueSourcesUpToStackIndex(1)))
-                        .push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(),
+                        .push(ValueSourceInfo.of(this, BASE_TYPE,
                                 stackMetadata.getValueSourcesUpToStackIndex(1)))); // either TOS or NULL
     }
 

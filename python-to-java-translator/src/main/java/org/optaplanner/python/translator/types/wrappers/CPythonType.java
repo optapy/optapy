@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.wrappers;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.TYPE_TYPE;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

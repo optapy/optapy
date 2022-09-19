@@ -1,12 +1,15 @@
 package org.optaplanner.python.translator;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
 
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
+import org.optaplanner.python.translator.types.BuiltinTypes;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
@@ -39,17 +42,17 @@ public class PythonClassTranslatorTest {
                 .build();
 
         compiledClass.className = "MyClass";
-        compiledClass.superclassList = List.of(PythonLikeType.getBaseType());
+        compiledClass.superclassList = List.of(BASE_TYPE);
         compiledClass.staticAttributeNameToObject = Map.of("type_variable", new PythonString("type_value"));
         compiledClass.staticAttributeNameToClassInstance = Map.of();
-        compiledClass.typeAnnotations = Map.of("age", PythonInteger.INT_TYPE);
+        compiledClass.typeAnnotations = Map.of("age", INT_TYPE);
         compiledClass.instanceFunctionNameToPythonBytecode = Map.of("__init__", initFunction,
                 "get_age", ageFunction);
         compiledClass.staticFunctionNameToPythonBytecode = Map.of("hello_world", helloWorldFunction);
         compiledClass.classFunctionNameToPythonBytecode = Map.of();
 
         PythonLikeType classType = PythonClassTranslator.translatePythonClass(compiledClass);
-        Class<?> generatedClass = PythonBytecodeToJavaBytecodeTranslator.asmClassLoader.loadClass(
+        Class<?> generatedClass = BuiltinTypes.asmClassLoader.loadClass(
                 classType.getJavaTypeInternalName().replace('/', '.'));
 
         assertThat(generatedClass).hasPublicFields(PythonClassTranslator.getJavaMethodName("get_age"),

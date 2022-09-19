@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.collection;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.LIST_TYPE;
+
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
@@ -16,7 +18,7 @@ public class BuildListOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop(instruction.arg).push(ValueSourceInfo.of(this, PythonLikeList.LIST_TYPE,
+        return stackMetadata.pop(instruction.arg).push(ValueSourceInfo.of(this, LIST_TYPE,
                 stackMetadata.getValueSourcesUpToStackIndex(instruction.arg)));
     }
 

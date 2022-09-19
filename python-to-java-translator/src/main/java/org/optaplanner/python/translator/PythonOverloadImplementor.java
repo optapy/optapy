@@ -1,10 +1,10 @@
 package org.optaplanner.python.translator;
 
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.asmClassLoader;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToBytecode;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
+import static org.optaplanner.python.translator.types.BuiltinTypes.asmClassLoader;
+import static org.optaplanner.python.translator.types.BuiltinTypes.classNameToBytecode;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
@@ -33,6 +33,38 @@ public class PythonOverloadImplementor {
             .thenComparing(PythonLikeType::getTypeName)
             .thenComparing(PythonLikeType::getJavaTypeInternalName)
             .reversed();
+
+    private final static List<DeferredRunner> deferredRunnerList = new ArrayList<>();
+
+    public interface DeferredRunner {
+        PythonLikeType run() throws NoSuchMethodException;
+    }
+
+    public static void deferDispatchesFor(DeferredRunner runner) {
+        try {
+            createDispatchesFor(runner.run());
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+        }
+        // deferredRunnerList.add(runner);
+    }
+
+    public static void createDeferredDispatches() {
+        while (!deferredRunnerList.isEmpty()) {
+            List<DeferredRunner> deferredRunnables = new ArrayList<>(deferredRunnerList);
+
+            List<PythonLikeType> deferredTypes = new ArrayList<>(deferredRunnables.size());
+            deferredRunnables.forEach(runner -> {
+                try {
+                    deferredTypes.add(runner.run());
+                } catch (NoSuchMethodException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            deferredTypes.forEach(PythonOverloadImplementor::createDispatchesFor);
+            deferredRunnerList.subList(0, deferredRunnables.size()).clear();
+        }
+    }
 
     public static void createDispatchesFor(PythonLikeType pythonLikeType) {
         for (String methodName : pythonLikeType.getKnownMethods()) {

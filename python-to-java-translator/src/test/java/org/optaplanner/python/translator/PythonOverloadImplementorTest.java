@@ -1,9 +1,9 @@
 package org.optaplanner.python.translator;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonBoolean.BOOLEAN_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
 
 import java.util.List;
 import java.util.Map;

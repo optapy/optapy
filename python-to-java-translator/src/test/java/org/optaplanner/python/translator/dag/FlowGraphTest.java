@@ -1,16 +1,17 @@
 package org.optaplanner.python.translator.dag;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.optaplanner.python.translator.types.PythonLikeType.TYPE_TYPE;
-import static org.optaplanner.python.translator.types.PythonNone.NONE_TYPE;
-import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
-import static org.optaplanner.python.translator.types.collections.PythonIterator.ITERATOR_TYPE;
-import static org.optaplanner.python.translator.types.collections.PythonLikeTuple.TUPLE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.ITERATOR_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.TUPLE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.TYPE_TYPE;
 import static org.optaplanner.python.translator.types.errors.PythonAssertionError.ASSERTION_ERROR_TYPE;
 import static org.optaplanner.python.translator.types.errors.PythonBaseException.BASE_EXCEPTION_TYPE;
 import static org.optaplanner.python.translator.types.errors.PythonTraceback.TRACEBACK_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonBoolean.BOOLEAN_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +39,7 @@ import org.optaplanner.python.translator.util.PythonFunctionBuilder;
 
 public class FlowGraphTest {
 
-    private static PythonLikeType OBJECT_TYPE = PythonLikeType.getBaseType();
+    private static PythonLikeType OBJECT_TYPE = BASE_TYPE;
 
     static FlowGraph getFlowGraph(FunctionMetadata functionMetadata, StackMetadata initialStackMetadata,
             PythonCompiledFunction function) {
@@ -454,8 +455,8 @@ public class FlowGraphTest {
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
         StackMetadata metadata = getInitialStackMetadata(5, 0)
-                .setLocalVariableValueSource(0, ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeType.getBaseType()))
-                .setLocalVariableValueSource(1, ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeType.getBaseType()));
+                .setLocalVariableValueSource(0, ValueSourceInfo.of(new OpcodeWithoutSource(), BASE_TYPE))
+                .setLocalVariableValueSource(1, ValueSourceInfo.of(new OpcodeWithoutSource(), BASE_TYPE));
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
         getFrameData(flowGraph);
         // simply test no exception is raised

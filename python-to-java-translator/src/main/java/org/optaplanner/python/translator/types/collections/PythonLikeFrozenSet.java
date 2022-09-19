@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.FROZEN_SET_TYPE;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -23,18 +25,11 @@ import org.optaplanner.python.translator.types.numeric.PythonInteger;
 public class PythonLikeFrozenSet extends AbstractPythonLikeObject implements Set<PythonLikeObject> {
     public final Set<PythonLikeObject> delegate;
 
-    public final static PythonLikeType FROZEN_SET_TYPE = new PythonLikeType("frozenset", PythonLikeFrozenSet.class);
-
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(FROZEN_SET_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonLikeFrozenSet::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
         FROZEN_SET_TYPE.setConstructor((positionalArguments, namedArguments) -> {
             if (positionalArguments.size() == 0) {
@@ -111,6 +106,8 @@ public class PythonLikeFrozenSet extends AbstractPythonLikeObject implements Set
                 PythonLikeFrozenSet.class.getMethod("symmetricDifference", PythonLikeFrozenSet.class));
 
         FROZEN_SET_TYPE.addMethod("copy", PythonLikeFrozenSet.class.getMethod("copy"));
+
+        return FROZEN_SET_TYPE;
     }
 
     private static UnsupportedOperationException modificationError() {

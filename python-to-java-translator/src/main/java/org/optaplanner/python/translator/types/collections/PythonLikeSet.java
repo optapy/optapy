@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.SET_TYPE;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -24,18 +26,11 @@ import org.optaplanner.python.translator.types.numeric.PythonInteger;
 public class PythonLikeSet extends AbstractPythonLikeObject implements Set<PythonLikeObject> {
     public final Set<PythonLikeObject> delegate;
 
-    public final static PythonLikeType SET_TYPE = new PythonLikeType("set", PythonLikeSet.class);
-
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(SET_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonLikeSet::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
         SET_TYPE.setConstructor((positionalArguments, namedArguments) -> {
             if (positionalArguments.size() == 0) {
@@ -130,6 +125,8 @@ public class PythonLikeSet extends AbstractPythonLikeObject implements Set<Pytho
         SET_TYPE.addMethod("pop", PythonLikeSet.class.getMethod("pop"));
         SET_TYPE.addMethod("clear", PythonLikeSet.class.getMethod("clearSet"));
         SET_TYPE.addMethod("copy", PythonLikeSet.class.getMethod("copy"));
+
+        return SET_TYPE;
     }
 
     public PythonLikeSet() {

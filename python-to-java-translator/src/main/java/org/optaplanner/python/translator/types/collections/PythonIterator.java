@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.ITERATOR_TYPE;
+
 import java.util.Iterator;
 
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -10,21 +12,16 @@ import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.errors.StopIteration;
 
 public class PythonIterator<T> extends AbstractPythonLikeObject implements Iterator<T> {
-    public static final PythonLikeType ITERATOR_TYPE = new PythonLikeType("iterator", PythonIterator.class);
     private final Iterator<T> delegate;
 
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(ITERATOR_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonIterator::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         ITERATOR_TYPE.addMethod(PythonUnaryOperator.NEXT, PythonIterator.class.getMethod("nextPythonItem"));
         ITERATOR_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonIterator.class.getMethod("getIterator"));
+        return ITERATOR_TYPE;
     }
 
     public PythonIterator(Iterator<T> delegate) {

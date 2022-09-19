@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.numeric;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.FLOAT_TYPE;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -21,16 +23,8 @@ import org.optaplanner.python.translator.types.errors.ValueError;
 public class PythonFloat extends AbstractPythonLikeObject implements PythonNumber {
     public final double value;
 
-    public final static PythonLikeType FLOAT_TYPE = new PythonLikeType("float", PythonFloat.class, List.of(NUMBER_TYPE));
-
     static {
-        try {
-            PythonLikeComparable.setup(FLOAT_TYPE);
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(FLOAT_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonFloat::registerMethods);
     }
 
     public PythonFloat(double value) {
@@ -38,7 +32,9 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         this.value = value;
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
+        PythonLikeComparable.setup(FLOAT_TYPE);
+
         // Constructor
         FLOAT_TYPE.setConstructor((positionalArguments, namedArguments) -> {
             if (positionalArguments.isEmpty()) {
@@ -133,6 +129,8 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round", PythonInteger.class));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format"));
         FLOAT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format", PythonString.class));
+
+        return FLOAT_TYPE;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.TYPE_TYPE;
+
 public class PythonLikeGenericType extends PythonLikeType {
     final PythonLikeType origin;
 

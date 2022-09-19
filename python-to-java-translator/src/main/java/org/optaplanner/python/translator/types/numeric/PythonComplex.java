@@ -13,12 +13,7 @@ public class PythonComplex extends AbstractPythonLikeObject implements PythonNum
     public final static PythonLikeType COMPLEX_TYPE = new PythonLikeType("complex", PythonComplex.class, List.of(NUMBER_TYPE));
 
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(COMPLEX_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonComplex::registerMethods);
     }
 
     public PythonComplex(PythonNumber real, PythonNumber imaginary) {
@@ -27,8 +22,9 @@ public class PythonComplex extends AbstractPythonLikeObject implements PythonNum
         this.imaginary = imaginary;
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // TODO
+        return COMPLEX_TYPE;
     }
 
     public PythonComplex valueOf(PythonNumber real, PythonNumber imaginary) {

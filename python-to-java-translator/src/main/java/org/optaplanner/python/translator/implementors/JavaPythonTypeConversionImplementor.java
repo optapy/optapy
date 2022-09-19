@@ -1,5 +1,19 @@
 package org.optaplanner.python.translator.implementors;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.FLOAT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.FROZEN_SET_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.ITERATOR_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.LIST_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.NUMBER_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.SET_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.TUPLE_TYPE;
+
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.util.Iterator;
@@ -12,10 +26,10 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.LocalVariableHelper;
 import org.optaplanner.python.translator.MethodDescriptor;
-import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.types.BuiltinTypes;
 import org.optaplanner.python.translator.types.PythonCode;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -127,11 +141,11 @@ public class JavaPythonTypeConversionImplementor {
      */
     public static PythonLikeType getPythonLikeType(Class<?> javaClass) {
         if (PythonNone.class.equals(javaClass)) {
-            return PythonNone.NONE_TYPE;
+            return NONE_TYPE;
         }
 
         if (PythonLikeObject.class.equals(javaClass)) {
-            return PythonLikeType.getBaseType();
+            return BASE_TYPE;
         }
 
         if (byte.class.equals(javaClass) || short.class.equals(javaClass) || int.class.equals(javaClass)
@@ -139,56 +153,56 @@ public class JavaPythonTypeConversionImplementor {
                 Byte.class.equals(javaClass) || Short.class.equals(javaClass) || Integer.class.equals(javaClass)
                 || Long.class.equals(javaClass) || BigInteger.class.equals(javaClass) ||
                 PythonInteger.class.equals(javaClass)) {
-            return PythonInteger.INT_TYPE;
+            return INT_TYPE;
         }
 
         if (float.class.equals(javaClass) || double.class.equals(javaClass) ||
                 Float.class.equals(javaClass) || Double.class.equals(javaClass) ||
                 PythonFloat.class.equals(javaClass)) {
-            return PythonFloat.FLOAT_TYPE;
+            return FLOAT_TYPE;
         }
 
         if (PythonNumber.class.equals(javaClass)) {
-            return PythonNumber.NUMBER_TYPE;
+            return NUMBER_TYPE;
         }
 
         if (boolean.class.equals(javaClass) ||
                 Boolean.class.equals(javaClass) ||
                 PythonBoolean.class.equals(javaClass)) {
-            return PythonBoolean.BOOLEAN_TYPE;
+            return BOOLEAN_TYPE;
         }
 
         if (String.class.equals(javaClass) ||
                 PythonString.class.equals(javaClass)) {
-            return PythonString.STRING_TYPE;
+            return STRING_TYPE;
         }
 
         if (Iterator.class.equals(javaClass) ||
                 PythonIterator.class.equals(javaClass)) {
-            return PythonIterator.ITERATOR_TYPE;
+            return ITERATOR_TYPE;
         }
 
         if (List.class.equals(javaClass) ||
                 PythonLikeList.class.equals(javaClass)) {
-            return PythonLikeList.LIST_TYPE;
+            return LIST_TYPE;
         }
 
         if (PythonLikeTuple.class.equals(javaClass)) {
-            return PythonLikeTuple.TUPLE_TYPE;
+            return TUPLE_TYPE;
         }
 
         if (Set.class.equals(javaClass) ||
                 PythonLikeSet.class.equals(javaClass)) {
-            return PythonLikeSet.SET_TYPE;
+            return SET_TYPE;
         }
 
         if (PythonLikeFrozenSet.class.equals(javaClass)) {
-            return PythonLikeFrozenSet.FROZEN_SET_TYPE;
+            return FROZEN_SET_TYPE;
         }
 
         if (Map.class.equals(javaClass) ||
                 PythonLikeDict.class.equals(javaClass)) {
-            return PythonLikeDict.DICT_TYPE;
+            return DICT_TYPE;
         }
 
         try {
@@ -388,7 +402,7 @@ public class JavaPythonTypeConversionImplementor {
 
         try {
             Class<?> returnTypeClass =
-                    Class.forName(returnAsmType.getClassName(), true, PythonBytecodeToJavaBytecodeTranslator.asmClassLoader);
+                    Class.forName(returnAsmType.getClassName(), true, BuiltinTypes.asmClassLoader);
 
             if (stackMetadata.getTOSType() == null) {
                 throw new IllegalStateException("Cannot return a deleted or undefined value");
@@ -468,7 +482,7 @@ public class JavaPythonTypeConversionImplementor {
         } else {
             try {
                 Class<?> typeClass = Class.forName(parameterType.getClassName(), false,
-                        PythonBytecodeToJavaBytecodeTranslator.asmClassLoader);
+                        BuiltinTypes.asmClassLoader);
                 if (!PythonLikeObject.class.isAssignableFrom(typeClass)) {
                     methodVisitor.visitVarInsn(Opcodes.ALOAD, localVariableHelper.getParameterSlot(parameterIndex));
                     methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC,

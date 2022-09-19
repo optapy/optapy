@@ -24,15 +24,10 @@ public class PythonSlice extends AbstractPythonLikeObject {
     public final PythonLikeObject step;
 
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(SLICE_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonSlice::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
         SLICE_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
             PythonLikeObject start;
@@ -76,6 +71,8 @@ public class PythonSlice extends AbstractPythonLikeObject {
 
         // Other methods
         SLICE_TYPE.addMethod("indices", PythonSlice.class.getMethod("indices", PythonInteger.class));
+
+        return SLICE_TYPE;
     }
 
     public PythonSlice(PythonLikeObject start, PythonLikeObject stop, PythonLikeObject step) {
@@ -87,6 +84,64 @@ public class PythonSlice extends AbstractPythonLikeObject {
         __setAttribute("start", (start != null) ? start : PythonNone.INSTANCE);
         __setAttribute("stop", (stop != null) ? stop : PythonNone.INSTANCE);
         __setAttribute("step", (step != null) ? step : PythonNone.INSTANCE);
+    }
+
+    /**
+     * Convert index into a index for a sequence of length {@code length}. May be outside the range
+     * [0, length - 1]. Use for indexing into a sequence.
+     *
+     * @param index The given index
+     * @param length The length
+     * @return index, if index in [0, length -1]; length - index, if index < 0.
+     */
+    public static int asIntIndexForLength(PythonInteger index, int length) {
+        int indexAsInt = index.value.intValueExact();
+
+        if (indexAsInt < 0) {
+            return length + indexAsInt;
+        } else {
+            return indexAsInt;
+        }
+    }
+
+    /**
+     * Convert index into a VALID start index for a sequence of length {@code length}. bounding it to the
+     * range [0, length - 1]. Use for sequence operations that need to search an portion of a sequence.
+     *
+     * @param index The given index
+     * @param length The length
+     * @return index, if index in [0, length -1]; length - index, if index < 0 and -index <= length;
+     *         otherwise 0 (if the index represent a position before 0) or length - 1 (if the index represent a
+     *         position after the sequence).
+     */
+    public static int asValidStartIntIndexForLength(PythonInteger index, int length) {
+        int indexAsInt = index.value.intValueExact();
+
+        if (indexAsInt < 0) {
+            return Math.max(0, Math.min(length - 1, length + indexAsInt));
+        } else {
+            return Math.max(0, Math.min(length - 1, indexAsInt));
+        }
+    }
+
+    /**
+     * Convert index into a VALID end index for a sequence of length {@code length}. bounding it to the
+     * range [0, length]. Use for sequence operations that need to search an portion of a sequence.
+     *
+     * @param index The given index
+     * @param length The length
+     * @return index, if index in [0, length]; length - index, if index < 0 and -index <= length + 1;
+     *         otherwise 0 (if the index represent a position before 0) or length (if the index represent a
+     *         position after the sequence).
+     */
+    public static int asValidEndIntIndexForLength(PythonInteger index, int length) {
+        int indexAsInt = index.value.intValueExact();
+
+        if (indexAsInt < 0) {
+            return Math.max(0, Math.min(length, length + indexAsInt));
+        } else {
+            return Math.max(0, Math.min(length, indexAsInt));
+        }
     }
 
     public PythonLikeTuple indices(PythonInteger sequenceLength) {

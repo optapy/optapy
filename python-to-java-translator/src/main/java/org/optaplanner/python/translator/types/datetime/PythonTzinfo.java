@@ -1,6 +1,7 @@
 package org.optaplanner.python.translator.types.datetime;
 
-import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
 
 import java.time.ZoneId;
 
@@ -30,13 +31,13 @@ public class PythonTzinfo extends AbstractPythonLikeObject {
     private static void registerMethods() throws NoSuchMethodException {
         TZ_INFO_TYPE.addMethod("utcoffset", new PythonFunctionSignature(new MethodDescriptor(
                 PythonTzinfo.class.getMethod("utcoffset", PythonLikeObject.class)),
-                PythonTimeDelta.TIME_DELTA_TYPE, PythonLikeType.getBaseType()));
+                PythonTimeDelta.TIME_DELTA_TYPE, BASE_TYPE));
         TZ_INFO_TYPE.addMethod("dst", new PythonFunctionSignature(new MethodDescriptor(
                 PythonTzinfo.class.getMethod("dst", PythonLikeObject.class)),
-                PythonTimeDelta.TIME_DELTA_TYPE, PythonLikeType.getBaseType()));
+                PythonTimeDelta.TIME_DELTA_TYPE, BASE_TYPE));
         TZ_INFO_TYPE.addMethod("tzname", new PythonFunctionSignature(new MethodDescriptor(
                 PythonTzinfo.class.getMethod("tzname", PythonLikeObject.class)),
-                STRING_TYPE, PythonLikeType.getBaseType()));
+                STRING_TYPE, BASE_TYPE));
     }
 
     final ZoneId zoneId;

@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_TYPE;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -32,18 +34,11 @@ public class PythonLikeDict extends AbstractPythonLikeObject
         implements Map<PythonLikeObject, PythonLikeObject>, Iterable<PythonLikeObject> {
     public final OrderedMap<PythonLikeObject, PythonLikeObject> delegate;
 
-    public final static PythonLikeType DICT_TYPE = new PythonLikeType("dict", PythonLikeDict.class);
-
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(DICT_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonLikeDict::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         DICT_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
             namedArguments = (namedArguments != null) ? namedArguments : Map.of();
 
@@ -108,6 +103,8 @@ public class PythonLikeDict extends AbstractPythonLikeObject
         DICT_TYPE.addMethod("update", PythonLikeDict.class.getMethod("update", PythonLikeObject.class));
         // TODO: Keyword update
         DICT_TYPE.addMethod("values", PythonLikeDict.class.getMethod("getValueView"));
+
+        return DICT_TYPE;
     }
 
     public PythonLikeDict() {

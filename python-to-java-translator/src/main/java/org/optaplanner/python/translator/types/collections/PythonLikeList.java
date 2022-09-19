@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.LIST_TYPE;
+
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -8,6 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
+import java.util.RandomAccess;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -25,22 +28,15 @@ import org.optaplanner.python.translator.types.errors.lookup.IndexError;
 import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
-public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<T> {
+public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<T>, RandomAccess {
     final List delegate;
     private int remainderToAdd;
 
-    public final static PythonLikeType LIST_TYPE = new PythonLikeType("list", PythonLikeList.class);
-
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(LIST_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonLikeList::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
         LIST_TYPE.setConstructor((positionalArguments, namedArguments) -> {
             if (positionalArguments.size() == 0) {
@@ -98,6 +94,8 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         LIST_TYPE.addMethod("pop", PythonLikeList.class.getMethod("pop", PythonInteger.class));
         LIST_TYPE.addMethod("reverse", PythonLikeList.class.getMethod("reverse"));
         LIST_TYPE.addMethod("sort", PythonLikeList.class.getMethod("sort"));
+
+        return LIST_TYPE;
     }
 
     public PythonLikeList() {

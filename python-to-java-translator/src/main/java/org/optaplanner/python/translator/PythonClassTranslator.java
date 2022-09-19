@@ -2,14 +2,16 @@ package org.optaplanner.python.translator;
 
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.USER_PACKAGE_BASE;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.asmClassLoader;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToBytecode;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.createInstance;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.getInitialStackMetadata;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.getOpcodeList;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.asmClassLoader;
+import static org.optaplanner.python.translator.types.BuiltinTypes.classNameToBytecode;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
@@ -73,7 +75,7 @@ public class PythonClassTranslator {
             superTypeList = new ArrayList<>(pythonCompiledClass.superclassList.size());
             for (int i = 0; i < pythonCompiledClass.superclassList.size(); i++) {
                 PythonLikeType superType = pythonCompiledClass.superclassList.get(i);
-                if (superType == PythonLikeType.getBaseType() || superType == null) {
+                if (superType == BASE_TYPE || superType == null) {
                     superTypeList.add(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
                 } else {
                     superTypeList.add(pythonCompiledClass.superclassList.get(i));
@@ -122,9 +124,9 @@ public class PythonClassTranslator {
 
         Map<String, PythonLikeType> attributeNameToTypeMap = new HashMap<>();
         for (String attributeName : instanceAttributeSet) {
-            PythonLikeType type = pythonCompiledClass.typeAnnotations.getOrDefault(attributeName, PythonLikeType.getBaseType());
+            PythonLikeType type = pythonCompiledClass.typeAnnotations.getOrDefault(attributeName, BASE_TYPE);
             if (type == null) { // null might be in __annotations__
-                type = PythonLikeType.getBaseType();
+                type = BASE_TYPE;
             }
             String javaFieldTypeDescriptor = 'L' + type.getJavaTypeInternalName() + ';';
             attributeNameToTypeMap.put(attributeName, type);
@@ -583,7 +585,7 @@ public class PythonClassTranslator {
         pythonLikeType.addMethod(methodName,
                 new PythonFunctionSignature(new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.VIRTUAL,
                         javaMethodName, javaMethodDescriptor),
-                        function.getReturnType().orElse(PythonLikeType.getBaseType()),
+                        function.getReturnType().orElse(BASE_TYPE),
                         function.co_argcount > 0 ? function.getParameterTypes().subList(1, function.getParameterTypes().size())
                                 : List.of()));
     }
@@ -611,7 +613,7 @@ public class PythonClassTranslator {
         pythonLikeType.addMethod(methodName,
                 new PythonFunctionSignature(new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.STATIC,
                         javaMethodName, function.getAsmMethodDescriptorString()),
-                        function.getReturnType().orElse(PythonLikeType.getBaseType()),
+                        function.getReturnType().orElse(BASE_TYPE),
                         function.getParameterTypes()));
     }
 
@@ -902,7 +904,7 @@ public class PythonClassTranslator {
         }
 
         String returnType = 'L' + pythonCompiledFunction.getReturnType()
-                .orElseGet(PythonLikeType::getBaseType).getJavaTypeInternalName() + ';';
+                .orElse(BASE_TYPE).getJavaTypeInternalName() + ';';
 
         FunctionSignature functionSignature = new FunctionSignature(returnType, parameterTypes);
         return functionSignatureToInterfaceName.computeIfAbsent(functionSignature,
@@ -1024,10 +1026,10 @@ public class PythonClassTranslator {
 
             return possibleReturnTypeList.stream()
                     .reduce(PythonLikeType::unifyWith)
-                    .orElse(PythonNone.NONE_TYPE);
+                    .orElse(NONE_TYPE);
         } catch (UnsupportedOperationException e) {
             // Return the base type if we encounter any unsupported operations
-            return PythonLikeType.getBaseType();
+            return BASE_TYPE;
         } catch (Exception e) {
             System.out.println("WARNING: Ignoring exception");
             //System.out.println("globals: " + pythonCompiledFunction.globalsMap);
@@ -1039,7 +1041,7 @@ public class PythonClassTranslator {
                     .map(PythonBytecodeInstruction::toString)
                     .collect(Collectors.joining("\n")));
             e.printStackTrace();
-            return PythonLikeType.getBaseType();
+            return BASE_TYPE;
         }
     }
 

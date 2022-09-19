@@ -1,5 +1,10 @@
 package org.optaplanner.python.translator.opcodes.exceptions;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.TYPE_TYPE;
+
 import java.util.List;
 
 import org.optaplanner.python.translator.FunctionMetadata;
@@ -10,11 +15,8 @@ import org.optaplanner.python.translator.implementors.ExceptionImplementor;
 import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
 import org.optaplanner.python.translator.opcodes.controlflow.AbstractControlFlowOpcode;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
-import org.optaplanner.python.translator.types.PythonLikeType;
-import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.errors.PythonBaseException;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
-import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class SetupWithOpcode extends AbstractControlFlowOpcode {
     int jumpTarget;
@@ -38,16 +40,16 @@ public class SetupWithOpcode extends AbstractControlFlowOpcode {
                 stackMetadata
                         .pop()
                         .push(ValueSourceInfo.of(this, PythonLikeFunction.getFunctionType(), stackMetadata.getTOSValueSource()))
-                        .push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(), stackMetadata.getTOSValueSource())),
+                        .push(ValueSourceInfo.of(this, BASE_TYPE, stackMetadata.getTOSValueSource())),
                 stackMetadata
                         .pop()
                         .push(ValueSourceInfo.of(this, PythonLikeFunction.getFunctionType(), stackMetadata.getTOSValueSource()))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonNone.NONE_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonInteger.getIntType()))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonNone.NONE_TYPE))
+                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), NONE_TYPE))
+                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), INT_TYPE))
+                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), NONE_TYPE))
                         .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonTraceback.TRACEBACK_TYPE))
                         .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonBaseException.BASE_EXCEPTION_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonLikeType.getTypeType())));
+                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), TYPE_TYPE)));
     }
 
     @Override

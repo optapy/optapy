@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.dunder;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+
 import java.util.Optional;
 
 import org.optaplanner.python.translator.FunctionMetadata;
@@ -26,9 +28,9 @@ public class BinaryDunderOpcode extends AbstractOpcode {
     public StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata,
             StackMetadata stackMetadata) {
         PythonLikeType leftOperand =
-                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(1)).orElseGet(PythonLikeType::getBaseType);
+                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(1)).orElse(BASE_TYPE);
         PythonLikeType rightOperand =
-                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(0)).orElseGet(PythonLikeType::getBaseType);
+                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(0)).orElse(BASE_TYPE);
 
         Optional<PythonKnownFunctionType> maybeKnownFunctionType = leftOperand.getMethodType(operator.getDunderMethod());
         if (maybeKnownFunctionType.isPresent()) {
@@ -43,7 +45,7 @@ public class BinaryDunderOpcode extends AbstractOpcode {
 
         // TODO: Right dunder method
         return stackMetadata.pop().pop()
-                .push(ValueSourceInfo.of(this, PythonLikeType.getBaseType(), stackMetadata.getValueSourcesUpToStackIndex(2)));
+                .push(ValueSourceInfo.of(this, BASE_TYPE, stackMetadata.getValueSourcesUpToStackIndex(2)));
     }
 
     @Override

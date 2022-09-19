@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.implementors;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,7 +29,7 @@ import org.optaplanner.python.translator.types.collections.PythonLikeList;
 public class DunderOperatorImplementor {
 
     public static void unaryOperator(MethodVisitor methodVisitor, StackMetadata stackMetadata, PythonUnaryOperator operator) {
-        PythonLikeType operand = Optional.ofNullable(stackMetadata.getTOSType()).orElseGet(PythonLikeType::getBaseType);
+        PythonLikeType operand = Optional.ofNullable(stackMetadata.getTOSType()).orElse(BASE_TYPE);
 
         Optional<PythonKnownFunctionType> maybeKnownFunctionType = operand.getMethodType(operator.getDunderMethod());
         if (maybeKnownFunctionType.isPresent()) {
@@ -100,9 +102,9 @@ public class DunderOperatorImplementor {
     public static void binaryOperator(MethodVisitor methodVisitor, StackMetadata stackMetadata,
             PythonBinaryOperators operator) {
         PythonLikeType leftOperand =
-                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(1)).orElseGet(PythonLikeType::getBaseType);
+                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(1)).orElse(BASE_TYPE);
         PythonLikeType rightOperand =
-                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(0)).orElseGet(PythonLikeType::getBaseType);
+                Optional.ofNullable(stackMetadata.getTypeAtStackIndex(0)).orElse(BASE_TYPE);
 
         Optional<PythonKnownFunctionType> maybeKnownFunctionType = leftOperand.getMethodType(operator.getDunderMethod());
         if (maybeKnownFunctionType.isPresent()) {

@@ -1,5 +1,11 @@
 package org.optaplanner.python.translator.types;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.ITERATOR_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.RANGE_TYPE;
+
 import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.util.Collection;
@@ -21,7 +27,6 @@ import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class PythonRange extends AbstractPythonLikeObject implements List<PythonInteger> {
-    public static PythonLikeType RANGE_TYPE = new PythonLikeType("range", PythonRange.class);
     public static PythonLikeType $TYPE = RANGE_TYPE;
 
     public final PythonInteger start;
@@ -29,15 +34,10 @@ public class PythonRange extends AbstractPythonLikeObject implements List<Python
     public final PythonInteger step;
 
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(RANGE_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonRange::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
         RANGE_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
             PythonLikeObject start;
@@ -96,18 +96,20 @@ public class PythonRange extends AbstractPythonLikeObject implements List<Python
         // Unary methods
         RANGE_TYPE.addMethod(PythonUnaryOperator.LENGTH, new PythonFunctionSignature(
                 new MethodDescriptor(PythonRange.class.getMethod("getLength")),
-                PythonInteger.getIntType()));
+                INT_TYPE));
         RANGE_TYPE.addMethod(PythonUnaryOperator.ITERATOR, new PythonFunctionSignature(
                 new MethodDescriptor(PythonRange.class.getMethod("getPythonIterator")),
-                PythonIterator.ITERATOR_TYPE));
+                ITERATOR_TYPE));
 
         // Binary methods
         RANGE_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, new PythonFunctionSignature(
                 new MethodDescriptor(PythonRange.class.getMethod("getItem", PythonInteger.class)),
-                PythonInteger.getIntType(), PythonInteger.getIntType()));
+                INT_TYPE, INT_TYPE));
         RANGE_TYPE.addMethod(PythonBinaryOperators.CONTAINS, new PythonFunctionSignature(
                 new MethodDescriptor(PythonRange.class.getMethod("isObjectInRange", PythonLikeObject.class)),
-                PythonBoolean.getBooleanType(), PythonLikeType.getBaseType()));
+                BOOLEAN_TYPE, BASE_TYPE));
+
+        return RANGE_TYPE;
     }
 
     public PythonRange(PythonInteger start, PythonInteger stop, PythonInteger step) {

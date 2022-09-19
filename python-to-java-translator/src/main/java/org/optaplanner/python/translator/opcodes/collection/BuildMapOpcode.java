@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.opcodes.collection;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_TYPE;
+
 import org.optaplanner.python.translator.FunctionMetadata;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.StackMetadata;
@@ -16,7 +18,7 @@ public class BuildMapOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop(2 * instruction.arg).push(ValueSourceInfo.of(this, PythonLikeDict.DICT_TYPE,
+        return stackMetadata.pop(2 * instruction.arg).push(ValueSourceInfo.of(this, DICT_TYPE,
                 stackMetadata.getValueSourcesUpToStackIndex(2 * instruction.arg)));
     }
 

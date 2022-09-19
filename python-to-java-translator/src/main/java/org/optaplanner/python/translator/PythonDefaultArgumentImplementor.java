@@ -1,10 +1,10 @@
 package org.optaplanner.python.translator;
 
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.asmClassLoader;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToBytecode;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
+import static org.optaplanner.python.translator.types.BuiltinTypes.asmClassLoader;
+import static org.optaplanner.python.translator.types.BuiltinTypes.classNameToBytecode;
 
 import java.lang.reflect.Modifier;
 import java.util.Collection;

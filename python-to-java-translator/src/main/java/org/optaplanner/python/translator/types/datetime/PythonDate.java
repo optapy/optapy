@@ -1,9 +1,9 @@
 package org.optaplanner.python.translator.types.datetime;
 
-import static org.optaplanner.python.translator.types.PythonString.STRING_TYPE;
-import static org.optaplanner.python.translator.types.collections.PythonLikeTuple.TUPLE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.TUPLE_TYPE;
 import static org.optaplanner.python.translator.types.datetime.PythonTimeDelta.TIME_DELTA_TYPE;
-import static org.optaplanner.python.translator.types.numeric.PythonInteger.INT_TYPE;
 
 import java.time.Duration;
 import java.time.Instant;

@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.TUPLE_TYPE;
+
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -7,6 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
+import java.util.RandomAccess;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -21,22 +24,15 @@ import org.optaplanner.python.translator.types.errors.lookup.IndexError;
 import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
-public class PythonLikeTuple extends AbstractPythonLikeObject implements List<PythonLikeObject> {
+public class PythonLikeTuple extends AbstractPythonLikeObject implements List<PythonLikeObject>, RandomAccess {
     final List<PythonLikeObject> delegate;
     private int remainderToAdd;
 
-    public final static PythonLikeType TUPLE_TYPE = new PythonLikeType("tuple", PythonLikeTuple.class);
-
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(TUPLE_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonLikeTuple::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
         TUPLE_TYPE.setConstructor((positionalArguments, namedArguments) -> {
             if (positionalArguments.isEmpty()) {
@@ -75,6 +71,8 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
         TUPLE_TYPE.addMethod("index",
                 PythonLikeTuple.class.getMethod("index", PythonLikeObject.class, PythonInteger.class, PythonInteger.class));
         TUPLE_TYPE.addMethod("count", PythonLikeTuple.class.getMethod("count", PythonLikeObject.class));
+
+        return TUPLE_TYPE;
     }
 
     public PythonLikeTuple() {

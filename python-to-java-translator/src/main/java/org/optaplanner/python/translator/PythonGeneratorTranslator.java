@@ -7,11 +7,11 @@ import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTran
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.QUALIFIED_NAME_INSTANCE_FIELD_NAME;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.USER_PACKAGE_BASE;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.asmClassLoader;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToBytecode;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.getInitialStackMetadata;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.getOpcodeList;
+import static org.optaplanner.python.translator.types.BuiltinTypes.asmClassLoader;
+import static org.optaplanner.python.translator.types.BuiltinTypes.classNameToBytecode;
 
 import java.lang.reflect.Modifier;
 import java.util.HashMap;

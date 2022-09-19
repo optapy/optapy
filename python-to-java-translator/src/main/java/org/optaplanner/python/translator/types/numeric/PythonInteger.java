@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.numeric;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
+
 import java.math.BigInteger;
 import java.util.List;
 
@@ -9,7 +11,6 @@ import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.NumberBuiltinOperations;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
-import org.optaplanner.python.translator.types.PythonLikeComparable;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
@@ -19,28 +20,15 @@ import org.optaplanner.python.translator.types.errors.ValueError;
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
     public final BigInteger value;
 
-    public static PythonLikeType INT_TYPE = getIntType();
-
     public final static PythonInteger ZERO = new PythonInteger(BigInteger.ZERO);
     public final static PythonInteger ONE = new PythonInteger(BigInteger.ONE);
     public final static PythonInteger TWO = new PythonInteger(BigInteger.TWO);
 
-    public static PythonLikeType getIntType() {
-        if (INT_TYPE != null) {
-            return INT_TYPE;
-        }
-        INT_TYPE = new PythonLikeType("int", PythonInteger.class, List.of(NUMBER_TYPE));
-        try {
-            PythonLikeComparable.setup(INT_TYPE);
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(INT_TYPE);
-            return INT_TYPE;
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
+    static {
+        PythonOverloadImplementor.deferDispatchesFor(PythonInteger::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
         INT_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
             if (positionalArguments.size() == 0) {
@@ -156,6 +144,8 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         INT_TYPE.addMethod("__round__", PythonInteger.class.getMethod("round", PythonInteger.class));
         INT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonInteger.class.getMethod("format"));
         INT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonInteger.class.getMethod("format", PythonString.class));
+
+        return INT_TYPE;
     }
 
     public PythonInteger(PythonLikeType type) {
@@ -173,7 +163,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public PythonInteger(BigInteger value) {
-        super(getIntType());
+        super(INT_TYPE);
         this.value = value;
     }
 

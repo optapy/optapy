@@ -1,5 +1,7 @@
 package org.optaplanner.python.translator.types.collections.view;
 
+import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_VALUE_VIEW_TYPE;
+
 import java.util.Collection;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
@@ -17,22 +19,16 @@ import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.IteratorUtils;
 
 public class DictValueView extends AbstractPythonLikeObject {
-    public final static PythonLikeType DICT_VALUE_VIEW_TYPE = new PythonLikeType("dict_values", DictValueView.class);
     public final static PythonLikeType $TYPE = DICT_VALUE_VIEW_TYPE;
 
     final PythonLikeDict mapping;
     final Collection<PythonLikeObject> valueCollection;
 
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(DICT_VALUE_VIEW_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unable to find method.", e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(DictValueView::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Unary
         DICT_VALUE_VIEW_TYPE.addMethod(PythonUnaryOperator.LENGTH, DictValueView.class.getMethod("getValuesSize"));
         DICT_VALUE_VIEW_TYPE.addMethod(PythonUnaryOperator.ITERATOR, DictValueView.class.getMethod("getValueIterator"));
@@ -43,6 +39,8 @@ public class DictValueView extends AbstractPythonLikeObject {
         // Binary
         DICT_VALUE_VIEW_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
                 DictValueView.class.getMethod("containsValue", PythonLikeObject.class));
+
+        return DICT_VALUE_VIEW_TYPE;
     }
 
     public DictValueView(PythonLikeDict mapping) {
