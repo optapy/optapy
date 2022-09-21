@@ -166,6 +166,62 @@ def test_count():
 
 
 ########################################
+# String operations
+########################################
+def test_interpolation():
+    interpolation_verifier = verifier_for(lambda tested, values: tested % values)
+
+    interpolation_verifier.verify('%d', 100, expected_result='100')
+    interpolation_verifier.verify('%d', 0b1111, expected_result='15')
+    interpolation_verifier.verify('%s', 'foo', expected_result='foo')
+    interpolation_verifier.verify('%s %s', ('foo', 'bar'), expected_result='foo bar')
+    interpolation_verifier.verify('%(foo)s', {'foo': 10, 'bar': 20}, expected_result='10')
+
+    interpolation_verifier.verify('%d', 101, expected_result='101')
+    interpolation_verifier.verify('%i', 101, expected_result='101')
+
+    interpolation_verifier.verify('%o', 27, expected_result='33')
+    interpolation_verifier.verify('%#o', 27, expected_result='0o33')
+
+    interpolation_verifier.verify('%x', 27, expected_result='1b')
+    interpolation_verifier.verify('%X', 27, expected_result='1B')
+    interpolation_verifier.verify('%#x', 27, expected_result='0x1b')
+    interpolation_verifier.verify('%#X', 27, expected_result='0X1B')
+
+    interpolation_verifier.verify('%03d', 1, expected_result='001')
+    interpolation_verifier.verify('%-5d', 1, expected_result='1    ')
+    interpolation_verifier.verify('%0-5d', 1, expected_result='1    ')
+
+    interpolation_verifier.verify('%d', 1, expected_result='1')
+    interpolation_verifier.verify('%d', -1, expected_result='-1')
+    interpolation_verifier.verify('% d', 1, expected_result=' 1')
+    interpolation_verifier.verify('% d', -1, expected_result='-1')
+    interpolation_verifier.verify('%+d', 1, expected_result='+1')
+    interpolation_verifier.verify('%+d', -1, expected_result='-1')
+
+    interpolation_verifier.verify('%f', 3.14, expected_result='3.140000')
+    interpolation_verifier.verify('%F', 3.14, expected_result='3.140000')
+    interpolation_verifier.verify('%.1f', 3.14, expected_result='3.1')
+    interpolation_verifier.verify('%.2f', 3.14, expected_result='3.14')
+    interpolation_verifier.verify('%.3f', 3.14, expected_result='3.140')
+
+    interpolation_verifier.verify('%g', 1234567890, expected_result='1.23457e+09')
+    interpolation_verifier.verify('%G', 1234567890, expected_result='1.23457E+09')
+    interpolation_verifier.verify('%e', 1234567890, expected_result='1.234568e+09')
+    interpolation_verifier.verify('%E', 1234567890, expected_result='1.234568E+09')
+
+    interpolation_verifier.verify('ABC %c', 10, expected_result='ABC \n')
+    interpolation_verifier.verify('ABC %c', 67, expected_result='ABC C')
+    interpolation_verifier.verify('ABC %c', 68, expected_result='ABC D')
+    interpolation_verifier.verify('ABC %c', 'D', expected_result='ABC D')
+    interpolation_verifier.verify('ABC %s', 'test', expected_result='ABC test')
+    interpolation_verifier.verify('ABC %r', 'test', expected_result='ABC \'test\'')
+
+    interpolation_verifier.verify('Give it %d%%!', 100, expected_result='Give it 100%!')
+    interpolation_verifier.verify('Give it %(all-you-got)d%%!', {'all-you-got': 100}, expected_result='Give it 100%!')
+
+
+########################################
 # String methods
 ########################################
 

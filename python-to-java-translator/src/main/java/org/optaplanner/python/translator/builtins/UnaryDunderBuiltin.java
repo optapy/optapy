@@ -15,6 +15,7 @@ public class UnaryDunderBuiltin implements PythonLikeFunction {
     public static final UnaryDunderBuiltin ABS = new UnaryDunderBuiltin(PythonUnaryOperator.ABS);
     public static final UnaryDunderBuiltin HASH = new UnaryDunderBuiltin(PythonUnaryOperator.HASH);
     public static final UnaryDunderBuiltin INT = new UnaryDunderBuiltin(PythonUnaryOperator.AS_INT);
+    public static final UnaryDunderBuiltin FLOAT = new UnaryDunderBuiltin(PythonUnaryOperator.AS_FLOAT);
     public static final UnaryDunderBuiltin INDEX = new UnaryDunderBuiltin(PythonUnaryOperator.AS_INDEX);
     public static final UnaryDunderBuiltin ITERATOR = new UnaryDunderBuiltin(PythonUnaryOperator.ITERATOR);
     public static final UnaryDunderBuiltin LENGTH = new UnaryDunderBuiltin(PythonUnaryOperator.LENGTH);
