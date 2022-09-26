@@ -362,6 +362,52 @@ def test_find():
     find_start_end_verifier.verify('abcabc', 'd', -2, -1, expected_result=-1)
 
 
+def test_format():
+    def my_format(tested, positional, keywords):
+        if positional is None:
+            return tested.format(**keywords)
+        elif keywords is None:
+            return tested.format(*positional)
+        else:
+            return tested.format(*positional, **keywords)
+
+    format_verifier = verifier_for(my_format)
+
+    format_verifier.verify('{0}, {1}, {2}', ('a', 'b', 'c'), None, expected_result='a, b, c')
+    format_verifier.verify('{}, {}, {}', ('a', 'b', 'c'), None, expected_result='a, b, c')
+    format_verifier.verify('{2}, {1}, {0}', ('a', 'b', 'c'), None, expected_result='c, b, a')
+    format_verifier.verify('{0}{1}{0}', ('abra', 'cad'), None, expected_result='abracadabra')
+    format_verifier.verify('Coordinates: {latitude}, {longitude}', None, {'latitude': '37.24N',
+                                                                          'longitude': '-115.81W'},
+                           expected_result='Coordinates: 37.24N, -115.81W')
+    format_verifier.verify("repr() shows quotes: {!r}; str() doesn't: {!s}", ('test1', 'test2'), None,
+                           expected_result="repr() shows quotes: 'test1'; str() doesn't: test2")
+    format_verifier.verify('{:<30}', ('left aligned',), None,
+                           expected_result='left aligned                  ')
+    format_verifier.verify('{:>30}', ('right aligned',), None,
+                           expected_result='                 right aligned')
+    format_verifier.verify('{:^30}', ('centered',), None,
+                           expected_result='           centered           ')
+    format_verifier.verify('{:*^30}', ('centered',), None,
+                           expected_result='***********centered***********')
+    format_verifier.verify('{:+f}; {:+f}', (3.14, -3.14), None,
+                           expected_result='+3.140000; -3.140000')
+    format_verifier.verify('{: f}; {: f}', (3.14, -3.14), None,
+                           expected_result=' 3.140000; -3.140000')
+    format_verifier.verify('{:-f}; {:-f}', (3.14, -3.14), None,
+                           expected_result='3.140000; -3.140000')
+    format_verifier.verify("int: {0:d};  hex: {0:x};  oct: {0:o};  bin: {0:b}", (42,), None,
+                           expected_result='int: 42;  hex: 2a;  oct: 52;  bin: 101010')
+    format_verifier.verify("int: {0:d};  hex: {0:#x};  oct: {0:#o};  bin: {0:#b}", (42,), None,
+                           expected_result='int: 42;  hex: 0x2a;  oct: 0o52;  bin: 0b101010')
+    format_verifier.verify("{:,}", (1234567890,), None,
+                           expected_result='1,234,567,890')
+    format_verifier.verify("{:_}", (1234567890,), None,
+                           expected_result='1_234_567_890')
+    format_verifier.verify("Correct answers: {:.2%}", (19/22,), None,
+                           expected_result='Correct answers: 86.36%')
+
+
 def test_isalnum():
     isalnum_verifier = verifier_for(lambda tested: tested.isalnum())
 

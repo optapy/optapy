@@ -3,19 +3,21 @@ package org.optaplanner.python.translator.types.numeric;
 import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
 
 import java.math.BigInteger;
+import java.text.NumberFormat;
 import java.util.List;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
-import org.optaplanner.python.translator.builtins.NumberBuiltinOperations;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.util.DefaultFormatSpec;
+import org.optaplanner.python.translator.util.StringFormatter;
 
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
     public final BigInteger value;
@@ -463,10 +465,82 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public PythonString format() {
-        return NumberBuiltinOperations.format(this, PythonString.valueOf(""));
+        return PythonString.valueOf(value.toString());
     }
 
     public PythonString format(PythonString spec) {
-        return NumberBuiltinOperations.format(this, spec);
+        DefaultFormatSpec formatSpec = DefaultFormatSpec.fromSpec(spec);
+
+        StringBuilder out = new StringBuilder();
+
+        String alternateFormPrefix = null;
+        int groupSize;
+
+        if (formatSpec.precision.isPresent()) {
+            throw new ValueError("Precision not allowed in integer format specifier");
+        }
+        switch (formatSpec.conversionType.orElse(DefaultFormatSpec.ConversionType.DECIMAL)) {
+            case BINARY:
+                alternateFormPrefix = "0b";
+                groupSize = 4;
+                out.append(value.toString(2));
+                break;
+            case OCTAL:
+                alternateFormPrefix = "0o";
+                groupSize = 4;
+                out.append(value.toString(8));
+                break;
+            case DECIMAL:
+                out.append(value.toString(10));
+                groupSize = 3;
+                break;
+            case LOWERCASE_HEX:
+                alternateFormPrefix = "0x";
+                groupSize = 4;
+                out.append(value.toString(16));
+                break;
+            case UPPERCASE_HEX:
+                alternateFormPrefix = "0X";
+                groupSize = 4;
+                out.append(value.toString(16).toUpperCase());
+                break;
+            case CHARACTER:
+                groupSize = -1;
+                out.appendCodePoint(value.intValueExact());
+                break;
+            case LOCALE_SENSITIVE:
+                groupSize = -1;
+                NumberFormat.getIntegerInstance().format(value);
+                break;
+            default:
+                throw new ValueError("Invalid format spec for int: " + spec);
+        }
+
+        StringFormatter.addGroupings(out, formatSpec, groupSize);
+        switch (formatSpec.signOption.orElse(DefaultFormatSpec.SignOption.ONLY_NEGATIVE_NUMBERS)) {
+            case ALWAYS_SIGN:
+                if (out.charAt(0) != '-') {
+                    out.insert(0, '+');
+                }
+                break;
+            case ONLY_NEGATIVE_NUMBERS:
+                break;
+            case SPACE_FOR_POSITIVE_NUMBERS:
+                if (out.charAt(0) != '-') {
+                    out.insert(0, ' ');
+                }
+                break;
+            default:
+                throw new IllegalStateException("Unhandled case: " + formatSpec.signOption);
+        }
+
+        if (formatSpec.useAlternateForm && alternateFormPrefix != null) {
+            StringFormatter.alignWithPrefixRespectingSign(out, alternateFormPrefix, formatSpec,
+                    DefaultFormatSpec.AlignmentOption.RIGHT_ALIGN);
+        } else {
+            StringFormatter.align(out, formatSpec, DefaultFormatSpec.AlignmentOption.RIGHT_ALIGN);
+        }
+
+        return PythonString.valueOf(out.toString());
     }
 }

@@ -499,6 +499,7 @@ public class PythonClassTranslator {
                 Type.getMethodDescriptor(Type.getType(Map.class)), true);
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
+        methodVisitor.visitInsn(initFunction.supportExtraKeywordsArgs ? Opcodes.ICONST_1 : Opcodes.ICONST_0);
         methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class), "extractArguments",
                 Type.getMethodDescriptor(Type.getType(List.class),
                         Type.INT_TYPE,
@@ -507,7 +508,8 @@ public class PythonClassTranslator {
                         Type.getType(List.class),
                         Type.getType(Map.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class),
+                        Type.BOOLEAN_TYPE),
                 false);
 
         List<PythonLikeType> initParameterTypes = initFunction.getParameterTypes();

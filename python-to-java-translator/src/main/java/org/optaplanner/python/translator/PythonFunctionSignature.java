@@ -124,6 +124,10 @@ public class PythonFunctionSignature {
     }
 
     public boolean moreSpecificThan(PythonFunctionSignature other) {
+        if (other instanceof PythonGenericFunctionSignature) {
+            return true;
+        }
+
         if (other.parameterTypes.length != parameterTypes.length) {
             return false;
         }
@@ -143,7 +147,7 @@ public class PythonFunctionSignature {
         return true;
     }
 
-    private void unwrapBoundMethod(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int posFromTOS) {
+    void unwrapBoundMethod(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int posFromTOS) {
         if (methodDescriptor.methodType == MethodDescriptor.MethodType.VIRTUAL ||
                 methodDescriptor.methodType == MethodDescriptor.MethodType.INTERFACE) {
             StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, posFromTOS);

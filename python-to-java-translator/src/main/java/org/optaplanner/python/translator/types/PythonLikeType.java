@@ -24,6 +24,7 @@ import org.optaplanner.python.translator.FieldDescriptor;
 import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonFunctionSignature;
+import org.optaplanner.python.translator.PythonGenericFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonTernaryOperators;
@@ -121,7 +122,7 @@ public class PythonLikeType implements PythonLikeObject,
                     STRING_TYPE, BASE_TYPE));
             BASE_TYPE.addMethod(PythonBinaryOperators.FORMAT, new PythonFunctionSignature(
                     MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("formatPythonObject",
-                            PythonLikeObject.class, PythonLikeObject.class)),
+                            PythonLikeObject.class, PythonString.class)),
                     STRING_TYPE, BASE_TYPE, STRING_TYPE));
             BASE_TYPE.__dir__.put(PythonUnaryOperator.HASH.getDunderMethod(),
                     new JavaMethodReference(Object.class.getMethod("hashCode"), Map.of()));
@@ -192,6 +193,22 @@ public class PythonLikeType implements PythonLikeObject,
 
     public void addMethod(PythonTernaryOperators operator, PythonFunctionSignature method) {
         addMethod(operator.getDunderMethod(), method);
+    }
+
+    public void addGenericMethod(String methodName, Method method) {
+        addMethod(methodName, PythonGenericFunctionSignature.forGenericMethod(method));
+    }
+
+    public void addGenericMethod(PythonUnaryOperator operator, Method method) {
+        addMethod(operator.getDunderMethod(), PythonGenericFunctionSignature.forGenericMethod(method));
+    }
+
+    public void addGenericMethod(PythonBinaryOperators operator, Method method) {
+        addMethod(operator.getDunderMethod(), PythonGenericFunctionSignature.forGenericMethod(method));
+    }
+
+    public void addGenericMethod(PythonTernaryOperators operator, Method method) {
+        addMethod(operator.getDunderMethod(), PythonGenericFunctionSignature.forGenericMethod(method));
     }
 
     public void addMethod(String methodName, PythonFunctionSignature method) {

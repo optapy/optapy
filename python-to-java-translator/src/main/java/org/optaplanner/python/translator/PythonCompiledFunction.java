@@ -81,6 +81,11 @@ public class PythonCompiledFunction {
     public int co_kwonlyargcount;
 
     /**
+     * True if the python function can take extra keyword arguments that were not specified in its arguments
+     */
+    public boolean supportExtraKeywordsArgs;
+
+    /**
      * The python version this function was compiled in (see sys.hexversion)
      */
     public PythonVersion pythonVersion;

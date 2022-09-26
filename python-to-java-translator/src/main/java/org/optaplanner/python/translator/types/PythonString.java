@@ -6,8 +6,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -18,7 +16,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -38,6 +35,8 @@ import org.optaplanner.python.translator.types.errors.lookup.LookupError;
 import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonFloat;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
+import org.optaplanner.python.translator.util.DefaultFormatSpec;
+import org.optaplanner.python.translator.util.StringFormatter;
 
 public class PythonString extends AbstractPythonLikeObject implements PythonLikeComparable<PythonString> {
     public final String value;
@@ -51,12 +50,11 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
      * Python printf-style String Formatting documentation</a> for details.
      */
     private final static Pattern PRINTF_FORMAT_REGEX = Pattern.compile("%(?:(?<key>\\([^()]+\\))?" +
-                                                                             "(?<flags>[#0\\-+ ]*)?" +
-                                                                             "(?<minWidth>\\*|\\d+)?" +
-                                                                             "(?<precision>\\.(?:\\*|\\d+))?" +
-                                                                             "[hlL]?" + // ignored length modifier
-                                                                             "(?<type>[diouxXeEfFgGcrsa%])|.*)"
-            );
+            "(?<flags>[#0\\-+ ]*)?" +
+            "(?<minWidth>\\*|\\d+)?" +
+            "(?<precision>\\.(?:\\*|\\d+))?" +
+            "[hlL]?" + // ignored length modifier
+            "(?<type>[diouxXeEfFgGcrsa%])|.*)");
 
     private enum PrintfConversionType {
         SIGNED_INTEGER_DECIMAL("d", "i", "u"),
@@ -75,6 +73,7 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         LITERAL_PERCENT("%");
 
         final String[] matchedCharacters;
+
         PrintfConversionType(String... matchedCharacters) {
             this.matchedCharacters = matchedCharacters;
         }
@@ -127,9 +126,12 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
                 PythonString.class.getMethod("containsSubstring", PythonString.class));
         STRING_TYPE.addMethod(PythonBinaryOperators.ADD, PythonString.class.getMethod("concat", PythonString.class));
         STRING_TYPE.addMethod(PythonBinaryOperators.MULTIPLY, PythonString.class.getMethod("repeat", PythonInteger.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonString.class.getMethod("interpolate", PythonLikeObject.class));
+        STRING_TYPE.addMethod(PythonBinaryOperators.MODULO,
+                PythonString.class.getMethod("interpolate", PythonLikeObject.class));
         STRING_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonString.class.getMethod("interpolate", PythonLikeTuple.class));
         STRING_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonString.class.getMethod("interpolate", PythonLikeDict.class));
+        STRING_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonString.class.getMethod("formatSelf"));
+        STRING_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonString.class.getMethod("formatSelf", PythonString.class));
 
         // Other
         STRING_TYPE.addMethod("capitalize", PythonString.class.getMethod("capitalize"));
@@ -163,8 +165,7 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         STRING_TYPE.addMethod("find", PythonString.class.getMethod("findSubstringIndex", PythonString.class,
                 PythonInteger.class, PythonInteger.class));
 
-        // TODO: format
-
+        STRING_TYPE.addGenericMethod("format", PythonString.class.getMethod("format", List.class, Map.class));
         STRING_TYPE.addMethod("format_map", PythonString.class.getMethod("formatMap", PythonLikeDict.class));
 
         STRING_TYPE.addMethod("index", PythonString.class.getMethod("findSubstringIndexOrError", PythonString.class));
@@ -725,36 +726,36 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     }
 
     public PythonString format(List<PythonLikeObject> positionalArguments, Map<PythonString, PythonLikeObject> namedArguments) {
-        return PythonString.valueOf(FORMAT_REGEX.splitAsStream(value)
-                .map(part -> {
-                    Matcher matcher = FORMAT_REGEX.matcher(part);
-                    if (matcher.find()) {
-                        String beforeArgument = part.substring(0, matcher.start());
-                        String argumentIdentifier = matcher.group(1);
-
-                        boolean isPositional = true;
-                        for (int i = 0; i < part.length(); i++) {
-                            char character = part.charAt(i);
-                            if (!Character.isDigit(character)) {
-                                isPositional = false;
-                                break;
-                            }
-                        }
-                        if (isPositional) {
-                            int position = Integer.parseInt(argumentIdentifier);
-                            return beforeArgument + UnaryDunderBuiltin.STR.invoke(positionalArguments.get(position));
-                        } else {
-                            PythonString identifierName = PythonString.valueOf(argumentIdentifier);
-                            return beforeArgument + UnaryDunderBuiltin.STR.invoke(namedArguments.get(identifierName));
-                        }
-                    } else {
-                        return part;
-                    }
-                }).collect(Collectors.joining()));
+        return PythonString.valueOf(StringFormatter.format(value, positionalArguments, namedArguments));
     }
 
     public PythonString formatMap(PythonLikeDict dict) {
         return format(List.of(), (Map) dict);
+    }
+
+    public PythonString formatSelf() {
+        return this;
+    }
+
+    public PythonString formatSelf(PythonString spec) {
+        if (spec.value.isEmpty()) {
+            return this;
+        }
+
+        DefaultFormatSpec formatSpec = DefaultFormatSpec.fromStringSpec(spec);
+
+        StringBuilder out = new StringBuilder();
+
+        switch (formatSpec.conversionType.orElse(DefaultFormatSpec.ConversionType.STRING)) {
+            case STRING:
+                out.append(value);
+                break;
+            default:
+                throw new ValueError("Invalid conversion type for str: " + formatSpec.conversionType);
+        }
+
+        StringFormatter.align(out, formatSpec, DefaultFormatSpec.AlignmentOption.LEFT_ALIGN);
+        return PythonString.valueOf(out.toString());
     }
 
     public PythonString interpolate(PythonLikeObject object) {
@@ -844,7 +845,8 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
             if (conversionType != PrintfConversionType.LITERAL_PERCENT) {
                 String key = matcher.group("key");
                 if (key == null) {
-                    throw new ValueError("When a dict is used for the interpolation operator, all conversions must have parenthesised keys");
+                    throw new ValueError(
+                            "When a dict is used for the interpolation operator, all conversions must have parenthesised keys");
                 }
                 key = key.substring(1, key.length() - 1);
 
@@ -853,7 +855,8 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
                 String precisionString = matcher.group("precision");
 
                 if ("*".equals(minWidth)) {
-                    throw new ValueError("* cannot be used for minimum field width when a dict is used for the interpolation operator");
+                    throw new ValueError(
+                            "* cannot be used for minimum field width when a dict is used for the interpolation operator");
                 }
 
                 if ("*".equals(precisionString)) {
@@ -898,8 +901,9 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         return out.toString();
     }
 
-    private String performInterpolateConversion(String flags, Optional<Integer> maybeWidth, Optional<Integer>  maybePrecision, PrintfConversionType conversionType,
-                                                PythonLikeObject toConvert) {
+    private String performInterpolateConversion(String flags, Optional<Integer> maybeWidth, Optional<Integer> maybePrecision,
+            PrintfConversionType conversionType,
+            PythonLikeObject toConvert) {
         boolean useAlternateForm = flags.contains("#");
         boolean isZeroPadded = flags.contains("0");
         boolean isLeftAdjusted = flags.contains("-");
@@ -912,7 +916,6 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         if (putSignBeforeConversion) {
             putSpaceBeforePositiveNumber = false;
         }
-
 
         String result;
         switch (conversionType) {
@@ -935,7 +938,7 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
                 }
                 result = ((PythonInteger) toConvert).value.toString(8);
                 if (useAlternateForm) {
-                    result = (result.startsWith("-"))? "-0o" + result.substring(1) : "0o" + result;
+                    result = (result.startsWith("-")) ? "-0o" + result.substring(1) : "0o" + result;
                 }
                 break;
             }
@@ -948,7 +951,7 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
                 }
                 result = ((PythonInteger) toConvert).value.toString(16);
                 if (useAlternateForm) {
-                    result = (result.startsWith("-"))? "-0x" + result.substring(1) : "0x" + result;
+                    result = (result.startsWith("-")) ? "-0x" + result.substring(1) : "0x" + result;
                 }
                 break;
             }
@@ -961,7 +964,7 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
                 }
                 result = ((PythonInteger) toConvert).value.toString(16).toUpperCase();
                 if (useAlternateForm) {
-                    result = (result.startsWith("-"))? "-0X" + result.substring(1) : "0X" + result;
+                    result = (result.startsWith("-")) ? "-0X" + result.substring(1) : "0X" + result;
                 }
                 break;
             }
@@ -1072,7 +1075,7 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
                 result = ((PythonString) UnaryDunderBuiltin.STR.invoke(toConvert)).value;
                 break;
             }
-            case ASCII_STRING:{
+            case ASCII_STRING: {
                 result = GlobalBuiltins.ascii(List.of(toConvert), null).value;
                 break;
             }
@@ -1745,31 +1748,34 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
 
     public PythonString repr() {
         return PythonString.valueOf("'" + value.codePoints()
-                                            .flatMap(character -> {
-                                                if (character == '\\') {
-                                                    return IntStream.of('\\', '\\');
-                                                }
-                                                if (isCharacterPrintable(character)) {
-                                                    return IntStream.of(character);
-                                                } else {
-                                                    switch (character) {
-                                                        case '\r': return IntStream.of('\\', 'r');
-                                                        case '\n': return IntStream.of('\\', 'n');
-                                                        case '\t': return IntStream.of('\\', 't');
-                                                        default: {
-                                                            if (character < 0xFFFF) {
-                                                                return String.format("u%04x", character).codePoints();
-                                                            } else {
-                                                                return String.format("U%08x", character).codePoints();
-                                                            }
+                .flatMap(character -> {
+                    if (character == '\\') {
+                        return IntStream.of('\\', '\\');
+                    }
+                    if (isCharacterPrintable(character)) {
+                        return IntStream.of(character);
+                    } else {
+                        switch (character) {
+                            case '\r':
+                                return IntStream.of('\\', 'r');
+                            case '\n':
+                                return IntStream.of('\\', 'n');
+                            case '\t':
+                                return IntStream.of('\\', 't');
+                            default: {
+                                if (character < 0xFFFF) {
+                                    return String.format("u%04x", character).codePoints();
+                                } else {
+                                    return String.format("U%08x", character).codePoints();
+                                }
 
-                                                        }
-                                                    }
-                                                }
-                                            })
-                                            .collect(StringBuilder::new,
-                                                     StringBuilder::appendCodePoint, StringBuilder::append)
-                                            .toString() + "'");
+                            }
+                        }
+                    }
+                })
+                .collect(StringBuilder::new,
+                        StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString() + "'");
     }
 
     public PythonString asString() {

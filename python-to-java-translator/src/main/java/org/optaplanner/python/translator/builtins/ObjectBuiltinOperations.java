@@ -1,6 +1,5 @@
 package org.optaplanner.python.translator.builtins;
 
-import java.util.Formatter;
 import java.util.List;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
@@ -94,17 +93,8 @@ public class ObjectBuiltinOperations {
         return result;
     }
 
-    public static PythonString formatPythonObject(PythonLikeObject object, PythonLikeObject formatString) {
-        String javaFormatString = getJavaNumberFormatString(((PythonString) formatString).value);
-        return new PythonString(new Formatter().format(javaFormatString, object.toString()).toString());
-    }
-
-    public static String getJavaNumberFormatString(String pythonFormatString) {
-        // Python format
-        // [[fill]align][sign][#][0][minimumwidth][.precision][type]
-        // Java format
-        //  %[argument_index$][flags][width][.precision]conversion
-        return "%1$" + pythonFormatString;
+    public static PythonString formatPythonObject(PythonLikeObject object, PythonString formatString) {
+        return ((PythonString) UnaryDunderBuiltin.STR.invoke(object)).formatSelf(formatString);
     }
 
     public static PythonBoolean equal(PythonLikeObject a, PythonLikeObject b) {

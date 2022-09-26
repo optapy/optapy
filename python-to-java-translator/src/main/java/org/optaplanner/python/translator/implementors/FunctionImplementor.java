@@ -3,8 +3,10 @@ package org.optaplanner.python.translator.implementors;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -444,7 +446,8 @@ public class FunctionImplementor {
             List<PythonLikeObject> defaultPositionalArguments,
             Map<PythonString, PythonLikeObject> defaultNamedArguments,
             List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+            Map<PythonString, PythonLikeObject> namedArguments,
+            boolean isGeneric) {
         if (positionalArguments == null) {
             positionalArguments = List.of();
         }
@@ -468,7 +471,7 @@ public class FunctionImplementor {
             int defaultPositionalArgumentsStart = positionalArgumentEnd - defaultPositionalArguments.size() - out.size();
             if (defaultPositionalArgumentsStart < 0) {
                 // TODO: explain missing positional/named arguments
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("missing " + -defaultPositionalArgumentsStart + " required arguments");
             }
             out.addAll(defaultPositionalArguments.subList(defaultPositionalArgumentsStart, defaultPositionalArguments.size()));
         }
@@ -482,18 +485,28 @@ public class FunctionImplementor {
             out.set(index, namedArguments.get(key));
         }
 
+        Set<PythonString> toRemoveNamedArgs = new HashSet<>();
         for (PythonString key : namedArguments.keySet()) {
             int index = variableNameList.indexOf(key);
             if (index == -1 || index >= totalArgCount) {
-                // TODO: explain invalid named arguments
-                throw new IllegalArgumentException();
+                if (!isGeneric) {
+                    // TODO: explain invalid named arguments
+                    throw new IllegalArgumentException("Function is not generic and got extra keyword arg " + key);
+                } else {
+                    // remove unused element from out
+                    out.remove(out.size() - 1);
+                }
+            } else {
+                out.set(index, namedArguments.get(key));
+                toRemoveNamedArgs.add(key);
             }
-            out.set(index, namedArguments.get(key));
         }
+        toRemoveNamedArgs.forEach(namedArguments::remove);
 
         if (out.size() != totalArgCount) {
             // TODO: explain invalid argument count
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Mismatch arg counts: actual " + out.size() + " expected " + totalArgCount +
+                    " args: " + positionalArguments + "; names: " + namedArguments);
         }
 
         return out;

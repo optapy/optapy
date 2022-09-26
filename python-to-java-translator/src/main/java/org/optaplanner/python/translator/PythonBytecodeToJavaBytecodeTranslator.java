@@ -709,12 +709,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 Type.getDescriptor(PythonLikeDict.class));
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
+        methodVisitor.visitInsn(pythonCompiledFunction.supportExtraKeywordsArgs ? Opcodes.ICONST_1 : Opcodes.ICONST_0);
 
         methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class), "extractArguments",
                 Type.getMethodDescriptor(Type.getType(List.class), Type.INT_TYPE, Type.INT_TYPE,
                         Type.getType(List.class), Type.getType(List.class),
                         Type.getType(Map.class), Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class), Type.BOOLEAN_TYPE),
                 false);
 
         for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {

@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -140,12 +141,21 @@ public class PythonOverloadImplementor {
         List<PythonFunctionSignature> overloadList = knownFunctionType.getOverloadFunctionSignatureList();
 
         Map<Integer, List<PythonFunctionSignature>> pythonFunctionSignatureByArgumentLength = overloadList.stream()
+                .filter(sig -> !(sig instanceof PythonGenericFunctionSignature))
                 .collect(Collectors.groupingBy(sig -> sig.getParameterTypes().length));
 
-        if (pythonFunctionSignatureByArgumentLength.size() == 1) {
+        Optional<PythonFunctionSignature> maybeGenericFunctionSignature = overloadList.stream()
+                .filter(sig -> sig instanceof PythonGenericFunctionSignature)
+                .findAny();
+
+        if (pythonFunctionSignatureByArgumentLength.isEmpty()) { // only generic overload
+            // No error message since we MUST have a generic overload
+            createGenericDispatch(methodVisitor, type, maybeGenericFunctionSignature, "");
+        } else if (pythonFunctionSignatureByArgumentLength.size() == 1) {
             Map.Entry<Integer, List<PythonFunctionSignature>> argCountOverloadPair = pythonFunctionSignatureByArgumentLength
                     .entrySet().iterator().next();
-            createDispatchForArgCount(methodVisitor, argCountOverloadPair.getKey(), type, argCountOverloadPair.getValue());
+            createDispatchForArgCount(methodVisitor, argCountOverloadPair.getKey(), type, argCountOverloadPair.getValue(),
+                    maybeGenericFunctionSignature);
         } else {
             int[] argCounts = pythonFunctionSignatureByArgumentLength.keySet().stream().sorted().mapToInt(i -> i).toArray();
             Label[] argCountLabel = new Label[argCounts.length];
@@ -167,19 +177,15 @@ public class PythonOverloadImplementor {
             for (int i = 0; i < argCounts.length; i++) {
                 methodVisitor.visitLabel(argCountLabel[i]);
                 createDispatchForArgCount(methodVisitor, argCounts[i], type,
-                        pythonFunctionSignatureByArgumentLength.get(argCounts[i]));
+                        pythonFunctionSignatureByArgumentLength.get(argCounts[i]),
+                        maybeGenericFunctionSignature);
             }
             methodVisitor.visitLabel(defaultCase);
 
-            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitLdcInsn("No overload has the given argcount. Possible overload(s) are: " +
-                    knownFunctionType.getOverloadFunctionSignatureList().stream().map(PythonFunctionSignature::toString)
-                            .collect(Collectors.joining(",\n")));
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
-                    "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
-                    false);
-            methodVisitor.visitInsn(Opcodes.ATHROW);
+            createGenericDispatch(methodVisitor, type, maybeGenericFunctionSignature,
+                    "No overload has the given argcount. Possible overload(s) are: " +
+                            knownFunctionType.getOverloadFunctionSignatureList().stream().map(PythonFunctionSignature::toString)
+                                    .collect(Collectors.joining(",\n")));
         }
 
         methodVisitor.visitMaxs(-1, -1);
@@ -187,7 +193,8 @@ public class PythonOverloadImplementor {
     }
 
     private static void createDispatchForArgCount(MethodVisitor methodVisitor, int argCount,
-            PythonLikeType type, List<PythonFunctionSignature> functionSignatureList) {
+            PythonLikeType type, List<PythonFunctionSignature> functionSignatureList,
+            Optional<PythonFunctionSignature> maybeGenericDispatch) {
         final int MATCHING_OVERLOAD_SET_VARIABLE_INDEX = 3; // 0 = this; 1 = posArguments; 2 = namedArguments
         methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(HashSet.class));
         methodVisitor.visitInsn(Opcodes.DUP);
@@ -278,15 +285,11 @@ public class PythonOverloadImplementor {
         Label setIsNotEmpty = new Label();
         methodVisitor.visitJumpInsn(Opcodes.IFNE, setIsNotEmpty);
 
-        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
-        methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitLdcInsn("No overload match the given arguments. Possible overload(s) for " + argCount
-                + " arguments are: " +
-                functionSignatureList.stream().map(PythonFunctionSignature::toString).collect(Collectors.joining(",\n")));
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
-                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
-                false);
-        methodVisitor.visitInsn(Opcodes.ATHROW);
+        createGenericDispatch(methodVisitor, type, maybeGenericDispatch,
+                "No overload match the given arguments. Possible overload(s) for " + argCount
+                        + " arguments are: " +
+                        functionSignatureList.stream().map(PythonFunctionSignature::toString)
+                                .collect(Collectors.joining(",\n")));
 
         methodVisitor.visitLabel(setIsNotEmpty);
 
@@ -343,6 +346,45 @@ public class PythonOverloadImplementor {
                 "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
                 false);
         methodVisitor.visitInsn(Opcodes.ATHROW);
+    }
+
+    private static void createGenericDispatch(MethodVisitor methodVisitor,
+            PythonLikeType type, Optional<PythonFunctionSignature> maybeGenericDispatch, String errorMessage) {
+        if (maybeGenericDispatch.isEmpty()) {
+            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitLdcInsn(errorMessage);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
+                    "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
+                    false);
+            methodVisitor.visitInsn(Opcodes.ATHROW);
+        } else {
+            PythonFunctionSignature functionSignature = maybeGenericDispatch.get();
+            if (functionSignature.methodDescriptor.methodType != MethodDescriptor.MethodType.STATIC) {
+                // It a virtual method, so need to load instance from argument list
+                methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+                methodVisitor.visitInsn(Opcodes.DUP);
+                methodVisitor.visitLdcInsn(0);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                        "get", Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
+                        true);
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type.getJavaTypeInternalName());
+                methodVisitor.visitInsn(Opcodes.SWAP);
+                methodVisitor.visitInsn(Opcodes.DUP);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                        "size", Type.getMethodDescriptor(Type.INT_TYPE), true);
+                methodVisitor.visitLdcInsn(1);
+                methodVisitor.visitInsn(Opcodes.SWAP);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                        "subList", Type.getMethodDescriptor(Type.getType(List.class), Type.INT_TYPE, Type.INT_TYPE),
+                        true);
+            } else {
+                methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+            }
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
+            functionSignature.methodDescriptor.callMethod(methodVisitor);
+            methodVisitor.visitInsn(Opcodes.ARETURN);
+        }
     }
 
     private static SortedMap<PythonLikeType, List<PythonFunctionSignature>>

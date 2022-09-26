@@ -5,13 +5,15 @@ import static org.optaplanner.python.translator.types.BuiltinTypes.FLOAT_TYPE;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.util.List;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
-import org.optaplanner.python.translator.builtins.NumberBuiltinOperations;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeComparable;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
@@ -19,6 +21,8 @@ import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.ValueError;
+import org.optaplanner.python.translator.util.DefaultFormatSpec;
+import org.optaplanner.python.translator.util.StringFormatter;
 
 public class PythonFloat extends AbstractPythonLikeObject implements PythonNumber {
     public final double value;
@@ -424,10 +428,137 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     }
 
     public PythonString format() {
-        return NumberBuiltinOperations.format(this, PythonString.valueOf(""));
+        return PythonString.valueOf(Double.toString(value));
+    }
+
+    private DecimalFormat getNumberFormat(DefaultFormatSpec formatSpec) {
+        DecimalFormat numberFormat = new DecimalFormat();
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols();
+        boolean isUppercase = false;
+
+        switch (formatSpec.conversionType.orElse(DefaultFormatSpec.ConversionType.LOWERCASE_GENERAL)) {
+            case UPPERCASE_GENERAL:
+            case UPPERCASE_SCIENTIFIC_NOTATION:
+            case UPPERCASE_FIXED_POINT:
+                isUppercase = true;
+                break;
+        }
+
+        if (isUppercase) {
+            symbols.setExponentSeparator("E");
+            symbols.setInfinity("INF");
+            symbols.setNaN("NAN");
+        } else {
+            symbols.setExponentSeparator("e");
+            symbols.setInfinity("inf");
+            symbols.setNaN("nan");
+        }
+
+        if (formatSpec.groupingOption.isPresent()) {
+            switch (formatSpec.groupingOption.get()) {
+                case COMMA:
+                    symbols.setGroupingSeparator(',');
+                    break;
+                case UNDERSCORE:
+                    symbols.setGroupingSeparator('_');
+                    break;
+            }
+        }
+
+        if (formatSpec.conversionType.orElse(null) == DefaultFormatSpec.ConversionType.LOCALE_SENSITIVE) {
+            symbols.setGroupingSeparator(DecimalFormatSymbols.getInstance().getGroupingSeparator());
+        }
+        numberFormat.setDecimalFormatSymbols(symbols);
+
+        switch (formatSpec.conversionType.orElse(DefaultFormatSpec.ConversionType.LOWERCASE_GENERAL)) {
+            case LOWERCASE_SCIENTIFIC_NOTATION:
+            case UPPERCASE_SCIENTIFIC_NOTATION:
+                numberFormat.applyPattern("0." + "#".repeat(formatSpec.getPrecisionOrDefault()) + "E00");
+                break;
+
+            case LOWERCASE_FIXED_POINT:
+            case UPPERCASE_FIXED_POINT:
+                if (formatSpec.groupingOption.isPresent()) {
+                    numberFormat.applyPattern("#,##0." + "0".repeat(formatSpec.getPrecisionOrDefault()));
+                } else {
+                    numberFormat.applyPattern("0." + "0".repeat(formatSpec.getPrecisionOrDefault()));
+                }
+                break;
+
+            case LOCALE_SENSITIVE:
+            case LOWERCASE_GENERAL:
+            case UPPERCASE_GENERAL:
+                BigDecimal asBigDecimal = BigDecimal.valueOf(value);
+                // total digits - digits to the right of the decimal point
+                int exponent;
+                if (asBigDecimal.precision() == asBigDecimal.scale() + 1) {
+                    exponent = -asBigDecimal.scale();
+                } else {
+                    exponent = asBigDecimal.precision() - asBigDecimal.scale() - 1;
+                }
+
+                if (-4 < exponent || exponent >= formatSpec.getPrecisionOrDefault()) {
+                    if (formatSpec.conversionType.isEmpty()) {
+                        numberFormat.applyPattern("0.0" + "#".repeat(formatSpec.getPrecisionOrDefault() - 1) + "E00");
+                    } else {
+                        numberFormat.applyPattern("0." + "#".repeat(formatSpec.getPrecisionOrDefault()) + "E00");
+                    }
+                } else {
+                    if (formatSpec.groupingOption.isPresent() ||
+                            formatSpec.conversionType.orElse(null) == DefaultFormatSpec.ConversionType.LOCALE_SENSITIVE) {
+                        if (formatSpec.conversionType.isEmpty()) {
+                            numberFormat.applyPattern("#,##0.0" + "#".repeat(formatSpec.getPrecisionOrDefault() - 1));
+                        } else {
+                            numberFormat.applyPattern("#,##0." + "#".repeat(formatSpec.getPrecisionOrDefault()));
+                        }
+                    } else {
+                        if (formatSpec.conversionType.isEmpty()) {
+                            numberFormat.applyPattern("0.0" + "#".repeat(formatSpec.getPrecisionOrDefault() - 1));
+                        } else {
+                            numberFormat.applyPattern("0." + "#".repeat(formatSpec.getPrecisionOrDefault()));
+                        }
+                    }
+                }
+            case PERCENTAGE:
+                if (formatSpec.groupingOption.isPresent()) {
+                    numberFormat.applyPattern("#,##0." + "0".repeat(formatSpec.getPrecisionOrDefault()) + "%");
+                } else {
+                    numberFormat.applyPattern("0." + "0".repeat(formatSpec.getPrecisionOrDefault()) + "%");
+                }
+                break;
+            default:
+                throw new ValueError("Invalid conversion for float type: " + formatSpec.conversionType);
+        }
+
+        switch (formatSpec.signOption.orElse(DefaultFormatSpec.SignOption.ONLY_NEGATIVE_NUMBERS)) {
+            case ALWAYS_SIGN:
+                numberFormat.setPositivePrefix("+");
+                numberFormat.setNegativePrefix("-");
+                break;
+            case ONLY_NEGATIVE_NUMBERS:
+                numberFormat.setPositivePrefix("");
+                numberFormat.setNegativePrefix("-");
+                break;
+            case SPACE_FOR_POSITIVE_NUMBERS:
+                numberFormat.setPositivePrefix(" ");
+                numberFormat.setNegativePrefix("-");
+                break;
+        }
+
+        numberFormat.setRoundingMode(RoundingMode.HALF_EVEN);
+        numberFormat.setDecimalSeparatorAlwaysShown(formatSpec.useAlternateForm);
+
+        return numberFormat;
     }
 
     public PythonString format(PythonString spec) {
-        return NumberBuiltinOperations.format(this, spec);
+        DefaultFormatSpec formatSpec = DefaultFormatSpec.fromSpec(spec);
+
+        StringBuilder out = new StringBuilder();
+        NumberFormat numberFormat = getNumberFormat(formatSpec);
+
+        out.append(numberFormat.format(value));
+        StringFormatter.align(out, formatSpec, DefaultFormatSpec.AlignmentOption.RIGHT_ALIGN);
+        return PythonString.valueOf(out.toString());
     }
 }
