@@ -2,15 +2,16 @@ package org.optaplanner.python.translator.types;
 
 import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.IntPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,7 +23,6 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.builtins.BinaryDunderBuiltin;
-import org.optaplanner.python.translator.builtins.GlobalBuiltins;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
 import org.optaplanner.python.translator.types.collections.PythonIterator;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
@@ -32,8 +32,9 @@ import org.optaplanner.python.translator.types.errors.TypeError;
 import org.optaplanner.python.translator.types.errors.ValueError;
 import org.optaplanner.python.translator.types.errors.lookup.IndexError;
 import org.optaplanner.python.translator.types.errors.lookup.LookupError;
+import org.optaplanner.python.translator.types.errors.unicode.UnicodeDecodeError;
+import org.optaplanner.python.translator.types.errors.unicode.UnicodeEncodeError;
 import org.optaplanner.python.translator.types.numeric.PythonBoolean;
-import org.optaplanner.python.translator.types.numeric.PythonFloat;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.util.DefaultFormatSpec;
 import org.optaplanner.python.translator.util.StringFormatter;
@@ -42,59 +43,6 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     public final String value;
 
     public final static PythonString EMPTY = new PythonString("");
-    private final static Pattern FORMAT_REGEX = Pattern.compile("\\{(.*?)\\}");
-
-    /**
-     * Pattern that matches conversion specifiers for the "%" operator. See
-     * <a href="https://docs.python.org/3/library/stdtypes.html#printf-style-string-formatting">
-     * Python printf-style String Formatting documentation</a> for details.
-     */
-    private final static Pattern PRINTF_FORMAT_REGEX = Pattern.compile("%(?:(?<key>\\([^()]+\\))?" +
-            "(?<flags>[#0\\-+ ]*)?" +
-            "(?<minWidth>\\*|\\d+)?" +
-            "(?<precision>\\.(?:\\*|\\d+))?" +
-            "[hlL]?" + // ignored length modifier
-            "(?<type>[diouxXeEfFgGcrsa%])|.*)");
-
-    private enum PrintfConversionType {
-        SIGNED_INTEGER_DECIMAL("d", "i", "u"),
-        SIGNED_INTEGER_OCTAL("o"),
-        SIGNED_HEXADECIMAL_LOWERCASE("x"),
-        SIGNED_HEXADECIMAL_UPPERCASE("X"),
-        FLOATING_POINT_EXPONENTIAL_LOWERCASE("e"),
-        FLOATING_POINT_EXPONENTIAL_UPPERCASE("E"),
-        FLOATING_POINT_DECIMAL("f", "F"),
-        FLOATING_POINT_DECIMAL_OR_EXPONENTIAL_LOWERCASE("g"),
-        FLOATING_POINT_DECIMAL_OR_EXPONENTIAL_UPPERCASE("G"),
-        SINGLE_CHARACTER("c"),
-        REPR_STRING("r"),
-        STR_STRING("s"),
-        ASCII_STRING("a"),
-        LITERAL_PERCENT("%");
-
-        final String[] matchedCharacters;
-
-        PrintfConversionType(String... matchedCharacters) {
-            this.matchedCharacters = matchedCharacters;
-        }
-
-        public static PrintfConversionType getConversionType(Matcher matcher) {
-            String conversion = matcher.group("type");
-
-            if (conversion == null) {
-                throw new ValueError("Invalid specifier at position " + matcher.start() + " in string ");
-            }
-
-            for (PrintfConversionType conversionType : PrintfConversionType.values()) {
-                for (String matchedCharacter : conversionType.matchedCharacters) {
-                    if (matchedCharacter.equals(conversion)) {
-                        return conversionType;
-                    }
-                }
-            }
-            throw new IllegalStateException("Conversion (" + conversion + ") does not match any defined conversions");
-        }
-    }
 
     static {
         PythonOverloadImplementor.deferDispatchesFor(PythonString::registerMethods);
@@ -103,11 +51,22 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         PythonLikeComparable.setup(STRING_TYPE);
         STRING_TYPE.setConstructor((positionalArguments, namedArguments) -> {
-            if (positionalArguments.size() == 1) {
+            if (positionalArguments.size() == 1) { // TODO: Named arguments
                 return UnaryDunderBuiltin.STR.invoke(positionalArguments.get(0));
+            } else if (positionalArguments.size() == 2) {
+                if (!(positionalArguments.get(0) instanceof PythonBytes) ||
+                        !(positionalArguments.get(1) instanceof PythonString)) {
+                    throw new TypeError(); // TODO: Better error message
+                }
+                return ((PythonBytes) positionalArguments.get(0)).decode((PythonString) positionalArguments.get(1));
             } else if (positionalArguments.size() == 3) {
-                // TODO Support byte array strings
-                throw new ValueError("three argument str not supported");
+                if (!(positionalArguments.get(0) instanceof PythonBytes) ||
+                        !(positionalArguments.get(1) instanceof PythonString) ||
+                        !(positionalArguments.get(2) instanceof PythonString)) {
+                    throw new TypeError(); // TODO: Better error message
+                }
+                return ((PythonBytes) positionalArguments.get(0)).decode((PythonString) positionalArguments.get(1),
+                        (PythonString) positionalArguments.get(2));
             } else {
                 throw new ValueError("str expects 1 or 3 arguments, got " + positionalArguments.size());
             }
@@ -279,36 +238,93 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         this.value = value;
     }
 
-    @Override
-    public String toString() {
-        return value;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof String) {
-            return value.equals(o);
-        } else if (o instanceof PythonString) {
-            return ((PythonString) o).value.equals(value);
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return value.hashCode();
-    }
-
     public static PythonString valueOf(String value) {
         return new PythonString(value);
     }
 
     public String getValue() {
-        if (value.equals("\0a")) {
-            throw new IllegalStateException("OKAY: " + value);
-        }
         return value;
+    }
+
+    public final PythonBytes asAsciiBytes() {
+        char[] charData = value.toCharArray();
+        int length = 0;
+        for (char charDatum : charData) {
+            if (charDatum < 0xFF) {
+                length++;
+            } else {
+                length += 2;
+            }
+        }
+        byte[] out = new byte[length];
+
+        int outIndex = 0;
+        for (char charDatum : charData) {
+            if (charDatum < 0xFF) {
+                out[outIndex] = (byte) charDatum;
+                outIndex++;
+            } else {
+                out[outIndex] = (byte) ((charDatum & 0xFF00) >> 8);
+                out[outIndex] = (byte) (charDatum & 0x00FF);
+                outIndex += 2;
+            }
+        }
+        return new PythonBytes(out);
+    }
+
+    public PythonBytes encode() {
+        try {
+            ByteBuffer byteBuffer = StandardCharsets.UTF_8.newEncoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .encode(CharBuffer.wrap(value));
+            byte[] out = new byte[byteBuffer.limit()];
+            byteBuffer.get(out);
+            return new PythonBytes(out);
+        } catch (CharacterCodingException e) {
+            throw new UnicodeEncodeError(e.getMessage());
+        }
+
+    }
+
+    public PythonBytes encode(PythonString charset) {
+        try {
+            ByteBuffer byteBuffer = Charset.forName(charset.value).newEncoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .encode(CharBuffer.wrap(value));
+            byte[] out = new byte[byteBuffer.limit()];
+            byteBuffer.get(out);
+            return new PythonBytes(out);
+        } catch (CharacterCodingException e) {
+            throw new UnicodeDecodeError(e.getMessage());
+        }
+    }
+
+    public PythonBytes encode(PythonString charset, PythonString errorActionString) {
+        CodingErrorAction errorAction;
+        switch (errorActionString.value) {
+            case "strict":
+                errorAction = CodingErrorAction.REPORT;
+                break;
+            case "ignore":
+                errorAction = CodingErrorAction.IGNORE;
+                break;
+            case "replace":
+                errorAction = CodingErrorAction.REPLACE;
+                break;
+            default:
+                throw new ValueError(errorActionString.repr() + " is not a valid value for errors. Possible values are: " +
+                        "\"strict\", \"ignore\", \"replace\".");
+        }
+        try {
+            ByteBuffer byteBuffer = Charset.forName(charset.value).newEncoder()
+                    .onMalformedInput(errorAction)
+                    .encode(CharBuffer.wrap(value));
+            byte[] out = new byte[byteBuffer.limit()];
+            byteBuffer.get(out);
+            return new PythonBytes(out);
+        } catch (CharacterCodingException e) {
+            throw new UnicodeDecodeError(e.getMessage());
+        }
     }
 
     public int length() {
@@ -763,352 +779,11 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     }
 
     public PythonString interpolate(PythonLikeTuple tuple) {
-        Matcher matcher = PRINTF_FORMAT_REGEX.matcher(value);
-
-        StringBuilder out = new StringBuilder();
-        int start = 0;
-        int currentElement = 0;
-
-        while (matcher.find()) {
-            out.append(value, start, matcher.start());
-            start = matcher.end();
-
-            String key = matcher.group("key");
-            if (key != null) {
-                throw new TypeError("format requires a mapping");
-            }
-
-            String flags = matcher.group("flags");
-            String minWidth = matcher.group("minWidth");
-            String precisionString = matcher.group("precision");
-
-            PrintfConversionType conversionType = PrintfConversionType.getConversionType(matcher);
-
-            if (conversionType != PrintfConversionType.LITERAL_PERCENT) {
-                if (tuple.size() <= currentElement) {
-                    throw new TypeError("not enough arguments for format string");
-                }
-
-                PythonLikeObject toConvert = tuple.get(currentElement);
-
-                currentElement++;
-
-                if ("*".equals(minWidth)) {
-                    if (tuple.size() <= currentElement) {
-                        throw new TypeError("not enough arguments for format string");
-                    }
-                    minWidth = ((PythonString) UnaryDunderBuiltin.STR.invoke(tuple.get(currentElement))).value;
-                    currentElement++;
-                }
-
-                if ("*".equals(precisionString)) {
-                    if (tuple.size() <= currentElement) {
-                        throw new TypeError("not enough arguments for format string");
-                    }
-                    precisionString = ((PythonString) UnaryDunderBuiltin.STR.invoke(tuple.get(currentElement))).value;
-                    currentElement++;
-                }
-
-                Optional<Integer> maybePrecision, maybeWidth;
-                if (precisionString != null) {
-                    maybePrecision = Optional.of(Integer.parseInt(precisionString.substring(1)));
-                } else {
-                    maybePrecision = Optional.empty();
-                }
-
-                if (minWidth != null) {
-                    maybeWidth = Optional.of(Integer.parseInt(minWidth));
-                } else {
-                    maybeWidth = Optional.empty();
-                }
-                out.append(performInterpolateConversion(flags, maybeWidth, maybePrecision, conversionType, toConvert));
-            } else {
-                out.append("%");
-            }
-        }
-
-        out.append(value.substring(start));
-        return PythonString.valueOf(out.toString());
+        return PythonString.valueOf(StringFormatter.printfInterpolate(value, tuple, StringFormatter.PrintfStringType.STRING));
     }
 
     public PythonString interpolate(PythonLikeDict dict) {
-        Matcher matcher = PRINTF_FORMAT_REGEX.matcher(value);
-
-        StringBuilder out = new StringBuilder();
-        int start = 0;
-        while (matcher.find()) {
-            out.append(value, start, matcher.start());
-            start = matcher.end();
-
-            PrintfConversionType conversionType = PrintfConversionType.getConversionType(matcher);
-
-            if (conversionType != PrintfConversionType.LITERAL_PERCENT) {
-                String key = matcher.group("key");
-                if (key == null) {
-                    throw new ValueError(
-                            "When a dict is used for the interpolation operator, all conversions must have parenthesised keys");
-                }
-                key = key.substring(1, key.length() - 1);
-
-                String flags = matcher.group("flags");
-                String minWidth = matcher.group("minWidth");
-                String precisionString = matcher.group("precision");
-
-                if ("*".equals(minWidth)) {
-                    throw new ValueError(
-                            "* cannot be used for minimum field width when a dict is used for the interpolation operator");
-                }
-
-                if ("*".equals(precisionString)) {
-                    throw new ValueError("* cannot be used for precision when a dict is used for the interpolation operator");
-                }
-
-                PythonLikeObject toConvert = dict.getItemOrError(PythonString.valueOf(key));
-                Optional<Integer> maybePrecision, maybeWidth;
-                if (precisionString != null) {
-                    maybePrecision = Optional.of(Integer.parseInt(precisionString.substring(1)));
-                } else {
-                    maybePrecision = Optional.empty();
-                }
-
-                if (minWidth != null) {
-                    maybeWidth = Optional.of(Integer.parseInt(minWidth));
-                } else {
-                    maybeWidth = Optional.empty();
-                }
-
-                out.append(performInterpolateConversion(flags, maybeWidth, maybePrecision, conversionType, toConvert));
-            } else {
-                out.append("%");
-            }
-        }
-
-        out.append(value.substring(start));
-        return PythonString.valueOf(out.toString());
-    }
-
-    private BigDecimal getBigDecimalWithPrecision(BigDecimal number, Optional<Integer> precision) {
-        int currentScale = number.scale();
-        int currentPrecision = number.precision();
-        int precisionDelta = precision.orElse(6) - currentPrecision;
-        return number.setScale(currentScale + precisionDelta, RoundingMode.HALF_EVEN);
-    }
-
-    private String getUppercaseEngineeringString(BigDecimal number, Optional<Integer> precision) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream printStream = new PrintStream(out);
-        printStream.printf("%1." + (precision.orElse(6) - 1) + "E", number);
-        return out.toString();
-    }
-
-    private String performInterpolateConversion(String flags, Optional<Integer> maybeWidth, Optional<Integer> maybePrecision,
-            PrintfConversionType conversionType,
-            PythonLikeObject toConvert) {
-        boolean useAlternateForm = flags.contains("#");
-        boolean isZeroPadded = flags.contains("0");
-        boolean isLeftAdjusted = flags.contains("-");
-        if (isLeftAdjusted) {
-            isZeroPadded = false;
-        }
-
-        boolean putSpaceBeforePositiveNumber = flags.contains(" ");
-        boolean putSignBeforeConversion = flags.contains("+");
-        if (putSignBeforeConversion) {
-            putSpaceBeforePositiveNumber = false;
-        }
-
-        String result;
-        switch (conversionType) {
-            case SIGNED_INTEGER_DECIMAL: {
-                if (toConvert instanceof PythonFloat) {
-                    toConvert = ((PythonFloat) toConvert).asInteger();
-                }
-                if (!(toConvert instanceof PythonInteger)) {
-                    throw new TypeError("%d format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                result = ((PythonInteger) toConvert).value.toString(10);
-                break;
-            }
-            case SIGNED_INTEGER_OCTAL: {
-                if (toConvert instanceof PythonFloat) {
-                    toConvert = ((PythonFloat) toConvert).asInteger();
-                }
-                if (!(toConvert instanceof PythonInteger)) {
-                    throw new TypeError("%o format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                result = ((PythonInteger) toConvert).value.toString(8);
-                if (useAlternateForm) {
-                    result = (result.startsWith("-")) ? "-0o" + result.substring(1) : "0o" + result;
-                }
-                break;
-            }
-            case SIGNED_HEXADECIMAL_LOWERCASE: {
-                if (toConvert instanceof PythonFloat) {
-                    toConvert = ((PythonFloat) toConvert).asInteger();
-                }
-                if (!(toConvert instanceof PythonInteger)) {
-                    throw new TypeError("%x format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                result = ((PythonInteger) toConvert).value.toString(16);
-                if (useAlternateForm) {
-                    result = (result.startsWith("-")) ? "-0x" + result.substring(1) : "0x" + result;
-                }
-                break;
-            }
-            case SIGNED_HEXADECIMAL_UPPERCASE: {
-                if (toConvert instanceof PythonFloat) {
-                    toConvert = ((PythonFloat) toConvert).asInteger();
-                }
-                if (!(toConvert instanceof PythonInteger)) {
-                    throw new TypeError("%X format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                result = ((PythonInteger) toConvert).value.toString(16).toUpperCase();
-                if (useAlternateForm) {
-                    result = (result.startsWith("-")) ? "-0X" + result.substring(1) : "0X" + result;
-                }
-                break;
-            }
-            case FLOATING_POINT_EXPONENTIAL_LOWERCASE: {
-                if (toConvert instanceof PythonInteger) {
-                    toConvert = ((PythonInteger) toConvert).asFloat();
-                }
-                if (!(toConvert instanceof PythonFloat)) {
-                    throw new TypeError("%e format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                BigDecimal value = BigDecimal.valueOf(((PythonFloat) toConvert).value);
-                result = getUppercaseEngineeringString(value, maybePrecision.map(precision -> precision + 1)
-                        .or(() -> Optional.of(7))).toLowerCase();
-                if (useAlternateForm && !result.contains(".")) {
-                    result = result + ".0";
-                }
-                break;
-            }
-            case FLOATING_POINT_EXPONENTIAL_UPPERCASE: {
-                if (toConvert instanceof PythonInteger) {
-                    toConvert = ((PythonInteger) toConvert).asFloat();
-                }
-                if (!(toConvert instanceof PythonFloat)) {
-                    throw new TypeError("%E format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                BigDecimal value = BigDecimal.valueOf(((PythonFloat) toConvert).value);
-                result = getUppercaseEngineeringString(value, maybePrecision.map(precision -> precision + 1)
-                        .or(() -> Optional.of(7)));
-                if (useAlternateForm && !result.contains(".")) {
-                    result = result + ".0";
-                }
-                break;
-            }
-            case FLOATING_POINT_DECIMAL: {
-                if (toConvert instanceof PythonInteger) {
-                    toConvert = ((PythonInteger) toConvert).asFloat();
-                }
-                if (!(toConvert instanceof PythonFloat)) {
-                    throw new TypeError("%f format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                BigDecimal value = BigDecimal.valueOf(((PythonFloat) toConvert).value);
-                BigDecimal valueWithPrecision = value.setScale(maybePrecision.orElse(6), RoundingMode.HALF_EVEN);
-                result = valueWithPrecision.toPlainString();
-                if (useAlternateForm && !result.contains(".")) {
-                    result = result + ".0";
-                }
-                break;
-            }
-            case FLOATING_POINT_DECIMAL_OR_EXPONENTIAL_LOWERCASE: {
-                if (toConvert instanceof PythonInteger) {
-                    toConvert = ((PythonInteger) toConvert).asFloat();
-                }
-                if (!(toConvert instanceof PythonFloat)) {
-                    throw new TypeError("%g format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                BigDecimal value = BigDecimal.valueOf(((PythonFloat) toConvert).value);
-                BigDecimal valueWithPrecision;
-
-                if (value.scale() > 4 || value.precision() >= maybePrecision.orElse(6)) {
-                    valueWithPrecision = getBigDecimalWithPrecision(value, maybePrecision);
-                    result = getUppercaseEngineeringString(valueWithPrecision, maybePrecision).toLowerCase();
-                } else {
-                    valueWithPrecision = value.setScale(maybePrecision.orElse(6), RoundingMode.HALF_EVEN);
-                    result = valueWithPrecision.toPlainString();
-                }
-
-                if (result.length() >= 3 && result.charAt(result.length() - 3) == 'e') {
-                    result = result.substring(0, result.length() - 1) + "0" + result.charAt(result.length() - 1);
-                }
-                break;
-            }
-            case FLOATING_POINT_DECIMAL_OR_EXPONENTIAL_UPPERCASE: {
-                if (toConvert instanceof PythonInteger) {
-                    toConvert = ((PythonInteger) toConvert).asFloat();
-                }
-                if (!(toConvert instanceof PythonFloat)) {
-                    throw new TypeError("%G format: a real number is required, not " + toConvert.__getType().getTypeName());
-                }
-                BigDecimal value = BigDecimal.valueOf(((PythonFloat) toConvert).value);
-                BigDecimal valueWithPrecision;
-
-                if (value.scale() > 4 || value.precision() >= maybePrecision.orElse(6)) {
-                    valueWithPrecision = getBigDecimalWithPrecision(value, maybePrecision);
-                    result = getUppercaseEngineeringString(valueWithPrecision, maybePrecision);
-                } else {
-                    valueWithPrecision = value.setScale(maybePrecision.orElse(6), RoundingMode.HALF_EVEN);
-                    result = valueWithPrecision.toPlainString();
-                }
-                break;
-            }
-            case SINGLE_CHARACTER: {
-                if (toConvert instanceof PythonString) {
-                    PythonString convertedCharacter = (PythonString) toConvert;
-                    if (convertedCharacter.value.length() != 1) {
-                        throw new ValueError("c specifier can only take an integer or single character string");
-                    }
-                    result = convertedCharacter.value;
-                } else {
-                    result = Character.toString(((PythonInteger) toConvert).value.intValueExact());
-                }
-                break;
-            }
-            case REPR_STRING: {
-                result = ((PythonString) UnaryDunderBuiltin.REPRESENTATION.invoke(toConvert)).value;
-                break;
-            }
-            case STR_STRING: {
-                result = ((PythonString) UnaryDunderBuiltin.STR.invoke(toConvert)).value;
-                break;
-            }
-            case ASCII_STRING: {
-                result = GlobalBuiltins.ascii(List.of(toConvert), null).value;
-                break;
-            }
-            case LITERAL_PERCENT: {
-                result = "%";
-                break;
-            }
-            default:
-                throw new IllegalStateException("Unhandled case: " + conversionType);
-        }
-
-        if (putSignBeforeConversion && !(result.startsWith("+") || result.startsWith("-"))) {
-            result = "+" + result;
-        }
-
-        if (putSpaceBeforePositiveNumber && !(result.startsWith("-"))) {
-            result = " " + result;
-        }
-
-        if (maybeWidth.isPresent() && maybeWidth.get() > result.length()) {
-            int padding = maybeWidth.get() - result.length();
-            if (isZeroPadded) {
-                if (result.startsWith("+") || result.startsWith("-")) {
-                    result = result.charAt(0) + "0".repeat(padding) + result.substring(1);
-                } else {
-                    result = "0".repeat(padding) + result;
-                }
-            } else if (isLeftAdjusted) {
-                result = result + " ".repeat(padding);
-            }
-        }
-
-        return result;
+        return PythonString.valueOf(StringFormatter.printfInterpolate(value, dict, StringFormatter.PrintfStringType.STRING));
     }
 
     public PythonInteger findSubstringIndexOrError(PythonString substring) {
@@ -1780,5 +1455,26 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
 
     public PythonString asString() {
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof String) {
+            return value.equals(o);
+        } else if (o instanceof PythonString) {
+            return ((PythonString) o).value.equals(value);
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return value.hashCode();
     }
 }

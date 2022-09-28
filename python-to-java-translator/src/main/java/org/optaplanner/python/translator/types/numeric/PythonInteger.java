@@ -20,6 +20,9 @@ import org.optaplanner.python.translator.util.DefaultFormatSpec;
 import org.optaplanner.python.translator.util.StringFormatter;
 
 public class PythonInteger extends AbstractPythonLikeObject implements PythonNumber {
+    private static final BigInteger MIN_BYTE = BigInteger.valueOf(0);
+    private static final BigInteger MAX_BYTE = BigInteger.valueOf(255);
+
     public final BigInteger value;
 
     public final static PythonInteger ZERO = new PythonInteger(BigInteger.ZERO);
@@ -177,6 +180,13 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     @Override
     public String toString() {
         return value.toString();
+    }
+
+    public byte asByte() {
+        if (value.compareTo(MIN_BYTE) < 0 || value.compareTo(MAX_BYTE) > 0) {
+            throw new ValueError(value + " cannot represent a byte because it outside the range [0, 255].");
+        }
+        return value.byteValue();
     }
 
     @Override

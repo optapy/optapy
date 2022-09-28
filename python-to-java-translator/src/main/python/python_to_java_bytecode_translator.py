@@ -10,6 +10,18 @@ global_dict_to_key_set = dict()
 type_to_compiled_java_class = dict()
 
 
+def get_translated_java_system_error_message(error):
+    from org.optaplanner.python.translator.util import TracebackUtils
+    top_line = f'{error.getClass().getSimpleName()}:  {error.getMessage()}'
+    traceback = TracebackUtils.getTraceback(error)
+    return f'{top_line}\n{traceback}'
+
+
+class TranslatedJavaSystemError(SystemError):
+    def __init__(self, error):
+        super().__init__(get_translated_java_system_error_message(error))
+
+
 # Taken from https://stackoverflow.com/a/60953150
 def is_c_native(item):
     import importlib
@@ -75,6 +87,7 @@ def init_type_to_compiled_java_class():
 
     type_to_compiled_java_class[type(None)] = BuiltinTypes.NONE_TYPE
     type_to_compiled_java_class[str] = BuiltinTypes.STRING_TYPE
+    type_to_compiled_java_class[bytes] = BuiltinTypes.BYTES_TYPE
     type_to_compiled_java_class[object] = BuiltinTypes.BASE_TYPE
     type_to_compiled_java_class[any] = BuiltinTypes.BASE_TYPE
 
@@ -249,7 +262,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
     from java.util import HashMap
     from types import ModuleType
     from org.optaplanner.python.translator import PythonLikeObject, CPythonBackedPythonInterpreter
-    from org.optaplanner.python.translator.types import PythonString, PythonNone, \
+    from org.optaplanner.python.translator.types import PythonString, PythonBytes, PythonNone, \
         PythonModule, PythonSlice, PythonRange
     from org.optaplanner.python.translator.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
         PythonLikeFrozenSet, PythonLikeDict
@@ -285,6 +298,10 @@ def convert_to_java_python_like_object(value, instance_map=None):
         return out
     elif isinstance(value, str):
         out = PythonString.valueOf(value)
+        put_in_instance_map(instance_map, value, out)
+        return out
+    elif isinstance(value, bytes):
+        out = PythonBytes.fromIntTuple(convert_to_java_python_like_object(tuple(value)))
         put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, tuple):
@@ -366,7 +383,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
 def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from org.optaplanner.python.translator import PythonLikeObject
     from java.util import List, Map, Set, Iterator
-    from org.optaplanner.python.translator.types import PythonString, PythonNone, \
+    from org.optaplanner.python.translator.types import PythonString, PythonBytes, PythonNone, \
         PythonModule, PythonSlice, PythonRange, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType
     from org.optaplanner.python.translator.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
         PythonLikeFrozenSet, PythonLikeDict
@@ -383,6 +400,8 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
         return float(python_like_object.getValue())
     elif isinstance(python_like_object, PythonString):
         return python_like_object.getValue()
+    elif isinstance(python_like_object, PythonBytes):
+        return bytes(unwrap_python_like_object(python_like_object.asIntTuple()))
     elif isinstance(python_like_object, PythonBoolean):
         return python_like_object == PythonBoolean.TRUE
     elif isinstance(python_like_object, PythonInteger):
@@ -443,10 +462,13 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     elif isinstance(python_like_object, CPythonBackedPythonLikeObject) and getattr(python_like_object, '$cpythonReference') is not None:
         return getattr(python_like_object, '$cpythonReference')
     elif isinstance(python_like_object, Exception):
-        exception_name = getattr(python_like_object, '$TYPE').getTypeName()
-        exception_python_type = getattr(builtins, exception_name)
-        args = unwrap_python_like_object(getattr(python_like_object, '$getArgs')())
-        return exception_python_type(*args)
+        try:
+            exception_name = getattr(python_like_object, '$TYPE').getTypeName()
+            exception_python_type = getattr(builtins, exception_name)
+            args = unwrap_python_like_object(getattr(python_like_object, '$getArgs')())
+            return exception_python_type(*args)
+        except AttributeError:
+            return TranslatedJavaSystemError(python_like_object)
     elif isinstance(python_like_object, PythonLikeType):
         if python_like_object.getClass() == PythonLikeGenericType:
             return type

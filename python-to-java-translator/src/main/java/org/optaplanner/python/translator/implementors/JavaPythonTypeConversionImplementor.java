@@ -2,6 +2,7 @@ package org.optaplanner.python.translator.implementors;
 
 import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BYTES_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.FLOAT_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.FROZEN_SET_TYPE;
@@ -30,6 +31,7 @@ import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.StackMetadata;
 import org.optaplanner.python.translator.types.BuiltinTypes;
+import org.optaplanner.python.translator.types.PythonBytes;
 import org.optaplanner.python.translator.types.PythonCode;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -175,6 +177,10 @@ public class JavaPythonTypeConversionImplementor {
         if (String.class.equals(javaClass) ||
                 PythonString.class.equals(javaClass)) {
             return STRING_TYPE;
+        }
+
+        if (PythonBytes.class.equals(javaClass)) {
+            return BYTES_TYPE;
         }
 
         if (Iterator.class.equals(javaClass) ||
