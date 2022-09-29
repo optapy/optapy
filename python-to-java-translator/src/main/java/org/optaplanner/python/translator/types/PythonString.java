@@ -272,6 +272,10 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         return new PythonBytes(out);
     }
 
+    public final PythonByteArray asAsciiByteArray() {
+        return new PythonByteArray(asAsciiBytes().value);
+    }
+
     public PythonBytes encode() {
         try {
             ByteBuffer byteBuffer = StandardCharsets.UTF_8.newEncoder()

@@ -128,6 +128,32 @@ public class PythonBytes extends AbstractPythonLikeObject implements PythonBytes
     }
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
+        BYTES_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+            if (positionalArguments.isEmpty()) {
+                return new PythonBytes(new byte[] {});
+            } else if (positionalArguments.size() == 1) {
+                PythonLikeObject arg = positionalArguments.get(0);
+                if (arg instanceof PythonInteger) {
+                    return new PythonBytes(new byte[((PythonInteger) arg).value.intValueExact()]);
+                } else {
+                    PythonIterator<?> iterator = (PythonIterator<?>) UnaryDunderBuiltin.ITERATOR.invoke(arg);
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    byte[] toWrite = new byte[1];
+                    while (iterator.hasNext()) {
+                        PythonLikeObject item = iterator.nextPythonItem();
+                        if (!(item instanceof PythonInteger)) {
+                            throw new ValueError("bytearray argument 1 must be an int or an iterable of int");
+                        }
+                        toWrite[0] = ((PythonInteger) item).asByte();
+                        out.writeBytes(toWrite);
+                    }
+                    return new PythonBytes(out.toByteArray());
+                }
+            } else {
+                throw new ValueError("bytearray takes 0 or 1 arguments, not " + positionalArguments.size());
+            }
+        }));
+
         // Unary
         BYTES_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonBytes.class.getMethod("repr"));
         BYTES_TYPE.addMethod(PythonUnaryOperator.AS_STRING, PythonBytes.class.getMethod("asString"));
@@ -348,7 +374,7 @@ public class PythonBytes extends AbstractPythonLikeObject implements PythonBytes
             throw new IndexError("position " + position + " is less than 0");
         }
 
-        return BYTE_TO_INT[value[index]];
+        return BYTE_TO_INT[value[index] & 0xFF];
     }
 
     public PythonBytes getSubsequence(PythonSlice slice) {

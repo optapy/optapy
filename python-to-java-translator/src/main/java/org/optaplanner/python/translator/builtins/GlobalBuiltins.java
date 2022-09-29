@@ -3,6 +3,8 @@ package org.optaplanner.python.translator.builtins;
 import static java.lang.StackWalker.Option.RETAIN_CLASS_REFERENCE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BYTES_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.BYTE_ARRAY_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.COMPLEX_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.DICT_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.FLOAT_TYPE;
@@ -172,6 +174,8 @@ public class GlobalBuiltins {
         addBuiltinType(DICT_TYPE);
 
         addBuiltinType(STRING_TYPE);
+        addBuiltinType(BYTES_TYPE);
+        addBuiltinType(BYTE_ARRAY_TYPE);
 
         addBuiltinType(NONE_TYPE);
         addBuiltinType(RANGE_TYPE);
@@ -268,6 +272,10 @@ public class GlobalBuiltins {
                 return ((PythonLikeFunction) GlobalBuiltins::bin);
             case "bool":
                 return BOOLEAN_TYPE;
+            case "bytes":
+                return BYTES_TYPE;
+            case "bytearray":
+                return BYTE_ARRAY_TYPE;
             case "callable":
                 return ((PythonLikeFunction) GlobalBuiltins::callable);
             case "chr":

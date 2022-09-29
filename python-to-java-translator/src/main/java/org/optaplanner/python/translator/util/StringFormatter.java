@@ -15,6 +15,7 @@ import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.builtins.BinaryDunderBuiltin;
 import org.optaplanner.python.translator.builtins.GlobalBuiltins;
 import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
+import org.optaplanner.python.translator.types.PythonByteArray;
 import org.optaplanner.python.translator.types.PythonBytes;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
@@ -421,6 +422,12 @@ public class StringFormatter {
                             throw new ValueError("c specifier can only take an integer or single character string");
                         }
                         result = convertedCharacter.asCharSequence().toString();
+                    } else if (toConvert instanceof PythonByteArray) {
+                        PythonByteArray convertedCharacter = (PythonByteArray) toConvert;
+                        if (convertedCharacter.valueBuffer.limit() != 1) {
+                            throw new ValueError("c specifier can only take an integer or single character string");
+                        }
+                        result = convertedCharacter.asCharSequence().toString();
                     } else {
                         result = Character.toString(((PythonInteger) toConvert).value.intValueExact());
                     }
@@ -437,6 +444,8 @@ public class StringFormatter {
                 } else {
                     if (toConvert instanceof PythonBytes) {
                         result = ((PythonBytes) toConvert).asCharSequence().toString();
+                    } else if (toConvert instanceof PythonByteArray) {
+                        result = ((PythonByteArray) toConvert).asCharSequence().toString();
                     } else {
                         result = ((PythonString) UnaryDunderBuiltin.STR.invoke(toConvert)).value;
                     }

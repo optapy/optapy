@@ -345,10 +345,7 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
     }
 
     public PythonNone insert(PythonInteger index, PythonLikeObject item) {
-        int indexAsInt = index.value.intValueExact();
-        if (indexAsInt < 0) {
-            indexAsInt = delegate.size() + indexAsInt;
-        }
+        int indexAsInt = PythonSlice.asIntIndexForLength(index, delegate.size());
 
         if (indexAsInt < 0) {
             indexAsInt = 0;

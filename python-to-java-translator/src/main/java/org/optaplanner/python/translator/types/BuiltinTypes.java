@@ -50,6 +50,8 @@ public class BuiltinTypes {
 
     public static final PythonLikeType STRING_TYPE = new PythonLikeType("str", PythonString.class, List.of(BASE_TYPE));
     public static final PythonLikeType BYTES_TYPE = new PythonLikeType("bytes", PythonBytes.class, List.of(BASE_TYPE));
+    public static final PythonLikeType BYTE_ARRAY_TYPE =
+            new PythonLikeType("bytearray", PythonByteArray.class, List.of(BASE_TYPE));
 
     public static final PythonLikeType ITERATOR_TYPE = new PythonLikeType("iterator", PythonIterator.class, List.of(BASE_TYPE));
     public static final PythonLikeType DICT_TYPE = new PythonLikeType("dict", PythonLikeDict.class, List.of(BASE_TYPE));
