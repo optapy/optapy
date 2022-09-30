@@ -35,6 +35,8 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.dag.FlowGraph;
 import org.optaplanner.python.translator.implementors.FunctionImplementor;
+import org.optaplanner.python.translator.implementors.JavaComparableImplementor;
+import org.optaplanner.python.translator.implementors.JavaInterfaceImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.opcodes.Opcode;
 import org.optaplanner.python.translator.opcodes.SelfOpcodeWithoutSource;
@@ -68,6 +70,20 @@ public class PythonClassTranslator {
         String internalClassName = className.replace('.', '/');
 
         List<PythonLikeType> superTypeList;
+        Set<JavaInterfaceImplementor> javaInterfaceImplementorSet = new HashSet<>();
+
+        for (Map.Entry<String, PythonCompiledFunction> instanceMethodEntry : pythonCompiledClass.instanceFunctionNameToPythonBytecode
+                .entrySet()) {
+            switch (instanceMethodEntry.getKey()) {
+                case "__lt__":
+                case "__le__":
+                case "__gt__":
+                case "__ge__":
+                    javaInterfaceImplementorSet
+                            .add(new JavaComparableImplementor(internalClassName, instanceMethodEntry.getKey()));
+                    break;
+            }
+        }
 
         if (pythonCompiledClass.superclassList.isEmpty()) {
             superTypeList = List.of(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
@@ -107,10 +123,16 @@ public class PythonClassTranslator {
             }
         });
 
+        String[] interfaces = new String[javaInterfaceImplementorSet.size()];
+        int interfaceIndex = 0;
+        for (JavaInterfaceImplementor interfaceImplementor : javaInterfaceImplementorSet) {
+            interfaces[interfaceIndex] = Type.getInternalName(interfaceImplementor.getInterfaceClass());
+        }
+
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 
         classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null,
-                superClassType.getJavaTypeInternalName(), null);
+                superClassType.getJavaTypeInternalName(), interfaces);
 
         pythonCompiledClass.staticAttributeNameToObject.forEach(pythonLikeType::__setAttribute);
 
@@ -213,6 +235,8 @@ public class PythonClassTranslator {
             createCPythonOperationMethods(classWriter, internalClassName, superClassType.getJavaTypeInternalName(),
                     attributeNameToTypeMap);
         }
+
+        javaInterfaceImplementorSet.forEach(implementor -> implementor.implement(classWriter, pythonCompiledClass));
 
         classWriter.visitEnd();
 
@@ -530,8 +554,7 @@ public class PythonClassTranslator {
             parameterTypes[i - 1] = Type.getType('L' + parameterTypeAnnotations.get(i).getJavaTypeInternalName() + ';');
         }
 
-        Type returnType = Type.getType('L' + initFunction.getReturnType()
-                .orElseGet(() -> getPythonReturnTypeOfFunction(initFunction, true)).getJavaTypeInternalName() + ';');
+        Type returnType = getVirtualFunctionReturnType(initFunction);
 
         String initMethodDescriptor = Type.getMethodDescriptor(returnType, parameterTypes);
 
@@ -568,8 +591,7 @@ public class PythonClassTranslator {
 
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, javaMethodName, interfaceDescriptor,
                 null, null);
-        Type returnType = Type.getType('L' + function.getReturnType().map(PythonLikeType::getJavaTypeInternalName)
-                .orElseGet(() -> getPythonReturnTypeOfFunction(function, true).getJavaTypeInternalName()) + ';');
+        Type returnType = getVirtualFunctionReturnType(function);
 
         List<PythonLikeType> parameterPythonTypeList = function.getParameterTypes();
         Type[] javaParameterTypes = new Type[Math.max(0, function.co_argcount - 1)];
@@ -639,6 +661,11 @@ public class PythonClassTranslator {
         methodVisitor.visitMaxs(-1, -1);
 
         methodVisitor.visitEnd();
+    }
+
+    public static Type getVirtualFunctionReturnType(PythonCompiledFunction function) {
+        return Type.getType('L' + function.getReturnType().map(PythonLikeType::getJavaTypeInternalName)
+                .orElseGet(() -> getPythonReturnTypeOfFunction(function, true).getJavaTypeInternalName()) + ';');
     }
 
     public static void createGetAttribute(ClassWriter classWriter, String classInternalName, String superInternalName,

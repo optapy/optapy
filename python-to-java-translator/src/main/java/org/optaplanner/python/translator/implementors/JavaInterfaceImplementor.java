@@ -1,0 +1,23 @@
+package org.optaplanner.python.translator.implementors;
+
+import org.objectweb.asm.ClassWriter;
+import org.optaplanner.python.translator.PythonCompiledClass;
+
+public abstract class JavaInterfaceImplementor {
+    public abstract Class<?> getInterfaceClass();
+
+    public abstract void implement(ClassWriter classWriter, PythonCompiledClass compiledClass);
+
+    @Override
+    public final boolean equals(Object o) {
+        if (!(o instanceof JavaInterfaceImplementor)) {
+            return false;
+        }
+        return getInterfaceClass().equals(((JavaInterfaceImplementor) o).getInterfaceClass());
+    }
+
+    @Override
+    public final int hashCode() {
+        return getInterfaceClass().hashCode();
+    }
+}

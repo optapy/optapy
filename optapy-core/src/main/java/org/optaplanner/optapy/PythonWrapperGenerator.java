@@ -1558,9 +1558,11 @@ public class PythonWrapperGenerator {
 
             if (returnType instanceof Class) {
                 Class<?> returnTypeClass = (Class<?>) returnType;
-                if (Comparable.class.isAssignableFrom(returnTypeClass) || Number.class.isAssignableFrom(returnTypeClass) ||
-                        ValueRange.class.isAssignableFrom(returnTypeClass)
-                        || OpaquePythonReference.class.isAssignableFrom(returnTypeClass)) {
+                if ((Comparable.class.isAssignableFrom(returnTypeClass) &&
+                        returnTypeClass.getClassLoader() != asmClassLoader) ||
+                        Number.class.isAssignableFrom(returnTypeClass) ||
+                        ValueRange.class.isAssignableFrom(returnTypeClass) ||
+                        OpaquePythonReference.class.isAssignableFrom(returnTypeClass)) {
                     // It is a number/String, so it already translated to the corresponding Java type
                     if (Integer.class.equals(returnTypeClass)) {
                         ResultHandle isLong = methodCreator.instanceOf(outResultHandle, Long.class);
