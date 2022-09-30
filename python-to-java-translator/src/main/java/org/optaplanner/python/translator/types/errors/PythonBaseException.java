@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 
@@ -48,6 +49,7 @@ public class PythonBaseException extends RuntimeException implements PythonLikeO
         this.args = args;
         this.dict = new HashMap<>();
         __setAttribute("args", PythonLikeTuple.fromList(args));
+        __setAttribute("__cause__", PythonNone.INSTANCE);
     }
 
     public PythonBaseException(PythonLikeType type, String message) {
@@ -56,6 +58,7 @@ public class PythonBaseException extends RuntimeException implements PythonLikeO
         this.args = List.of(PythonString.valueOf(message));
         this.dict = new HashMap<>();
         __setAttribute("args", PythonLikeTuple.fromList(args));
+        __setAttribute("__cause__", PythonNone.INSTANCE);
     }
 
     /**
@@ -69,6 +72,13 @@ public class PythonBaseException extends RuntimeException implements PythonLikeO
     @Override
     public Throwable fillInStackTrace() {
         // Do nothing
+        return this;
+    }
+
+    @Override
+    public Throwable initCause(Throwable cause) {
+        super.initCause(cause);
+        __setAttribute("__cause__", (PythonLikeObject) cause);
         return this;
     }
 

@@ -24,6 +24,7 @@ import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
 import org.optaplanner.python.translator.types.BoundPythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.PythonAssertionError;
 import org.optaplanner.python.translator.types.errors.PythonBaseException;
 import org.optaplanner.python.translator.types.errors.PythonTraceback;
@@ -55,9 +56,27 @@ public class ExceptionImplementor {
     }
 
     /**
-     * TOS is an exception. Reraise it (i.e. throw it).
+     * TOS is an exception or an exception type. Reraise it (i.e. throw it).
      */
     public static void reraise(MethodVisitor methodVisitor) {
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(Throwable.class));
+
+        Label ifNotThrowable = new Label();
+        methodVisitor.visitJumpInsn(Opcodes.IFEQ, ifNotThrowable);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Throwable.class));
+        methodVisitor.visitInsn(Opcodes.ATHROW);
+
+        methodVisitor.visitLabel(ifNotThrowable);
+
+        // Construct an instance of the type and throw it
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class)),
+                true);
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Throwable.class));
         methodVisitor.visitInsn(Opcodes.ATHROW);
     }
@@ -71,13 +90,12 @@ public class ExceptionImplementor {
 
         Label ifExceptionIsInstanceStart = new Label();
 
+        methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(PythonLikeType.class));
         methodVisitor.visitJumpInsn(Opcodes.IFEQ, ifExceptionIsInstanceStart);
 
         // Exception is type: turn it to instance via its constructor
-        PythonBytecodeInstruction instruction = new PythonBytecodeInstruction();
-        instruction.arg = 0;
-        FunctionImplementor.callGenericFunction(methodVisitor, instruction); // a type is callable; calling it results in calling its constructor
+        FunctionImplementor.callGenericFunction(methodVisitor, 0); // a type is callable; calling it results in calling its constructor
 
         methodVisitor.visitLabel(ifExceptionIsInstanceStart);
 
@@ -95,7 +113,7 @@ public class ExceptionImplementor {
      * Raise an exception, with the stack and effect varying depending on {@code instruction.arg}:
      *
      * instruction.arg = 0: Stack is empty. Reraise the last exception.
-     * instruction.arg = 1: TOS is an exception; raise it.
+     * instruction.arg = 1: TOS is an exception or exception type; raise it.
      * instruction.arg = 2: TOS1 is an exception/exception type, and TOS is the cause. Raise TOS1 with TOS as the cause.
      */
     public static void raiseWithOptionalExceptionAndCause(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,

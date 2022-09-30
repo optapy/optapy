@@ -41,6 +41,7 @@ def init(*args, path: List[str] = None, include_translator_jars: bool = True):
     CPythonBackedPythonInterpreter.lookupAttributeOnPythonReferencePythonFunction = GetAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.lookupAttributeOnPythonReferenceWithMapPythonFunction = \
         GetAttributeOnPythonObjectWithMap()
+    CPythonBackedPythonInterpreter.lookupDictOnPythonReferencePythonFunction = GetDictOnPythonObject()
     CPythonBackedPythonInterpreter.setAttributeOnPythonReferencePythonFunction = SetAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.deleteAttributeOnPythonReferencePythonFunction = DeleteAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.callPythonFunction = CallPythonFunction()
@@ -101,6 +102,20 @@ class DeleteAttributeOnPythonObject:
     @jpype.JOverride()
     def accept(self, python_object, attribute_name):
         delattr(python_object, attribute_name)
+
+
+@jpype.JImplements('java.util.function.BiFunction', deferred=True)
+class GetDictOnPythonObject:
+    @jpype.JOverride()
+    def apply(self, python_object, instance_map):
+        from java.util import HashMap
+        from .python_to_java_bytecode_translator import convert_to_java_python_like_object
+
+        out = HashMap()
+        for key in dir(python_object):
+            out.put(key, convert_to_java_python_like_object(getattr(python_object, key), instance_map))
+
+        return out
 
 
 @jpype.JImplements('org.optaplanner.python.translator.TriFunction', deferred=True)

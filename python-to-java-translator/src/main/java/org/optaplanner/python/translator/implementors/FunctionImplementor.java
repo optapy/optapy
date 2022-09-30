@@ -252,8 +252,12 @@ public class FunctionImplementor {
     }
 
     public static void callGenericFunction(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+        callGenericFunction(methodVisitor, instruction.arg);
+    }
+
+    public static void callGenericFunction(MethodVisitor methodVisitor, int argCount) {
         // stack is callable, arg0, arg1, ..., arg(argc - 1)
-        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, argCount);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
 
         // Stack is callable, argument_list, null

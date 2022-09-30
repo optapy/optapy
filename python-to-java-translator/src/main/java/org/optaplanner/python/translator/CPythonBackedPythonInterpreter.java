@@ -36,6 +36,7 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     public static TriFunction<OpaquePythonReference, String, Map<Number, PythonLikeObject>, PythonLikeObject> lookupAttributeOnPythonReferenceWithMapPythonFunction;
     public static TriConsumer<OpaquePythonReference, String, Object> setAttributeOnPythonReferencePythonFunction;
     public static BiConsumer<OpaquePythonReference, String> deleteAttributeOnPythonReferencePythonFunction;
+    public static BiFunction<OpaquePythonReference, Map<Number, PythonLikeObject>, Map<String, PythonLikeObject>> lookupDictOnPythonReferencePythonFunction;
     public static TriFunction<OpaquePythonReference, List<PythonLikeObject>, Map<PythonString, PythonLikeObject>, PythonLikeObject> callPythonFunction;
 
     public static PentaFunction<String, Map<String, PythonLikeObject>, Map<String, PythonLikeObject>, List<String>, Long, PythonModule> importModuleFunction;
@@ -75,6 +76,11 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
         deleteAttributeOnPythonReferencePythonFunction.accept(object, attribute);
     }
 
+    public static Map<String, PythonLikeObject> getPythonReferenceDict(OpaquePythonReference object,
+            Map<Number, PythonLikeObject> referenceMap) {
+        return lookupDictOnPythonReferencePythonFunction.apply(object, referenceMap);
+    }
+
     public static void updateJavaObjectFromPythonObject(CPythonBackedPythonLikeObject javaObject,
             OpaquePythonReference pythonObject,
             Map<Number, PythonLikeObject> instanceMap) {
@@ -82,6 +88,13 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
         javaObject.$setCPythonReference(pythonObject);
         javaObject.$setCPythonId(PythonInteger.valueOf(getPythonReferenceId(pythonObject).longValue()));
         javaObject.$readFieldsFromCPythonReference();
+    }
+
+    public static void updateJavaObjectFromPythonObject(PythonLikeObject javaObject,
+            OpaquePythonReference pythonObject,
+            Map<Number, PythonLikeObject> instanceMap) {
+        Map<String, PythonLikeObject> dict = getPythonReferenceDict(pythonObject, instanceMap);
+        dict.forEach(javaObject::__setAttribute);
     }
 
     public static PythonLikeObject callPythonReference(OpaquePythonReference object, List<PythonLikeObject> positionalArguments,
