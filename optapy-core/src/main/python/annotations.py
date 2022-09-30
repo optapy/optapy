@@ -432,7 +432,7 @@ def planning_entity_collection_property(entity_type: Type) -> Callable[[Callable
     return planning_entity_collection_property_function_mapper
 
 
-def value_range_provider(range_id: str, value_range_type: type = list) -> Callable[
+def value_range_provider(range_id: str, value_range_type: type = object) -> Callable[
     [Callable[[], Union[List, '_ValueRange']]], Callable[[], Union[List, '_ValueRange']]]:
     """Provides the planning values that can be used for a PlanningVariable.
 
@@ -441,24 +441,39 @@ def value_range_provider(range_id: str, value_range_type: type = list) -> Callab
     :param range_id: The id of the value range. Referenced by @planning_variable's value_range_provider_refs
                      parameter. Required.
 
-    :param value_range_type: The type of the value range. Should either be
-                             list or a Java class that implements ValueRangeProvider.
+    :param value_range_type: The type of the value range. Optional; required if the method does not have
+                             another decorator (@problem_fact_collection_property or
+                             @planning_entity_collection_property) that defines the type.
+                             Should be either the type of the elements the value range provider contains
+                             (if your value range is [Value(1), Value(2)], then it should be Value),
+                             or ValueRange/CountableValueRange if you use a ValueRange from
+                             optapy.types.ValueRangeFactory
+                             (ex: optapy.types.ValueRangeFactory.createIntValueRange(0, 10)).
     """
 
     def value_range_provider_function_wrapper(getter_function: Callable[[], Union[List, '_ValueRange']]):
         ensure_init()
-        from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider
+        from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider,\
+                                                               ValueRange as JavaValueRange
         from org.optaplanner.optapy import PythonWrapperGenerator, OpaquePythonReference  # noqa
+        from java.util import List as JavaList
+        from java.lang import Object as JavaObject
 
         getter_function.__optaplannerValueRangeProvider = {
             'annotationType': JavaValueRangeProvider,
             'id': range_id
         }
         if not hasattr(getter_function, '__optapy_return'):
-            if value_range_type == list:
-                getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(OpaquePythonReference)
-            else:
+            actual_value_range_type = get_class(value_range_type)
+            if JavaValueRange.class_.isAssignableFrom(actual_value_range_type):
                 getter_function.__optapy_return = get_class(value_range_type)
+            else:
+                if actual_value_range_type == JavaObject:
+                    getter_function.__optapy_return = PythonWrapperGenerator.getArrayClass(OpaquePythonReference)
+                else:
+                    getter_function.__optapy_return = JavaList
+                    getter_function.__optapy_signature = PythonWrapperGenerator.getCollectionSignature(
+                        JavaList, actual_value_range_type)
         return getter_function
 
     return value_range_provider_function_wrapper

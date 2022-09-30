@@ -1,4 +1,5 @@
 import optapy
+import optapy.types
 import optapy.score
 import optapy.config
 import optapy.constraint
@@ -422,6 +423,166 @@ def test_custom_planning_id():
         value_1,
         value_2,
         value_3
+    ])
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
+    assert solution.get_score().getScore() == 0
+
+    encountered = set()
+    for entity in solution.entities:
+        assert entity.value not in encountered
+        encountered.add(entity.value)
+
+def test_entity_value_range_provider():
+    @optapy.problem_fact
+    class Value:
+        def __init__(self, code):
+            self.code = code
+
+    @optapy.planning_entity
+    class Entity:
+        def __init__(self, code, possible_values, value=None):
+            self.code = code
+            self.possible_values = possible_values
+            self.value = value
+
+        @optapy.planning_id
+        def get_code(self):
+            return self.code
+
+        @optapy.planning_variable(Value, value_range_provider_refs=['value_range'])
+        def get_value(self):
+            return self.value
+
+        def set_value(self, value):
+            self.value = value
+
+        @optapy.value_range_provider(range_id='value_range', value_range_type=Value)
+        def get_possible_values(self):
+            return self.possible_values
+
+    @optapy.constraint_provider
+    def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
+        return [
+            constraint_factory.for_each_unique_pair(Entity,
+                                                    optapy.constraint.Joiners.equal(lambda entity: entity.value))
+            .reward('Same value', optapy.score.SimpleScore.ONE),
+        ]
+
+    @optapy.planning_solution
+    class Solution:
+        def __init__(self, entities, score=None):
+            self.entities = entities
+            self.score = score
+
+        @optapy.planning_entity_collection_property(Entity)
+        def get_entities(self):
+            return self.entities
+
+        @optapy.planning_score(optapy.score.SimpleScore)
+        def get_score(self) -> optapy.score.SimpleScore:
+            return self.score
+
+        def set_score(self, score):
+            self.score = score
+
+    solver_config = optapy.config.solver.SolverConfig()
+    termination_config = optapy.config.solver.termination.TerminationConfig()
+    termination_config.setBestScoreLimit('0')
+    solver_config.withSolutionClass(optapy.get_class(Solution)) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
+        .withTerminationConfig(termination_config)
+
+    value_1 = Value('A')
+    value_2 = Value('B')
+    value_3 = Value('C')
+
+    entity_1 = Entity('1', [value_1])
+    entity_2 = Entity('2', [value_2])
+    entity_3 = Entity('3', [value_3])
+
+
+    problem: Solution = Solution([
+        entity_1,
+        entity_2,
+        entity_3
+    ])
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
+    assert solution.get_score().getScore() == 0
+
+    encountered = set()
+    for entity in solution.entities:
+        assert entity.value not in encountered
+        encountered.add(entity.value)
+
+
+def test_int_value_range_provider():
+    @optapy.planning_entity
+    class Entity:
+        def __init__(self, code, actual_value, value=None):
+            self.code = code
+            self.actual_value = actual_value
+            self.value = value
+
+        @optapy.planning_id
+        def get_code(self):
+            return self.code
+
+        @optapy.planning_variable(int, value_range_provider_refs=['value_range'])
+        def get_value(self):
+            return self.value
+
+        def set_value(self, value):
+            self.value = value
+
+        @optapy.value_range_provider(range_id='value_range', value_range_type=optapy.types.CountableValueRange)
+        def get_possible_values(self):
+            return optapy.types.ValueRangeFactory.createIntValueRange(self.actual_value, self.actual_value + 1)
+
+    @optapy.constraint_provider
+    def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
+        return [
+            constraint_factory.for_each_unique_pair(Entity,
+                                                    optapy.constraint.Joiners.equal(lambda entity: entity.value))
+            .reward('Same value', optapy.score.SimpleScore.ONE),
+        ]
+
+    @optapy.planning_solution
+    class Solution:
+        def __init__(self, entities, score=None):
+            self.entities = entities
+            self.score = score
+
+        @optapy.planning_entity_collection_property(Entity)
+        def get_entities(self):
+            return self.entities
+
+        @optapy.planning_score(optapy.score.SimpleScore)
+        def get_score(self) -> optapy.score.SimpleScore:
+            return self.score
+
+        def set_score(self, score):
+            self.score = score
+
+    solver_config = optapy.config.solver.SolverConfig()
+    termination_config = optapy.config.solver.termination.TerminationConfig()
+    termination_config.setBestScoreLimit('0')
+    solver_config.withSolutionClass(optapy.get_class(Solution)) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
+        .withTerminationConfig(termination_config)
+
+    entity_1 = Entity('1', 1)
+    entity_2 = Entity('2', 2)
+    entity_3 = Entity('3', 3)
+
+
+    problem: Solution = Solution([
+        entity_1,
+        entity_2,
+        entity_3
     ])
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     solution = solver.solve(problem)
