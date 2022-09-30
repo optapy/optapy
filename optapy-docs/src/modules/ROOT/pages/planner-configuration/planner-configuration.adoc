@@ -613,11 +613,11 @@ For example, if a teacher can *never* teach in a room that does not belong to hi
 
 [source,python,options="nowrap"]
 ----
-    @planning_variable(value_range_provider_refs = ["department_room_range"])
+    @planning_variable(Room, value_range_provider_refs = ["department_room_range"])
     def get_room(self):
         return self.room
 
-    @value_range_provider(range_id = "department_room_range")
+    @value_range_provider(range_id = "department_room_range", value_range_type = Room)
     def get_possible_room_list(self):
         return self.course.teacher.department.room_list
 ----

@@ -6,6 +6,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -23,6 +24,8 @@ import org.optaplanner.core.api.domain.lookup.PlanningId;
 import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty;
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
+import org.optaplanner.core.api.domain.valuerange.CountableValueRange;
+import org.optaplanner.core.api.domain.valuerange.ValueRange;
 import org.optaplanner.core.api.domain.valuerange.ValueRangeProvider;
 import org.optaplanner.core.api.domain.variable.VariableListener;
 import org.optaplanner.core.api.function.TriFunction;
@@ -376,6 +379,18 @@ public class PythonWrapperGenerator {
             throw new IllegalStateException(
                     "Impossible State: the class (" + className + ") should exists since it was just created");
         }
+    }
+
+    public static ValueRange getValueRangeProxy(Object proxy) {
+        return (ValueRange) Proxy.newProxyInstance(proxy.getClass().getClassLoader(),
+                new Class[] { ValueRange.class },
+                Proxy.getInvocationHandler(proxy));
+    }
+
+    public static CountableValueRange getCountableValueRangeProxy(Object proxy) {
+        return (CountableValueRange) Proxy.newProxyInstance(proxy.getClass().getClassLoader(),
+                new Class[] { CountableValueRange.class },
+                Proxy.getInvocationHandler(proxy));
     }
 
     /**
@@ -867,7 +882,8 @@ public class PythonWrapperGenerator {
 
             if (returnType instanceof Class) {
                 Class<?> returnTypeClass = (Class<?>) returnType;
-                if (Comparable.class.isAssignableFrom(returnTypeClass) || Number.class.isAssignableFrom(returnTypeClass)
+                if (Comparable.class.isAssignableFrom(returnTypeClass) || Number.class.isAssignableFrom(returnTypeClass) ||
+                        ValueRange.class.isAssignableFrom(returnTypeClass)
                         || OpaquePythonReference.class.isAssignableFrom(returnTypeClass)) {
                     // It is a number/String, so it already translated to the corresponding Java type
                     if (Integer.class.equals(returnTypeClass)) {
@@ -879,6 +895,19 @@ public class PythonWrapperGenerator {
                                         int.class), outResultHandle));
                         bytecodeCreator = ifLongBranchResult.falseBranch();
                         bytecodeCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                    } else if (CountableValueRange.class.isAssignableFrom(returnTypeClass)) {
+                        ResultHandle proxy = methodCreator.invokeStaticMethod(
+                                MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getCountableValueRangeProxy",
+                                        CountableValueRange.class,
+                                        Object.class),
+                                outResultHandle);
+                        methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), proxy);
+                    } else if (ValueRange.class.isAssignableFrom(returnTypeClass)) {
+                        ResultHandle proxy = methodCreator.invokeStaticMethod(
+                                MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getValueRangeProxy", ValueRange.class,
+                                        Object.class),
+                                outResultHandle);
+                        methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), proxy);
                     } else {
                         methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
                     }
@@ -925,10 +954,15 @@ public class PythonWrapperGenerator {
                 // A PlanningId MUST be comparable
                 actualReturnType = Comparable.class;
             } else if ((ProblemFactCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
-                    || PlanningEntityCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType"))
-                    || ValueRangeProvider.class.isAssignableFrom((Class<?>) annotation.get("annotationType")))
+                    || PlanningEntityCollectionProperty.class.isAssignableFrom((Class<?>) annotation.get("annotationType")))
                     && !(Collection.class.isAssignableFrom(returnType) || returnType.isArray())) {
                 // A ProblemFactCollection/PlanningEntityCollection MUST be a collection or array
+                actualReturnType = List.class;
+            } else if (ValueRangeProvider.class.isAssignableFrom((Class<?>) annotation.get("annotationType")) &&
+                    !(Collection.class.isAssignableFrom(returnType) ||
+                            ValueRange.class.isAssignableFrom(returnType) ||
+                            returnType.isArray())) {
+                // A Value Range must be a Collection, ValueRange or Array
                 actualReturnType = List.class;
             } else if (SelfType.class.equals(returnType)) {
                 actualReturnType = classCreator.getClassName();
