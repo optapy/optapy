@@ -258,10 +258,10 @@ def test_tuple_group_by_key():
 
 
 def test_python_object():
-    import datetime
-    date1 = datetime.date(2021, 12, 2)
-    date2 = datetime.date(2021, 12, 3)
-    date3 = datetime.date(2021, 12, 4)
+    import ctypes
+    pointer1 = ctypes.c_void_p(1)
+    pointer2 = ctypes.c_void_p(2)
+    pointer3 = ctypes.c_void_p(3)
 
     @optapy.planning_entity
     class Entity:
@@ -269,7 +269,7 @@ def test_python_object():
             self.code = code
             self.value = value
 
-        @optapy.planning_variable(datetime.date, value_range_provider_refs=['value_range'])
+        @optapy.planning_variable(ctypes.c_void_p, value_range_provider_refs=['value_range'])
         def get_value(self):
             return self.value
 
@@ -285,9 +285,7 @@ def test_python_object():
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
             constraint_factory.for_each(Entity)
-                .join(Value,
-                      optapy.constraint.Joiners.less_than_or_equal(lambda entity: entity.value,
-                                                                   lambda value: value.code))
+                .filter(lambda entity: entity.value == pointer1)
                 .reward('Same as value', optapy.score.SimpleScore.ONE),
             constraint_factory.for_each(Entity)
                 .group_by(lambda entity: entity.value, optapy.constraint.ConstraintCollectors.count())
@@ -316,7 +314,7 @@ def test_python_object():
         def get_value(self):
             return self.value
 
-        @optapy.value_range_provider(range_id='value_range')
+        @optapy.value_range_provider(range_id='value_range', value_range_type=ctypes.c_void_p)
         def get_value_range(self):
             return self.value_range
 
@@ -334,11 +332,11 @@ def test_python_object():
         .withEntityClasses(Entity) \
         .withConstraintProviderClass(my_constraints) \
         .withTerminationConfig(termination_config)
-    problem: Solution = Solution(Entity('A'), Value(date1), [date1, date2, date3])
+    problem: Solution = Solution(Entity('A'), Value(pointer1), [pointer1, pointer2, pointer3])
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     solution = solver.solve(problem)
-    assert solution.get_score().getScore() == 3
-    assert solution.entity.value == date1
+    assert solution.get_score().getScore() == 2
+    assert solution.entity.value is pointer1
 
 
 def test_custom_planning_id():

@@ -32,6 +32,8 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
 
     public static Function<OpaquePythonReference, OpaquePythonReference> lookupPythonReferenceTypePythonFunction;
     public static BiFunction<OpaquePythonReference, String, PythonLikeObject> lookupAttributeOnPythonReferencePythonFunction;
+    public static BiFunction<OpaquePythonReference, String, OpaquePythonReference> lookupPointerForAttributeOnPythonReferencePythonFunction;
+    public static BiFunction<OpaquePythonReference, String, OpaquePythonReference[]> lookupPointerArrayForAttributeOnPythonReferencePythonFunction;
 
     public static TriFunction<OpaquePythonReference, String, Map<Number, PythonLikeObject>, PythonLikeObject> lookupAttributeOnPythonReferenceWithMapPythonFunction;
     public static TriConsumer<OpaquePythonReference, String, Object> setAttributeOnPythonReferencePythonFunction;
@@ -66,6 +68,16 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     public static PythonLikeObject lookupAttributeOnPythonReference(OpaquePythonReference object, String attribute,
             Map<Number, PythonLikeObject> map) {
         return lookupAttributeOnPythonReferenceWithMapPythonFunction.apply(object, attribute, map);
+    }
+
+    public static OpaquePythonReference lookupPointerForAttributeOnPythonReference(OpaquePythonReference object,
+            String attribute) {
+        return lookupPointerForAttributeOnPythonReferencePythonFunction.apply(object, attribute);
+    }
+
+    public static OpaquePythonReference[] lookupPointerArrayForAttributeOnPythonReference(OpaquePythonReference object,
+            String attribute) {
+        return lookupPointerArrayForAttributeOnPythonReferencePythonFunction.apply(object, attribute);
     }
 
     public static void setAttributeOnPythonReference(OpaquePythonReference object, String attribute, Object value) {

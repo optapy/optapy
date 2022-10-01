@@ -801,8 +801,8 @@ def translate_python_class_to_java_class(python_class):
     if raw_type in type_to_compiled_java_class:
         return type_to_compiled_java_class[raw_type]
 
-    if hasattr(python_class, '__module__') and python_class.__module__ is not None \
-            and is_banned_module(python_class.__module__):
+    if hasattr(python_class, '__module__') and python_class.__module__ is not None and \
+            is_banned_module(python_class.__module__):
         python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
         type_to_compiled_java_class[python_class] = python_class_java_type
         return python_class_java_type
@@ -822,6 +822,11 @@ def translate_python_class_to_java_class(python_class):
             python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
             type_to_compiled_java_class[python_class] = python_class_java_type
             return python_class_java_type
+
+    if is_c_native(python_class):
+        python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
+        type_to_compiled_java_class[python_class] = python_class_java_type
+        return python_class_java_type
 
     type_to_compiled_java_class[python_class] = None
     methods = []
@@ -848,6 +853,10 @@ def translate_python_class_to_java_class(python_class):
         else:
             try:
                 superclass_list.add(translate_python_class_to_java_class(superclass))
+                if isinstance(type_to_compiled_java_class[superclass], CPythonType):
+                    python_class_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=python_class, convert=True))
+                    type_to_compiled_java_class[python_class] = python_class_java_type
+                    return python_class_java_type
             except Exception:
                 superclass_java_type = CPythonType.getType(JProxy(OpaquePythonReference, inst=superclass, convert=True))
                 type_to_compiled_java_class[superclass] = superclass_java_type

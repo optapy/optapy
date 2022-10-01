@@ -10,6 +10,7 @@ import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.errors.NotImplementedError;
 import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
@@ -63,16 +64,25 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
         }
 
         PythonLikeFunction lessThan = (PythonLikeFunction) __getType().__getAttributeOrError("__lt__");
-        PythonBoolean result = (PythonBoolean) lessThan.__call__(List.of(this, other), Map.of());
-        if (result.getBooleanValue()) {
-            return -1;
+        PythonLikeObject result = lessThan.__call__(List.of(this, other), Map.of());
+
+        if (result instanceof PythonBoolean) {
+            if (((PythonBoolean) result).getBooleanValue()) {
+                return -1;
+            } else {
+                return 1;
+            }
         } else {
-            return 1;
+            throw new NotImplementedError("Cannot compare " + this.__getType().getTypeName() +
+                    " with " + other.__getType().getTypeName());
         }
     }
 
     @Override
     public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
         if (!(o instanceof PythonObjectWrapper)) {
             return false;
         }
@@ -96,8 +106,12 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
             return super.hashCode();
         }
         PythonLikeFunction hash = (PythonLikeFunction) maybeHash;
-        PythonInteger result = (PythonInteger) hash.__call__(List.of(this), Map.of());
-        return result.value.hashCode();
+        PythonLikeObject result = hash.__call__(List.of(this), Map.of());
+        if (result instanceof PythonInteger) {
+            return ((PythonInteger) result).value.hashCode();
+        } else {
+            return System.identityHashCode(this);
+        }
     }
 
     @Override
@@ -107,7 +121,7 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
             return super.toString();
         }
         PythonLikeFunction str = (PythonLikeFunction) maybeStr;
-        PythonString result = (PythonString) str.__call__(List.of(this), Map.of());
+        PythonLikeObject result = str.__call__(List.of(this), Map.of());
         return result.toString();
     }
 }

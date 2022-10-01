@@ -111,10 +111,14 @@ def _get_python_object_java_class(the_object):
 def _set_python_object_attribute(object_id: int, name: str, value: Any) -> None:
     """Sets an attribute on an Python Object"""
     from org.optaplanner.optapy import PythonObject  # noqa
+    from org.optaplanner.python.translator.types.wrappers import PythonObjectWrapper
+
     the_object = object_id
     the_value = value
     if isinstance(the_value, PythonObject):
         the_value = value.get__optapy_Id()
+    elif isinstance(the_value, PythonObjectWrapper):
+        the_value = value.getWrappedObject()
     getattr(the_object, str(name))(the_value)
 
 
@@ -985,6 +989,9 @@ def _get_optaplanner_annotations(python_class: Type) -> List[Tuple[str, JClass, 
 def get_class(python_class: Union[Type, Callable]) -> JClass:
     """Return the Java Class for the given Python Class"""
     from java.lang import Object, Class
+    from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference
+    from javapython import is_c_native
+
     if isinstance(python_class, jpype.JClass):
         return cast(JClass, python_class)
     if isinstance(python_class, Class):
@@ -1000,6 +1007,8 @@ def get_class(python_class: Union[Type, Callable]) -> JClass:
     if python_class == bool:
         from java.lang import Boolean
         return cast(JClass, Boolean)
+    if is_c_native(python_class):
+        return cast(JClass, OpaquePythonReference.class_)
     return cast(JClass, Object)
 
 

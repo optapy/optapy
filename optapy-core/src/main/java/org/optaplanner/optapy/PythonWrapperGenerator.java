@@ -1551,6 +1551,28 @@ public class PythonWrapperGenerator {
             Object returnType = returnTypeList.get(i);
             String methodName = fieldDescriptor.getName().substring(0, fieldDescriptor.getName().length() - 6);
 
+            if (returnType instanceof Class) {
+                Class<?> returnTypeClass = (Class<?>) returnType;
+                if (returnTypeClass.equals(OpaquePythonReference.class)) {
+                    ResultHandle outResultHandle = methodCreator.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(CPythonBackedPythonInterpreter.class,
+                                    "lookupPointerForAttributeOnPythonReference", OpaquePythonReference.class,
+                                    OpaquePythonReference.class, String.class),
+                            value, methodCreator.load(methodName));
+                    methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                    continue;
+                } else if (returnTypeClass.isArray()
+                        && returnTypeClass.getComponentType().equals(OpaquePythonReference.class)) {
+                    ResultHandle outResultHandle = methodCreator.invokeStaticMethod(
+                            MethodDescriptor.ofMethod(CPythonBackedPythonInterpreter.class,
+                                    "lookupPointerArrayForAttributeOnPythonReference", OpaquePythonReference[].class,
+                                    OpaquePythonReference.class, String.class),
+                            value, methodCreator.load(methodName));
+                    methodCreator.writeInstanceField(fieldDescriptor, methodCreator.getThis(), outResultHandle);
+                    continue;
+                }
+            }
+
             ResultHandle outResultHandle = methodCreator.invokeStaticMethod(
                     MethodDescriptor.ofMethod(PythonWrapperGenerator.class, "getValueFromPythonObject", Object.class,
                             OpaquePythonReference.class, String.class),

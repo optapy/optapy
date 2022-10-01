@@ -18,6 +18,14 @@ public class NotImplementedError extends RuntimeError {
                 namedArguments) -> new NotImplementedError(NOT_IMPLEMENTED_ERROR_TYPE, positionalArguments)));
     }
 
+    public NotImplementedError() {
+        super(NOT_IMPLEMENTED_ERROR_TYPE);
+    }
+
+    public NotImplementedError(String message) {
+        super(NOT_IMPLEMENTED_ERROR_TYPE, message);
+    }
+
     public NotImplementedError(PythonLikeType type) {
         super(type);
     }

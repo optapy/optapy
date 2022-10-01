@@ -39,6 +39,10 @@ def init(*args, path: List[str] = None, include_translator_jars: bool = True):
     CPythonBackedPythonInterpreter.lookupPythonReferenceIdPythonFunction = GetPythonObjectId()
     CPythonBackedPythonInterpreter.lookupPythonReferenceTypePythonFunction = GetPythonObjectType()
     CPythonBackedPythonInterpreter.lookupAttributeOnPythonReferencePythonFunction = GetAttributeOnPythonObject()
+    CPythonBackedPythonInterpreter.lookupPointerForAttributeOnPythonReferencePythonFunction = \
+        GetAttributePointerOnPythonObject()
+    CPythonBackedPythonInterpreter.lookupPointerArrayForAttributeOnPythonReferencePythonFunction = \
+        GetAttributePointerArrayOnPythonObject()
     CPythonBackedPythonInterpreter.lookupAttributeOnPythonReferenceWithMapPythonFunction = \
         GetAttributeOnPythonObjectWithMap()
     CPythonBackedPythonInterpreter.lookupDictOnPythonReferencePythonFunction = GetDictOnPythonObject()
@@ -72,6 +76,33 @@ class GetAttributeOnPythonObject:
             return None
         out = getattr(python_object, attribute_name)
         return convert_to_java_python_like_object(out)
+
+
+@jpype.JImplements('java.util.function.BiFunction', deferred=True)
+class GetAttributePointerOnPythonObject:
+    @jpype.JOverride()
+    def apply(self, python_object, attribute_name):
+        from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference
+        if not hasattr(python_object, attribute_name):
+            return None
+        out = getattr(python_object, attribute_name)
+        return jpype.JProxy(OpaquePythonReference, inst=out, convert=True)
+
+
+@jpype.JImplements('java.util.function.BiFunction', deferred=True)
+class GetAttributePointerArrayOnPythonObject:
+    @jpype.JOverride()
+    def apply(self, python_object, attribute_name):
+        from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference
+        if not hasattr(python_object, attribute_name):
+            return None
+        out = getattr(python_object, attribute_name)()
+        out_array = OpaquePythonReference[len(out)]
+
+        for i in range(len(out)):
+            out_array[i] = jpype.JProxy(OpaquePythonReference, inst=out[i], convert=True)
+
+        return out_array
 
 
 @jpype.JImplements('org.optaplanner.python.translator.TriFunction', deferred=True)
