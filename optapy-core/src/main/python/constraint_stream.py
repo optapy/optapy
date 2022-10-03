@@ -1,15 +1,17 @@
 import dataclasses
+import sys
 
 from .optaplanner_java_interop import get_class
 from .jpype_type_conversions import _convert_to_java_compatible_object
 from .jpype_type_conversions import PythonFunction, PythonBiFunction, PythonTriFunction, PythonQuadFunction, \
     PythonPentaFunction, PythonToIntFunction, PythonToIntBiFunction, PythonToIntTriFunction, PythonToIntQuadFunction, \
     PythonPredicate, PythonBiPredicate, PythonTriPredicate, PythonQuadPredicate, PythonPentaPredicate
-from javapython import translate_python_bytecode_to_java_bytecode
+from javapython import translate_python_bytecode_to_java_bytecode, check_current_python_version_supported
 from enum import Enum
 import jpype.imports  # noqa
 from jpype import JImplements, JOverride, JObject, JClass, JInt
 import inspect
+import logging
 from typing import TYPE_CHECKING, Type, Callable, Optional, overload, TypeVar, Generic, Any, Union, List, Sequence
 
 if TYPE_CHECKING:
@@ -42,6 +44,17 @@ class BytecodeTranslation(Enum):
 
 function_bytecode_translation: BytecodeTranslation = BytecodeTranslation.IF_POSSIBLE
 all_translated_successfully = True
+logger = logging.getLogger('optapy')
+
+def _check_if_bytecode_translation_possible():
+    try:
+        check_current_python_version_supported()
+    except NotImplementedError:
+        if all_translated_successfully:
+            logger.warning('The bytecode translator does not support the current python version %s. This will '
+                           'severely degrade performance.', sys.version, exc_info=True)
+        raise
+
 
 @JImplements('java.util.function.Predicate', deferred=True)
 class PythonPredicate:
@@ -104,6 +117,7 @@ def function_cast(function, *type_args):
         from org.optaplanner.python.translator import PythonLikeObject
 
         try:
+            _check_if_bytecode_translation_possible()
             if arg_count == 1:
                 return translate_python_bytecode_to_java_bytecode(function, Function, *type_args, PythonLikeObject)
             elif arg_count == 2:
@@ -148,6 +162,7 @@ def predicate_cast(predicate, *type_args):
         from java.util.function import Predicate, BiPredicate
         from org.optaplanner.core.api.function import TriPredicate, QuadPredicate, PentaPredicate
         try:
+            _check_if_bytecode_translation_possible()
             if arg_count == 1:
                 return translate_python_bytecode_to_java_bytecode(predicate, Predicate, *type_args)
             elif arg_count == 2:
@@ -193,6 +208,7 @@ def to_int_function_cast(function, *type_args):
         from org.optaplanner.core.api.function import ToIntTriFunction, ToIntQuadFunction
 
         try:
+            _check_if_bytecode_translation_possible()
             if arg_count == 1:
                 return translate_python_bytecode_to_java_bytecode(function, ToIntFunction, *type_args)
             elif arg_count == 2:

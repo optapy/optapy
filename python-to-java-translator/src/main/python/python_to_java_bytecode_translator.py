@@ -1,13 +1,35 @@
 import builtins
 import dis
 import inspect
+import math
 import sys
 
 from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, JArray
 
+MINIMUM_SUPPORTED_PYTHON_VERSION = (3, 9)
+MAXIMUM_SUPPORTED_PYTHON_VERSION = (3, 10)
+
 global_dict_to_instance = dict()
 global_dict_to_key_set = dict()
 type_to_compiled_java_class = dict()
+
+
+def is_python_version_supported(python_version):
+    python_version_major_minor = python_version[0:2]
+    return MINIMUM_SUPPORTED_PYTHON_VERSION <= python_version_major_minor <= MAXIMUM_SUPPORTED_PYTHON_VERSION
+
+
+def is_current_python_version_supported():
+    return is_python_version_supported(sys.version_info)
+
+
+def check_current_python_version_supported():
+    if not is_current_python_version_supported():
+        raise NotImplementedError(f'The translator does not support the current Python version ({sys.version}). '
+                                  f'The minimum version currently supported is '
+                                  f'{MINIMUM_SUPPORTED_PYTHON_VERSION[0]}.{MINIMUM_SUPPORTED_PYTHON_VERSION[1]}. '
+                                  f'The maximum version currently supported is '
+                                  f'{MAXIMUM_SUPPORTED_PYTHON_VERSION[0]}.{MAXIMUM_SUPPORTED_PYTHON_VERSION[1]}.')
 
 
 def get_translated_java_system_error_message(error):
@@ -80,6 +102,7 @@ def init_type_to_compiled_java_class():
     if len(type_to_compiled_java_class) > 0:
         return
 
+    check_current_python_version_supported()
     type_to_compiled_java_class[int] = BuiltinTypes.INT_TYPE
     type_to_compiled_java_class[float] = BuiltinTypes.FLOAT_TYPE
     type_to_compiled_java_class[complex] = BuiltinTypes.COMPLEX_TYPE
