@@ -13,6 +13,10 @@ public abstract class JavaInterfaceImplementor {
         if (!(o instanceof JavaInterfaceImplementor)) {
             return false;
         }
+
+        if (getInterfaceClass().equals(Object.class)) {
+            return getClass().equals(o.getClass());
+        }
         return getInterfaceClass().equals(((JavaInterfaceImplementor) o).getInterfaceClass());
     }
 

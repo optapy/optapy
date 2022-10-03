@@ -36,6 +36,8 @@ import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.dag.FlowGraph;
 import org.optaplanner.python.translator.implementors.FunctionImplementor;
 import org.optaplanner.python.translator.implementors.JavaComparableImplementor;
+import org.optaplanner.python.translator.implementors.JavaEqualsImplementor;
+import org.optaplanner.python.translator.implementors.JavaHashCodeImplementor;
 import org.optaplanner.python.translator.implementors.JavaInterfaceImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
 import org.optaplanner.python.translator.opcodes.Opcode;
@@ -75,6 +77,14 @@ public class PythonClassTranslator {
         for (Map.Entry<String, PythonCompiledFunction> instanceMethodEntry : pythonCompiledClass.instanceFunctionNameToPythonBytecode
                 .entrySet()) {
             switch (instanceMethodEntry.getKey()) {
+                case "__eq__":
+                    javaInterfaceImplementorSet.add(new JavaEqualsImplementor(internalClassName));
+                    break;
+
+                case "__hash__":
+                    javaInterfaceImplementorSet.add(new JavaHashCodeImplementor(internalClassName));
+                    break;
+
                 case "__lt__":
                 case "__le__":
                 case "__gt__":
@@ -123,10 +133,12 @@ public class PythonClassTranslator {
             }
         });
 
-        String[] interfaces = new String[javaInterfaceImplementorSet.size()];
-        int interfaceIndex = 0;
-        for (JavaInterfaceImplementor interfaceImplementor : javaInterfaceImplementorSet) {
-            interfaces[interfaceIndex] = Type.getInternalName(interfaceImplementor.getInterfaceClass());
+        List<JavaInterfaceImplementor> nonObjectInterfaceImplementors = javaInterfaceImplementorSet.stream()
+                .filter(implementor -> !Object.class.equals(implementor.getInterfaceClass()))
+                .collect(Collectors.toList());
+        String[] interfaces = new String[nonObjectInterfaceImplementors.size()];
+        for (int i = 0; i < nonObjectInterfaceImplementors.size(); i++) {
+            interfaces[i] = Type.getInternalName(nonObjectInterfaceImplementors.get(i).getInterfaceClass());
         }
 
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);

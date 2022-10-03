@@ -132,4 +132,76 @@ public class PythonClassTranslatorTest {
                     .isEqualTo(0);
         }
     }
+
+    @Test
+    public void testPythonClassEqualsAndHashCode() throws ClassNotFoundException {
+        PythonCompiledFunction initFunction = PythonFunctionBuilder.newFunction("self", "key")
+                .loadParameter("key")
+                .loadParameter("self")
+                .storeAttribute("key")
+                .loadConstant(null)
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        PythonCompiledFunction equalsFunction = PythonFunctionBuilder.newFunction("self", "other")
+                .loadParameter("self")
+                .getAttribute("key")
+                .loadParameter("other")
+                .getAttribute("key")
+                .compare(CompareOp.EQUALS)
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        PythonCompiledFunction hashFunction = PythonFunctionBuilder.newFunction("self")
+                .loadParameter("self")
+                .getAttribute("key")
+                .op(OpcodeIdentifier.RETURN_VALUE)
+                .build();
+
+        PythonCompiledClass compiledClass = new PythonCompiledClass();
+        compiledClass.className = "MyClass";
+        compiledClass.superclassList = List.of(BASE_TYPE);
+        compiledClass.staticAttributeNameToObject = Map.of();
+        compiledClass.staticAttributeNameToClassInstance = Map.of();
+        compiledClass.typeAnnotations = Map.of("key", INT_TYPE);
+        compiledClass.instanceFunctionNameToPythonBytecode = Map.of("__init__", initFunction,
+                "__eq__", equalsFunction,
+                "__hash__", hashFunction);
+        compiledClass.staticFunctionNameToPythonBytecode = Map.of();
+        compiledClass.classFunctionNameToPythonBytecode = Map.of();
+
+        PythonLikeType classType = PythonClassTranslator.translatePythonClass(compiledClass);
+        Class<?> generatedClass = BuiltinTypes.asmClassLoader.loadClass(
+                classType.getJavaTypeInternalName().replace('/', '.'));
+
+        assertThat(generatedClass).hasPublicFields(PythonClassTranslator.getJavaFieldName("key"));
+        assertThat(generatedClass).hasPublicMethods(
+                PythonClassTranslator.getJavaMethodName("__init__"),
+                "equals");
+
+        Object object1a = classType.__call__(List.of(PythonInteger.valueOf(1)), Map.of());
+        Object object1b = classType.__call__(List.of(PythonInteger.valueOf(1)), Map.of());
+        Object object2 = classType.__call__(List.of(PythonInteger.valueOf(2)), Map.of());
+        Object object3 = classType.__call__(List.of(PythonInteger.valueOf(Long.MAX_VALUE)), Map.of());
+
+        assertThat(object1a.equals(object2))
+                .isFalse();
+        assertThat(object2.equals(object1a))
+                .isFalse();
+        assertThat(object1a.equals(object1b))
+                .isTrue();
+        assertThat(object1b.equals(object1a))
+                .isTrue();
+        assertThat(object1a.equals(object1a))
+                .isTrue();
+
+        assertThat(object1a.hashCode())
+                .isEqualTo(PythonInteger.valueOf(1).hashCode());
+        assertThat(object1b.hashCode())
+                .isEqualTo(PythonInteger.valueOf(1).hashCode());
+        assertThat(object2.hashCode())
+                .isEqualTo(PythonInteger.valueOf(2).hashCode());
+        assertThat(object3.hashCode())
+                .isEqualTo(PythonInteger.valueOf(Long.MAX_VALUE).hashCode());
+    }
 }
