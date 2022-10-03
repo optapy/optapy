@@ -268,20 +268,24 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         return new PythonFloat(value / other.value);
     }
 
-    public PythonInteger floorDivide(PythonInteger other) {
-        return new PythonInteger((long) Math.floor(value / other.value.doubleValue()));
+    public PythonFloat floorDivide(PythonInteger other) {
+        return new PythonFloat(BigDecimal.valueOf(value)
+                .divideToIntegralValue(new BigDecimal(other.value))
+                .doubleValue());
     }
 
-    public PythonInteger floorDivide(PythonFloat other) {
-        return PythonInteger.valueOf((long) Math.floor(value / other.value));
+    public PythonFloat floorDivide(PythonFloat other) {
+        return PythonFloat.valueOf(Math.floor(value / other.value));
     }
 
-    public PythonInteger ceilDivide(PythonInteger other) {
-        return new PythonInteger((long) Math.ceil(value / other.value.doubleValue()));
+    public PythonFloat ceilDivide(PythonInteger other) {
+        return new PythonFloat(BigDecimal.valueOf(value)
+                .divide(new BigDecimal(other.value), RoundingMode.CEILING)
+                .doubleValue());
     }
 
-    public PythonInteger ceilDivide(PythonFloat other) {
-        return PythonInteger.valueOf((long) Math.ceil(value / other.value));
+    public PythonFloat ceilDivide(PythonFloat other) {
+        return PythonFloat.valueOf(Math.ceil(value / other.value));
     }
 
     public PythonFloat modulo(PythonInteger other) {
@@ -293,7 +297,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     }
 
     public PythonLikeTuple divmod(PythonInteger other) {
-        PythonInteger quotient;
+        PythonFloat quotient;
 
         if (value < 0 == other.value.compareTo(BigInteger.ZERO) < 0) {
             // Same sign, use floor division
@@ -322,7 +326,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     }
 
     public PythonLikeTuple divmod(PythonFloat other) {
-        PythonInteger quotient;
+        PythonFloat quotient;
 
         if (value < 0 == other.value < 0) {
             // Same sign, use floor division

@@ -2,7 +2,9 @@ package org.optaplanner.python.translator.types.numeric;
 
 import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.List;
 
@@ -291,12 +293,16 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         return new PythonInteger(value.divide(other.value));
     }
 
-    public PythonInteger floorDivide(PythonFloat other) {
-        return PythonInteger.valueOf((long) Math.floor(value.doubleValue() / other.value));
+    public PythonFloat floorDivide(PythonFloat other) {
+        return PythonFloat.valueOf(new BigDecimal(value)
+                .divideToIntegralValue(BigDecimal.valueOf(other.value))
+                .doubleValue());
     }
 
-    public PythonInteger ceilDivide(PythonFloat other) {
-        return PythonInteger.valueOf((long) Math.ceil(value.doubleValue() / other.value));
+    public PythonFloat ceilDivide(PythonFloat other) {
+        return PythonFloat.valueOf(new BigDecimal(value)
+                .divide(BigDecimal.valueOf(other.value), RoundingMode.CEILING)
+                .doubleValue());
     }
 
     public PythonInteger modulo(PythonInteger other) {
@@ -327,7 +333,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public PythonLikeTuple divmod(PythonFloat other) {
-        PythonInteger quotient;
+        PythonFloat quotient;
 
         if (value.compareTo(BigInteger.ZERO) < 0 == other.value < 0) {
             // Same sign, use floor division

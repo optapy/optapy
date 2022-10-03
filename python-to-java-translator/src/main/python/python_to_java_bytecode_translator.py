@@ -246,7 +246,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
 
 
 def is_banned_module(module: str):
-    banned_modules = {'jpype', 'importlib', 'pytest'}
+    banned_modules = {'jpype', 'importlib'}
     for banned_module in banned_modules:
         if module == banned_module:
             return True
@@ -261,6 +261,7 @@ def is_banned_module(module: str):
 
 def convert_to_java_python_like_object(value, instance_map=None):
     from java.util import HashMap
+    from java.math import BigInteger
     from types import ModuleType
     from org.optaplanner.python.translator import PythonLikeObject, CPythonBackedPythonInterpreter
     from org.optaplanner.python.translator.types import PythonString, PythonBytes, PythonByteArray, PythonNone, \
@@ -285,7 +286,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
     elif isinstance(value, bool):
         return PythonBoolean.valueOf(JBoolean(value))
     elif isinstance(value, int):
-        out = PythonInteger.valueOf(JInt(value))
+        out = PythonInteger.valueOf(BigInteger("{0:x}".format(value), 16))
         put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, float):
@@ -412,7 +413,7 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     elif isinstance(python_like_object, PythonBoolean):
         return python_like_object == PythonBoolean.TRUE
     elif isinstance(python_like_object, PythonInteger):
-        return int(python_like_object.getValue().longValue())
+        return int(python_like_object.getValue().toString(16), 16)
     elif isinstance(python_like_object, PythonComplex):
         real = unwrap_python_like_object(python_like_object.getReal())
         imaginary = unwrap_python_like_object(python_like_object.getImaginary())

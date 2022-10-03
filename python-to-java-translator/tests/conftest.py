@@ -35,6 +35,11 @@ class FunctionVerifier:
             raise AssertionError(f'Python function did not raise expected error ({expected_error}) '
                                  f'for arguments {args}; it returned ({expected}) instead.')
 
+        if expected_result is not ... and type(expected_result) is not type(expected):
+            raise AssertionError(f'Python function did not return expected result ({expected_result}, '
+                                 f'{type(expected_result)}) for arguments {args}; it returned the equal but different '
+                                 f'type ({expected}, {type(expected)}) instead.')
+
         self.expect(expected, *deepcopy(args))
 
 
@@ -59,6 +64,10 @@ class FunctionVerifier:
         if java_result != expected:
             raise AssertionError(f'Translated bytecode did not return expected result ({expected}) '
                                  f'for arguments {args}; it returned ({java_result}) instead.')
+        if type(java_result) is not type(expected):
+            raise AssertionError(f'Translated bytecode did not return expected result ({expected}, {type(expected)}) '
+                                 f'for arguments {args}; it returned the equal but different type ({java_result}, '
+                                 f'{type(java_result)}) instead.')
 
     def expect_error(self, error, *args):
         with pytest.raises(type(error)) as error_info:
