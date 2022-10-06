@@ -331,7 +331,7 @@ def init(*args, path: List[str] = None, include_optaplanner_jars: bool = True, l
                       Defaults to 'INFO'
     :return: None
     """
-    from javapython import init
+    from jpyinterpreter import init
     if jpype.isJVMStarted():  # noqa
         raise RuntimeError('JVM already started. Maybe call init before optapy.type imports?')
     if path is None:
@@ -990,7 +990,7 @@ def get_class(python_class: Union[Type, Callable]) -> JClass:
     """Return the Java Class for the given Python Class"""
     from java.lang import Object, Class
     from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference
-    from javapython import is_c_native
+    from jpyinterpreter import is_c_native
 
     if isinstance(python_class, jpype.JClass):
         return cast(JClass, python_class)
@@ -1047,7 +1047,7 @@ def _does_class_define_eq_or_hashcode(python_class):
 def _generate_problem_fact_class(python_class):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    from javapython import translate_python_class_to_java_class, force_update_type
+    from jpyinterpreter import translate_python_class_to_java_class, force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
@@ -1065,7 +1065,7 @@ def _generate_problem_fact_class(python_class):
 def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[str, Any]):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    from javapython import translate_python_class_to_java_class, force_update_type
+    from jpyinterpreter import translate_python_class_to_java_class, force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
@@ -1083,7 +1083,7 @@ def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[st
 def _generate_planning_solution_class(python_class: Type) -> JClass:
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    from javapython import translate_python_class_to_java_class, force_update_type
+    from jpyinterpreter import translate_python_class_to_java_class, force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
     parent_class = translate_python_class_to_java_class(python_class).getJavaClass()

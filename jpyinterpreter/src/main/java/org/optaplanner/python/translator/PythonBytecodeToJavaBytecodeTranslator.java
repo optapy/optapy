@@ -40,9 +40,9 @@ import org.slf4j.LoggerFactory;
 
 public class PythonBytecodeToJavaBytecodeTranslator {
 
-    public static final String USER_PACKAGE_BASE = "org.javapython.user.";
+    public static final String USER_PACKAGE_BASE = "org.jpyinterpreter.user.";
 
-    public static final String GENERATED_PACKAGE_BASE = "org.javapython.synthetic.";
+    public static final String GENERATED_PACKAGE_BASE = "org.jpyinterpreter.synthetic.";
 
     public static final String CONSTANTS_STATIC_FIELD_NAME = "co_consts";
 

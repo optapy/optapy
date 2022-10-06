@@ -75,8 +75,8 @@ class FunctionVerifier:
 
 
 def verifier_for(the_function: Callable[..., Any]) -> FunctionVerifier:
-    import javapython
-    java_function = javapython.as_java(the_function)
+    import jpyinterpreter
+    java_function = jpyinterpreter.as_java(the_function)
     return FunctionVerifier(the_function, java_function)
 
 
@@ -94,11 +94,11 @@ def pytest_sessionstart(session):
     Called after the Session object has been created and
     before performing collection and entering the run test loop.
     """
-    import javapython
+    import jpyinterpreter
     import pathlib
     import sys
-    javapython.init()
-    javapython.set_class_output_directory(pathlib.Path('target', 'tox-generated-classes', 'python', f'{sys.version_info[0]}.{sys.version_info[1]}'))
+    jpyinterpreter.init()
+    jpyinterpreter.set_class_output_directory(pathlib.Path('target', 'tox-generated-classes', 'python', f'{sys.version_info[0]}.{sys.version_info[1]}'))
 
 
 def pytest_sessionfinish(session, exitstatus):

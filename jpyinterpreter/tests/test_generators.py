@@ -1,4 +1,4 @@
-import javapython
+import jpyinterpreter
 import pytest
 
 
@@ -9,7 +9,7 @@ def test_loop_generator():
             yield i
             i += 1
 
-    java_function = javapython.as_java(my_function)
+    java_function = jpyinterpreter.as_java(my_function)
     my_function_generator = my_function(10)
     java_function_generator = java_function(10)
 

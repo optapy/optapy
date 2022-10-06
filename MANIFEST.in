@@ -6,10 +6,10 @@ graft optapy-core/src/main/java
 graft optapy-core/src/main/resources
 graft optapy-core/src/test/java
 
-include python-to-java-translator/pom.xml
-graft python-to-java-translator/src/main/java
-graft python-to-java-translator/src/main/resources
-graft python-to-java-translator/src/test/java
+include jpyinterpreter/pom.xml
+graft jpyinterpreter/src/main/java
+graft jpyinterpreter/src/main/resources
+graft jpyinterpreter/src/test/java
 
 include optapy-docs/pom.xml
 graft optapy-docs/src

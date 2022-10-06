@@ -31,7 +31,7 @@
     </dependency>
     <dependency>
       <groupId>org.optaplanner</groupId>
-      <artifactId>python-to-java-translator</artifactId>
+      <artifactId>jpyinterpreter</artifactId>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>

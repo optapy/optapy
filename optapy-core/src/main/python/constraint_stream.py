@@ -6,7 +6,7 @@ from .jpype_type_conversions import _convert_to_java_compatible_object
 from .jpype_type_conversions import PythonFunction, PythonBiFunction, PythonTriFunction, PythonQuadFunction, \
     PythonPentaFunction, PythonToIntFunction, PythonToIntBiFunction, PythonToIntTriFunction, PythonToIntQuadFunction, \
     PythonPredicate, PythonBiPredicate, PythonTriPredicate, PythonQuadPredicate, PythonPentaPredicate
-from javapython import translate_python_bytecode_to_java_bytecode, check_current_python_version_supported
+from jpyinterpreter import translate_python_bytecode_to_java_bytecode, check_current_python_version_supported
 from enum import Enum
 import jpype.imports  # noqa
 from jpype import JImplements, JOverride, JObject, JClass, JInt

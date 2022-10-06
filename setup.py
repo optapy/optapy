@@ -120,11 +120,11 @@ setup(
         'Operating System :: OS Independent'
     ],
     packages=['optapy', 'optapy.config', 'optapy.constraint', 'optapy.score', 'optapy.types',
-              'javapython',
+              'jpyinterpreter',
               'java-stubs', 'jpype-stubs', 'org-stubs'],
     package_dir={
         'optapy': 'optapy-core/src/main/python',
-        'javapython': 'python-to-java-translator/src/main/python',
+        'jpyinterpreter': 'jpyinterpreter/src/main/python',
         # Setup tools need a non-empty directory to use as base
         # Since these packages are generated during the build,
         # we use the src/main/resources package, which does

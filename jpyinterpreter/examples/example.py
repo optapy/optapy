@@ -1,7 +1,7 @@
 import jpype.imports
-import javapython
+import jpyinterpreter
 
-javapython.init(path=['target/example-8.19.0.Final.jar'])
+jpyinterpreter.init(path=['target/example-8.19.0.Final.jar'])
 
 from java.util.function import Function
 
@@ -10,7 +10,7 @@ from org.acme import MyClass
 
 def time(iterations, function, argument):
     from timeit import default_timer as timer
-    java_function = javapython.translate_python_bytecode_to_java_bytecode(function, Function)
+    java_function = jpyinterpreter.translate_python_bytecode_to_java_bytecode(function, Function)
     
     start = timer()
 

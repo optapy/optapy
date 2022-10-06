@@ -1,4 +1,4 @@
-import javapython
+import jpyinterpreter
 
 
 def my_function(sequence, x, y):
@@ -9,8 +9,8 @@ def my_function_with_step(sequence, x, y, z):
     return sequence[x:y:z]
 
 
-java_function = javapython.as_java(my_function)
-java_function_with_step = javapython.as_java(my_function_with_step)
+java_function = jpyinterpreter.as_java(my_function)
+java_function_with_step = jpyinterpreter.as_java(my_function_with_step)
 
 
 def test_list_slice():

@@ -27,16 +27,16 @@ environment:
 ```bash
 python -m venv venv
 . venv/bin/activate
-pip install dist/javapython-*-py3-none-any.whl
+pip install dist/jpyinterpreter-*-py3-none-any.whl
 ```
 
 . Initialize the translator:
 +
 ```python
 import jpype.imports
-import javapython
+import jpyinterpreter
 
-javapython.init(path=['my-java-jar.jar'])
+jpyinterpreter.init(path=['my-java-jar.jar'])
 ```
 +
 This will start the JVM used by the Java translator and load jars

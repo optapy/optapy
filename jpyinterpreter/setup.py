@@ -43,19 +43,19 @@ class FetchDependencies(build_py):
             filenames = list(map(os.path.basename, classpath_jars))
             classpath_list_text = "\n".join(filenames)
 
-            self.mkpath(os.path.join(self.build_lib, 'javapython', 'jars'))
+            self.mkpath(os.path.join(self.build_lib, 'jpyinterpreter', 'jars'))
 
             # Copy classpath jars to optapy.jars
             for file in classpath_jars:
-                copyfile(file, os.path.join(self.build_lib, 'javapython', 'jars', os.path.basename(file)))
+                copyfile(file, os.path.join(self.build_lib, 'jpyinterpreter', 'jars', os.path.basename(file)))
 
             # Add classpath.txt to optapy
-            fp = open(os.path.join(self.build_lib, 'javapython', 'classpath.txt'), 'w')
+            fp = open(os.path.join(self.build_lib, 'jpyinterpreter', 'classpath.txt'), 'w')
             fp.write(classpath_list_text)
             fp.close()
 
             # Make optapy.jars a Python module
-            fp = open(os.path.join(self.build_lib, 'javapython', 'jars', '__init__.py'), 'w')
+            fp = open(os.path.join(self.build_lib, 'jpyinterpreter', 'jars', '__init__.py'), 'w')
             fp.close()
         build_py.run(self)
 
@@ -81,7 +81,7 @@ def find_stub_files(stub_root: str):
 this_directory = Path(__file__).parent
 
 setup(
-    name='javapython',
+    name='jpyinterpreter',
     version='8.19.0a0',
     license='Apache License Version 2.0',
     license_file='LICENSE',
@@ -93,9 +93,9 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent'
     ],
-    packages=['javapython', 'java-stubs', 'jpype-stubs', 'org-stubs'],
+    packages=['jpyinterpreter', 'java-stubs', 'jpype-stubs', 'org-stubs'],
     package_dir={
-        'javapython': 'src/main/python',
+        'jpyinterpreter': 'src/main/python',
         # Setup tools need a non-empty directory to use as base
         # Since these packages are generated during the build,
         # we use the src/main/resources package, which does

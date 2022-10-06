@@ -1,4 +1,4 @@
-from javapython import is_python_version_supported
+from jpyinterpreter import is_python_version_supported
 
 
 def test_version_check():

@@ -8,14 +8,14 @@ from typing import List
 def extract_python_translator_jars() -> list[str]:
     """Extracts and return a list of the Python Translator Java dependencies
 
-    Invoking this function extracts Python Translator Dependencies from the javapython.jars module
+    Invoking this function extracts Python Translator Dependencies from the jpyinterpreter.jars module
     into a temporary directory and returns a list contains classpath entries for
     those dependencies. The temporary directory exists for the entire execution of the
     program.
 
     :return: None
     """
-    return [str(p.locate()) for p in importlib.metadata.files('javapython') if p.name.endswith('.jar')]
+    return [str(p.locate()) for p in importlib.metadata.files('jpyinterpreter') if p.name.endswith('.jar')]
 
 
 def init(*args, path: List[str] = None, include_translator_jars: bool = True):
