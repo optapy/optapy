@@ -68,7 +68,7 @@ public class PythonOverloadImplementor {
     }
 
     public static void createDispatchesFor(PythonLikeType pythonLikeType) {
-        for (String methodName : pythonLikeType.getKnownMethods()) {
+        for (String methodName : pythonLikeType.getKnownMethodsDefinedByClass()) {
             PythonLikeFunction overloadDispatch =
                     createDispatchForMethod(pythonLikeType, methodName, pythonLikeType.getMethodType(methodName).orElseThrow());
             pythonLikeType.__setAttribute(methodName, overloadDispatch);

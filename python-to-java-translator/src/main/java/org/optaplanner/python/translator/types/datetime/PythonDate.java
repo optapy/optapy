@@ -56,21 +56,21 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
 
     private static void registerMethods() throws NoSuchMethodException {
         // Unary Operators
-        DATE_TYPE.addMethod(PythonUnaryOperator.AS_STRING,
+        DATE_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING,
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDate.class.getMethod("toPythonString")),
                         STRING_TYPE));
 
         // Binary Operators
-        DATE_TYPE.addMethod(PythonBinaryOperators.ADD,
+        DATE_TYPE.addBinaryMethod(PythonBinaryOperators.ADD,
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDate.class.getMethod("add_time_delta", PythonTimeDelta.class)),
                         DATE_TYPE, TIME_DELTA_TYPE));
-        DATE_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        DATE_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDate.class.getMethod("subtract_time_delta", PythonTimeDelta.class)),
                         DATE_TYPE, TIME_DELTA_TYPE));
-        DATE_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        DATE_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDate.class.getMethod("subtract_date", PythonDate.class)),
                         TIME_DELTA_TYPE, DATE_TYPE));

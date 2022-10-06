@@ -38,32 +38,35 @@ public class DictItemView extends AbstractPythonLikeObject {
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Unary
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonUnaryOperator.LENGTH, DictItemView.class.getMethod("getItemsSize"));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonUnaryOperator.ITERATOR, DictItemView.class.getMethod("getItemsIterator"));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonUnaryOperator.REVERSED, DictItemView.class.getMethod("getReversedItemIterator"));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonUnaryOperator.AS_STRING, DictItemView.class.getMethod("toRepresentation"));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, DictItemView.class.getMethod("toRepresentation"));
+        DICT_ITEM_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, DictItemView.class.getMethod("getItemsSize"));
+        DICT_ITEM_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, DictItemView.class.getMethod("getItemsIterator"));
+        DICT_ITEM_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.REVERSED,
+                DictItemView.class.getMethod("getReversedItemIterator"));
+        DICT_ITEM_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING, DictItemView.class.getMethod("toRepresentation"));
+        DICT_ITEM_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION,
+                DictItemView.class.getMethod("toRepresentation"));
 
         // Binary
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 DictItemView.class.getMethod("containsItem", PythonLikeObject.class));
 
         // Set methods
         DICT_ITEM_VIEW_TYPE.addMethod("isdisjoint", DictItemView.class.getMethod("isDisjoint", DictItemView.class));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 DictItemView.class.getMethod("isSubset", DictItemView.class));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.LESS_THAN,
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.LESS_THAN,
                 DictItemView.class.getMethod("isStrictSubset", DictItemView.class));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 DictItemView.class.getMethod("isSuperset", DictItemView.class));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.GREATER_THAN,
                 DictItemView.class.getMethod("isStrictSuperset", DictItemView.class));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.OR, DictItemView.class.getMethod("union", DictItemView.class));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.AND,
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.OR,
+                DictItemView.class.getMethod("union", DictItemView.class));
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.AND,
                 DictItemView.class.getMethod("intersection", DictItemView.class));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 DictItemView.class.getMethod("difference", DictItemView.class));
-        DICT_ITEM_VIEW_TYPE.addMethod(PythonBinaryOperators.XOR,
+        DICT_ITEM_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.XOR,
                 DictItemView.class.getMethod("symmetricDifference", DictItemView.class));
 
         return DICT_ITEM_VIEW_TYPE;

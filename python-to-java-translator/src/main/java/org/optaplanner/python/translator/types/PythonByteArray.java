@@ -72,40 +72,41 @@ public class PythonByteArray extends AbstractPythonLikeObject implements PythonB
         }));
 
         // Unary
-        BYTE_ARRAY_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonByteArray.class.getMethod("repr"));
-        BYTE_ARRAY_TYPE.addMethod(PythonUnaryOperator.AS_STRING, PythonByteArray.class.getMethod("asString"));
-        BYTE_ARRAY_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonByteArray.class.getMethod("getIterator"));
-        BYTE_ARRAY_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonByteArray.class.getMethod("getLength"));
+        BYTE_ARRAY_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, PythonByteArray.class.getMethod("repr"));
+        BYTE_ARRAY_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING, PythonByteArray.class.getMethod("asString"));
+        BYTE_ARRAY_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonByteArray.class.getMethod("getIterator"));
+        BYTE_ARRAY_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, PythonByteArray.class.getMethod("getLength"));
 
         // Binary
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.GET_ITEM,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
                 PythonByteArray.class.getMethod("getCharAt", PythonInteger.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.GET_ITEM,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
                 PythonByteArray.class.getMethod("getSubsequence", PythonSlice.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.DELETE_ITEM,
                 PythonByteArray.class.getMethod("deleteIndex", PythonInteger.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.DELETE_ITEM,
                 PythonByteArray.class.getMethod("deleteSlice", PythonSlice.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 PythonByteArray.class.getMethod("containsSubsequence", PythonByteArray.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.ADD, PythonByteArray.class.getMethod("concat", PythonByteArray.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.ADD,
+                PythonByteArray.class.getMethod("concat", PythonByteArray.class));
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.INPLACE_ADD,
                 PythonByteArray.class.getMethod("inplaceAdd", PythonLikeObject.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.MULTIPLY,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY,
                 PythonByteArray.class.getMethod("repeat", PythonInteger.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
                 PythonByteArray.class.getMethod("inplaceRepeat", PythonInteger.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.MODULO,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
                 PythonByteArray.class.getMethod("interpolate", PythonLikeObject.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.MODULO,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
                 PythonByteArray.class.getMethod("interpolate", PythonLikeTuple.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonBinaryOperators.MODULO,
+        BYTE_ARRAY_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
                 PythonByteArray.class.getMethod("interpolate", PythonLikeDict.class));
 
         // Ternary
-        BYTE_ARRAY_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
+        BYTE_ARRAY_TYPE.addTernaryMethod(PythonTernaryOperators.SET_ITEM,
                 PythonByteArray.class.getMethod("setByte", PythonInteger.class, PythonInteger.class));
-        BYTE_ARRAY_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
+        BYTE_ARRAY_TYPE.addTernaryMethod(PythonTernaryOperators.SET_ITEM,
                 PythonByteArray.class.getMethod("setSlice", PythonSlice.class, PythonLikeObject.class));
 
         // Other

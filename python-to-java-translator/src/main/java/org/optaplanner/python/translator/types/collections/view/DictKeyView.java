@@ -32,32 +32,32 @@ public class DictKeyView extends AbstractPythonLikeObject {
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Unary
-        DICT_KEY_VIEW_TYPE.addMethod(PythonUnaryOperator.LENGTH, DictKeyView.class.getMethod("getKeysSize"));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonUnaryOperator.ITERATOR, DictKeyView.class.getMethod("getKeysIterator"));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonUnaryOperator.REVERSED, DictKeyView.class.getMethod("getReversedKeyIterator"));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonUnaryOperator.AS_STRING, DictKeyView.class.getMethod("toRepresentation"));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, DictKeyView.class.getMethod("toRepresentation"));
+        DICT_KEY_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, DictKeyView.class.getMethod("getKeysSize"));
+        DICT_KEY_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, DictKeyView.class.getMethod("getKeysIterator"));
+        DICT_KEY_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.REVERSED, DictKeyView.class.getMethod("getReversedKeyIterator"));
+        DICT_KEY_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING, DictKeyView.class.getMethod("toRepresentation"));
+        DICT_KEY_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, DictKeyView.class.getMethod("toRepresentation"));
 
         // Binary
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 DictKeyView.class.getMethod("containsKey", PythonLikeObject.class));
 
         // Set methods
         DICT_KEY_VIEW_TYPE.addMethod("isdisjoint", DictKeyView.class.getMethod("isDisjoint", DictKeyView.class));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 DictKeyView.class.getMethod("isSubset", DictKeyView.class));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.LESS_THAN,
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.LESS_THAN,
                 DictKeyView.class.getMethod("isStrictSubset", DictKeyView.class));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 DictKeyView.class.getMethod("isSuperset", DictKeyView.class));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.GREATER_THAN,
                 DictKeyView.class.getMethod("isStrictSuperset", DictKeyView.class));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.OR, DictKeyView.class.getMethod("union", DictKeyView.class));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.AND,
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.OR, DictKeyView.class.getMethod("union", DictKeyView.class));
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.AND,
                 DictKeyView.class.getMethod("intersection", DictKeyView.class));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 DictKeyView.class.getMethod("difference", DictKeyView.class));
-        DICT_KEY_VIEW_TYPE.addMethod(PythonBinaryOperators.XOR,
+        DICT_KEY_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.XOR,
                 DictKeyView.class.getMethod("symmetricDifference", DictKeyView.class));
 
         return DICT_KEY_VIEW_TYPE;

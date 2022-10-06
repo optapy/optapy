@@ -42,11 +42,11 @@ public class PythonLikeFrozenSet extends AbstractPythonLikeObject implements Set
         });
 
         // Unary
-        FROZEN_SET_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonLikeFrozenSet.class.getMethod("getLength"));
-        FROZEN_SET_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonLikeFrozenSet.class.getMethod("getIterator"));
+        FROZEN_SET_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, PythonLikeFrozenSet.class.getMethod("getLength"));
+        FROZEN_SET_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonLikeFrozenSet.class.getMethod("getIterator"));
 
         // Binary
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 PythonLikeFrozenSet.class.getMethod("containsItem", PythonLikeObject.class));
 
         // Other
@@ -54,55 +54,56 @@ public class PythonLikeFrozenSet extends AbstractPythonLikeObject implements Set
         FROZEN_SET_TYPE.addMethod("isdisjoint", PythonLikeFrozenSet.class.getMethod("isDisjoint", PythonLikeFrozenSet.class));
 
         FROZEN_SET_TYPE.addMethod("issubset", PythonLikeFrozenSet.class.getMethod("isSubset", PythonLikeSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 PythonLikeFrozenSet.class.getMethod("isSubset", PythonLikeSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.LESS_THAN,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.LESS_THAN,
                 PythonLikeFrozenSet.class.getMethod("isStrictSubset", PythonLikeSet.class));
         FROZEN_SET_TYPE.addMethod("issubset", PythonLikeFrozenSet.class.getMethod("isSubset", PythonLikeFrozenSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 PythonLikeFrozenSet.class.getMethod("isSubset", PythonLikeFrozenSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.LESS_THAN,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.LESS_THAN,
                 PythonLikeFrozenSet.class.getMethod("isStrictSubset", PythonLikeFrozenSet.class));
 
         FROZEN_SET_TYPE.addMethod("issuperset", PythonLikeFrozenSet.class.getMethod("isSuperset", PythonLikeSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 PythonLikeFrozenSet.class.getMethod("isSuperset", PythonLikeSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.GREATER_THAN,
                 PythonLikeFrozenSet.class.getMethod("isStrictSuperset", PythonLikeSet.class));
         FROZEN_SET_TYPE.addMethod("issuperset", PythonLikeFrozenSet.class.getMethod("isSuperset", PythonLikeFrozenSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 PythonLikeFrozenSet.class.getMethod("isSuperset", PythonLikeFrozenSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.GREATER_THAN,
                 PythonLikeFrozenSet.class.getMethod("isStrictSuperset", PythonLikeFrozenSet.class));
 
         FROZEN_SET_TYPE.addMethod("union", PythonLikeFrozenSet.class.getMethod("union", PythonLikeSet.class));
         FROZEN_SET_TYPE.addMethod("union", PythonLikeFrozenSet.class.getMethod("union", PythonLikeFrozenSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.OR, PythonLikeFrozenSet.class.getMethod("union", PythonLikeSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.OR,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.OR,
+                PythonLikeFrozenSet.class.getMethod("union", PythonLikeSet.class));
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.OR,
                 PythonLikeFrozenSet.class.getMethod("union", PythonLikeFrozenSet.class));
 
         FROZEN_SET_TYPE.addMethod("intersection", PythonLikeFrozenSet.class.getMethod("intersection", PythonLikeSet.class));
         FROZEN_SET_TYPE.addMethod("intersection",
                 PythonLikeFrozenSet.class.getMethod("intersection", PythonLikeFrozenSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.AND,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.AND,
                 PythonLikeFrozenSet.class.getMethod("intersection", PythonLikeSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.AND,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.AND,
                 PythonLikeFrozenSet.class.getMethod("intersection", PythonLikeFrozenSet.class));
 
         FROZEN_SET_TYPE.addMethod("difference", PythonLikeFrozenSet.class.getMethod("difference", PythonLikeSet.class));
         FROZEN_SET_TYPE.addMethod("difference", PythonLikeFrozenSet.class.getMethod("difference", PythonLikeFrozenSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 PythonLikeFrozenSet.class.getMethod("difference", PythonLikeSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 PythonLikeFrozenSet.class.getMethod("difference", PythonLikeFrozenSet.class));
 
         FROZEN_SET_TYPE.addMethod("symmetric_difference",
                 PythonLikeFrozenSet.class.getMethod("symmetricDifference", PythonLikeSet.class));
         FROZEN_SET_TYPE.addMethod("symmetric_difference",
                 PythonLikeFrozenSet.class.getMethod("symmetricDifference", PythonLikeFrozenSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.XOR,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.XOR,
                 PythonLikeFrozenSet.class.getMethod("symmetricDifference", PythonLikeSet.class));
-        FROZEN_SET_TYPE.addMethod(PythonBinaryOperators.XOR,
+        FROZEN_SET_TYPE.addBinaryMethod(PythonBinaryOperators.XOR,
                 PythonLikeFrozenSet.class.getMethod("symmetricDifference", PythonLikeFrozenSet.class));
 
         FROZEN_SET_TYPE.addMethod("copy", PythonLikeFrozenSet.class.getMethod("copy"));

@@ -34,6 +34,30 @@ import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
  */
 public class FunctionImplementor {
 
+    public static void callBinaryMethod(MethodVisitor methodVisitor, String methodName) {
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                true);
+        methodVisitor.visitLdcInsn(methodName);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getAttributeOrError", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(String.class)),
+                true);
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 2);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class)),
+                true);
+    }
+
     /**
      * Loads a method named co_names[namei] from the TOS object. TOS is popped. This bytecode distinguishes two cases:
      * if TOS has a method with the correct name, the bytecode pushes the unbound method and TOS.

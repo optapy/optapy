@@ -155,22 +155,26 @@ public class PythonBytes extends AbstractPythonLikeObject implements PythonBytes
         }));
 
         // Unary
-        BYTES_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonBytes.class.getMethod("repr"));
-        BYTES_TYPE.addMethod(PythonUnaryOperator.AS_STRING, PythonBytes.class.getMethod("asString"));
-        BYTES_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonBytes.class.getMethod("getIterator"));
-        BYTES_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonBytes.class.getMethod("getLength"));
+        BYTES_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, PythonBytes.class.getMethod("repr"));
+        BYTES_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING, PythonBytes.class.getMethod("asString"));
+        BYTES_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonBytes.class.getMethod("getIterator"));
+        BYTES_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, PythonBytes.class.getMethod("getLength"));
 
         // Binary
-        BYTES_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonBytes.class.getMethod("getCharAt", PythonInteger.class));
-        BYTES_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonBytes.class.getMethod("getSubsequence", PythonSlice.class));
-        BYTES_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        BYTES_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
+                PythonBytes.class.getMethod("getCharAt", PythonInteger.class));
+        BYTES_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
+                PythonBytes.class.getMethod("getSubsequence", PythonSlice.class));
+        BYTES_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 PythonBytes.class.getMethod("containsSubsequence", PythonBytes.class));
-        BYTES_TYPE.addMethod(PythonBinaryOperators.ADD, PythonBytes.class.getMethod("concat", PythonBytes.class));
-        BYTES_TYPE.addMethod(PythonBinaryOperators.MULTIPLY, PythonBytes.class.getMethod("repeat", PythonInteger.class));
-        BYTES_TYPE.addMethod(PythonBinaryOperators.MODULO,
+        BYTES_TYPE.addBinaryMethod(PythonBinaryOperators.ADD, PythonBytes.class.getMethod("concat", PythonBytes.class));
+        BYTES_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY, PythonBytes.class.getMethod("repeat", PythonInteger.class));
+        BYTES_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
                 PythonBytes.class.getMethod("interpolate", PythonLikeObject.class));
-        BYTES_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonBytes.class.getMethod("interpolate", PythonLikeTuple.class));
-        BYTES_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonBytes.class.getMethod("interpolate", PythonLikeDict.class));
+        BYTES_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
+                PythonBytes.class.getMethod("interpolate", PythonLikeTuple.class));
+        BYTES_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
+                PythonBytes.class.getMethod("interpolate", PythonLikeDict.class));
 
         // Other
         BYTES_TYPE.addMethod("capitalize", PythonBytes.class.getMethod("capitalize"));

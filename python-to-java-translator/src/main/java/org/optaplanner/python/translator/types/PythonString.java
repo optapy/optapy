@@ -73,24 +73,30 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         });
 
         // Unary
-        STRING_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonString.class.getMethod("repr"));
-        STRING_TYPE.addMethod(PythonUnaryOperator.AS_STRING, PythonString.class.getMethod("asString"));
-        STRING_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonString.class.getMethod("getIterator"));
-        STRING_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonString.class.getMethod("getLength"));
+        STRING_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, PythonString.class.getMethod("repr"));
+        STRING_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING, PythonString.class.getMethod("asString"));
+        STRING_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonString.class.getMethod("getIterator"));
+        STRING_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, PythonString.class.getMethod("getLength"));
 
         // Binary
-        STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonString.class.getMethod("getCharAt", PythonInteger.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonString.class.getMethod("getSubstring", PythonSlice.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
+                PythonString.class.getMethod("getCharAt", PythonInteger.class));
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
+                PythonString.class.getMethod("getSubstring", PythonSlice.class));
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 PythonString.class.getMethod("containsSubstring", PythonString.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.ADD, PythonString.class.getMethod("concat", PythonString.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.MULTIPLY, PythonString.class.getMethod("repeat", PythonInteger.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.MODULO,
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.ADD, PythonString.class.getMethod("concat", PythonString.class));
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY,
+                PythonString.class.getMethod("repeat", PythonInteger.class));
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
                 PythonString.class.getMethod("interpolate", PythonLikeObject.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonString.class.getMethod("interpolate", PythonLikeTuple.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonString.class.getMethod("interpolate", PythonLikeDict.class));
-        STRING_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonString.class.getMethod("formatSelf"));
-        STRING_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonString.class.getMethod("formatSelf", PythonString.class));
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
+                PythonString.class.getMethod("interpolate", PythonLikeTuple.class));
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
+                PythonString.class.getMethod("interpolate", PythonLikeDict.class));
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonString.class.getMethod("formatSelf"));
+        STRING_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT,
+                PythonString.class.getMethod("formatSelf", PythonString.class));
 
         // Other
         STRING_TYPE.addMethod("capitalize", PythonString.class.getMethod("capitalize"));

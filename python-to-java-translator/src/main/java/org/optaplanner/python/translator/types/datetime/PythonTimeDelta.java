@@ -142,67 +142,67 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
                 NUMBER_TYPE, NUMBER_TYPE));
 
         // Unary
-        TIME_DELTA_TYPE.addMethod(PythonUnaryOperator.POSITIVE,
+        TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.POSITIVE,
                 new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("pos")),
                         TIME_DELTA_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonUnaryOperator.NEGATIVE,
+        TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.NEGATIVE,
                 new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("negate")),
                         TIME_DELTA_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonUnaryOperator.ABS,
+        TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.ABS,
                 new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("abs")),
                         TIME_DELTA_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN,
+        TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.AS_BOOLEAN,
                 new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("isZero")),
                         BOOLEAN_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonUnaryOperator.AS_STRING,
+        TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING,
                 new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("toPythonString")),
                         STRING_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION,
+        TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION,
                 new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("toPythonRepr")),
                         STRING_TYPE));
 
         // Binary
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.ADD,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.ADD,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("add_time_delta", PythonTimeDelta.class)),
                         TIME_DELTA_TYPE, TIME_DELTA_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("subtract_time_delta", PythonTimeDelta.class)),
                         TIME_DELTA_TYPE, TIME_DELTA_TYPE));
 
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.MULTIPLY,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("get_integer_multiple", PythonInteger.class)),
                         TIME_DELTA_TYPE, INT_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.MULTIPLY,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("get_float_multiple", PythonFloat.class)),
                         TIME_DELTA_TYPE, FLOAT_TYPE));
 
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("divide_time_delta", PythonTimeDelta.class)),
                         FLOAT_TYPE, TIME_DELTA_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("divide_integer", PythonInteger.class)),
                         TIME_DELTA_TYPE, INT_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("divide_float", PythonFloat.class)),
                         TIME_DELTA_TYPE, FLOAT_TYPE));
 
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.FLOOR_DIVIDE,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("floor_divide_time_delta", PythonTimeDelta.class)),
                         INT_TYPE, TIME_DELTA_TYPE));
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.FLOOR_DIVIDE,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("floor_divide_integer", PythonInteger.class)),
                         TIME_DELTA_TYPE, INT_TYPE));
 
-        TIME_DELTA_TYPE.addMethod(PythonBinaryOperators.MODULO,
+        TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonTimeDelta.class.getMethod("remainder_time_delta", PythonTimeDelta.class)),
                         TIME_DELTA_TYPE, TIME_DELTA_TYPE));

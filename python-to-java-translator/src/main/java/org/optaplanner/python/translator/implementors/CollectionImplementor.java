@@ -473,9 +473,13 @@ public class CollectionImplementor {
     /**
      * Implements TOS1 in TOS. TOS must be a collection/object that implement the "__contains__" dunder method.
      */
-    public static void containsOperator(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+    public static void containsOperator(MethodVisitor methodVisitor, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
         StackManipulationImplementor.swap(methodVisitor);
-        DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.CONTAINS);
+        DunderOperatorImplementor.binaryOperator(methodVisitor, stackMetadata
+                .pop(2)
+                .push(stackMetadata.getTOSValueSource())
+                .push(stackMetadata.getValueSourceForStackIndex(1)), PythonBinaryOperators.CONTAINS);
         // TODO: implement fallback on __getitem__ if __contains__ does not exist
         if (instruction.arg == 1) {
             PythonBuiltinOperatorImplementor.performNotOnTOS(methodVisitor);

@@ -26,11 +26,11 @@ public abstract class PythonGenerator extends AbstractPythonLikeObject implement
     }
 
     private static void registerMethods() throws NoSuchMethodException {
-        GENERATOR_TYPE.addMethod(PythonUnaryOperator.ITERATOR,
+        GENERATOR_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("asPythonIterator")),
                         GENERATOR_TYPE));
-        GENERATOR_TYPE.addMethod(PythonUnaryOperator.NEXT,
+        GENERATOR_TYPE.addUnaryMethod(PythonUnaryOperator.NEXT,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("next")),
                         BASE_TYPE));

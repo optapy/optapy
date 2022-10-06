@@ -30,14 +30,16 @@ public class DictValueView extends AbstractPythonLikeObject {
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Unary
-        DICT_VALUE_VIEW_TYPE.addMethod(PythonUnaryOperator.LENGTH, DictValueView.class.getMethod("getValuesSize"));
-        DICT_VALUE_VIEW_TYPE.addMethod(PythonUnaryOperator.ITERATOR, DictValueView.class.getMethod("getValueIterator"));
-        DICT_VALUE_VIEW_TYPE.addMethod(PythonUnaryOperator.REVERSED, DictValueView.class.getMethod("getReversedValueIterator"));
-        DICT_VALUE_VIEW_TYPE.addMethod(PythonUnaryOperator.AS_STRING, DictValueView.class.getMethod("toRepresentation"));
-        DICT_VALUE_VIEW_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, DictValueView.class.getMethod("toRepresentation"));
+        DICT_VALUE_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, DictValueView.class.getMethod("getValuesSize"));
+        DICT_VALUE_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, DictValueView.class.getMethod("getValueIterator"));
+        DICT_VALUE_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.REVERSED,
+                DictValueView.class.getMethod("getReversedValueIterator"));
+        DICT_VALUE_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING, DictValueView.class.getMethod("toRepresentation"));
+        DICT_VALUE_VIEW_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION,
+                DictValueView.class.getMethod("toRepresentation"));
 
         // Binary
-        DICT_VALUE_VIEW_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        DICT_VALUE_VIEW_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 DictValueView.class.getMethod("containsValue", PythonLikeObject.class));
 
         return DICT_VALUE_VIEW_TYPE;

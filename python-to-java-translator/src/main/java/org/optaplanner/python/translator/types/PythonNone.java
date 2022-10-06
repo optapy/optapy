@@ -18,9 +18,10 @@ public class PythonNone extends AbstractPythonLikeObject {
     }
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
-        NONE_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN, PythonNone.class.getMethod("asBool"));
-        NONE_TYPE.addMethod(PythonBinaryOperators.EQUAL, PythonNone.class.getMethod("equalsObject", PythonLikeObject.class));
-        NONE_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL,
+        NONE_TYPE.addUnaryMethod(PythonUnaryOperator.AS_BOOLEAN, PythonNone.class.getMethod("asBool"));
+        NONE_TYPE.addBinaryMethod(PythonBinaryOperators.EQUAL,
+                PythonNone.class.getMethod("equalsObject", PythonLikeObject.class));
+        NONE_TYPE.addBinaryMethod(PythonBinaryOperators.NOT_EQUAL,
                 PythonNone.class.getMethod("notEqualsObject", PythonLikeObject.class));
         GlobalBuiltins.addBuiltinConstant("None", INSTANCE);
         return NONE_TYPE;

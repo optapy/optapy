@@ -26,6 +26,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.dag.FlowGraph;
 import org.optaplanner.python.translator.implementors.DunderOperatorImplementor;
+import org.optaplanner.python.translator.implementors.FunctionImplementor;
 import org.optaplanner.python.translator.implementors.PythonConstantsImplementor;
 import org.optaplanner.python.translator.implementors.VariableImplementor;
 import org.optaplanner.python.translator.opcodes.AbstractOpcode;
@@ -623,7 +624,8 @@ public class PythonGeneratorTranslator {
                                     methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(PythonGenerator.class),
                                             "sentValue",
                                             Type.getDescriptor(PythonLikeObject.class));
-                                    DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.SEND);
+                                    FunctionImplementor.callBinaryMethod(methodVisitor,
+                                            PythonBinaryOperators.SEND.dunderMethod);
                                     break;
                                 }
                                 case 2: { // throw
@@ -674,7 +676,8 @@ public class PythonGeneratorTranslator {
 
                                     // Swap so it Generator, Throwable instead of Throwable, Generator
                                     methodVisitor.visitInsn(Opcodes.SWAP);
-                                    DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.THROW);
+                                    FunctionImplementor.callBinaryMethod(methodVisitor,
+                                            PythonBinaryOperators.THROW.dunderMethod);
                                     break;
                                 }
                             }

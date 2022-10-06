@@ -11,6 +11,9 @@ import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonBytecodeInstruction;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.StackMetadata;
+import org.optaplanner.python.translator.ValueSourceInfo;
+import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
+import org.optaplanner.python.translator.types.BuiltinTypes;
 import org.optaplanner.python.translator.types.PythonLikeType;
 
 /**
@@ -36,7 +39,10 @@ public class ObjectImplementor {
                     fieldDescriptor.getJavaFieldTypeDescriptor());
         } else {
             PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
-            DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.GET_ATTRIBUTE);
+            DunderOperatorImplementor.binaryOperator(methodVisitor,
+                    stackMetadata.push(ValueSourceInfo.of(new OpcodeWithoutSource(),
+                            BuiltinTypes.STRING_TYPE)),
+                    PythonBinaryOperators.GET_ATTRIBUTE);
         }
     }
 
@@ -58,7 +64,10 @@ public class ObjectImplementor {
                     fieldDescriptor.getJavaFieldTypeDescriptor());
         } else {
             PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
-            DunderOperatorImplementor.binaryOperator(methodVisitor, PythonBinaryOperators.DELETE_ATTRIBUTE);
+            DunderOperatorImplementor.binaryOperator(methodVisitor,
+                    stackMetadata.push(ValueSourceInfo.of(new OpcodeWithoutSource(),
+                            BuiltinTypes.STRING_TYPE)),
+                    PythonBinaryOperators.DELETE_ATTRIBUTE);
         }
     }
 

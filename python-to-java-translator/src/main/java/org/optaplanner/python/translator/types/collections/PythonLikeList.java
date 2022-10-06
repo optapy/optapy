@@ -51,31 +51,34 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
         });
 
         // Unary methods
-        LIST_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonLikeList.class.getMethod("length"));
-        LIST_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonLikeList.class.getMethod("getIterator"));
-        LIST_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, PythonLikeList.class.getMethod("getRepresentation"));
+        LIST_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, PythonLikeList.class.getMethod("length"));
+        LIST_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonLikeList.class.getMethod("getIterator"));
+        LIST_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, PythonLikeList.class.getMethod("getRepresentation"));
 
         // Binary methods
-        LIST_TYPE.addMethod(PythonBinaryOperators.ADD, PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class));
-        LIST_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD,
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.ADD,
+                PythonLikeList.class.getMethod("concatToNew", PythonLikeList.class));
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.INPLACE_ADD,
                 PythonLikeList.class.getMethod("concatToSelf", PythonLikeList.class));
-        LIST_TYPE.addMethod(PythonBinaryOperators.MULTIPLY,
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY,
                 PythonLikeList.class.getMethod("multiplyToNew", PythonInteger.class));
-        LIST_TYPE.addMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
                 PythonLikeList.class.getMethod("multiplyToSelf", PythonInteger.class));
-        LIST_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeList.class.getMethod("getItem", PythonInteger.class));
-        LIST_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeList.class.getMethod("getSlice", PythonSlice.class));
-        LIST_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
+                PythonLikeList.class.getMethod("getItem", PythonInteger.class));
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
+                PythonLikeList.class.getMethod("getSlice", PythonSlice.class));
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.DELETE_ITEM,
                 PythonLikeList.class.getMethod("deleteItem", PythonInteger.class));
-        LIST_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.DELETE_ITEM,
                 PythonLikeList.class.getMethod("deleteSlice", PythonSlice.class));
-        LIST_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        LIST_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 PythonLikeList.class.getMethod("containsItem", PythonLikeObject.class));
 
         // Ternary methods
-        LIST_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
+        LIST_TYPE.addTernaryMethod(PythonTernaryOperators.SET_ITEM,
                 PythonLikeList.class.getMethod("setItem", PythonInteger.class, PythonLikeObject.class));
-        LIST_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
+        LIST_TYPE.addTernaryMethod(PythonTernaryOperators.SET_ITEM,
                 PythonLikeList.class.getMethod("setSlice", PythonSlice.class, PythonLikeObject.class));
 
         // Other

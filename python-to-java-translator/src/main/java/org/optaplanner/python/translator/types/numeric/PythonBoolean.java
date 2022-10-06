@@ -31,15 +31,15 @@ public class PythonBoolean extends PythonInteger {
 
     public static PythonLikeType registerMethods() {
         try {
-            BOOLEAN_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN,
+            BOOLEAN_TYPE.addUnaryMethod(PythonUnaryOperator.AS_BOOLEAN,
                     new PythonFunctionSignature(new MethodDescriptor(
                             PythonBoolean.class.getMethod("asBoolean")),
                             BOOLEAN_TYPE));
-            BOOLEAN_TYPE.addMethod(PythonUnaryOperator.AS_STRING,
+            BOOLEAN_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING,
                     new PythonFunctionSignature(new MethodDescriptor(
                             PythonBoolean.class.getMethod("asString")),
                             STRING_TYPE));
-            BOOLEAN_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION,
+            BOOLEAN_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION,
                     new PythonFunctionSignature(new MethodDescriptor(
                             PythonBoolean.class.getMethod("asString")),
                             STRING_TYPE));

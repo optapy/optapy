@@ -65,23 +65,23 @@ public class PythonLikeDict extends AbstractPythonLikeObject
         }));
 
         // Unary operators
-        DICT_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonLikeDict.class.getMethod("getKeyIterator"));
-        DICT_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonLikeDict.class.getMethod("getSize"));
-        DICT_TYPE.addMethod(PythonUnaryOperator.REVERSED, PythonLikeDict.class.getMethod("reversed"));
+        DICT_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonLikeDict.class.getMethod("getKeyIterator"));
+        DICT_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, PythonLikeDict.class.getMethod("getSize"));
+        DICT_TYPE.addUnaryMethod(PythonUnaryOperator.REVERSED, PythonLikeDict.class.getMethod("reversed"));
 
         // Binary operators
-        DICT_TYPE.addMethod(PythonBinaryOperators.GET_ITEM,
+        DICT_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
                 PythonLikeDict.class.getMethod("getItemOrError", PythonLikeObject.class));
-        DICT_TYPE.addMethod(PythonBinaryOperators.DELETE_ITEM,
+        DICT_TYPE.addBinaryMethod(PythonBinaryOperators.DELETE_ITEM,
                 PythonLikeDict.class.getMethod("removeItemOrError", PythonLikeObject.class));
-        DICT_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        DICT_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 PythonLikeDict.class.getMethod("isKeyInDict", PythonLikeObject.class));
-        DICT_TYPE.addMethod(PythonBinaryOperators.OR, PythonLikeDict.class.getMethod("binaryOr", PythonLikeDict.class));
-        DICT_TYPE.addMethod(PythonBinaryOperators.INPLACE_OR,
+        DICT_TYPE.addBinaryMethod(PythonBinaryOperators.OR, PythonLikeDict.class.getMethod("binaryOr", PythonLikeDict.class));
+        DICT_TYPE.addBinaryMethod(PythonBinaryOperators.INPLACE_OR,
                 PythonLikeDict.class.getMethod("binaryInplaceOr", PythonLikeDict.class));
 
         // Ternary operators
-        DICT_TYPE.addMethod(PythonTernaryOperators.SET_ITEM,
+        DICT_TYPE.addTernaryMethod(PythonTernaryOperators.SET_ITEM,
                 PythonLikeDict.class.getMethod("setItem", PythonLikeObject.class, PythonLikeObject.class));
 
         // Other

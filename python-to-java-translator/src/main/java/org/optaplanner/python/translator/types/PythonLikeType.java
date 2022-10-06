@@ -96,31 +96,31 @@ public class PythonLikeType implements PythonLikeObject,
             BASE_TYPE.__dir__.put(PythonUnaryOperator.AS_STRING.getDunderMethod(),
                     new JavaMethodReference(Object.class.getMethod("toString"), Map.of()));
 
-            BASE_TYPE.addMethod(PythonBinaryOperators.GET_ATTRIBUTE, new PythonFunctionSignature(
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ATTRIBUTE, new PythonFunctionSignature(
                     MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("getAttribute",
                             PythonLikeObject.class, PythonString.class)),
                     BASE_TYPE, BASE_TYPE, STRING_TYPE));
-            BASE_TYPE.addMethod(PythonTernaryOperators.SET_ATTRIBUTE, new PythonFunctionSignature(
+            BASE_TYPE.addTernaryMethod(PythonTernaryOperators.SET_ATTRIBUTE, new PythonFunctionSignature(
                     MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("setAttribute",
                             PythonLikeObject.class, PythonString.class, PythonLikeObject.class)),
                     NONE_TYPE, BASE_TYPE, STRING_TYPE, BASE_TYPE));
-            BASE_TYPE.addMethod(PythonBinaryOperators.DELETE_ATTRIBUTE, new PythonFunctionSignature(
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.DELETE_ATTRIBUTE, new PythonFunctionSignature(
                     MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("deleteAttribute",
                             PythonLikeObject.class, PythonString.class)),
                     NONE_TYPE, BASE_TYPE, STRING_TYPE));
-            BASE_TYPE.addMethod(PythonBinaryOperators.EQUAL, new PythonFunctionSignature(
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.EQUAL, new PythonFunctionSignature(
                     MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("equal",
                             PythonLikeObject.class, PythonLikeObject.class)),
                     BOOLEAN_TYPE, BASE_TYPE, BASE_TYPE));
-            BASE_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL, new PythonFunctionSignature(
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.NOT_EQUAL, new PythonFunctionSignature(
                     MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("notEqual",
                             PythonLikeObject.class, PythonLikeObject.class)),
                     BOOLEAN_TYPE, BASE_TYPE, BASE_TYPE));
-            BASE_TYPE.addMethod(PythonUnaryOperator.REPRESENTATION, new PythonFunctionSignature(
+            BASE_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, new PythonFunctionSignature(
                     MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("repr",
                             PythonLikeObject.class)),
                     STRING_TYPE, BASE_TYPE));
-            BASE_TYPE.addMethod(PythonBinaryOperators.FORMAT, new PythonFunctionSignature(
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, new PythonFunctionSignature(
                     MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("formatPythonObject",
                             PythonLikeObject.class, PythonString.class)),
                     STRING_TYPE, BASE_TYPE, STRING_TYPE));
@@ -171,27 +171,49 @@ public class PythonLikeType implements PythonLikeObject,
         addMethod(methodName, PythonFunctionSignature.forMethod(method));
     }
 
-    public void addMethod(PythonUnaryOperator operator, Method method) {
+    public void addUnaryMethod(PythonUnaryOperator operator, Method method) {
         addMethod(operator.getDunderMethod(), PythonFunctionSignature.forMethod(method));
     }
 
-    public void addMethod(PythonBinaryOperators operator, Method method) {
+    public void addBinaryMethod(PythonBinaryOperators operator, Method method) {
+        addMethod(operator.getDunderMethod(), PythonFunctionSignature.forMethod(method));
+        if (operator.hasRightDunderMethod() && !operator.isComparisonMethod()) {
+            addMethod(operator.getRightDunderMethod(), PythonFunctionSignature.forMethod(method));
+        }
+    }
+
+    public void addLeftBinaryMethod(PythonBinaryOperators operator, Method method) {
         addMethod(operator.getDunderMethod(), PythonFunctionSignature.forMethod(method));
     }
 
-    public void addMethod(PythonTernaryOperators operator, Method method) {
+    public void addRightBinaryMethod(PythonBinaryOperators operator, Method method) {
+        addMethod(operator.getRightDunderMethod(), PythonFunctionSignature.forMethod(method));
+    }
+
+    public void addTernaryMethod(PythonTernaryOperators operator, Method method) {
         addMethod(operator.getDunderMethod(), PythonFunctionSignature.forMethod(method));
     }
 
-    public void addMethod(PythonUnaryOperator operator, PythonFunctionSignature method) {
+    public void addUnaryMethod(PythonUnaryOperator operator, PythonFunctionSignature method) {
         addMethod(operator.getDunderMethod(), method);
     }
 
-    public void addMethod(PythonBinaryOperators operator, PythonFunctionSignature method) {
+    public void addBinaryMethod(PythonBinaryOperators operator, PythonFunctionSignature method) {
+        addMethod(operator.getDunderMethod(), method);
+        if (operator.hasRightDunderMethod() && !operator.isComparisonMethod()) {
+            addMethod(operator.getRightDunderMethod(), method);
+        }
+    }
+
+    public void addLeftBinaryMethod(PythonBinaryOperators operator, PythonFunctionSignature method) {
         addMethod(operator.getDunderMethod(), method);
     }
 
-    public void addMethod(PythonTernaryOperators operator, PythonFunctionSignature method) {
+    public void addRightBinaryMethod(PythonBinaryOperators operator, PythonFunctionSignature method) {
+        addMethod(operator.getRightDunderMethod(), method);
+    }
+
+    public void addTernaryMethod(PythonTernaryOperators operator, PythonFunctionSignature method) {
         addMethod(operator.getDunderMethod(), method);
     }
 
@@ -199,15 +221,26 @@ public class PythonLikeType implements PythonLikeObject,
         addMethod(methodName, PythonGenericFunctionSignature.forGenericMethod(method));
     }
 
-    public void addGenericMethod(PythonUnaryOperator operator, Method method) {
+    public void addGenericUnaryMethod(PythonUnaryOperator operator, Method method) {
         addMethod(operator.getDunderMethod(), PythonGenericFunctionSignature.forGenericMethod(method));
     }
 
-    public void addGenericMethod(PythonBinaryOperators operator, Method method) {
-        addMethod(operator.getDunderMethod(), PythonGenericFunctionSignature.forGenericMethod(method));
+    public void addGenericBinaryMethod(PythonBinaryOperators operator, Method method) {
+        addMethod(operator.getDunderMethod(), method);
+        if (operator.hasRightDunderMethod() && !operator.isComparisonMethod()) {
+            addMethod(operator.getRightDunderMethod(), method);
+        }
     }
 
-    public void addGenericMethod(PythonTernaryOperators operator, Method method) {
+    public void addGenericLeftBinaryMethod(PythonBinaryOperators operator, Method method) {
+        addMethod(operator.getDunderMethod(), method);
+    }
+
+    public void addGenericRightBinaryMethod(PythonBinaryOperators operator, Method method) {
+        addMethod(operator.getRightDunderMethod(), method);
+    }
+
+    public void addGenericTernaryMethod(PythonTernaryOperators operator, Method method) {
         addMethod(operator.getDunderMethod(), PythonGenericFunctionSignature.forGenericMethod(method));
     }
 
@@ -217,9 +250,13 @@ public class PythonLikeType implements PythonLikeObject,
         knownFunctionType.getOverloadFunctionSignatureList().add(method);
     }
 
+    public Set<String> getKnownMethodsDefinedByClass() {
+        return functionNameToKnownFunctionType.keySet();
+    }
+
     public Set<String> getKnownMethods() {
         Set<String> out = new HashSet<>();
-        getAssignableTypesStream().forEach(type -> out.addAll(type.functionNameToKnownFunctionType.keySet()));
+        getAssignableTypesStream().forEach(type -> out.addAll(type.getKnownMethodsDefinedByClass()));
         return out;
     }
 
@@ -348,6 +385,22 @@ public class PythonLikeType implements PythonLikeObject,
     public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
             Map<PythonString, PythonLikeObject> namedArguments) {
         return constructor.__call__(positionalArguments, namedArguments);
+    }
+
+    public PythonLikeType getDefiningTypeOrNull(String attributeName) {
+        if (__dir__.containsKey(attributeName) &&
+                (this == BASE_TYPE
+                        || (__dir__.get(attributeName).getClass() != BASE_TYPE.__dir__.get(attributeName).getClass()))) {
+            return this;
+        }
+
+        for (PythonLikeType parent : PARENT_TYPES) {
+            PythonLikeType out = parent.getDefiningTypeOrNull(attributeName);
+            if (out != null) {
+                return out;
+            }
+        }
+        return null;
     }
 
     public PythonLikeObject __getAttributeOrNull(String attributeName) {

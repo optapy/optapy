@@ -53,16 +53,19 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
             }
         });
         // Unary
-        TUPLE_TYPE.addMethod(PythonUnaryOperator.LENGTH, PythonLikeTuple.class.getMethod("getLength"));
-        TUPLE_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonLikeTuple.class.getMethod("getIterator"));
+        TUPLE_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, PythonLikeTuple.class.getMethod("getLength"));
+        TUPLE_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonLikeTuple.class.getMethod("getIterator"));
 
         // Binary
-        TUPLE_TYPE.addMethod(PythonBinaryOperators.ADD, PythonLikeTuple.class.getMethod("concatToNew", PythonLikeTuple.class));
-        TUPLE_TYPE.addMethod(PythonBinaryOperators.MULTIPLY,
+        TUPLE_TYPE.addBinaryMethod(PythonBinaryOperators.ADD,
+                PythonLikeTuple.class.getMethod("concatToNew", PythonLikeTuple.class));
+        TUPLE_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY,
                 PythonLikeTuple.class.getMethod("multiplyToNew", PythonInteger.class));
-        TUPLE_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeTuple.class.getMethod("getItem", PythonInteger.class));
-        TUPLE_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, PythonLikeTuple.class.getMethod("getSlice", PythonSlice.class));
-        TUPLE_TYPE.addMethod(PythonBinaryOperators.CONTAINS,
+        TUPLE_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
+                PythonLikeTuple.class.getMethod("getItem", PythonInteger.class));
+        TUPLE_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM,
+                PythonLikeTuple.class.getMethod("getSlice", PythonSlice.class));
+        TUPLE_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
                 PythonLikeTuple.class.getMethod("containsItem", PythonLikeObject.class));
 
         // Other

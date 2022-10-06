@@ -46,12 +46,12 @@ def test_repeat():
     repeat_verifier.verify(bytearray(b'test'), -1, expected_result=(bytearray(b''), False, False))
     repeat_verifier.verify(bytearray(b'test'), -2, expected_result=(bytearray(b''), False, False))
 
-    # TODO: Support right versions of binary operators in bytecode translator
-    # repeat_verifier.verify(2, (1, 2, 3), expected_result=((1, 2, 3, 1, 2, 3), False, False))
-    # repeat_verifier.verify(4, (1, 2), expected_result=((1, 2, 1, 2, 1, 2, 1, 2), False, False))
-    # repeat_verifier.verify(0, (1, 2, 3), expected_result=((), False, False))
-    # repeat_verifier.verify(-1, (1, 2, 3), expected_result=((), False, False))
-    # repeat_verifier.verify(-2, (1, 2, 3), expected_result=((), False, False))
+    repeat_verifier.verify(1, bytearray(b'hi'), expected_result=(bytearray(b'hi'), False, False))
+    repeat_verifier.verify(2, bytearray(b'abc'), expected_result=(bytearray(b'abcabc'), False, False))
+    repeat_verifier.verify(4, bytearray(b'a'), expected_result=(bytearray(b'aaaa'), False, False))
+    repeat_verifier.verify(0, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
+    repeat_verifier.verify(-1, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
+    repeat_verifier.verify(-2, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
 
 
 def test_get_item():

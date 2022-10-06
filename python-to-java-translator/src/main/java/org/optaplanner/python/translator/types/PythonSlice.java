@@ -64,10 +64,10 @@ public class PythonSlice extends AbstractPythonLikeObject {
         }));
 
         // Unary
-        SLICE_TYPE.addMethod(PythonUnaryOperator.HASH, PythonSlice.class.getMethod("pythonHash"));
+        SLICE_TYPE.addUnaryMethod(PythonUnaryOperator.HASH, PythonSlice.class.getMethod("pythonHash"));
 
         // Binary
-        SLICE_TYPE.addMethod(PythonBinaryOperators.EQUAL, PythonSlice.class.getMethod("pythonEquals", PythonSlice.class));
+        SLICE_TYPE.addBinaryMethod(PythonBinaryOperators.EQUAL, PythonSlice.class.getMethod("pythonEquals", PythonSlice.class));
 
         // Other methods
         SLICE_TYPE.addMethod("indices", PythonSlice.class.getMethod("indices", PythonInteger.class));

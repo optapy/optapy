@@ -59,80 +59,100 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
             }
         });
         // Unary
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.AS_BOOLEAN, PythonFloat.class.getMethod("asBoolean"));
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.AS_INT, PythonFloat.class.getMethod("asInteger"));
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.POSITIVE, PythonFloat.class.getMethod("asFloat"));
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.NEGATIVE, PythonFloat.class.getMethod("negative"));
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.ABS, PythonFloat.class.getMethod("abs"));
-        FLOAT_TYPE.addMethod(PythonUnaryOperator.HASH, PythonFloat.class.getMethod("computePythonHash"));
+        FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.AS_BOOLEAN, PythonFloat.class.getMethod("asBoolean"));
+        FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.AS_INT, PythonFloat.class.getMethod("asInteger"));
+        FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.POSITIVE, PythonFloat.class.getMethod("asFloat"));
+        FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.NEGATIVE, PythonFloat.class.getMethod("negative"));
+        FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.ABS, PythonFloat.class.getMethod("abs"));
+        FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.HASH, PythonFloat.class.getMethod("computePythonHash"));
 
         // Binary
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.ADD, PythonFloat.class.getMethod("add", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.ADD, PythonFloat.class.getMethod("add", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.SUBTRACT, PythonFloat.class.getMethod("subtract", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.SUBTRACT, PythonFloat.class.getMethod("subtract", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.MULTIPLY, PythonFloat.class.getMethod("multiply", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.MULTIPLY, PythonFloat.class.getMethod("multiply", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE, PythonFloat.class.getMethod("trueDivide", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.TRUE_DIVIDE, PythonFloat.class.getMethod("trueDivide", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.FLOOR_DIVIDE,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.ADD, PythonFloat.class.getMethod("add", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.ADD, PythonFloat.class.getMethod("add", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.SUBTRACT,
+                PythonFloat.class.getMethod("subtract", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.SUBTRACT,
+                PythonFloat.class.getMethod("subtract", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MULTIPLY,
+                PythonFloat.class.getMethod("multiply", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MULTIPLY,
+                PythonFloat.class.getMethod("multiply", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
+                PythonFloat.class.getMethod("trueDivide", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
+                PythonFloat.class.getMethod("trueDivide", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
                 PythonFloat.class.getMethod("floorDivide", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.FLOOR_DIVIDE, PythonFloat.class.getMethod("floorDivide", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.DIVMOD, PythonFloat.class.getMethod("divmod", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.DIVMOD, PythonFloat.class.getMethod("divmod", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonFloat.class.getMethod("modulo", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.MODULO, PythonFloat.class.getMethod("modulo", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.POWER, PythonFloat.class.getMethod("power", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.POWER, PythonFloat.class.getMethod("power", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
+                PythonFloat.class.getMethod("floorDivide", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.DIVMOD,
+                PythonFloat.class.getMethod("divmod", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.DIVMOD, PythonFloat.class.getMethod("divmod", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MODULO,
+                PythonFloat.class.getMethod("modulo", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MODULO, PythonFloat.class.getMethod("modulo", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.POWER, PythonFloat.class.getMethod("power", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.POWER, PythonFloat.class.getMethod("power", PythonFloat.class));
 
         // Inplace Binary (identical to Binary)
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD, PythonFloat.class.getMethod("add", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_ADD, PythonFloat.class.getMethod("add", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_ADD,
+                PythonFloat.class.getMethod("add", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_ADD,
+                PythonFloat.class.getMethod("add", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
                 PythonFloat.class.getMethod("subtract", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
                 PythonFloat.class.getMethod("subtract", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
                 PythonFloat.class.getMethod("multiply", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
                 PythonFloat.class.getMethod("multiply", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
                 PythonFloat.class.getMethod("trueDivide", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
                 PythonFloat.class.getMethod("trueDivide", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
                 PythonFloat.class.getMethod("floorDivide", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
                 PythonFloat.class.getMethod("floorDivide", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MODULO, PythonFloat.class.getMethod("modulo", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_MODULO, PythonFloat.class.getMethod("modulo", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_POWER, PythonFloat.class.getMethod("power", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.INPLACE_POWER, PythonFloat.class.getMethod("power", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MODULO,
+                PythonFloat.class.getMethod("modulo", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MODULO,
+                PythonFloat.class.getMethod("modulo", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_POWER,
+                PythonFloat.class.getMethod("power", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_POWER,
+                PythonFloat.class.getMethod("power", PythonFloat.class));
 
         // Comparisons
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.EQUAL, PythonFloat.class.getMethod("equal", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.EQUAL, PythonFloat.class.getMethod("equal", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL, PythonFloat.class.getMethod("notEqual", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.NOT_EQUAL, PythonFloat.class.getMethod("notEqual", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN, PythonFloat.class.getMethod("lessThan", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN, PythonFloat.class.getMethod("lessThan", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.EQUAL, PythonFloat.class.getMethod("equal", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.EQUAL, PythonFloat.class.getMethod("equal", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.NOT_EQUAL,
+                PythonFloat.class.getMethod("notEqual", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.NOT_EQUAL,
+                PythonFloat.class.getMethod("notEqual", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN,
+                PythonFloat.class.getMethod("lessThan", PythonInteger.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN,
+                PythonFloat.class.getMethod("lessThan", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 PythonFloat.class.getMethod("lessThanOrEqual", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 PythonFloat.class.getMethod("lessThanOrEqual", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN,
                 PythonFloat.class.getMethod("greaterThan", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN, PythonFloat.class.getMethod("greaterThan", PythonFloat.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN,
+                PythonFloat.class.getMethod("greaterThan", PythonFloat.class));
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 PythonFloat.class.getMethod("greaterThanOrEqual", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
+        FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 PythonFloat.class.getMethod("greaterThanOrEqual", PythonFloat.class));
 
         // Other
         FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round"));
         FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round", PythonInteger.class));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format"));
-        FLOAT_TYPE.addMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format", PythonString.class));
+        FLOAT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format"));
+        FLOAT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format", PythonString.class));
 
         return FLOAT_TYPE;
     }

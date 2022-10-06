@@ -84,21 +84,21 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
                         DATE_TYPE, TIME_TYPE));
 
         // Unary Operators
-        DATE_TIME_TYPE.addMethod(PythonUnaryOperator.AS_STRING,
+        DATE_TIME_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING,
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDateTime.class.getMethod("toPythonString")),
                         STRING_TYPE));
 
         // Binary Operators
-        DATE_TIME_TYPE.addMethod(PythonBinaryOperators.ADD,
+        DATE_TIME_TYPE.addBinaryMethod(PythonBinaryOperators.ADD,
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDateTime.class.getMethod("add_time_delta", PythonTimeDelta.class)),
                         DATE_TIME_TYPE, TIME_DELTA_TYPE));
-        DATE_TIME_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        DATE_TIME_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDateTime.class.getMethod("subtract_time_delta", PythonTimeDelta.class)),
                         DATE_TIME_TYPE, TIME_DELTA_TYPE));
-        DATE_TIME_TYPE.addMethod(PythonBinaryOperators.SUBTRACT,
+        DATE_TIME_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 new PythonFunctionSignature(new MethodDescriptor(
                         PythonDateTime.class.getMethod("subtract_date_time", PythonDateTime.class)),
                         TIME_DELTA_TYPE, DATE_TIME_TYPE));

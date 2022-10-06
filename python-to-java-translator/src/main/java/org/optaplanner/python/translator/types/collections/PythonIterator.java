@@ -19,8 +19,8 @@ public class PythonIterator<T> extends AbstractPythonLikeObject implements Itera
     }
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
-        ITERATOR_TYPE.addMethod(PythonUnaryOperator.NEXT, PythonIterator.class.getMethod("nextPythonItem"));
-        ITERATOR_TYPE.addMethod(PythonUnaryOperator.ITERATOR, PythonIterator.class.getMethod("getIterator"));
+        ITERATOR_TYPE.addUnaryMethod(PythonUnaryOperator.NEXT, PythonIterator.class.getMethod("nextPythonItem"));
+        ITERATOR_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonIterator.class.getMethod("getIterator"));
         return ITERATOR_TYPE;
     }
 

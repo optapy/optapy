@@ -21,7 +21,8 @@ public class DeleteItemOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        DunderOperatorImplementor.binaryOperator(functionMetadata.methodVisitor, PythonBinaryOperators.DELETE_ITEM);
+        DunderOperatorImplementor.binaryOperator(functionMetadata.methodVisitor, stackMetadata,
+                PythonBinaryOperators.DELETE_ITEM);
         functionMetadata.methodVisitor.visitInsn(Opcodes.POP); // DELETE_ITEM ignore results of delete function
     }
 }

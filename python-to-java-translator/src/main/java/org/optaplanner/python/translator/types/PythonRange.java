@@ -94,18 +94,18 @@ public class PythonRange extends AbstractPythonLikeObject implements List<Python
         }));
 
         // Unary methods
-        RANGE_TYPE.addMethod(PythonUnaryOperator.LENGTH, new PythonFunctionSignature(
+        RANGE_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, new PythonFunctionSignature(
                 new MethodDescriptor(PythonRange.class.getMethod("getLength")),
                 INT_TYPE));
-        RANGE_TYPE.addMethod(PythonUnaryOperator.ITERATOR, new PythonFunctionSignature(
+        RANGE_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, new PythonFunctionSignature(
                 new MethodDescriptor(PythonRange.class.getMethod("getPythonIterator")),
                 ITERATOR_TYPE));
 
         // Binary methods
-        RANGE_TYPE.addMethod(PythonBinaryOperators.GET_ITEM, new PythonFunctionSignature(
+        RANGE_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM, new PythonFunctionSignature(
                 new MethodDescriptor(PythonRange.class.getMethod("getItem", PythonInteger.class)),
                 INT_TYPE, INT_TYPE));
-        RANGE_TYPE.addMethod(PythonBinaryOperators.CONTAINS, new PythonFunctionSignature(
+        RANGE_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS, new PythonFunctionSignature(
                 new MethodDescriptor(PythonRange.class.getMethod("isObjectInRange", PythonLikeObject.class)),
                 BOOLEAN_TYPE, BASE_TYPE));
 

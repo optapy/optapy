@@ -23,6 +23,6 @@ public class ContainsOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        CollectionImplementor.containsOperator(functionMetadata.methodVisitor, instruction);
+        CollectionImplementor.containsOperator(functionMetadata.methodVisitor, stackMetadata, instruction);
     }
 }

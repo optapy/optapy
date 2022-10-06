@@ -8,8 +8,11 @@ import java.util.Map;
 
 import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class CPythonType extends PythonLikeType {
 
@@ -43,9 +46,72 @@ public class CPythonType extends PythonLikeType {
 
     @Override
     public PythonLikeObject __getAttributeOrNull(String attributeName) {
-        return cachedAttributeMap.computeIfAbsent(attributeName,
-                key -> CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
-                        attributeName));
+        switch (attributeName) {
+            case "__eq__":
+                return cachedAttributeMap.computeIfAbsent(attributeName,
+                        key -> {
+                            PythonLikeObject equals =
+                                    CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
+                                            attributeName);
+                            if (equals instanceof PythonLikeFunction) {
+                                final PythonLikeFunction function = (PythonLikeFunction) equals;
+                                return (PythonLikeFunction) (pos, named) -> {
+                                    PythonLikeObject result = function.__call__(pos, named);
+                                    if (result instanceof PythonBoolean) {
+                                        return result;
+                                    } else {
+                                        return PythonBoolean.valueOf(pos.get(0) == pos.get(1));
+                                    }
+                                };
+                            } else {
+                                return equals;
+                            }
+                        });
+            case "__ne__":
+                return cachedAttributeMap.computeIfAbsent(attributeName,
+                        key -> {
+                            PythonLikeObject notEquals =
+                                    CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
+                                            attributeName);
+                            if (notEquals instanceof PythonLikeFunction) {
+                                final PythonLikeFunction function = (PythonLikeFunction) notEquals;
+                                return (PythonLikeFunction) (pos, named) -> {
+                                    PythonLikeObject result = function.__call__(pos, named);
+                                    if (result instanceof PythonBoolean) {
+                                        return result;
+                                    } else {
+                                        return PythonBoolean.valueOf(pos.get(0) != pos.get(1));
+                                    }
+                                };
+                            } else {
+                                return notEquals;
+                            }
+                        });
+            case "__hash__":
+                return cachedAttributeMap.computeIfAbsent(attributeName,
+                        key -> {
+                            PythonLikeObject hash =
+                                    CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
+                                            attributeName);
+                            if (hash instanceof PythonLikeFunction) {
+                                final PythonLikeFunction function = (PythonLikeFunction) hash;
+                                return (PythonLikeFunction) (pos, named) -> {
+                                    PythonLikeObject result = function.__call__(pos, named);
+                                    if (result instanceof PythonInteger) {
+                                        return result;
+                                    } else {
+                                        return PythonInteger.valueOf(System.identityHashCode(pos.get(0)));
+                                    }
+                                };
+                            } else {
+                                return hash;
+                            }
+                        });
+            default:
+                return cachedAttributeMap.computeIfAbsent(attributeName,
+                        key -> CPythonBackedPythonInterpreter.lookupAttributeOnPythonReference(pythonReference,
+                                attributeName));
+        }
     }
 
     @Override

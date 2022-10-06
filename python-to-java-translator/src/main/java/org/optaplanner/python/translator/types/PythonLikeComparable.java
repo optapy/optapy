@@ -10,16 +10,16 @@ import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 public interface PythonLikeComparable<T> extends Comparable<T> {
     static void setup(PythonLikeType type) {
         try {
-            type.addMethod(PythonBinaryOperators.LESS_THAN, new PythonFunctionSignature(
+            type.addBinaryMethod(PythonBinaryOperators.LESS_THAN, new PythonFunctionSignature(
                     new MethodDescriptor(PythonLikeComparable.class.getMethod("lessThan", Object.class)),
                     BOOLEAN_TYPE, type));
-            type.addMethod(PythonBinaryOperators.GREATER_THAN, new PythonFunctionSignature(
+            type.addBinaryMethod(PythonBinaryOperators.GREATER_THAN, new PythonFunctionSignature(
                     new MethodDescriptor(PythonLikeComparable.class.getMethod("greaterThan", Object.class)),
                     BOOLEAN_TYPE, type));
-            type.addMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL, new PythonFunctionSignature(
+            type.addBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL, new PythonFunctionSignature(
                     new MethodDescriptor(PythonLikeComparable.class.getMethod("lessThanOrEqual", Object.class)),
                     BOOLEAN_TYPE, type));
-            type.addMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL, new PythonFunctionSignature(
+            type.addBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL, new PythonFunctionSignature(
                     new MethodDescriptor(PythonLikeComparable.class.getMethod("greaterThanOrEqual", Object.class)),
                     BOOLEAN_TYPE, type));
         } catch (NoSuchMethodException e) {
