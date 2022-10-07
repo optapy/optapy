@@ -1431,6 +1431,19 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         return value.compareTo(pythonString.value);
     }
 
+    @Override
+    public PythonString $method$__format__(PythonLikeObject specObject) {
+        PythonString spec;
+        if (specObject == PythonNone.INSTANCE) {
+            return formatSelf();
+        } else if (specObject instanceof PythonString) {
+            spec = (PythonString) specObject;
+        } else {
+            throw new TypeError("__format__ argument 0 has incorrect type (expecting str or None)");
+        }
+        return formatSelf(spec);
+    }
+
     public PythonString repr() {
         return PythonString.valueOf("'" + value.codePoints()
                 .flatMap(character -> {
@@ -1486,5 +1499,10 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     @Override
     public int hashCode() {
         return value.hashCode();
+    }
+
+    @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
     }
 }

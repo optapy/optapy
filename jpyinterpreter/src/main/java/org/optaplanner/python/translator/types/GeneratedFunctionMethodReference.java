@@ -13,11 +13,14 @@ public class GeneratedFunctionMethodReference implements PythonLikeFunction {
 
     private final Method method;
     private final Map<String, Integer> parameterNameToIndexMap;
+    private final PythonLikeType type;
 
-    public GeneratedFunctionMethodReference(Object instance, Method method, Map<String, Integer> parameterNameToIndexMap) {
+    public GeneratedFunctionMethodReference(Object instance, Method method, Map<String, Integer> parameterNameToIndexMap,
+            PythonLikeType type) {
         this.instance = instance;
         this.method = method;
         this.parameterNameToIndexMap = parameterNameToIndexMap;
+        this.type = type;
     }
 
     @Override
@@ -50,5 +53,10 @@ public class GeneratedFunctionMethodReference implements PythonLikeFunction {
         }
 
         return out;
+    }
+
+    @Override
+    public PythonLikeType __getType() {
+        return type;
     }
 }

@@ -136,4 +136,8 @@ public class CPythonType extends PythonLikeType {
             Map<PythonString, PythonLikeObject> namedArguments) {
         return CPythonBackedPythonInterpreter.callPythonReference(pythonReference, positionalArguments, namedArguments);
     }
+
+    public OpaquePythonReference getPythonReference() {
+        return pythonReference;
+    }
 }

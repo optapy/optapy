@@ -565,4 +565,9 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
     public int hashCode() {
         return dateTime.hashCode();
     }
+
+    @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
+    }
 }

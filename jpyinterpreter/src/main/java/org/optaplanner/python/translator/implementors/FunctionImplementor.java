@@ -135,10 +135,10 @@ public class FunctionImplementor {
                 "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
                 true);
         methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
-                "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeType.class),
+                "loadMethod", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(String.class)),
-                true);
+                false);
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
 

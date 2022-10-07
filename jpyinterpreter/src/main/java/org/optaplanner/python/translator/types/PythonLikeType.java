@@ -1,9 +1,9 @@
 package org.optaplanner.python.translator.types;
 
 import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
-import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
-import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
-import static org.optaplanner.python.translator.types.BuiltinTypes.STRING_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.CLASS_FUNCTION_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.FUNCTION_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.STATIC_FUNCTION_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.TYPE_TYPE;
 
 import java.lang.reflect.Method;
@@ -21,19 +21,19 @@ import java.util.stream.Stream;
 
 import org.objectweb.asm.Type;
 import org.optaplanner.python.translator.FieldDescriptor;
-import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
+import org.optaplanner.python.translator.PythonClassTranslator;
 import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonGenericFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonTernaryOperators;
 import org.optaplanner.python.translator.PythonUnaryOperator;
-import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
+import org.optaplanner.python.translator.builtins.TernaryDunderBuiltin;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
+import org.optaplanner.python.translator.types.errors.AttributeError;
 import org.optaplanner.python.translator.types.errors.ValueError;
-import org.optaplanner.python.translator.types.wrappers.JavaMethodReference;
 
 public class PythonLikeType implements PythonLikeObject,
         PythonLikeFunction {
@@ -93,39 +93,21 @@ public class PythonLikeType implements PythonLikeObject,
 
     public static PythonLikeType registerBaseType() {
         try {
-            BASE_TYPE.__dir__.put(PythonUnaryOperator.AS_STRING.getDunderMethod(),
-                    new JavaMethodReference(Object.class.getMethod("toString"), Map.of()));
-
-            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ATTRIBUTE, new PythonFunctionSignature(
-                    MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("getAttribute",
-                            PythonLikeObject.class, PythonString.class)),
-                    BASE_TYPE, BASE_TYPE, STRING_TYPE));
-            BASE_TYPE.addTernaryMethod(PythonTernaryOperators.SET_ATTRIBUTE, new PythonFunctionSignature(
-                    MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("setAttribute",
-                            PythonLikeObject.class, PythonString.class, PythonLikeObject.class)),
-                    NONE_TYPE, BASE_TYPE, STRING_TYPE, BASE_TYPE));
-            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.DELETE_ATTRIBUTE, new PythonFunctionSignature(
-                    MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("deleteAttribute",
-                            PythonLikeObject.class, PythonString.class)),
-                    NONE_TYPE, BASE_TYPE, STRING_TYPE));
-            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.EQUAL, new PythonFunctionSignature(
-                    MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("equal",
-                            PythonLikeObject.class, PythonLikeObject.class)),
-                    BOOLEAN_TYPE, BASE_TYPE, BASE_TYPE));
-            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.NOT_EQUAL, new PythonFunctionSignature(
-                    MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("notEqual",
-                            PythonLikeObject.class, PythonLikeObject.class)),
-                    BOOLEAN_TYPE, BASE_TYPE, BASE_TYPE));
-            BASE_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, new PythonFunctionSignature(
-                    MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("repr",
-                            PythonLikeObject.class)),
-                    STRING_TYPE, BASE_TYPE));
-            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, new PythonFunctionSignature(
-                    MethodDescriptor.useStaticMethodAsVirtual(ObjectBuiltinOperations.class.getMethod("formatPythonObject",
-                            PythonLikeObject.class, PythonString.class)),
-                    STRING_TYPE, BASE_TYPE, STRING_TYPE));
-            BASE_TYPE.__dir__.put(PythonUnaryOperator.HASH.getDunderMethod(),
-                    new JavaMethodReference(Object.class.getMethod("hashCode"), Map.of()));
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ATTRIBUTE,
+                    PythonLikeObject.class.getMethod("$method$__getattribute__", PythonString.class));
+            BASE_TYPE.addTernaryMethod(PythonTernaryOperators.SET_ATTRIBUTE,
+                    PythonLikeObject.class.getMethod("$method$__setattr__", PythonString.class, PythonLikeObject.class));
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.DELETE_ATTRIBUTE,
+                    PythonLikeObject.class.getMethod("$method$__delattr__", PythonString.class));
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.EQUAL,
+                    PythonLikeObject.class.getMethod("$method$__eq__", PythonLikeObject.class));
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.NOT_EQUAL,
+                    PythonLikeObject.class.getMethod("$method$__ne__", PythonLikeObject.class));
+            BASE_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING, PythonLikeObject.class.getMethod("$method$__str__"));
+            BASE_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, PythonLikeObject.class.getMethod("$method$__repr__"));
+            BASE_TYPE.addUnaryMethod(PythonUnaryOperator.HASH, PythonLikeObject.class.getMethod("$method$__hash__"));
+            BASE_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT,
+                    PythonLikeObject.class.getMethod("$method$__format__", PythonLikeObject.class));
             BASE_TYPE.setConstructor((vargs, kwargs) -> new AbstractPythonLikeObject(BASE_TYPE) {
             });
 
@@ -165,6 +147,28 @@ public class PythonLikeType implements PythonLikeObject,
         });
 
         return TYPE_TYPE;
+    }
+
+    @Override
+    public PythonLikeObject $method$__getattribute__(PythonString pythonName) {
+        String name = pythonName.value;
+        PythonLikeObject typeResult = __getAttributeOrNull(name);
+        if (typeResult != null) {
+            PythonLikeObject maybeDescriptor = typeResult.__getAttributeOrNull(PythonTernaryOperators.GET.dunderMethod);
+            if (maybeDescriptor == null) {
+                maybeDescriptor = typeResult.__getType().__getAttributeOrNull(PythonTernaryOperators.GET.dunderMethod);
+            }
+
+            if (maybeDescriptor != null) {
+                if (!(maybeDescriptor instanceof PythonLikeFunction)) {
+                    throw new UnsupportedOperationException("'" + maybeDescriptor.__getType() + "' is not callable");
+                }
+                return TernaryDunderBuiltin.GET_DESCRIPTOR.invoke(typeResult, PythonNone.INSTANCE, this);
+            }
+            return typeResult;
+        }
+
+        throw new AttributeError("object '" + this + "' does not have attribute '" + name + "'");
     }
 
     public void addMethod(String methodName, Method method) {
@@ -287,6 +291,25 @@ public class PythonLikeType implements PythonLikeObject,
         return Optional.of(out);
     }
 
+    public Optional<PythonClassTranslator.PythonMethodKind> getMethodKind(String methodName) {
+        PythonLikeObject maybeMethod = __getAttributeOrNull(methodName);
+        if (maybeMethod != null) {
+            PythonLikeType methodKind = maybeMethod.__getType();
+            if (methodKind == FUNCTION_TYPE) {
+                return Optional.of(PythonClassTranslator.PythonMethodKind.VIRTUAL_METHOD);
+            }
+            if (methodKind == STATIC_FUNCTION_TYPE) {
+                return Optional.of(PythonClassTranslator.PythonMethodKind.STATIC_METHOD);
+            }
+            if (methodKind == CLASS_FUNCTION_TYPE) {
+                return Optional.of(PythonClassTranslator.PythonMethodKind.CLASS_METHOD);
+            }
+            return Optional.empty();
+        } else {
+            return Optional.empty();
+        }
+    }
+
     public Optional<PythonKnownFunctionType> getConstructorType() {
         return constructorKnownFunctionType;
     }
@@ -385,6 +408,24 @@ public class PythonLikeType implements PythonLikeObject,
     public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
             Map<PythonString, PythonLikeObject> namedArguments) {
         return constructor.__call__(positionalArguments, namedArguments);
+    }
+
+    public PythonLikeObject loadMethod(String methodName) {
+        PythonLikeObject out = __getAttributeOrNull(methodName);
+        if (out == null) {
+            return null;
+        }
+
+        if (out.__getType() == PythonLikeFunction.getFunctionType()) {
+            return out;
+        }
+
+        return null;
+        //if (out.__getType() == PythonLikeFunction.getClassFunctionType()) {
+        //    return FunctionBuiltinOperations.bindFunctionToType((PythonLikeFunction) out, null, this);
+        //} else {
+        //    return null;
+        //}
     }
 
     public PythonLikeType getDefiningTypeOrNull(String attributeName) {

@@ -2,35 +2,20 @@ package org.optaplanner.python.translator.types;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.PythonTernaryOperators;
-import org.optaplanner.python.translator.builtins.FunctionBuiltinOperations;
-import org.optaplanner.python.translator.types.wrappers.JavaMethodReference;
 
 public interface PythonLikeFunction extends PythonLikeObject {
-
-    AtomicReference<PythonLikeType> __$FUNCTION_TYPE_REFERENCE = new AtomicReference<>();
+    static PythonLikeType getStaticFunctionType() {
+        return BuiltinTypes.STATIC_FUNCTION_TYPE;
+    }
 
     static PythonLikeType getFunctionType() {
-        PythonLikeType out = __$FUNCTION_TYPE_REFERENCE.get();
-        if (out != null) {
-            return out;
-        }
-        out = new PythonLikeType("function", PythonLikeFunction.class, type -> {
-            try {
-                type.__dir__.put(PythonTernaryOperators.GET.dunderMethod,
-                        new JavaMethodReference(
-                                FunctionBuiltinOperations.class.getMethod("bindFunctionToInstance", PythonLikeFunction.class,
-                                        PythonLikeObject.class, PythonLikeType.class),
-                                Map.of("self", 0, "obj", 1, "objtype", 2)));
-            } catch (NoSuchMethodException e) {
-                throw new IllegalStateException(e);
-            }
-        });
-        __$FUNCTION_TYPE_REFERENCE.set(out);
-        return out;
+        return BuiltinTypes.FUNCTION_TYPE;
+    }
+
+    static PythonLikeType getClassFunctionType() {
+        return BuiltinTypes.CLASS_FUNCTION_TYPE;
     }
 
     /**
@@ -66,6 +51,6 @@ public interface PythonLikeFunction extends PythonLikeObject {
 
     @Override
     default PythonLikeType __getType() {
-        return __$FUNCTION_TYPE_REFERENCE.get();
+        return BuiltinTypes.FUNCTION_TYPE;
     }
 }

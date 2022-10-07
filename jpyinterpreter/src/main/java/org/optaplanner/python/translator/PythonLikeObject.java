@@ -1,7 +1,17 @@
 package org.optaplanner.python.translator;
 
+import java.util.Objects;
+
+import org.optaplanner.python.translator.builtins.TernaryDunderBuiltin;
+import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
+import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.AttributeError;
+import org.optaplanner.python.translator.types.errors.TypeError;
+import org.optaplanner.python.translator.types.numeric.PythonBoolean;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 /**
  * Represents an Object that can be interacted with like a Python Object.
@@ -55,4 +65,82 @@ public interface PythonLikeObject {
      * @return the type describing the object
      */
     PythonLikeType __getType();
+
+    default PythonLikeObject $method$__getattribute__(PythonString pythonName) {
+        String name = pythonName.value;
+        PythonLikeObject objectResult = __getAttributeOrNull(name);
+        if (objectResult != null) {
+            return objectResult;
+        }
+
+        PythonLikeType type = __getType();
+        PythonLikeObject typeResult = type.__getAttributeOrNull(name);
+        if (typeResult != null) {
+            PythonLikeObject maybeDescriptor = typeResult.__getAttributeOrNull(PythonTernaryOperators.GET.dunderMethod);
+            if (maybeDescriptor == null) {
+                maybeDescriptor = typeResult.__getType().__getAttributeOrNull(PythonTernaryOperators.GET.dunderMethod);
+            }
+
+            if (maybeDescriptor != null) {
+                if (!(maybeDescriptor instanceof PythonLikeFunction)) {
+                    throw new UnsupportedOperationException("'" + maybeDescriptor.__getType() + "' is not callable");
+                }
+                return TernaryDunderBuiltin.GET_DESCRIPTOR.invoke(typeResult, this, type);
+            }
+            return typeResult;
+        }
+
+        throw new AttributeError("object '" + this + "' does not have attribute '" + name + "'");
+    }
+
+    default PythonLikeObject $method$__setattr__(PythonString pythonName, PythonLikeObject value) {
+        String name = pythonName.value;
+        __setAttribute(name, value);
+        return PythonNone.INSTANCE;
+    }
+
+    default PythonLikeObject $method$__delattr__(PythonString pythonName) {
+        String name = pythonName.value;
+        __deleteAttribute(name);
+        return PythonNone.INSTANCE;
+    }
+
+    default PythonLikeObject $method$__eq__(PythonLikeObject other) {
+        return PythonBoolean.valueOf(Objects.equals(this, other));
+    }
+
+    default PythonLikeObject $method$__ne__(PythonLikeObject other) {
+        return PythonBoolean.valueOf(!Objects.equals(this, other));
+    }
+
+    default PythonLikeObject $method$__str__() {
+        return PythonString.valueOf(this.toString());
+    }
+
+    default PythonLikeObject $method$__repr__() {
+        String position;
+        if (this instanceof CPythonBackedPythonLikeObject) {
+            PythonInteger id = ((CPythonBackedPythonLikeObject) this).$cpythonId;
+            if (id != null) {
+                position = id.toString();
+            } else {
+                position = String.valueOf(System.identityHashCode(this));
+            }
+        } else {
+            position = String.valueOf(System.identityHashCode(this));
+        }
+        return PythonString.valueOf("<" + __getType().getTypeName() + " object at " + position + ">");
+    }
+
+    default PythonLikeObject $method$__format__() {
+        return $method$__format__(PythonNone.INSTANCE);
+    }
+
+    default PythonLikeObject $method$__format__(PythonLikeObject formatString) {
+        return $method$__str__().$method$__format__(formatString);
+    }
+
+    default PythonLikeObject $method$__hash__() {
+        throw new TypeError("unhashable type: '" + __getType().getTypeName() + "'");
+    }
 }

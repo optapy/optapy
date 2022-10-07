@@ -261,4 +261,9 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
     public int hashCode() {
         return localDate.hashCode();
     }
+
+    @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
+    }
 }

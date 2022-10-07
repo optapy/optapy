@@ -14,7 +14,6 @@ import org.optaplanner.python.translator.PythonInterpreter;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonUnaryOperator;
 import org.optaplanner.python.translator.StackMetadata;
-import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
@@ -109,12 +108,11 @@ public class StringImplementor {
                 throw new IllegalStateException("Invalid flag: " + instruction.arg +
                         "; & did not produce a value in range 0-3: " + (instruction.arg & 3));
         }
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(ObjectBuiltinOperations.class),
-                "format",
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "$method$__format__",
                 Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
-                        Type.getType(PythonLikeObject.class),
                         Type.getType(PythonLikeObject.class)),
-                false);
+                true);
     }
 
     /**

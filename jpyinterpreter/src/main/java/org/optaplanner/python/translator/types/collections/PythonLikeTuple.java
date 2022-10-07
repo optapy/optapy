@@ -372,6 +372,11 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
     }
 
     @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
+    }
+
+    @Override
     public String toString() {
         return delegate.toString();
     }

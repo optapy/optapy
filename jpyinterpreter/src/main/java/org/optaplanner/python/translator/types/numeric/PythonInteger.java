@@ -16,8 +16,10 @@ import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
 import org.optaplanner.python.translator.types.NotImplemented;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
+import org.optaplanner.python.translator.types.errors.TypeError;
 import org.optaplanner.python.translator.types.errors.ValueError;
 import org.optaplanner.python.translator.util.DefaultFormatSpec;
 import org.optaplanner.python.translator.util.StringFormatter;
@@ -67,7 +69,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         INT_TYPE.addUnaryMethod(PythonUnaryOperator.ABS, PythonInteger.class.getMethod("abs"));
         INT_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION, PythonInteger.class.getMethod("asString"));
         INT_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING, PythonInteger.class.getMethod("asString"));
-        INT_TYPE.addUnaryMethod(PythonUnaryOperator.HASH, PythonInteger.class.getMethod("getPythonHash"));
+        INT_TYPE.addUnaryMethod(PythonUnaryOperator.HASH, PythonInteger.class.getMethod("$method$__hash__"));
 
         // Binary
         INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.ADD, PythonInteger.class.getMethod("add", PythonLikeObject.class));
@@ -229,8 +231,9 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         // Other
         INT_TYPE.addMethod("__round__", PythonInteger.class.getMethod("round"));
         INT_TYPE.addMethod("__round__", PythonInteger.class.getMethod("round", PythonInteger.class));
-        INT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonInteger.class.getMethod("format"));
-        INT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonInteger.class.getMethod("format", PythonString.class));
+        INT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonInteger.class.getMethod("$method$__format__"));
+        INT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT,
+                PythonInteger.class.getMethod("$method$__format__", PythonLikeObject.class));
 
         return INT_TYPE;
     }
@@ -286,10 +289,10 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
 
     @Override
     public int hashCode() {
-        return value.hashCode();
+        return $method$__hash__().value.intValue();
     }
 
-    public PythonInteger getPythonHash() {
+    public PythonInteger $method$__hash__() {
         return PythonNumber.computeHash(this, ONE);
     }
 
@@ -730,11 +733,19 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         return PythonString.valueOf(value.toString());
     }
 
-    public PythonString format() {
+    public PythonString $method$__format__() {
         return PythonString.valueOf(value.toString());
     }
 
-    public PythonString format(PythonString spec) {
+    public PythonString $method$__format__(PythonLikeObject specObject) {
+        PythonString spec;
+        if (specObject == PythonNone.INSTANCE) {
+            spec = PythonString.EMPTY;
+        } else if (specObject instanceof PythonString) {
+            spec = (PythonString) specObject;
+        } else {
+            throw new TypeError("__format__ argument 0 has incorrect type (expecting str or None)");
+        }
         DefaultFormatSpec formatSpec = DefaultFormatSpec.fromSpec(spec);
 
         StringBuilder out = new StringBuilder();

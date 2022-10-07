@@ -1769,4 +1769,9 @@ public class PythonBytes extends AbstractPythonLikeObject implements PythonBytes
     public int hashCode() {
         return Arrays.hashCode(value);
     }
+
+    @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
+    }
 }

@@ -115,6 +115,11 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
     }
 
     @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
+    }
+
+    @Override
     public String toString() {
         Object maybeStr = __getType().__getAttributeOrNull("__str__");
         if (!(maybeStr instanceof PythonLikeFunction)) {

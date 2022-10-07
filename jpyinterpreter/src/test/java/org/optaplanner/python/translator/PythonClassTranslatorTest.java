@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
-import org.optaplanner.python.translator.builtins.ObjectBuiltinOperations;
 import org.optaplanner.python.translator.types.BuiltinTypes;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -65,7 +64,7 @@ public class PythonClassTranslatorTest {
 
         PythonLikeObject classObject = classType.__call__(List.of(PythonInteger.valueOf(10)), Map.of());
         PythonLikeFunction getAgeFunction =
-                (PythonLikeFunction) ObjectBuiltinOperations.getAttribute(classObject, PythonString.valueOf("get_age"));
+                (PythonLikeFunction) classObject.$method$__getattribute__(PythonString.valueOf("get_age"));
         assertThat(getAgeFunction.__call__(List.of(), Map.of())).isEqualTo(PythonInteger.valueOf(10));
     }
 

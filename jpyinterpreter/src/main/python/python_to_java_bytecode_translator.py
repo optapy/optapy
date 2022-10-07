@@ -103,6 +103,10 @@ def init_type_to_compiled_java_class():
         return
 
     check_current_python_version_supported()
+
+    type_to_compiled_java_class[staticmethod] = BuiltinTypes.STATIC_FUNCTION_TYPE
+    type_to_compiled_java_class[classmethod] = BuiltinTypes.CLASS_FUNCTION_TYPE
+
     type_to_compiled_java_class[int] = BuiltinTypes.INT_TYPE
     type_to_compiled_java_class[float] = BuiltinTypes.FLOAT_TYPE
     type_to_compiled_java_class[complex] = BuiltinTypes.COMPLEX_TYPE
@@ -288,7 +292,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
     from types import ModuleType
     from org.optaplanner.python.translator import PythonLikeObject, CPythonBackedPythonInterpreter
     from org.optaplanner.python.translator.types import PythonString, PythonBytes, PythonByteArray, PythonNone, \
-        PythonModule, PythonSlice, PythonRange
+        PythonModule, PythonSlice, PythonRange, NotImplemented as JavaNotImplemented
     from org.optaplanner.python.translator.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
         PythonLikeFrozenSet, PythonLikeDict
     from org.optaplanner.python.translator.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
@@ -306,6 +310,8 @@ def convert_to_java_python_like_object(value, instance_map=None):
         return value
     elif value is None:
         return PythonNone.INSTANCE
+    elif value is NotImplemented:
+        return JavaNotImplemented.INSTANCE
     elif isinstance(value, bool):
         return PythonBoolean.valueOf(JBoolean(value))
     elif isinstance(value, int):
@@ -413,7 +419,8 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from org.optaplanner.python.translator import PythonLikeObject
     from java.util import List, Map, Set, Iterator
     from org.optaplanner.python.translator.types import PythonString, PythonBytes, PythonByteArray, PythonNone, \
-        PythonModule, PythonSlice, PythonRange, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType
+        PythonModule, PythonSlice, PythonRange, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType, \
+        NotImplemented as JavaNotImplemented
     from org.optaplanner.python.translator.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
         PythonLikeFrozenSet, PythonLikeDict
     from org.optaplanner.python.translator.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
@@ -425,6 +432,8 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
         return out
     elif isinstance(python_like_object, PythonNone):
         return None
+    elif isinstance(python_like_object, JavaNotImplemented):
+        return NotImplemented
     elif isinstance(python_like_object, PythonFloat):
         return float(python_like_object.getValue())
     elif isinstance(python_like_object, PythonString):
@@ -490,8 +499,18 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
         return JavaIterator(python_like_object)
     elif isinstance(python_like_object, PythonModule):
         return python_like_object.getPythonReference()
-    elif isinstance(python_like_object, CPythonBackedPythonLikeObject) and getattr(python_like_object, '$cpythonReference') is not None:
-        return getattr(python_like_object, '$cpythonReference')
+    elif isinstance(python_like_object, CPythonBackedPythonLikeObject):
+        maybe_python_reference = getattr(python_like_object, '$cpythonReference')
+        if maybe_python_reference is not None:
+            return maybe_python_reference
+        # does not have an existing python reference
+        maybe_cpython_type = getattr(python_like_object, "$CPYTHON_TYPE")
+        if isinstance(maybe_cpython_type, CPythonType):
+            out = object.__new__(maybe_cpython_type.getPythonReference())
+            setattr(python_like_object, '$cpythonReference', JProxy(OpaquePythonReference, inst=out, convert=True))
+            setattr(python_like_object, '$cpythonId', PythonInteger.valueOf(JLong(id(out))))
+            getattr(python_like_object, '$writeFieldsToCPythonReference')()
+            return out
     elif isinstance(python_like_object, Exception):
         try:
             exception_name = getattr(python_like_object, '$TYPE').getTypeName()
@@ -663,6 +682,10 @@ def get_function_bytecode_object(python_function):
     python_compiled_function.supportExtraKeywordsArgs = inspect.getfullargspec(python_function).varkw is not None
     python_compiled_function.pythonVersion = PythonVersion(sys.hexversion)
     return python_compiled_function
+
+
+def get_static_function_bytecode_object(the_class, python_function):
+    return get_function_bytecode_object(python_function.__get__(the_class))
 
 
 def get_code_bytecode_object(python_code):
@@ -856,10 +879,14 @@ def translate_python_class_to_java_class(python_class):
     methods = []
     for method_name in python_class.__dict__:
         method = inspect.getattr_static(python_class, method_name)
-        if inspect.isfunction(method):
+        if inspect.isfunction(method) or \
+                isinstance(method, __STATIC_METHOD_TYPE) or \
+                isinstance(method, __CLASS_METHOD_TYPE):
             methods.append((method_name, method))
 
-    static_attributes = inspect.getmembers(python_class, predicate=lambda member: not inspect.isfunction(member))
+    static_attributes = inspect.getmembers(python_class, predicate=lambda member: not (inspect.isfunction(member)
+                                                                                       or isinstance(member, __STATIC_METHOD_TYPE)
+                                                                                       or isinstance(member, __CLASS_METHOD_TYPE)))
     static_attributes = [attribute for attribute in static_attributes if attribute[0] in python_class.__dict__]
     static_methods = [method for method in methods if isinstance(method[1], __STATIC_METHOD_TYPE)]
     class_methods = [method for method in methods if isinstance(method[1], __CLASS_METHOD_TYPE)]
@@ -890,11 +917,11 @@ def translate_python_class_to_java_class(python_class):
 
     static_method_map = HashMap()
     for method in static_methods:
-        static_method_map.put(method[0], get_function_bytecode_object(method[1]))
+        static_method_map.put(method[0], get_static_function_bytecode_object(python_class, method[1]))
 
     class_method_map = HashMap()
     for method in class_methods:
-        class_method_map.put(method[0], get_function_bytecode_object(method[1]))
+        class_method_map.put(method[0], get_static_function_bytecode_object(python_class, method[1]))
 
     instance_method_map = HashMap()
     for method in instance_methods:

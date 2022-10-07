@@ -14,6 +14,7 @@ public class TernaryDunderBuiltin implements PythonLikeFunction {
 
     public static final TernaryDunderBuiltin POWER = new TernaryDunderBuiltin("__pow__");
     public static final TernaryDunderBuiltin SETATTR = new TernaryDunderBuiltin(PythonTernaryOperators.SET_ATTRIBUTE);
+    public static final TernaryDunderBuiltin GET_DESCRIPTOR = new TernaryDunderBuiltin(PythonTernaryOperators.GET);
 
     public TernaryDunderBuiltin(String dunderMethodName) {
         DUNDER_METHOD_NAME = dunderMethodName;

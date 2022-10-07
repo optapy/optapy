@@ -332,4 +332,9 @@ public class PythonLikeFrozenSet extends AbstractPythonLikeObject implements Set
     public int hashCode() {
         return Objects.hash(delegate);
     }
+
+    @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
+    }
 }

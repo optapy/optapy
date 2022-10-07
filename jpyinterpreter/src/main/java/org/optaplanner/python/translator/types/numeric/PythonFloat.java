@@ -18,8 +18,10 @@ import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeComparable;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
+import org.optaplanner.python.translator.types.errors.TypeError;
 import org.optaplanner.python.translator.types.errors.ValueError;
 import org.optaplanner.python.translator.util.DefaultFormatSpec;
 import org.optaplanner.python.translator.util.StringFormatter;
@@ -64,7 +66,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.POSITIVE, PythonFloat.class.getMethod("asFloat"));
         FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.NEGATIVE, PythonFloat.class.getMethod("negative"));
         FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.ABS, PythonFloat.class.getMethod("abs"));
-        FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.HASH, PythonFloat.class.getMethod("computePythonHash"));
+        FLOAT_TYPE.addUnaryMethod(PythonUnaryOperator.HASH, PythonFloat.class.getMethod("$method$__hash__"));
 
         // Binary
         FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.ADD, PythonFloat.class.getMethod("add", PythonInteger.class));
@@ -151,8 +153,9 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         // Other
         FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round"));
         FLOAT_TYPE.addMethod("__round__", PythonFloat.class.getMethod("round", PythonInteger.class));
-        FLOAT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format"));
-        FLOAT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("format", PythonString.class));
+        FLOAT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT, PythonFloat.class.getMethod("$method$__format__"));
+        FLOAT_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT,
+                PythonFloat.class.getMethod("$method$__format__", PythonLikeObject.class));
 
         return FLOAT_TYPE;
     }
@@ -211,10 +214,11 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
 
     @Override
     public int hashCode() {
-        return Double.hashCode(value);
+        return $method$__hash__().value.intValue();
     }
 
-    public PythonInteger computePythonHash() {
+    @Override
+    public PythonInteger $method$__hash__() {
         if (Double.isNaN(value)) {
             return PythonInteger.valueOf(hashCode());
         } else if (Double.isInfinite(value)) {
@@ -575,7 +579,15 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         return numberFormat;
     }
 
-    public PythonString format(PythonString spec) {
+    public PythonString $method$__format__(PythonLikeObject specObject) {
+        PythonString spec;
+        if (specObject == PythonNone.INSTANCE) {
+            spec = PythonString.EMPTY;
+        } else if (specObject instanceof PythonString) {
+            spec = (PythonString) specObject;
+        } else {
+            throw new TypeError("__format__ argument 0 has incorrect type (expecting str or None)");
+        }
         DefaultFormatSpec formatSpec = DefaultFormatSpec.fromSpec(spec);
 
         StringBuilder out = new StringBuilder();

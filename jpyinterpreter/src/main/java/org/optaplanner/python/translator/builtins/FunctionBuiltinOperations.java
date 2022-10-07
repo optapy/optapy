@@ -10,4 +10,9 @@ public class FunctionBuiltinOperations {
             final PythonLikeType type) {
         return new BoundPythonLikeFunction(instance, function);
     }
+
+    public static PythonLikeObject bindFunctionToType(final PythonLikeFunction function, final PythonLikeObject instance,
+            final PythonLikeType type) {
+        return new BoundPythonLikeFunction(type, function);
+    }
 }

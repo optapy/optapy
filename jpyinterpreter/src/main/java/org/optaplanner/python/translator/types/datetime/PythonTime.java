@@ -243,4 +243,9 @@ public class PythonTime extends AbstractPythonLikeObject {
     public String toString() {
         return localTime.toString();
     }
+
+    @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
+    }
 }

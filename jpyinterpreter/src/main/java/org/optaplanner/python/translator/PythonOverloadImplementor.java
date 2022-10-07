@@ -25,6 +25,7 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.python.translator.types.BuiltinTypes;
 import org.optaplanner.python.translator.types.PythonKnownFunctionType;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
@@ -70,14 +71,17 @@ public class PythonOverloadImplementor {
     public static void createDispatchesFor(PythonLikeType pythonLikeType) {
         for (String methodName : pythonLikeType.getKnownMethodsDefinedByClass()) {
             PythonLikeFunction overloadDispatch =
-                    createDispatchForMethod(pythonLikeType, methodName, pythonLikeType.getMethodType(methodName).orElseThrow());
+                    createDispatchForMethod(pythonLikeType, methodName, pythonLikeType.getMethodType(methodName).orElseThrow(),
+                            pythonLikeType.getMethodKind(methodName)
+                                    .orElse(PythonClassTranslator.PythonMethodKind.VIRTUAL_METHOD));
             pythonLikeType.__setAttribute(methodName, overloadDispatch);
         }
     }
 
     private static PythonLikeFunction createDispatchForMethod(PythonLikeType pythonLikeType,
             String methodName,
-            PythonKnownFunctionType knownFunctionType) {
+            PythonKnownFunctionType knownFunctionType,
+            PythonClassTranslator.PythonMethodKind methodKind) {
         String maybeClassName = GENERATED_PACKAGE_BASE + pythonLikeType.getJavaTypeInternalName().replace('/', '.') + "."
                 + methodName + "$$Dispatcher";
         int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
@@ -108,6 +112,7 @@ public class PythonOverloadImplementor {
         methodVisitor.visitEnd();
 
         createDispatchFunction(pythonLikeType, knownFunctionType, classWriter);
+        createGetTypeFunction(methodKind, classWriter);
 
         classWriter.visitEnd();
         writeClassOutput(classNameToBytecode, className, classWriter.toByteArray());
@@ -123,6 +128,37 @@ public class PythonOverloadImplementor {
             throw new IllegalStateException("Impossible State: Unable to invoke constructor for generated class (" +
                     className + ").", e);
         }
+    }
+
+    private static void createGetTypeFunction(PythonClassTranslator.PythonMethodKind kind, ClassWriter classWriter) {
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "__getType",
+                Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                null,
+                null);
+
+        methodVisitor.visitCode();
+
+        switch (kind) {
+            case VIRTUAL_METHOD:
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(BuiltinTypes.class),
+                        "FUNCTION_TYPE", Type.getDescriptor(PythonLikeType.class));
+                break;
+            case STATIC_METHOD:
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(BuiltinTypes.class),
+                        "STATIC_FUNCTION_TYPE", Type.getDescriptor(PythonLikeType.class));
+                break;
+            case CLASS_METHOD:
+                methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(BuiltinTypes.class),
+                        "CLASS_FUNCTION_TYPE", Type.getDescriptor(PythonLikeType.class));
+                break;
+            default:
+                throw new IllegalStateException("Unhandled case: " + kind);
+        }
+        methodVisitor.visitInsn(Opcodes.ARETURN);
+
+        methodVisitor.visitMaxs(0, 0);
+        methodVisitor.visitEnd();
+
     }
 
     private static void createDispatchFunction(PythonLikeType type, PythonKnownFunctionType knownFunctionType,

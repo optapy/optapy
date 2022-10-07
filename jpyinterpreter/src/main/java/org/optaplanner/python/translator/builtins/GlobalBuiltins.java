@@ -714,7 +714,7 @@ public class GlobalBuiltins {
             throw new ValueError("format expects 1 or 2 arguments, got " + positionalArgs.size());
         }
 
-        return ObjectBuiltinOperations.format(toFormat, formatSpec);
+        return toFormat.$method$__format__((PythonString) formatSpec);
     }
 
     public static PythonLikeObject getattr(List<PythonLikeObject> positionalArgs,
@@ -1179,6 +1179,10 @@ public class GlobalBuiltins {
 
         return (positionalArgs, keywordArgs) -> {
             List<PythonLikeObject> objects = positionalArgs;
+            if (keywordArgs == null) {
+                keywordArgs = Map.of();
+            }
+
             String sep;
             if (!keywordArgs.containsKey(PythonString.valueOf("sep"))
                     || keywordArgs.get(PythonString.valueOf("sep")) == PythonNone.INSTANCE) {

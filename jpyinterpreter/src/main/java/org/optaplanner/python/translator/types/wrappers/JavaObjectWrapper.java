@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.numeric.PythonInteger;
 
 public class JavaObjectWrapper implements PythonLikeObject, Comparable<JavaObjectWrapper> {
 
@@ -227,5 +228,10 @@ public class JavaObjectWrapper implements PythonLikeObject, Comparable<JavaObjec
     @Override
     public int hashCode() {
         return wrappedObject.hashCode();
+    }
+
+    @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
     }
 }

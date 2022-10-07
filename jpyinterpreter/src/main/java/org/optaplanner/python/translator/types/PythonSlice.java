@@ -379,6 +379,11 @@ public class PythonSlice extends AbstractPythonLikeObject {
         return Objects.hash(start, stop, step);
     }
 
+    @Override
+    public PythonInteger $method$__hash__() {
+        return PythonInteger.valueOf(hashCode());
+    }
+
     public interface SliceConsumer {
         void accept(int index, int step);
     }

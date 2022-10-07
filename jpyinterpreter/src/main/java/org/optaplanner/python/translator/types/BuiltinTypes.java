@@ -9,6 +9,8 @@ import java.util.Map;
 import org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
+import org.optaplanner.python.translator.PythonTernaryOperators;
+import org.optaplanner.python.translator.builtins.FunctionBuiltinOperations;
 import org.optaplanner.python.translator.builtins.GlobalBuiltins;
 import org.optaplanner.python.translator.types.collections.PythonIterator;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
@@ -24,6 +26,7 @@ import org.optaplanner.python.translator.types.numeric.PythonComplex;
 import org.optaplanner.python.translator.types.numeric.PythonFloat;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
 import org.optaplanner.python.translator.types.numeric.PythonNumber;
+import org.optaplanner.python.translator.types.wrappers.JavaMethodReference;
 
 public class BuiltinTypes {
     public static final PythonLikeType BASE_TYPE =
@@ -32,6 +35,12 @@ public class BuiltinTypes {
     public static final PythonLikeType MODULE_TYPE = new PythonLikeType("module", PythonModule.class, List.of(BASE_TYPE));
     public static final PythonLikeType FUNCTION_TYPE =
             new PythonLikeType("function", PythonLikeFunction.class, List.of(BASE_TYPE));
+    public static final PythonLikeType CLASS_FUNCTION_TYPE =
+            new PythonLikeType("classmethod", PythonLikeFunction.class, List.of(BASE_TYPE));
+    public static final PythonLikeType STATIC_FUNCTION_TYPE =
+            new PythonLikeType("staticmethod", PythonLikeFunction.class, List.of(BASE_TYPE));
+    public static final PythonLikeType METHOD_TYPE =
+            new PythonLikeType("method", PythonLikeFunction.class, List.of(BASE_TYPE));
     public static final PythonLikeType GENERATOR_TYPE =
             new PythonLikeType("generator", PythonGenerator.class, List.of(BASE_TYPE));
     public static final PythonLikeType CODE_TYPE = new PythonLikeType("code", PythonCode.class, List.of(BASE_TYPE));
@@ -99,6 +108,21 @@ public class BuiltinTypes {
     static {
         PythonOverloadImplementor.deferDispatchesFor(PythonLikeType::registerBaseType);
         PythonOverloadImplementor.deferDispatchesFor(PythonLikeType::registerTypeType);
+
+        try {
+            FUNCTION_TYPE.__dir__.put(PythonTernaryOperators.GET.dunderMethod,
+                    new JavaMethodReference(
+                            FunctionBuiltinOperations.class.getMethod("bindFunctionToInstance", PythonLikeFunction.class,
+                                    PythonLikeObject.class, PythonLikeType.class),
+                            Map.of("self", 0, "obj", 1, "objtype", 2)));
+            CLASS_FUNCTION_TYPE.__dir__.put(PythonTernaryOperators.GET.dunderMethod,
+                    new JavaMethodReference(
+                            FunctionBuiltinOperations.class.getMethod("bindFunctionToType", PythonLikeFunction.class,
+                                    PythonLikeObject.class, PythonLikeType.class),
+                            Map.of("self", 0, "obj", 1, "objtype", 2)));
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+        }
 
         for (Field field : BuiltinTypes.class.getFields()) {
             try {

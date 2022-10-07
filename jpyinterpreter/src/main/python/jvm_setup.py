@@ -125,7 +125,8 @@ class GetAttributeOnPythonObjectWithMap:
 class SetAttributeOnPythonObject:
     @jpype.JOverride()
     def accept(self, python_object, attribute_name, value):
-        setattr(python_object, attribute_name, value)
+        from .python_to_java_bytecode_translator import unwrap_python_like_object
+        setattr(python_object, attribute_name, unwrap_python_like_object(value))
 
 
 @jpype.JImplements('java.util.function.BiConsumer', deferred=True)
