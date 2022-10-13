@@ -1,9 +1,16 @@
 from .conftest import verifier_for
+from typing import Union
 
 
 def test_membership():
-    membership_verifier = verifier_for(lambda tested, x: x in tested)
-    not_membership_verifier = verifier_for(lambda tested, x: x not in tested)
+    def membership(tested: list, x: object) -> bool:
+        return x in tested
+
+    def not_membership(tested: list, x: object) -> bool:
+        return x not in tested
+
+    membership_verifier = verifier_for(membership)
+    not_membership_verifier = verifier_for(not_membership)
 
     membership_verifier.verify([1, 2, 3], 1, expected_result=True)
     not_membership_verifier.verify([1, 2, 3], 1, expected_result=False)
@@ -16,7 +23,7 @@ def test_membership():
 
 
 def test_concat():
-    def concat(x, y):
+    def concat(x: list, y: list) -> tuple:
         out = x + y
         return out, out is x, out is y
 
@@ -29,27 +36,35 @@ def test_concat():
 
 
 def test_repeat():
-    def repeat(x, y):
+    def left_repeat(x: list, y: int) -> tuple:
         out = x * y
         return out, out is x, out is y
 
-    repeat_verifier = verifier_for(repeat)
+    def right_repeat(x: int, y: list) -> tuple:
+        out = x * y
+        return out, out is x, out is y
 
-    repeat_verifier.verify([1, 2, 3], 2, expected_result=([1, 2, 3, 1, 2, 3], False, False))
-    repeat_verifier.verify([1, 2], 4, expected_result=([1, 2, 1, 2, 1, 2, 1, 2], False, False))
-    repeat_verifier.verify([1, 2, 3], 0, expected_result=([], False, False))
-    repeat_verifier.verify([1, 2, 3], -1, expected_result=([], False, False))
-    repeat_verifier.verify([1, 2, 3], -2, expected_result=([], False, False))
+    left_repeat_verifier = verifier_for(left_repeat)
+    right_repeat_verifier = verifier_for(right_repeat)
 
-    repeat_verifier.verify(2, [1, 2, 3], expected_result=([1, 2, 3, 1, 2, 3], False, False))
-    repeat_verifier.verify(4, [1, 2], expected_result=([1, 2, 1, 2, 1, 2, 1, 2], False, False))
-    repeat_verifier.verify(0, [1, 2, 3], expected_result=([], False, False))
-    repeat_verifier.verify(-1, [1, 2, 3], expected_result=([], False, False))
-    repeat_verifier.verify(-2, [1, 2, 3], expected_result=([], False, False))
+    left_repeat_verifier.verify([1, 2, 3], 2, expected_result=([1, 2, 3, 1, 2, 3], False, False))
+    left_repeat_verifier.verify([1, 2], 4, expected_result=([1, 2, 1, 2, 1, 2, 1, 2], False, False))
+    left_repeat_verifier.verify([1, 2, 3], 0, expected_result=([], False, False))
+    left_repeat_verifier.verify([1, 2, 3], -1, expected_result=([], False, False))
+    left_repeat_verifier.verify([1, 2, 3], -2, expected_result=([], False, False))
+
+    right_repeat_verifier.verify(2, [1, 2, 3], expected_result=([1, 2, 3, 1, 2, 3], False, False))
+    right_repeat_verifier.verify(4, [1, 2], expected_result=([1, 2, 1, 2, 1, 2, 1, 2], False, False))
+    right_repeat_verifier.verify(0, [1, 2, 3], expected_result=([], False, False))
+    right_repeat_verifier.verify(-1, [1, 2, 3], expected_result=([], False, False))
+    right_repeat_verifier.verify(-2, [1, 2, 3], expected_result=([], False, False))
 
 
 def test_get_item():
-    get_item_verifier = verifier_for(lambda tested, index: tested[index])
+    def get_item(tested: list, index: int) -> int:
+        return tested[index]
+
+    get_item_verifier = verifier_for(get_item)
 
     get_item_verifier.verify([1, 2, 3], 1, expected_result=2)
     get_item_verifier.verify([1, 2, 3], -1, expected_result=3)
@@ -61,7 +76,10 @@ def test_get_item():
 
 
 def test_get_slice():
-    get_slice_verifier = verifier_for(lambda tested, start, end: tested[start:end])
+    def get_slice(tested: list, start: Union[int, None], end: Union[int, None]) -> list:
+        return tested[start:end]
+
+    get_slice_verifier = verifier_for(get_slice)
 
     get_slice_verifier.verify([1, 2, 3, 4, 5], 1, 3, expected_result=[2, 3])
     get_slice_verifier.verify([1, 2, 3, 4, 5], -3, -1, expected_result=[3, 4])
@@ -81,7 +99,11 @@ def test_get_slice():
 
 
 def test_get_slice_with_step():
-    get_slice_verifier = verifier_for(lambda tested, start, end, step: tested[start:end:step])
+    def get_slice_with_step(tested: list, start: Union[int, None], end: Union[int, None],
+                            step: Union[int, None]) -> list:
+        return tested[start:end:step]
+
+    get_slice_verifier = verifier_for(get_slice_with_step)
 
     get_slice_verifier.verify([1, 2, 3, 4, 5], 0, None, 2, expected_result=[1, 3, 5])
     get_slice_verifier.verify([1, 2, 3, 4, 5], 1, None, 2, expected_result=[2, 4])
@@ -107,7 +129,10 @@ def test_get_slice_with_step():
 
 
 def test_len():
-    len_verifier = verifier_for(lambda tested: len(tested))
+    def length(tested: list) -> int:
+        return len(tested)
+
+    len_verifier = verifier_for(length)
 
     len_verifier.verify([], expected_result=0)
     len_verifier.verify([1], expected_result=1)
@@ -116,9 +141,18 @@ def test_len():
 
 
 def test_index():
-    index_verifier = verifier_for(lambda tested, item: tested.index(item))
-    index_start_verifier = verifier_for(lambda tested, item, start: tested.index(item, start))
-    index_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.index(item, start, end))
+    def index(tested: list, item: object) -> int:
+        return tested.index(item)
+
+    def index_start(tested: list, item: object, start: int) -> int:
+        return tested.index(item, start)
+
+    def index_start_end(tested: list, item: object, start: int, end: int) -> int:
+        return tested.index(item, start, end)
+
+    index_verifier = verifier_for(index)
+    index_start_verifier = verifier_for(index_start)
+    index_start_end_verifier = verifier_for(index_start_end)
 
     index_verifier.verify([1, 2, 3], 1, expected_result=0)
     index_verifier.verify([1, 2, 3], 2, expected_result=1)
@@ -146,7 +180,10 @@ def test_index():
 
 
 def test_count():
-    count_verifier = verifier_for(lambda tested, item: tested.count(item))
+    def count(tested: list, item: object) -> int:
+        return tested.count(item)
+
+    count_verifier = verifier_for(count)
 
     count_verifier.verify([1, 2, 3], 1, expected_result=1)
     count_verifier.verify([1, 2, 3], 2, expected_result=1)
@@ -159,7 +196,7 @@ def test_count():
 
 
 def test_set_item():
-    def set_item(tested, index, value):
+    def set_item(tested: list, index: int, value: object) -> list:
         tested[index] = value
         return tested
 
@@ -171,7 +208,7 @@ def test_set_item():
     set_item_verifier.verify([1, 2, 3, 4, 5], 10, 1, expected_error=IndexError)
 
 def test_set_slice():
-    def set_slice(tested, start, stop, value):
+    def set_slice(tested: list, start: Union[int, None], stop: Union[int, None], value: list) -> list:
         tested[start:stop] = value
         return tested
 
@@ -192,7 +229,7 @@ def test_set_slice():
 
 
 def test_delete_slice():
-    def delete_slice(tested, start, stop):
+    def delete_slice(tested: list, start: Union[int, None], stop: Union[int, None]) -> list:
         del tested[start:stop]
         return tested
 
@@ -205,7 +242,8 @@ def test_delete_slice():
 
 
 def test_set_slice_with_step():
-    def set_slice_with_step(tested, start, stop, step, value):
+    def set_slice_with_step(tested: list, start: Union[int, None], stop: Union[int, None], step: Union[int, None],
+                            value: list) -> list:
         tested[start:stop:step] = value
         return tested
 
@@ -226,7 +264,8 @@ def test_set_slice_with_step():
 
 
 def test_delete_slice_with_step():
-    def delete_slice_with_step(tested, start, stop, step):
+    def delete_slice_with_step(tested: list, start: Union[int, None], stop: Union[int, None],
+                               step: Union[int, None]) -> list:
         del tested[start:stop:step]
         return tested
 
@@ -244,7 +283,7 @@ def test_delete_slice_with_step():
 
 
 def test_append():
-    def append(tested, item):
+    def append(tested: list, item: object) -> list:
         tested.append(item)
         return tested
 
@@ -257,7 +296,7 @@ def test_append():
 
 
 def test_clear():
-    def clear(tested):
+    def clear(tested: list) -> list:
         tested.clear()
         return tested
 
@@ -270,7 +309,7 @@ def test_clear():
 
 
 def test_copy():
-    def copy(tested):
+    def copy(tested: list) -> tuple:
         out = tested.copy()
         return out, out is tested
 
@@ -283,7 +322,7 @@ def test_copy():
 
 
 def test_extend():
-    def extend(tested, item):
+    def extend(tested: list, item: object) -> list:
         tested.extend(item)
         return tested
 
@@ -298,7 +337,7 @@ def test_extend():
 
 
 def test_inplace_add():
-    def extend(tested, item):
+    def extend(tested: list, item: list) -> list:
         tested += item
         return tested
 
@@ -313,7 +352,7 @@ def test_inplace_add():
 
 
 def test_inplace_multiply():
-    def multiply(tested, item):
+    def multiply(tested: list, item: int) -> list:
         tested *= item
         return tested
 
@@ -328,7 +367,7 @@ def test_inplace_multiply():
 
 
 def test_insert():
-    def insert(tested, index, item):
+    def insert(tested: list, index: int, item: object) -> list:
         tested.insert(index, item)
         return tested
 
@@ -349,7 +388,7 @@ def test_insert():
 
 
 def test_pop():
-    def pop(tested):
+    def pop(tested: list) -> tuple:
         item = tested.pop()
         return item, tested
 
@@ -365,7 +404,7 @@ def test_pop():
 
 
 def test_pop_at_index():
-    def pop_at_index(tested, index):
+    def pop_at_index(tested: list, index: int) -> tuple:
         item = tested.pop(index)
         return item, tested
 
@@ -386,7 +425,7 @@ def test_pop_at_index():
 
 
 def test_remove():
-    def remove(tested, item):
+    def remove(tested: list, item: object) -> list:
         tested.remove(item)
         return tested
 
@@ -403,7 +442,7 @@ def test_remove():
 
 
 def test_reverse():
-    def reverse(tested):
+    def reverse(tested: list) -> list:
         tested.reverse()
         return tested
 
@@ -418,7 +457,7 @@ def test_reverse():
 
 
 def test_sort():
-    def sort(tested):
+    def sort(tested: list) -> list:
         tested.sort()
         return tested
 

@@ -79,14 +79,14 @@ public class FunctionImplementor {
         }
         tosType.getMethodType(functionMetadata.pythonCompiledFunction.co_names.get(instruction.arg)).ifPresentOrElse(
                 knownFunctionType -> {
-                    if (isTosType && knownFunctionType.isStatic()) {
+                    if (isTosType && knownFunctionType.isStaticMethod()) {
                         methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
                         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                                 "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                                         Type.getType(String.class)),
                                 true);
                         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-                    } else if (!isTosType && knownFunctionType.isStatic()) {
+                    } else if (!isTosType && knownFunctionType.isStaticMethod()) {
                         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                                 "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
                                 true);
@@ -94,6 +94,29 @@ public class FunctionImplementor {
                         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                                 "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                                         Type.getType(String.class)),
+                                true);
+                        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                    } else if (isTosType && knownFunctionType.isClassMethod()) {
+                        methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class), "valueOf",
+                                Type.getMethodDescriptor(Type.getType(PythonString.class), Type.getType(String.class)),
+                                false);
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "$method$__getattribute__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(PythonString.class)),
+                                true);
+                        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                    } else if (!isTosType && knownFunctionType.isClassMethod()) {
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                                true);
+                        methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class), "valueOf",
+                                Type.getMethodDescriptor(Type.getType(PythonString.class), Type.getType(String.class)),
+                                false);
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                                "$method$__getattribute__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(PythonString.class)),
                                 true);
                         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
                     } else if (isTosType) {
@@ -179,8 +202,7 @@ public class FunctionImplementor {
         PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(instruction.arg + 1);
         if (functionType instanceof PythonKnownFunctionType) {
             PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
-            PythonLikeType[] parameterTypes =
-                    new PythonLikeType[knownFunctionType.isStatic() ? instruction.arg : instruction.arg + 1];
+            PythonLikeType[] parameterTypes = new PythonLikeType[instruction.arg];
             for (int i = 0; i < parameterTypes.length; i++) {
                 parameterTypes[parameterTypes.length - i - 1] = stackMetadata.getTypeAtStackIndex(i);
             }
@@ -189,7 +211,7 @@ public class FunctionImplementor {
                         functionSignature.callMethod(methodVisitor, localVariableHelper, instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
-                        if (knownFunctionType.isStatic()) {
+                        if (knownFunctionType.isStaticMethod()) {
                             methodVisitor.visitInsn(Opcodes.SWAP);
                             methodVisitor.visitInsn(Opcodes.POP);
                         }

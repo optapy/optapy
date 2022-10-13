@@ -1,9 +1,5 @@
 package org.optaplanner.python.translator.types;
 
-import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
-import static org.optaplanner.python.translator.types.BuiltinTypes.BOOLEAN_TYPE;
-import static org.optaplanner.python.translator.types.BuiltinTypes.INT_TYPE;
-import static org.optaplanner.python.translator.types.BuiltinTypes.ITERATOR_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.RANGE_TYPE;
 
 import java.lang.reflect.Array;
@@ -14,9 +10,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
-import org.optaplanner.python.translator.MethodDescriptor;
 import org.optaplanner.python.translator.PythonBinaryOperators;
-import org.optaplanner.python.translator.PythonFunctionSignature;
 import org.optaplanner.python.translator.PythonLikeObject;
 import org.optaplanner.python.translator.PythonOverloadImplementor;
 import org.optaplanner.python.translator.PythonUnaryOperator;
@@ -94,20 +88,13 @@ public class PythonRange extends AbstractPythonLikeObject implements List<Python
         }));
 
         // Unary methods
-        RANGE_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, new PythonFunctionSignature(
-                new MethodDescriptor(PythonRange.class.getMethod("getLength")),
-                INT_TYPE));
-        RANGE_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, new PythonFunctionSignature(
-                new MethodDescriptor(PythonRange.class.getMethod("getPythonIterator")),
-                ITERATOR_TYPE));
+        RANGE_TYPE.addUnaryMethod(PythonUnaryOperator.LENGTH, PythonRange.class.getMethod("getLength"));
+        RANGE_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR, PythonRange.class.getMethod("getPythonIterator"));
 
         // Binary methods
-        RANGE_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM, new PythonFunctionSignature(
-                new MethodDescriptor(PythonRange.class.getMethod("getItem", PythonInteger.class)),
-                INT_TYPE, INT_TYPE));
-        RANGE_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS, new PythonFunctionSignature(
-                new MethodDescriptor(PythonRange.class.getMethod("isObjectInRange", PythonLikeObject.class)),
-                BOOLEAN_TYPE, BASE_TYPE));
+        RANGE_TYPE.addBinaryMethod(PythonBinaryOperators.GET_ITEM, PythonRange.class.getMethod("getItem", PythonInteger.class));
+        RANGE_TYPE.addBinaryMethod(PythonBinaryOperators.CONTAINS,
+                PythonRange.class.getMethod("isObjectInRange", PythonLikeObject.class));
 
         return RANGE_TYPE;
     }
@@ -125,7 +112,13 @@ public class PythonRange extends AbstractPythonLikeObject implements List<Python
 
     @Override
     public int size() {
-        return stop.value.subtract(start.value).divide(step.value).intValueExact();
+        // Need to use ceil division
+        BigInteger[] divideAndRemainder = stop.value.subtract(start.value).divideAndRemainder(step.value);
+        if (divideAndRemainder[1].equals(BigInteger.ZERO)) {
+            return divideAndRemainder[0].intValueExact();
+        } else {
+            return divideAndRemainder[0].intValueExact() + 1;
+        }
     }
 
     public PythonInteger getLength() {

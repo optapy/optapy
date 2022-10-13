@@ -5,234 +5,312 @@ MIN_LONG = -MAX_LONG
 
 
 def test_add():
-    add_verifier = verifier_for(lambda a, b: a + b)
+    def int_add(a: float, b: int) -> float:
+        return a + b
 
-    add_verifier.verify(1.0, 1, expected_result=2.0)
-    add_verifier.verify(1.0, -1, expected_result=0.0)
-    add_verifier.verify(-1.0, 1, expected_result=0.0)
-    add_verifier.verify(0.0, 1, expected_result=1.0)
-    add_verifier.verify(MAX_LONG + 0.0, 1, expected_result=(MAX_LONG + 1.0))
-    add_verifier.verify(MIN_LONG + 0.0, -1, expected_result=(MIN_LONG - 1.0))
+    def float_add(a: float, b: float) -> float:
+        return a + b
 
-    add_verifier.verify(1.0, 1.0, expected_result=2.0)
-    add_verifier.verify(1.0, -1.0, expected_result=0.0)
-    add_verifier.verify(-1.0, 1.0, expected_result=0.0)
-    add_verifier.verify(0.0, 1.0, expected_result=1.0)
-    add_verifier.verify(MAX_LONG + 0.0, 1.0, expected_result=(MAX_LONG + 1.0))
-    add_verifier.verify(MIN_LONG + 0.0, -1.0, expected_result=(MIN_LONG - 1.0))
+    int_add_verifier = verifier_for(int_add)
+    float_add_verifier = verifier_for(float_add)
+
+    int_add_verifier.verify(1.0, 1, expected_result=2.0)
+    int_add_verifier.verify(1.0, -1, expected_result=0.0)
+    int_add_verifier.verify(-1.0, 1, expected_result=0.0)
+    int_add_verifier.verify(0.0, 1, expected_result=1.0)
+    int_add_verifier.verify(MAX_LONG + 0.0, 1, expected_result=(MAX_LONG + 1.0))
+    int_add_verifier.verify(MIN_LONG + 0.0, -1, expected_result=(MIN_LONG - 1.0))
+
+    float_add_verifier.verify(1.0, 1.0, expected_result=2.0)
+    float_add_verifier.verify(1.0, -1.0, expected_result=0.0)
+    float_add_verifier.verify(-1.0, 1.0, expected_result=0.0)
+    float_add_verifier.verify(0.0, 1.0, expected_result=1.0)
+    float_add_verifier.verify(MAX_LONG + 0.0, 1.0, expected_result=(MAX_LONG + 1.0))
+    float_add_verifier.verify(MIN_LONG + 0.0, -1.0, expected_result=(MIN_LONG - 1.0))
 
 
 def test_iadd():
-    def iadd(x, y):
+    def int_iadd(x: float, y: int) -> float:
         old = x
         x += y
         if y != 0:
             assert old is not x
         return x
 
-    iadd_verifier = verifier_for(iadd)
+    def float_iadd(x: float, y: float) -> float:
+        old = x
+        x += y
+        if y != 0:
+            assert old is not x
+        return x
 
-    iadd_verifier.verify(1.0, 1, expected_result=2.0)
-    iadd_verifier.verify(1.0, -1, expected_result=0.0)
-    iadd_verifier.verify(-1.0, 1, expected_result=0.0)
-    iadd_verifier.verify(0.0, 1, expected_result=1.0)
-    iadd_verifier.verify(MAX_LONG + 0.0, 1, expected_result=(MAX_LONG + 1.0))
-    iadd_verifier.verify(MIN_LONG + 0.0, -1, expected_result=(MIN_LONG - 1.0))
+    int_iadd_verifier = verifier_for(int_iadd)
+    float_iadd_verifier = verifier_for(float_iadd)
 
-    iadd_verifier.verify(1.0, 1.0, expected_result=2.0)
-    iadd_verifier.verify(1.0, -1.0, expected_result=0.0)
-    iadd_verifier.verify(-1.0, 1.0, expected_result=0.0)
-    iadd_verifier.verify(0.0, 1.0, expected_result=1.0)
-    iadd_verifier.verify(MAX_LONG + 0.0, 1.0, expected_result=(MAX_LONG + 1.0))
-    iadd_verifier.verify(MIN_LONG + 0.0, -1.0, expected_result=(MIN_LONG - 1.0))
+    int_iadd_verifier.verify(1.0, 1, expected_result=2.0)
+    int_iadd_verifier.verify(1.0, -1, expected_result=0.0)
+    int_iadd_verifier.verify(-1.0, 1, expected_result=0.0)
+    int_iadd_verifier.verify(0.0, 1, expected_result=1.0)
+    int_iadd_verifier.verify(MAX_LONG + 0.0, 1, expected_result=(MAX_LONG + 1.0))
+    int_iadd_verifier.verify(MIN_LONG + 0.0, -1, expected_result=(MIN_LONG - 1.0))
+
+    float_iadd_verifier.verify(1.0, 1.0, expected_result=2.0)
+    float_iadd_verifier.verify(1.0, -1.0, expected_result=0.0)
+    float_iadd_verifier.verify(-1.0, 1.0, expected_result=0.0)
+    float_iadd_verifier.verify(0.0, 1.0, expected_result=1.0)
+    float_iadd_verifier.verify(MAX_LONG + 0.0, 1.0, expected_result=(MAX_LONG + 1.0))
+    float_iadd_verifier.verify(MIN_LONG + 0.0, -1.0, expected_result=(MIN_LONG - 1.0))
 
 
 def test_sub():
-    sub_verifier = verifier_for(lambda a, b: a - b)
+    def int_sub(a: float, b: int) -> float:
+        return a - b
 
-    sub_verifier.verify(1.0, 1, expected_result=0.0)
-    sub_verifier.verify(1.0, -1, expected_result=2.0)
-    sub_verifier.verify(-1.0, 1, expected_result=-2.0)
-    sub_verifier.verify(0.0, 1, expected_result=-1.0)
-    sub_verifier.verify(MAX_LONG + 0.0, -1, expected_result=(MAX_LONG + 1.0))
-    sub_verifier.verify(MIN_LONG + 0.0, 1, expected_result=(MIN_LONG - 1.0))
+    def float_sub(a: float, b: float) -> float:
+        return a - b
 
-    sub_verifier.verify(1.0, 1.0, expected_result=0.0)
-    sub_verifier.verify(1.0, -1.0, expected_result=2.0)
-    sub_verifier.verify(-1.0, 1.0, expected_result=-2.0)
-    sub_verifier.verify(0.0, 1.0, expected_result=-1.0)
-    sub_verifier.verify(MAX_LONG + 0.0, -1.0, expected_result=(MAX_LONG + 1.0))
-    sub_verifier.verify(MIN_LONG + 0.0, 1.0, expected_result=(MIN_LONG - 1.0))
+    int_sub_verifier = verifier_for(int_sub)
+    float_sub_verifier = verifier_for(float_sub)
+
+    int_sub_verifier.verify(1.0, 1, expected_result=0.0)
+    int_sub_verifier.verify(1.0, -1, expected_result=2.0)
+    int_sub_verifier.verify(-1.0, 1, expected_result=-2.0)
+    int_sub_verifier.verify(0.0, 1, expected_result=-1.0)
+    int_sub_verifier.verify(MAX_LONG + 0.0, -1, expected_result=(MAX_LONG + 1.0))
+    int_sub_verifier.verify(MIN_LONG + 0.0, 1, expected_result=(MIN_LONG - 1.0))
+
+    float_sub_verifier.verify(1.0, 1.0, expected_result=0.0)
+    float_sub_verifier.verify(1.0, -1.0, expected_result=2.0)
+    float_sub_verifier.verify(-1.0, 1.0, expected_result=-2.0)
+    float_sub_verifier.verify(0.0, 1.0, expected_result=-1.0)
+    float_sub_verifier.verify(MAX_LONG + 0.0, -1.0, expected_result=(MAX_LONG + 1.0))
+    float_sub_verifier.verify(MIN_LONG + 0.0, 1.0, expected_result=(MIN_LONG - 1.0))
 
 
 def test_isub():
-    def isub(x, y):
+    def int_isub(x: float, y: int) -> float:
         old = x
         x -= y
         if y != 0:
             assert old is not x
         return x
 
-    isub_verifier = verifier_for(isub)
+    def float_isub(x: float, y: float) -> float:
+        old = x
+        x -= y
+        if y != 0:
+            assert old is not x
+        return x
 
-    isub_verifier.verify(1.0, 1, expected_result=0.0)
-    isub_verifier.verify(1.0, -1, expected_result=2.0)
-    isub_verifier.verify(-1.0, 1, expected_result=-2.0)
-    isub_verifier.verify(0.0, 1, expected_result=-1.0)
-    isub_verifier.verify(MAX_LONG + 0.0, -1, expected_result=(MAX_LONG + 1.0))
-    isub_verifier.verify(MIN_LONG + 0.0, 1, expected_result=(MIN_LONG - 1.0))
+    int_isub_verifier = verifier_for(int_isub)
+    float_isub_verifier = verifier_for(float_isub)
 
-    isub_verifier.verify(1.0, 1.0, expected_result=0.0)
-    isub_verifier.verify(1.0, -1.0, expected_result=2.0)
-    isub_verifier.verify(-1.0, 1.0, expected_result=-2.0)
-    isub_verifier.verify(0.0, 1.0, expected_result=-1.0)
-    isub_verifier.verify(MAX_LONG + 0.0, -1.0, expected_result=(MAX_LONG + 1.0))
-    isub_verifier.verify(MIN_LONG + 0.0, 1.0, expected_result=(MIN_LONG - 1.0))
+    int_isub_verifier.verify(1.0, 1, expected_result=0.0)
+    int_isub_verifier.verify(1.0, -1, expected_result=2.0)
+    int_isub_verifier.verify(-1.0, 1, expected_result=-2.0)
+    int_isub_verifier.verify(0.0, 1, expected_result=-1.0)
+    int_isub_verifier.verify(MAX_LONG + 0.0, -1, expected_result=(MAX_LONG + 1.0))
+    int_isub_verifier.verify(MIN_LONG + 0.0, 1, expected_result=(MIN_LONG - 1.0))
+
+    float_isub_verifier.verify(1.0, 1.0, expected_result=0.0)
+    float_isub_verifier.verify(1.0, -1.0, expected_result=2.0)
+    float_isub_verifier.verify(-1.0, 1.0, expected_result=-2.0)
+    float_isub_verifier.verify(0.0, 1.0, expected_result=-1.0)
+    float_isub_verifier.verify(MAX_LONG + 0.0, -1.0, expected_result=(MAX_LONG + 1.0))
+    float_isub_verifier.verify(MIN_LONG + 0.0, 1.0, expected_result=(MIN_LONG - 1.0))
 
 
 def test_multiply():
-    multiply_verifier = verifier_for(lambda a, b: a * b)
+    def int_multiply(a: float, b: int) -> float:
+        return a * b
 
-    multiply_verifier.verify(1.0, 1, expected_result=1.0)
-    multiply_verifier.verify(1.0, -1, expected_result=-1.0)
-    multiply_verifier.verify(-1.0, 1, expected_result=-1.0)
-    multiply_verifier.verify(0.0, 1, expected_result=0.0)
-    multiply_verifier.verify(2.0, 3, expected_result=6.0)
-    multiply_verifier.verify(MAX_LONG + 0.0, 2, expected_result=(2.0 * MAX_LONG))
-    multiply_verifier.verify(MIN_LONG + 0.0, 2, expected_result=(2.0 * MIN_LONG))
+    def float_multiply(a: float, b: float) -> float:
+        return a * b
 
-    multiply_verifier.verify(1.0, 1.0, expected_result=1.0)
-    multiply_verifier.verify(1.0, -1.0, expected_result=-1.0)
-    multiply_verifier.verify(-1.0, 1.0, expected_result=-1.0)
-    multiply_verifier.verify(0.0, 1.0, expected_result=0.0)
-    multiply_verifier.verify(2.0, 3.0, expected_result=6.0)
-    multiply_verifier.verify(MAX_LONG + 0.0, 2.0, expected_result=(2.0 * MAX_LONG))
-    multiply_verifier.verify(MIN_LONG + 0.0, 2.0, expected_result=(2.0 * MIN_LONG))
+    int_multiply_verifier = verifier_for(int_multiply)
+    float_multiply_verifier = verifier_for(float_multiply)
+
+    int_multiply_verifier.verify(1.0, 1, expected_result=1.0)
+    int_multiply_verifier.verify(1.0, -1, expected_result=-1.0)
+    int_multiply_verifier.verify(-1.0, 1, expected_result=-1.0)
+    int_multiply_verifier.verify(0.0, 1, expected_result=0.0)
+    int_multiply_verifier.verify(2.0, 3, expected_result=6.0)
+    int_multiply_verifier.verify(MAX_LONG + 0.0, 2, expected_result=(2.0 * MAX_LONG))
+    int_multiply_verifier.verify(MIN_LONG + 0.0, 2, expected_result=(2.0 * MIN_LONG))
+
+    float_multiply_verifier.verify(1.0, 1.0, expected_result=1.0)
+    float_multiply_verifier.verify(1.0, -1.0, expected_result=-1.0)
+    float_multiply_verifier.verify(-1.0, 1.0, expected_result=-1.0)
+    float_multiply_verifier.verify(0.0, 1.0, expected_result=0.0)
+    float_multiply_verifier.verify(2.0, 3.0, expected_result=6.0)
+    float_multiply_verifier.verify(MAX_LONG + 0.0, 2.0, expected_result=(2.0 * MAX_LONG))
+    float_multiply_verifier.verify(MIN_LONG + 0.0, 2.0, expected_result=(2.0 * MIN_LONG))
 
 
 def test_imultiply():
-    def imultiply(x, y):
+    def int_imultiply(x: float, y: int) -> float:
         old = x
         x *= y
         if y != 1:
             assert old is not x
         return x
 
-    imultiply_verifier = verifier_for(imultiply)
+    def float_imultiply(x: float, y: float) -> float:
+        old = x
+        x *= y
+        if y != 1:
+            assert old is not x
+        return x
 
-    imultiply_verifier.verify(1.0, 1, expected_result=1.0)
-    imultiply_verifier.verify(1.0, -1, expected_result=-1.0)
-    imultiply_verifier.verify(-1.0, 1, expected_result=-1.0)
-    imultiply_verifier.verify(0.0, 1, expected_result=0.0)
-    imultiply_verifier.verify(2.0, 3, expected_result=6.0)
-    imultiply_verifier.verify(MAX_LONG + 0.0, 2, expected_result=(2.0 * MAX_LONG))
-    imultiply_verifier.verify(MIN_LONG + 0.0, 2, expected_result=(2.0 * MIN_LONG))
+    int_imultiply_verifier = verifier_for(int_imultiply)
+    float_imultiply_verifier = verifier_for(float_imultiply)
 
-    imultiply_verifier.verify(1.0, 1.0, expected_result=1.0)
-    imultiply_verifier.verify(1.0, -1.0, expected_result=-1.0)
-    imultiply_verifier.verify(-1.0, 1.0, expected_result=-1.0)
-    imultiply_verifier.verify(0.0, 1.0, expected_result=0.0)
-    imultiply_verifier.verify(2.0, 3.0, expected_result=6.0)
-    imultiply_verifier.verify(MAX_LONG + 0.0, 2.0, expected_result=(2.0 * MAX_LONG))
-    imultiply_verifier.verify(MIN_LONG + 0.0, 2.0, expected_result=(2.0 * MIN_LONG))
+    int_imultiply_verifier.verify(1.0, 1, expected_result=1.0)
+    int_imultiply_verifier.verify(1.0, -1, expected_result=-1.0)
+    int_imultiply_verifier.verify(-1.0, 1, expected_result=-1.0)
+    int_imultiply_verifier.verify(0.0, 1, expected_result=0.0)
+    int_imultiply_verifier.verify(2.0, 3, expected_result=6.0)
+    int_imultiply_verifier.verify(MAX_LONG + 0.0, 2, expected_result=(2.0 * MAX_LONG))
+    int_imultiply_verifier.verify(MIN_LONG + 0.0, 2, expected_result=(2.0 * MIN_LONG))
+
+    float_imultiply_verifier.verify(1.0, 1.0, expected_result=1.0)
+    float_imultiply_verifier.verify(1.0, -1.0, expected_result=-1.0)
+    float_imultiply_verifier.verify(-1.0, 1.0, expected_result=-1.0)
+    float_imultiply_verifier.verify(0.0, 1.0, expected_result=0.0)
+    float_imultiply_verifier.verify(2.0, 3.0, expected_result=6.0)
+    float_imultiply_verifier.verify(MAX_LONG + 0.0, 2.0, expected_result=(2.0 * MAX_LONG))
+    float_imultiply_verifier.verify(MIN_LONG + 0.0, 2.0, expected_result=(2.0 * MIN_LONG))
 
 
 def test_truediv():
-    truediv_verifier = verifier_for(lambda a, b: a / b)
+    def int_truediv(a: float, b: int) -> float:
+        return a / b
 
-    truediv_verifier.verify(1.0, 1, expected_result=1.0)
-    truediv_verifier.verify(1.0, -1, expected_result=-1.0)
-    truediv_verifier.verify(-1.0, 1, expected_result=-1.0)
-    truediv_verifier.verify(0.0, 1, expected_result=0.0)
-    truediv_verifier.verify(3.0, 2, expected_result=1.5)
-    truediv_verifier.verify(2.0 * MAX_LONG, 2, expected_result=1.8446744073709552e+19)
-    truediv_verifier.verify(2.0 * MIN_LONG, 2, expected_result=-1.8446744073709552e+19)
+    def float_truediv(a: float, b: float) -> float:
+        return a / b
 
-    truediv_verifier.verify(1.0, 1.0, expected_result=1.0)
-    truediv_verifier.verify(1.0, -1.0, expected_result=-1.0)
-    truediv_verifier.verify(-1.0, 1.0, expected_result=-1.0)
-    truediv_verifier.verify(0.0, 1.0, expected_result=0.0)
-    truediv_verifier.verify(3.0, 2.0, expected_result=1.5)
-    truediv_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=1.8446744073709552e+19)
-    truediv_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=-1.8446744073709552e+19)
+    int_truediv_verifier = verifier_for(int_truediv)
+    float_truediv_verifier = verifier_for(float_truediv)
+
+    int_truediv_verifier.verify(1.0, 1, expected_result=1.0)
+    int_truediv_verifier.verify(1.0, -1, expected_result=-1.0)
+    int_truediv_verifier.verify(-1.0, 1, expected_result=-1.0)
+    int_truediv_verifier.verify(0.0, 1, expected_result=0.0)
+    int_truediv_verifier.verify(3.0, 2, expected_result=1.5)
+    int_truediv_verifier.verify(2.0 * MAX_LONG, 2, expected_result=1.8446744073709552e+19)
+    int_truediv_verifier.verify(2.0 * MIN_LONG, 2, expected_result=-1.8446744073709552e+19)
+
+    float_truediv_verifier.verify(1.0, 1.0, expected_result=1.0)
+    float_truediv_verifier.verify(1.0, -1.0, expected_result=-1.0)
+    float_truediv_verifier.verify(-1.0, 1.0, expected_result=-1.0)
+    float_truediv_verifier.verify(0.0, 1.0, expected_result=0.0)
+    float_truediv_verifier.verify(3.0, 2.0, expected_result=1.5)
+    float_truediv_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=1.8446744073709552e+19)
+    float_truediv_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=-1.8446744073709552e+19)
 
 
 def test_itruediv():
-    def itruediv(x, y):
+    def int_itruediv(x: float, y: int) -> float:
         old = x
         x /= y
         if y != 1:
             assert old is not x
         return x
 
-    itruediv_verifier = verifier_for(itruediv)
+    def float_itruediv(x: float, y: float) -> float:
+        old = x
+        x /= y
+        if y != 1:
+            assert old is not x
+        return x
 
-    itruediv_verifier.verify(1.0, 1, expected_result=1.0)
-    itruediv_verifier.verify(1.0, -1, expected_result=-1.0)
-    itruediv_verifier.verify(-1.0, 1, expected_result=-1.0)
-    itruediv_verifier.verify(0.0, 1, expected_result=0.0)
-    itruediv_verifier.verify(3.0, 2, expected_result=1.5)
-    itruediv_verifier.verify(2.0 * MAX_LONG, 2, expected_result=1.8446744073709552e+19)
-    itruediv_verifier.verify(2.0 * MIN_LONG, 2, expected_result=-1.8446744073709552e+19)
+    int_itruediv_verifier = verifier_for(int_itruediv)
+    float_itruediv_verifier = verifier_for(float_itruediv)
 
-    itruediv_verifier.verify(1.0, 1.0, expected_result=1.0)
-    itruediv_verifier.verify(1.0, -1.0, expected_result=-1.0)
-    itruediv_verifier.verify(-1.0, 1.0, expected_result=-1.0)
-    itruediv_verifier.verify(0.0, 1.0, expected_result=0.0)
-    itruediv_verifier.verify(3.0, 2.0, expected_result=1.5)
-    itruediv_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=1.8446744073709552e+19)
-    itruediv_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=-1.8446744073709552e+19)
+    int_itruediv_verifier.verify(1.0, 1, expected_result=1.0)
+    int_itruediv_verifier.verify(1.0, -1, expected_result=-1.0)
+    int_itruediv_verifier.verify(-1.0, 1, expected_result=-1.0)
+    int_itruediv_verifier.verify(0.0, 1, expected_result=0.0)
+    int_itruediv_verifier.verify(3.0, 2, expected_result=1.5)
+    int_itruediv_verifier.verify(2.0 * MAX_LONG, 2, expected_result=1.8446744073709552e+19)
+    int_itruediv_verifier.verify(2.0 * MIN_LONG, 2, expected_result=-1.8446744073709552e+19)
+
+    float_itruediv_verifier.verify(1.0, 1.0, expected_result=1.0)
+    float_itruediv_verifier.verify(1.0, -1.0, expected_result=-1.0)
+    float_itruediv_verifier.verify(-1.0, 1.0, expected_result=-1.0)
+    float_itruediv_verifier.verify(0.0, 1.0, expected_result=0.0)
+    float_itruediv_verifier.verify(3.0, 2.0, expected_result=1.5)
+    float_itruediv_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=1.8446744073709552e+19)
+    float_itruediv_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=-1.8446744073709552e+19)
 
 
 def test_floordiv():
-    floordiv_verifier = verifier_for(lambda a, b: a // b)
+    def int_floordiv(a: float, b: int) -> float:
+        return a // b
 
-    floordiv_verifier.verify(1.0, 1, expected_result=1.0)
-    floordiv_verifier.verify(1.0, -1, expected_result=-1.0)
-    floordiv_verifier.verify(-1.0, 1, expected_result=-1.0)
-    floordiv_verifier.verify(0.0, 1, expected_result=0.0)
-    floordiv_verifier.verify(3.0, 2, expected_result=1.0)
-    floordiv_verifier.verify(2.0 * MAX_LONG, 2, expected_result=(MAX_LONG + 0.0))
-    floordiv_verifier.verify(2.0 * MIN_LONG, 2, expected_result=(MIN_LONG + 0.0))
+    def float_floordiv(a: float, b: float) -> float:
+        return a // b
 
-    floordiv_verifier.verify(1.0, 1.0, expected_result=1.0)
-    floordiv_verifier.verify(1.0, -1.0, expected_result=-1.0)
-    floordiv_verifier.verify(-1.0, 1.0, expected_result=-1.0)
-    floordiv_verifier.verify(0.0, 1.0, expected_result=0.0)
-    floordiv_verifier.verify(3.0, 2.0, expected_result=1.0)
-    floordiv_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=1.8446744073709552e+19)
-    floordiv_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=-1.8446744073709552e+19)
+    int_floordiv_verifier = verifier_for(int_floordiv)
+    float_floordiv_verifier = verifier_for(float_floordiv)
+
+    int_floordiv_verifier.verify(1.0, 1, expected_result=1.0)
+    int_floordiv_verifier.verify(1.0, -1, expected_result=-1.0)
+    int_floordiv_verifier.verify(-1.0, 1, expected_result=-1.0)
+    int_floordiv_verifier.verify(0.0, 1, expected_result=0.0)
+    int_floordiv_verifier.verify(3.0, 2, expected_result=1.0)
+    int_floordiv_verifier.verify(2.0 * MAX_LONG, 2, expected_result=(MAX_LONG + 0.0))
+    int_floordiv_verifier.verify(2.0 * MIN_LONG, 2, expected_result=(MIN_LONG + 0.0))
+
+    float_floordiv_verifier.verify(1.0, 1.0, expected_result=1.0)
+    float_floordiv_verifier.verify(1.0, -1.0, expected_result=-1.0)
+    float_floordiv_verifier.verify(-1.0, 1.0, expected_result=-1.0)
+    float_floordiv_verifier.verify(0.0, 1.0, expected_result=0.0)
+    float_floordiv_verifier.verify(3.0, 2.0, expected_result=1.0)
+    float_floordiv_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=1.8446744073709552e+19)
+    float_floordiv_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=-1.8446744073709552e+19)
 
 
 def test_ifloordiv():
-    def ifloordiv(x, y):
+    def int_ifloordiv(x: float, y: int) -> float:
         old = x
         x //= y
         if y != 1:
             assert old is not x
         return x
 
-    ifloordiv_verifier = verifier_for(ifloordiv)
+    def float_ifloordiv(x: float, y: float) -> float:
+        old = x
+        x //= y
+        if y != 1:
+            assert old is not x
+        return x
 
-    ifloordiv_verifier.verify(1.0, 1, expected_result=1.0)
-    ifloordiv_verifier.verify(1.0, -1, expected_result=-1.0)
-    ifloordiv_verifier.verify(-1.0, 1, expected_result=-1.0)
-    ifloordiv_verifier.verify(0.0, 1, expected_result=0.0)
-    ifloordiv_verifier.verify(3.0, 2, expected_result=1.0)
-    ifloordiv_verifier.verify(2.0 * MAX_LONG, 2, expected_result=(MAX_LONG + 0.0))
-    ifloordiv_verifier.verify(2.0 * MIN_LONG, 2, expected_result=(MIN_LONG + 0.0))
+    int_ifloordiv_verifier = verifier_for(int_ifloordiv)
+    float_ifloordiv_verifier = verifier_for(float_ifloordiv)
 
-    ifloordiv_verifier.verify(1.0, 1.0, expected_result=1.0)
-    ifloordiv_verifier.verify(1.0, -1.0, expected_result=-1.0)
-    ifloordiv_verifier.verify(-1.0, 1.0, expected_result=-1.0)
-    ifloordiv_verifier.verify(0.0, 1.0, expected_result=0.0)
-    ifloordiv_verifier.verify(3.0, 2.0, expected_result=1.0)
-    ifloordiv_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=1.8446744073709552e+19)
-    ifloordiv_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=-1.8446744073709552e+19)
+    int_ifloordiv_verifier.verify(1.0, 1, expected_result=1.0)
+    int_ifloordiv_verifier.verify(1.0, -1, expected_result=-1.0)
+    int_ifloordiv_verifier.verify(-1.0, 1, expected_result=-1.0)
+    int_ifloordiv_verifier.verify(0.0, 1, expected_result=0.0)
+    int_ifloordiv_verifier.verify(3.0, 2, expected_result=1.0)
+    int_ifloordiv_verifier.verify(2.0 * MAX_LONG, 2, expected_result=(MAX_LONG + 0.0))
+    int_ifloordiv_verifier.verify(2.0 * MIN_LONG, 2, expected_result=(MIN_LONG + 0.0))
+
+    float_ifloordiv_verifier.verify(1.0, 1.0, expected_result=1.0)
+    float_ifloordiv_verifier.verify(1.0, -1.0, expected_result=-1.0)
+    float_ifloordiv_verifier.verify(-1.0, 1.0, expected_result=-1.0)
+    float_ifloordiv_verifier.verify(0.0, 1.0, expected_result=0.0)
+    float_ifloordiv_verifier.verify(3.0, 2.0, expected_result=1.0)
+    float_ifloordiv_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=1.8446744073709552e+19)
+    float_ifloordiv_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=-1.8446744073709552e+19)
 
 
 def test_negate():
-    negate_verifier = verifier_for(lambda x: -x)
+    def negate(x: float) -> float:
+        return -x
+
+    negate_verifier = verifier_for(negate)
 
     negate_verifier.verify(1.0, expected_result=-1.0)
     negate_verifier.verify(-1.0, expected_result=1.0)
@@ -241,7 +319,10 @@ def test_negate():
 
 
 def test_pos():
-    pos_verifier = verifier_for(lambda x: +x)
+    def pos(x: float) -> float:
+        return +x
+
+    pos_verifier = verifier_for(pos)
 
     pos_verifier.verify(1.0, expected_result=1.0)
     pos_verifier.verify(-1.0, expected_result=-1.0)
@@ -250,7 +331,10 @@ def test_pos():
 
 
 def test_abs():
-    abs_verifier = verifier_for(lambda x: abs(x))
+    def float_abs(x: float) -> float:
+        return abs(x)
+
+    abs_verifier = verifier_for(float_abs)
 
     abs_verifier.verify(1.0, expected_result=1.0)
     abs_verifier.verify(-1.0, expected_result=1.0)
@@ -259,46 +343,60 @@ def test_abs():
 
 
 def test_divmod():
-    divmod_verifier = verifier_for(lambda x, y: divmod(x, y))
+    def int_divmod(a: float, b: int) -> tuple:
+        return divmod(a, b)
 
-    divmod_verifier.verify(1.0, 1, expected_result=(1.0, 0.0))
-    divmod_verifier.verify(1.0, -1, expected_result=(-1.0, 0.0))
-    divmod_verifier.verify(-1.0, 1, expected_result=(-1.0, 0.0))
-    divmod_verifier.verify(0.0, 1, expected_result=(0.0, 0.0))
-    divmod_verifier.verify(3.0, 2, expected_result=(1.0, 1.0))
-    divmod_verifier.verify(-3.0, -2, expected_result=(1.0, -1.0))
-    divmod_verifier.verify(2.0 * MAX_LONG, 2, expected_result=(MAX_LONG + 0.0, 0.0))
-    divmod_verifier.verify(2.0 * MIN_LONG, 2, expected_result=(MIN_LONG + 0.0, 0.0))
+    def float_divmod(a: float, b: float) -> tuple:
+        return divmod(a, b)
 
-    divmod_verifier.verify(1.0, 1.0, expected_result=(1.0, 0.0))
-    divmod_verifier.verify(1.0, -1.0, expected_result=(-1.0, 0.0))
-    divmod_verifier.verify(-1.0, 1.0, expected_result=(-1.0, 0.0))
-    divmod_verifier.verify(0.0, 1.0, expected_result=(0.0, 0.0))
-    divmod_verifier.verify(3.0, 2.0, expected_result=(1.0, 1.0))
-    divmod_verifier.verify(-3.0, -2.0, expected_result=(1.0, -1.0))
-    divmod_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=(1.8446744073709552e+19, 0.0))
-    divmod_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=(-1.8446744073709552e+19, 0.0))
+    int_divmod_verifier = verifier_for(int_divmod)
+    float_divmod_verifier = verifier_for(float_divmod)
+
+    int_divmod_verifier.verify(1.0, 1, expected_result=(1.0, 0.0))
+    int_divmod_verifier.verify(1.0, -1, expected_result=(-1.0, 0.0))
+    int_divmod_verifier.verify(-1.0, 1, expected_result=(-1.0, 0.0))
+    int_divmod_verifier.verify(0.0, 1, expected_result=(0.0, 0.0))
+    int_divmod_verifier.verify(3.0, 2, expected_result=(1.0, 1.0))
+    int_divmod_verifier.verify(-3.0, -2, expected_result=(1.0, -1.0))
+    int_divmod_verifier.verify(2.0 * MAX_LONG, 2, expected_result=(MAX_LONG + 0.0, 0.0))
+    int_divmod_verifier.verify(2.0 * MIN_LONG, 2, expected_result=(MIN_LONG + 0.0, 0.0))
+
+    float_divmod_verifier.verify(1.0, 1.0, expected_result=(1.0, 0.0))
+    float_divmod_verifier.verify(1.0, -1.0, expected_result=(-1.0, 0.0))
+    float_divmod_verifier.verify(-1.0, 1.0, expected_result=(-1.0, 0.0))
+    float_divmod_verifier.verify(0.0, 1.0, expected_result=(0.0, 0.0))
+    float_divmod_verifier.verify(3.0, 2.0, expected_result=(1.0, 1.0))
+    float_divmod_verifier.verify(-3.0, -2.0, expected_result=(1.0, -1.0))
+    float_divmod_verifier.verify(2.0 * MAX_LONG, 2.0, expected_result=(1.8446744073709552e+19, 0.0))
+    float_divmod_verifier.verify(2.0 * MIN_LONG, 2.0, expected_result=(-1.8446744073709552e+19, 0.0))
 
 
 def test_pow():
-    pow_verifier = verifier_for(lambda x, y: x ** y)
+    def int_pow(a: float, b: int) -> float:
+        return a ** b
 
-    pow_verifier.verify(0.0, 0, expected_result=1.0)
-    pow_verifier.verify(1.0, 2, expected_result=1.0)
-    pow_verifier.verify(2.0, 2, expected_result=4.0)
-    pow_verifier.verify(-2.0, 2, expected_result=4.0)
-    pow_verifier.verify(-2.0, 3, expected_result=-8.0)
-    pow_verifier.verify(3.0, 2, expected_result=9.0)
-    pow_verifier.verify(2.0, 3, expected_result=8.0)
-    pow_verifier.verify(2.0, -1, expected_result=0.5)
-    pow_verifier.verify(2.0, -2, expected_result=0.25)
+    def float_pow(a: float, b: float) -> float:
+        return a ** b
 
-    pow_verifier.verify(0.0, 0.0, expected_result=1.0)
-    pow_verifier.verify(1.0, 2.0, expected_result=1.0)
-    pow_verifier.verify(2.0, 2.0, expected_result=4.0)
-    pow_verifier.verify(-2.0, 2.0, expected_result=4.0)
-    pow_verifier.verify(-2.0, 3.0, expected_result=-8.0)
-    pow_verifier.verify(3.0, 2.0, expected_result=9.0)
-    pow_verifier.verify(2.0, 3.0, expected_result=8.0)
-    pow_verifier.verify(2.0, -1.0, expected_result=0.5)
-    pow_verifier.verify(2.0, -2.0, expected_result=0.25)
+    int_pow_verifier = verifier_for(int_pow)
+    float_pow_verifier = verifier_for(float_pow)
+
+    int_pow_verifier.verify(0.0, 0, expected_result=1.0)
+    int_pow_verifier.verify(1.0, 2, expected_result=1.0)
+    int_pow_verifier.verify(2.0, 2, expected_result=4.0)
+    int_pow_verifier.verify(-2.0, 2, expected_result=4.0)
+    int_pow_verifier.verify(-2.0, 3, expected_result=-8.0)
+    int_pow_verifier.verify(3.0, 2, expected_result=9.0)
+    int_pow_verifier.verify(2.0, 3, expected_result=8.0)
+    int_pow_verifier.verify(2.0, -1, expected_result=0.5)
+    int_pow_verifier.verify(2.0, -2, expected_result=0.25)
+
+    float_pow_verifier.verify(0.0, 0.0, expected_result=1.0)
+    float_pow_verifier.verify(1.0, 2.0, expected_result=1.0)
+    float_pow_verifier.verify(2.0, 2.0, expected_result=4.0)
+    float_pow_verifier.verify(-2.0, 2.0, expected_result=4.0)
+    float_pow_verifier.verify(-2.0, 3.0, expected_result=-8.0)
+    float_pow_verifier.verify(3.0, 2.0, expected_result=9.0)
+    float_pow_verifier.verify(2.0, 3.0, expected_result=8.0)
+    float_pow_verifier.verify(2.0, -1.0, expected_result=0.5)
+    float_pow_verifier.verify(2.0, -2.0, expected_result=0.25)

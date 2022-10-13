@@ -65,7 +65,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static final Map<String, Integer> classNameToSharedInstanceCount = new HashMap<>();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PythonBytecodeToJavaBytecodeTranslator.class);
-    public static Path classOutputRootPath = null;
+    public static Path classOutputRootPath = InterpreterStartupOptions.classOutputRootPath;
 
     static {
         BuiltinTypes.load();
@@ -681,6 +681,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
         for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
             localVariableHelper.readLocal(methodVisitor, i);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, javaParameterTypes[i + 6].getInternalName());
         }
 
         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(generatorClass),

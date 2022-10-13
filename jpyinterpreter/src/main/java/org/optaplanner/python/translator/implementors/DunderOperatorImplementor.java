@@ -128,11 +128,7 @@ public class DunderOperatorImplementor {
                 PythonFunctionSignature functionSignature = maybeFunctionSignature.get();
                 MethodDescriptor methodDescriptor = functionSignature.getMethodDescriptor();
                 boolean needToCheckForNotImplemented = operator.hasRightDunderMethod() &&
-                        functionSignature.getReturnType().isSubclassOf(NOT_IMPLEMENTED_TYPE);
-
-                if (!isLeft) {
-                    methodVisitor.visitInsn(Opcodes.SWAP);
-                }
+                        NOT_IMPLEMENTED_TYPE.isSubclassOf(functionSignature.getReturnType());
 
                 if (isLeft) {
                     if (methodDescriptor.getParameterTypes().length < 2) {
@@ -149,10 +145,30 @@ public class DunderOperatorImplementor {
                         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
                                 methodDescriptor.getParameterTypes()[1].getInternalName());
                     }
+                } else {
+                    if (methodDescriptor.getParameterTypes().length < 2) {
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                                methodDescriptor.getParameterTypes()[0].getInternalName());
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                                methodDescriptor.getDeclaringClassInternalName());
+                    } else {
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                                methodDescriptor.getParameterTypes()[1].getInternalName());
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                                methodDescriptor.getParameterTypes()[0].getInternalName());
+                    }
                 }
 
                 if (needToCheckForNotImplemented) {
                     methodVisitor.visitInsn(Opcodes.DUP2);
+                }
+
+                if (!isLeft) {
+                    methodVisitor.visitInsn(Opcodes.SWAP);
                 }
                 functionSignature.getMethodDescriptor().callMethod(methodVisitor);
                 if (needToCheckForNotImplemented) {
@@ -163,17 +179,15 @@ public class DunderOperatorImplementor {
                     Label done = new Label();
 
                     methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, ifNotImplemented);
-                    if (isLeft) {
-                        methodVisitor.visitInsn(Opcodes.DUP_X2);
-                        methodVisitor.visitInsn(Opcodes.POP);
-                        methodVisitor.visitInsn(Opcodes.POP2);
-                        methodVisitor.visitJumpInsn(Opcodes.GOTO, done);
-                    }
+
+                    methodVisitor.visitInsn(Opcodes.DUP_X2);
+                    methodVisitor.visitInsn(Opcodes.POP);
+                    methodVisitor.visitInsn(Opcodes.POP2);
+                    methodVisitor.visitJumpInsn(Opcodes.GOTO, done);
 
                     methodVisitor.visitLabel(ifNotImplemented);
                     if (isLeft) {
                         methodVisitor.visitInsn(Opcodes.POP);
-                        methodVisitor.visitInsn(Opcodes.SWAP);
                         binaryOperator(methodVisitor, stackMetadata, operator, false, true);
                     } else {
                         methodVisitor.visitInsn(Opcodes.POP);
@@ -427,64 +441,68 @@ public class DunderOperatorImplementor {
             PythonBinaryOperators operator) {
         Label done = new Label();
         Label raiseError = new Label();
-        if (operator.hasRightDunderMethod()) {
-            Label noRightMethod = new Label();
-            // Stack is now TOS1, TOS
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
-                    "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
-                    true);
-            methodVisitor.visitLdcInsn(operator.getRightDunderMethod());
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
-                    "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
-                            Type.getType(String.class)),
-                    true);
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-            methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, noRightMethod);
+        Label noRightMethod = new Label();
 
-            // Stack is now TOS1, TOS, method
-            methodVisitor.visitInsn(Opcodes.DUP_X2);
-            methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitInsn(Opcodes.DUP2);
 
-            // Stack is now method, TOS1, TOS
-            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonLikeList.class));
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonLikeList.class), "<init>",
-                    Type.getMethodDescriptor(Type.VOID_TYPE), false);
+        // Stack is now TOS1, TOS
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                true);
+        methodVisitor.visitLdcInsn(operator.getRightDunderMethod());
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(String.class)),
+                true);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, noRightMethod);
 
-            // Stack is now method, TOS1, TOS, argList
-            pushArgumentIntoList(methodVisitor);
-            pushArgumentIntoList(methodVisitor);
+        // Stack is now TOS1, TOS, method
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.POP);
 
-            // Stack is now method, argList
-            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
-                    "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
-                            Type.getType(List.class),
-                            Type.getType(Map.class)),
-                    true);
+        // Stack is now method, TOS1, TOS
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonLikeList.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(PythonLikeList.class), "<init>",
+                Type.getMethodDescriptor(Type.VOID_TYPE), false);
 
-            // Stack is now method_result
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(NotImplemented.class),
-                    "INSTANCE", Type.getDescriptor(NotImplemented.class));
+        // Stack is now method, TOS1, TOS, argList
+        pushArgumentIntoList(methodVisitor);
+        pushArgumentIntoList(methodVisitor);
 
-            methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, done);
-            // Stack is TOS1, TOS, NotImplemented
-            methodVisitor.visitInsn(Opcodes.POP);
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, raiseError);
+        // Stack is now method, argList
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class)),
+                true);
 
-            methodVisitor.visitLabel(noRightMethod);
-            methodVisitor.visitInsn(Opcodes.POP);
-            methodVisitor.visitInsn(Opcodes.POP2);
-        }
+        // Stack is now method_result
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(NotImplemented.class),
+                "INSTANCE", Type.getDescriptor(NotImplemented.class));
+
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, done);
+        // Stack is TOS1, TOS, NotImplemented
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, raiseError);
+
+        methodVisitor.visitLabel(noRightMethod);
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitInsn(Opcodes.POP2);
+
         methodVisitor.visitLabel(raiseError);
         methodVisitor.visitInsn(Opcodes.SWAP);
         raiseUnsupportedType(methodVisitor, localVariableHelper, operator);
 
         methodVisitor.visitLabel(done);
-
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitInsn(Opcodes.POP2);
     }
 
     /**

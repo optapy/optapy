@@ -9,6 +9,7 @@ import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTran
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
 import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.GENERATOR_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.TYPE_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.asmClassLoader;
@@ -22,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -50,7 +52,6 @@ import org.optaplanner.python.translator.opcodes.object.StoreAttrOpcode;
 import org.optaplanner.python.translator.opcodes.variable.LoadFastOpcode;
 import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.python.translator.types.GeneratedFunctionMethodReference;
-import org.optaplanner.python.translator.types.PythonGenerator;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
@@ -76,7 +77,7 @@ public class PythonClassTranslator {
         String className = maybeClassName;
         String internalClassName = className.replace('.', '/');
 
-        List<PythonLikeType> superTypeList;
+        Set<PythonLikeType> superTypeSet;
         Set<JavaInterfaceImplementor> javaInterfaceImplementorSet = new HashSet<>();
 
         for (Map.Entry<String, PythonCompiledFunction> instanceMethodEntry : pythonCompiledClass.instanceFunctionNameToPythonBytecode
@@ -101,19 +102,20 @@ public class PythonClassTranslator {
         }
 
         if (pythonCompiledClass.superclassList.isEmpty()) {
-            superTypeList = List.of(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
+            superTypeSet = Set.of(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
         } else {
-            superTypeList = new ArrayList<>(pythonCompiledClass.superclassList.size());
+            superTypeSet = new LinkedHashSet<>(pythonCompiledClass.superclassList.size());
             for (int i = 0; i < pythonCompiledClass.superclassList.size(); i++) {
                 PythonLikeType superType = pythonCompiledClass.superclassList.get(i);
                 if (superType == BASE_TYPE || superType == null) {
-                    superTypeList.add(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
+                    superTypeSet.add(CPythonBackedPythonLikeObject.CPYTHON_BACKED_OBJECT_TYPE);
                 } else {
-                    superTypeList.add(pythonCompiledClass.superclassList.get(i));
+                    superTypeSet.add(superType);
                 }
             }
         }
 
+        List<PythonLikeType> superTypeList = new ArrayList<>(superTypeSet);
         PythonLikeType pythonLikeType = new PythonLikeType(pythonCompiledClass.className, internalClassName,
                 superTypeList);
         PythonLikeType superClassType = superTypeList.get(0);
@@ -734,7 +736,7 @@ public class PythonClassTranslator {
         parameterTypes.addAll(function.getParameterTypes().subList(1, function.getParameterTypes().size()));
 
         pythonLikeType.addMethod(methodName,
-                new PythonFunctionSignature(new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.STATIC,
+                new PythonFunctionSignature(new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.CLASS,
                         javaMethodName, interfaceDeclaration.methodDescriptor),
                         function.getReturnType().orElse(BASE_TYPE),
                         parameterTypes));
@@ -1104,6 +1106,15 @@ public class PythonClassTranslator {
         return new InterfaceDeclaration(internalClassName, Type.getMethodDescriptor(returnType, parameterTypes));
     }
 
+    public static Class<?> getInterfaceClassForDeclaration(InterfaceDeclaration interfaceDeclaration) {
+        try {
+            return asmClassLoader.loadClass(interfaceDeclaration.interfaceName.replaceAll("/", "."));
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("Cannot load " + interfaceDeclaration.interfaceName +
+                    " from the classloader; maybe it was not created?", e);
+        }
+    }
+
     private static FlowGraph createFlowGraph(PythonCompiledFunction pythonCompiledFunction, boolean isVirtual) {
         InterfaceDeclaration interfaceDeclaration = getInterfaceForPythonFunctionIgnoringReturn(pythonCompiledFunction);
         MethodDescriptor methodDescriptor = new MethodDescriptor(interfaceDeclaration.interfaceName.replace('.', '/'),
@@ -1160,7 +1171,7 @@ public class PythonClassTranslator {
         try {
             if (PythonBytecodeToJavaBytecodeTranslator
                     .getFunctionType(pythonCompiledFunction) == PythonFunctionType.GENERATOR) {
-                return PythonGenerator.GENERATOR_TYPE;
+                return GENERATOR_TYPE;
             }
 
             FlowGraph flowGraph = createFlowGraph(pythonCompiledFunction, isVirtual);

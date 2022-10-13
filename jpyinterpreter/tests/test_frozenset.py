@@ -2,14 +2,23 @@ from .conftest import verifier_for
 
 
 def test_len():
-    len_verifier = verifier_for(lambda tested: len(tested))
+    def length(tested: frozenset) -> int:
+        return len(tested)
+
+    len_verifier = verifier_for(length)
     len_verifier.verify(frozenset(), expected_result=0)
     len_verifier.verify(frozenset({1, 2, 3}), expected_result=3)
 
 
 def test_membership():
-    membership_verifier = verifier_for(lambda tested, x: x in tested)
-    not_membership_verifier = verifier_for(lambda tested, x: x not in tested)
+    def membership(tested: frozenset, x: object) -> bool:
+        return x in tested
+
+    def not_membership(tested: frozenset, x: object) -> bool:
+        return x not in tested
+
+    membership_verifier = verifier_for(membership)
+    not_membership_verifier = verifier_for(not_membership)
 
     membership_verifier.verify(frozenset(), 1, expected_result=False)
     not_membership_verifier.verify(frozenset(), 1, expected_result=True)
@@ -19,16 +28,28 @@ def test_membership():
 
 
 def test_isdisjoint():
-    isdisjoint_verifier = verifier_for(lambda x, y: x.isdisjoint(y))
+    def isdisjoint(x: frozenset, y: frozenset) -> bool:
+        return x.isdisjoint(y)
+
+    isdisjoint_verifier = verifier_for(isdisjoint)
 
     isdisjoint_verifier.verify(frozenset({1, 2, 3}), frozenset({4, 5, 6}), expected_result=True)
     isdisjoint_verifier.verify(frozenset({1, 2, 3}), frozenset({3, 4, 5}), expected_result=False)
 
 
 def test_issubset():
-    issubset_verifier = verifier_for(lambda x, y: x.issubset(y))
-    subset_le_verifier = verifier_for(lambda x, y: x <= y)
-    subset_strict_verifier = verifier_for(lambda x, y: x < y)
+    def issubset(x: frozenset, y: frozenset) -> bool:
+        return x.issubset(y)
+
+    def issubset_le(x: frozenset, y: frozenset) -> bool:
+        return x <= y
+
+    def is_strict_subset(x: frozenset, y: frozenset) -> bool:
+        return x < y
+
+    issubset_verifier = verifier_for(issubset)
+    subset_le_verifier = verifier_for(issubset_le)
+    subset_strict_verifier = verifier_for(is_strict_subset)
 
     issubset_verifier.verify(frozenset(), frozenset({1, 2, 3}), expected_result=True)
     subset_le_verifier.verify(frozenset(), frozenset({1, 2, 3}), expected_result=True)
@@ -56,9 +77,18 @@ def test_issubset():
 
 
 def test_issuperset():
-    issuperset_verifier = verifier_for(lambda x, y: x.issuperset(y))
-    superset_ge_verifier = verifier_for(lambda x, y: x >= y)
-    superset_strict_verifier = verifier_for(lambda x, y: x > y)
+    def issuperset(x: frozenset, y: frozenset) -> bool:
+        return x.issuperset(y)
+
+    def issuperset_ge(x: frozenset, y: frozenset) -> bool:
+        return x >= y
+
+    def is_strict_superset(x: frozenset, y: frozenset) -> bool:
+        return x > y
+
+    issuperset_verifier = verifier_for(issuperset)
+    superset_ge_verifier = verifier_for(issuperset_ge)
+    superset_strict_verifier = verifier_for(is_strict_superset)
 
     issuperset_verifier.verify(frozenset(), frozenset({1, 2, 3}), expected_result=False)
     superset_ge_verifier.verify(frozenset(), frozenset({1, 2, 3}), expected_result=False)
@@ -86,8 +116,14 @@ def test_issuperset():
 
 
 def test_union():
-    union_verifier = verifier_for(lambda x, y: x.union(y))
-    union_or_verifier = verifier_for(lambda x, y: x | y)
+    def union(x: frozenset, y: frozenset) -> frozenset:
+        return x.union(y)
+
+    def union_or(x: frozenset, y: frozenset) -> frozenset:
+        return x | y
+
+    union_verifier = verifier_for(union)
+    union_or_verifier = verifier_for(union_or)
 
     union_verifier.verify(frozenset({1}), frozenset({2}), expected_result=frozenset({1, 2}))
     union_or_verifier.verify(frozenset({1}), frozenset({2}), expected_result=frozenset({1, 2}))
@@ -103,8 +139,14 @@ def test_union():
 
 
 def test_intersection():
-    intersection_verifier = verifier_for(lambda x, y: x.intersection(y))
-    intersection_and_verifier = verifier_for(lambda x, y: x & y)
+    def intersection(x: frozenset, y: frozenset) -> frozenset:
+        return x.intersection(y)
+
+    def intersection_and(x: frozenset, y: frozenset) -> frozenset:
+        return x & y
+
+    intersection_verifier = verifier_for(intersection)
+    intersection_and_verifier = verifier_for(intersection_and)
 
     intersection_verifier.verify(frozenset({1}), frozenset({2}), expected_result=frozenset())
     intersection_and_verifier.verify(frozenset({1}), frozenset({2}), expected_result=frozenset())
@@ -120,8 +162,14 @@ def test_intersection():
 
 
 def test_difference():
-    difference_verifier = verifier_for(lambda x, y: x.difference(y))
-    difference_subtract_verifier = verifier_for(lambda x, y: x - y)
+    def difference(x: frozenset, y: frozenset) -> frozenset:
+        return x.difference(y)
+
+    def difference_subtract(x: frozenset, y: frozenset) -> frozenset:
+        return x - y
+
+    difference_verifier = verifier_for(difference)
+    difference_subtract_verifier = verifier_for(difference_subtract)
 
     difference_verifier.verify(frozenset({1}), frozenset({2}), expected_result=frozenset({1}))
     difference_subtract_verifier.verify(frozenset({1}), frozenset({2}), expected_result=frozenset({1}))
@@ -143,8 +191,14 @@ def test_difference():
 
 
 def test_symmetric_difference():
-    symmetric_difference_verifier = verifier_for(lambda x, y: x.symmetric_difference(y))
-    symmetric_difference_xor_verifier = verifier_for(lambda x, y: x ^ y)
+    def symmetric_difference(x: frozenset, y: frozenset) -> frozenset:
+        return x.symmetric_difference(y)
+
+    def symmetric_difference_xor(x: frozenset, y: frozenset) -> frozenset:
+        return x ^ y
+
+    symmetric_difference_verifier = verifier_for(symmetric_difference)
+    symmetric_difference_xor_verifier = verifier_for(symmetric_difference_xor)
 
     symmetric_difference_verifier.verify(frozenset({1}), frozenset({2}), expected_result=frozenset({1, 2}))
     symmetric_difference_xor_verifier.verify(frozenset({1}), frozenset({2}), expected_result=frozenset({1, 2}))
@@ -166,7 +220,7 @@ def test_symmetric_difference():
 
 
 def test_copy():
-    def copy_function(x):
+    def copy_function(x: frozenset) -> tuple:
         out = x.copy()
         return out, out is x
 

@@ -2,7 +2,7 @@ from .conftest import verifier_for
 
 
 def test_try_except_with_exception_type():
-    def my_function(arg):
+    def my_function(arg: str) -> int:
         try:
             if arg == 'ValueError':
                 raise ValueError
@@ -20,7 +20,7 @@ def test_try_except_with_exception_type():
 
 
 def test_try_except_with_exception_instance():
-    def my_function(arg):
+    def my_function(arg: str) -> object:
         try:
             if arg == 'ValueError':
                 raise ValueError('A value error')
@@ -38,7 +38,7 @@ def test_try_except_with_exception_instance():
 
 
 def test_nested_try_except():
-    def my_function(arg):
+    def my_function(arg: str) -> int:
         try:
             if arg == 'ValueError1':
                 raise ValueError
@@ -67,7 +67,7 @@ def test_nested_try_except():
 
 
 def test_try_except_finally():
-    def my_function(arg):
+    def my_function(arg: str) -> list:
         out = []
         try:
             try:
@@ -92,7 +92,7 @@ def test_try_except_finally():
 
 
 def test_raise_with_cause():
-    def my_function(arg):
+    def my_function(arg: BaseException) -> str:
         try:
             raise ValueError from arg
         except ValueError as e:
@@ -106,7 +106,7 @@ def test_raise_with_cause():
 
 
 def test_reraise():
-    def my_function(arg):
+    def my_function(arg: str) -> int:
         try:
             if arg == 'ValueError':
                 raise ValueError

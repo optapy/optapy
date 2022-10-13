@@ -2,7 +2,7 @@ from .conftest import verifier_for
 
 
 def test_while_loops():
-    def my_function(x):
+    def my_function(x: int) -> int:
         total = 0
         while x > 0:
             total += x
@@ -20,7 +20,7 @@ def test_while_loops():
 
 
 def test_inner_loops():
-    def my_function(x, y):
+    def my_function(x: int, y: int) -> int:
         total = 0
         while x > 0:
             remaining = y
@@ -43,7 +43,7 @@ def test_inner_loops():
 
 
 def test_iterable_loops():
-    def my_function(x):
+    def my_function(x: list) -> int:
         total = 0
         for item in x:
             total += item
@@ -57,7 +57,7 @@ def test_iterable_loops():
 
 
 def test_inner_iterable_loops():
-    def my_function(x, y):
+    def my_function(x: list, y: list) -> int:
         total = 0
         for x_item in x:
             for y_item in y:
@@ -75,7 +75,7 @@ def test_inner_iterable_loops():
 
 
 def test_breaks_in_iterable_loop():
-    def my_function(x):
+    def my_function(x: list) -> int:
         total = 0
         for item in x:
             if item == 0:
@@ -92,7 +92,7 @@ def test_breaks_in_iterable_loop():
 
 
 def test_continues_in_iterable_loop():
-    def my_function(x):
+    def my_function(x: list) -> int:
         total = 0
         for item in x:
             if item == 5:
@@ -109,11 +109,11 @@ def test_continues_in_iterable_loop():
 
 
 def test_iterating_generator():
-    def my_generator(x):
+    def my_generator(x: int):
         for i in range(x + 1):
             yield i
 
-    def my_function(x):
+    def my_function(x: int) -> int:
         total = 0
         for item in my_generator(x):
             total += item
@@ -128,7 +128,7 @@ def test_iterating_generator():
 
 
 def test_try_except_in_loop():
-    def my_function(x):
+    def my_function(x: int) -> int:
         total = 0
         for item in range(x + 1):
             try:
@@ -151,7 +151,7 @@ def test_try_except_in_loop():
 
 
 def test_try_except_outside_loop():
-    def my_function(x):
+    def my_function(x: list) -> int:
         total = 0
         try:
             for item in x:

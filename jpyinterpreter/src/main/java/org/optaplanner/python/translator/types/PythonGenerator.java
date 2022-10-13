@@ -1,6 +1,7 @@
 package org.optaplanner.python.translator.types;
 
 import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
+import static org.optaplanner.python.translator.types.BuiltinTypes.GENERATOR_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.NONE_TYPE;
 
 import java.util.Iterator;
@@ -14,18 +15,12 @@ import org.optaplanner.python.translator.types.errors.GeneratorExit;
 import org.optaplanner.python.translator.types.errors.PythonBaseException;
 
 public abstract class PythonGenerator extends AbstractPythonLikeObject implements Iterator<PythonLikeObject> {
-    public static PythonLikeType GENERATOR_TYPE = new PythonLikeType("generator", PythonGenerator.class);
     public static PythonLikeType $TYPE = GENERATOR_TYPE;
     static {
-        try {
-            registerMethods();
-            PythonOverloadImplementor.createDispatchesFor(GENERATOR_TYPE);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
+        PythonOverloadImplementor.deferDispatchesFor(PythonGenerator::registerMethods);
     }
 
-    private static void registerMethods() throws NoSuchMethodException {
+    private static PythonLikeType registerMethods() throws NoSuchMethodException {
         GENERATOR_TYPE.addUnaryMethod(PythonUnaryOperator.ITERATOR,
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("asPythonIterator")),
@@ -46,6 +41,8 @@ public abstract class PythonGenerator extends AbstractPythonLikeObject implement
                 new PythonFunctionSignature(
                         new MethodDescriptor(PythonGenerator.class.getMethod("close")),
                         BASE_TYPE));
+
+        return GENERATOR_TYPE;
     }
 
     public PythonLikeObject sentValue;

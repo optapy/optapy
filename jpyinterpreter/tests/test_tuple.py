@@ -1,9 +1,16 @@
 from .conftest import verifier_for
+from typing import Union
 
 
 def test_membership():
-    membership_verifier = verifier_for(lambda tested, x: x in tested)
-    not_membership_verifier = verifier_for(lambda tested, x: x not in tested)
+    def membership(tested: tuple, x: object):
+        return x in tested
+
+    def not_membership(tested: tuple, x: object):
+        return x not in tested
+
+    membership_verifier = verifier_for(membership)
+    not_membership_verifier = verifier_for(not_membership)
 
     membership_verifier.verify((1, 2, 3), 1, expected_result=True)
     not_membership_verifier.verify((1, 2, 3), 1, expected_result=False)
@@ -16,7 +23,7 @@ def test_membership():
 
 
 def test_concat():
-    def concat(x, y):
+    def concat(x: tuple, y: tuple):
         out = x + y
         return out, out is x, out is y
 
@@ -29,29 +36,37 @@ def test_concat():
 
 
 def test_repeat():
-    def repeat(x, y):
+    def repeat_left(x: tuple, y: int):
         out = x * y
         return out, out is x, out is y
 
-    repeat_verifier = verifier_for(repeat)
+    def repeat_right(x: int, y: tuple):
+        out = x * y
+        return out, out is x, out is y
 
-    repeat_verifier.verify((1, 2, 3), 1, expected_result=((1, 2, 3), True, False))
-    repeat_verifier.verify((1, 2, 3), 2, expected_result=((1, 2, 3, 1, 2, 3), False, False))
-    repeat_verifier.verify((1, 2), 4, expected_result=((1, 2, 1, 2, 1, 2, 1, 2), False, False))
-    repeat_verifier.verify((1, 2, 3), 0, expected_result=((), False, False))
-    repeat_verifier.verify((1, 2, 3), -1, expected_result=((), False, False))
-    repeat_verifier.verify((1, 2, 3), -2, expected_result=((), False, False))
+    repeat_left_verifier = verifier_for(repeat_left)
+    repeat_right_verifier = verifier_for(repeat_right)
 
-    repeat_verifier.verify(1, (1, 2, 3), expected_result=((1, 2, 3), False, True))
-    repeat_verifier.verify(2, (1, 2, 3), expected_result=((1, 2, 3, 1, 2, 3), False, False))
-    repeat_verifier.verify(4, (1, 2), expected_result=((1, 2, 1, 2, 1, 2, 1, 2), False, False))
-    repeat_verifier.verify(0, (1, 2, 3), expected_result=((), False, False))
-    repeat_verifier.verify(-1, (1, 2, 3), expected_result=((), False, False))
-    repeat_verifier.verify(-2, (1, 2, 3), expected_result=((), False, False))
+    repeat_left_verifier.verify((1, 2, 3), 1, expected_result=((1, 2, 3), True, False))
+    repeat_left_verifier.verify((1, 2, 3), 2, expected_result=((1, 2, 3, 1, 2, 3), False, False))
+    repeat_left_verifier.verify((1, 2), 4, expected_result=((1, 2, 1, 2, 1, 2, 1, 2), False, False))
+    repeat_left_verifier.verify((1, 2, 3), 0, expected_result=((), False, False))
+    repeat_left_verifier.verify((1, 2, 3), -1, expected_result=((), False, False))
+    repeat_left_verifier.verify((1, 2, 3), -2, expected_result=((), False, False))
+
+    repeat_right_verifier.verify(1, (1, 2, 3), expected_result=((1, 2, 3), False, True))
+    repeat_right_verifier.verify(2, (1, 2, 3), expected_result=((1, 2, 3, 1, 2, 3), False, False))
+    repeat_right_verifier.verify(4, (1, 2), expected_result=((1, 2, 1, 2, 1, 2, 1, 2), False, False))
+    repeat_right_verifier.verify(0, (1, 2, 3), expected_result=((), False, False))
+    repeat_right_verifier.verify(-1, (1, 2, 3), expected_result=((), False, False))
+    repeat_right_verifier.verify(-2, (1, 2, 3), expected_result=((), False, False))
 
 
 def test_get_item():
-    get_item_verifier = verifier_for(lambda tested, index: tested[index])
+    def get_item(tested: tuple, index: int):
+        return tested[index]
+
+    get_item_verifier = verifier_for(get_item)
 
     get_item_verifier.verify((1, 2, 3), 1, expected_result=2)
     get_item_verifier.verify((1, 2, 3), -1, expected_result=3)
@@ -63,7 +78,10 @@ def test_get_item():
 
 
 def test_get_slice():
-    get_slice_verifier = verifier_for(lambda tested, start, end: tested[start:end])
+    def get_slice(tested: tuple, start: Union[int, None], end: Union[int, None]):
+        return tested[start:end]
+
+    get_slice_verifier = verifier_for(get_slice)
 
     get_slice_verifier.verify((1, 2, 3, 4, 5), 1, 3, expected_result=(2, 3))
     get_slice_verifier.verify((1, 2, 3, 4, 5), -3, -1, expected_result=(3, 4))
@@ -83,7 +101,10 @@ def test_get_slice():
 
 
 def test_get_slice_with_step():
-    get_slice_verifier = verifier_for(lambda tested, start, end, step: tested[start:end:step])
+    def get_slice_with_step(tested: tuple, start: Union[int, None], end: Union[int, None], step: Union[int, None]):
+        return tested[start:end:step]
+
+    get_slice_verifier = verifier_for(get_slice_with_step)
 
     get_slice_verifier.verify((1, 2, 3, 4, 5), 0, None, 2, expected_result=(1, 3, 5))
     get_slice_verifier.verify((1, 2, 3, 4, 5), 1, None, 2, expected_result=(2, 4))
@@ -109,7 +130,10 @@ def test_get_slice_with_step():
 
 
 def test_len():
-    len_verifier = verifier_for(lambda tested: len(tested))
+    def length(tested: tuple):
+        return len(tested)
+
+    len_verifier = verifier_for(length)
 
     len_verifier.verify((), expected_result=0)
     len_verifier.verify((1,), expected_result=1)
@@ -118,9 +142,18 @@ def test_len():
 
 
 def test_index():
-    index_verifier = verifier_for(lambda tested, item: tested.index(item))
-    index_start_verifier = verifier_for(lambda tested, item, start: tested.index(item, start))
-    index_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.index(item, start, end))
+    def index(tested: tuple, item: object):
+        return tested.index(item)
+
+    def index_start(tested: tuple, item: object, start: int):
+        return tested.index(item, start)
+
+    def index_start_end(tested: tuple, item: object, start: int, end: int):
+        return tested.index(item, start, end)
+
+    index_verifier = verifier_for(index)
+    index_start_verifier = verifier_for(index_start)
+    index_start_end_verifier = verifier_for(index_start_end)
 
     index_verifier.verify((1, 2, 3), 1, expected_result=0)
     index_verifier.verify((1, 2, 3), 2, expected_result=1)
@@ -148,7 +181,10 @@ def test_index():
 
 
 def test_count():
-    count_verifier = verifier_for(lambda tested, item: tested.count(item))
+    def count(tested: tuple, item: object):
+        return tested.count(item)
+
+    count_verifier = verifier_for(count)
 
     count_verifier.verify((1, 2, 3), 1, expected_result=1)
     count_verifier.verify((1, 2, 3), 2, expected_result=1)

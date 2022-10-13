@@ -45,6 +45,7 @@ import org.optaplanner.python.translator.types.collections.PythonLikeFrozenSet;
 import org.optaplanner.python.translator.types.collections.PythonLikeList;
 import org.optaplanner.python.translator.types.collections.PythonLikeSet;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
+import org.optaplanner.python.translator.types.errors.TypeError;
 import org.optaplanner.python.translator.types.numeric.PythonBoolean;
 import org.optaplanner.python.translator.types.numeric.PythonFloat;
 import org.optaplanner.python.translator.types.numeric.PythonInteger;
@@ -253,7 +254,7 @@ public class JavaPythonTypeConversionImplementor {
             JavaObjectWrapper wrappedObject = (JavaObjectWrapper) object;
             Object javaObject = wrappedObject.getWrappedObject();
             if (!type.isAssignableFrom(javaObject.getClass())) {
-                throw new IllegalArgumentException("Cannot convert from (" + javaObject.getClass() + ") to (" + type + ").");
+                throw new TypeError("Cannot convert from (" + javaObject.getClass() + ") to (" + type + ").");
             }
             return (T) javaObject;
         }
@@ -261,7 +262,7 @@ public class JavaPythonTypeConversionImplementor {
         if (type.equals(byte.class) || type.equals(short.class) || type.equals(int.class) || type.equals(long.class) ||
                 type.equals(float.class) || type.equals(double.class) || Number.class.isAssignableFrom(type)) {
             if (!(object instanceof PythonNumber)) {
-                throw new IllegalArgumentException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+                throw new TypeError("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
             }
             PythonNumber pythonNumber = (PythonNumber) object;
             Number value = pythonNumber.getValue();
@@ -297,7 +298,7 @@ public class JavaPythonTypeConversionImplementor {
 
         if (type.equals(boolean.class) || type.equals(Boolean.class)) {
             if (!(object instanceof PythonBoolean)) {
-                throw new IllegalArgumentException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+                throw new TypeError("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
             }
             PythonBoolean pythonBoolean = (PythonBoolean) object;
             return (T) (Boolean) pythonBoolean.getBooleanValue();
@@ -310,7 +311,7 @@ public class JavaPythonTypeConversionImplementor {
 
         // TODO: List, Map, Set
 
-        throw new IllegalStateException("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+        throw new TypeError("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
     }
 
     /**

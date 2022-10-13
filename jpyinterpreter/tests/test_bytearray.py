@@ -1,3 +1,4 @@
+from typing import Union
 from .conftest import verifier_for
 
 
@@ -6,8 +7,14 @@ from .conftest import verifier_for
 ########################################
 
 def test_membership():
-    membership_verifier = verifier_for(lambda tested, x: x in tested)
-    not_membership_verifier = verifier_for(lambda tested, x: x not in tested)
+    def membership(tested: bytearray, x: bytearray) -> bool:
+        return x in tested
+
+    def not_membership(tested: bytearray, x: bytearray) -> bool:
+        return x not in tested
+
+    membership_verifier = verifier_for(membership)
+    not_membership_verifier = verifier_for(not_membership)
 
     membership_verifier.verify(bytearray(b'hello world'), bytearray(b'world'), expected_result=True)
     not_membership_verifier.verify(bytearray(b'hello world'), bytearray(b'world'), expected_result=False)
@@ -20,7 +27,7 @@ def test_membership():
 
 
 def test_concat():
-    def concat(x, y):
+    def concat(x: bytearray, y: bytearray) -> tuple:
         out = x + y
         return out, out is x, out is y
 
@@ -33,29 +40,37 @@ def test_concat():
 
 
 def test_repeat():
-    def repeat(x, y):
+    def left_repeat(x: bytearray, y: int) -> tuple:
         out = x * y
         return out, out is x, out is y
 
-    repeat_verifier = verifier_for(repeat)
+    def right_repeat(x: int, y: bytearray) -> tuple:
+        out = x * y
+        return out, out is x, out is y
 
-    repeat_verifier.verify(bytearray(b'hi'), 1, expected_result=(bytearray(b'hi'), False, False))
-    repeat_verifier.verify(bytearray(b'abc'), 2, expected_result=(bytearray(b'abcabc'), False, False))
-    repeat_verifier.verify(bytearray(b'a'), 4, expected_result=(bytearray(b'aaaa'), False, False))
-    repeat_verifier.verify(bytearray(b'test'), 0, expected_result=(bytearray(b''), False, False))
-    repeat_verifier.verify(bytearray(b'test'), -1, expected_result=(bytearray(b''), False, False))
-    repeat_verifier.verify(bytearray(b'test'), -2, expected_result=(bytearray(b''), False, False))
+    left_repeat_verifier = verifier_for(left_repeat)
+    right_repeat_verifier = verifier_for(right_repeat)
 
-    repeat_verifier.verify(1, bytearray(b'hi'), expected_result=(bytearray(b'hi'), False, False))
-    repeat_verifier.verify(2, bytearray(b'abc'), expected_result=(bytearray(b'abcabc'), False, False))
-    repeat_verifier.verify(4, bytearray(b'a'), expected_result=(bytearray(b'aaaa'), False, False))
-    repeat_verifier.verify(0, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
-    repeat_verifier.verify(-1, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
-    repeat_verifier.verify(-2, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
+    left_repeat_verifier.verify(bytearray(b'hi'), 1, expected_result=(bytearray(b'hi'), False, False))
+    left_repeat_verifier.verify(bytearray(b'abc'), 2, expected_result=(bytearray(b'abcabc'), False, False))
+    left_repeat_verifier.verify(bytearray(b'a'), 4, expected_result=(bytearray(b'aaaa'), False, False))
+    left_repeat_verifier.verify(bytearray(b'test'), 0, expected_result=(bytearray(b''), False, False))
+    left_repeat_verifier.verify(bytearray(b'test'), -1, expected_result=(bytearray(b''), False, False))
+    left_repeat_verifier.verify(bytearray(b'test'), -2, expected_result=(bytearray(b''), False, False))
+
+    right_repeat_verifier.verify(1, bytearray(b'hi'), expected_result=(bytearray(b'hi'), False, False))
+    right_repeat_verifier.verify(2, bytearray(b'abc'), expected_result=(bytearray(b'abcabc'), False, False))
+    right_repeat_verifier.verify(4, bytearray(b'a'), expected_result=(bytearray(b'aaaa'), False, False))
+    right_repeat_verifier.verify(0, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
+    right_repeat_verifier.verify(-1, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
+    right_repeat_verifier.verify(-2, bytearray(b'test'), expected_result=(bytearray(b''), False, False))
 
 
 def test_get_item():
-    get_item_verifier = verifier_for(lambda tested, index: tested[index])
+    def get_item(tested: bytearray, index: int) -> int:
+        return tested[index]
+
+    get_item_verifier = verifier_for(get_item)
 
     get_item_verifier.verify(bytearray(b'abc'), 1, expected_result=ord(bytearray(b'b')))
     get_item_verifier.verify(bytearray(b'abc'), -1, expected_result=ord(bytearray(b'c')))
@@ -67,7 +82,10 @@ def test_get_item():
 
 
 def test_get_slice():
-    get_slice_verifier = verifier_for(lambda tested, start, end: tested[start:end])
+    def get_slice(tested: bytearray, start: Union[int, None], end: Union[int, None]) -> bytearray:
+        return tested[start:end]
+
+    get_slice_verifier = verifier_for(get_slice)
 
     get_slice_verifier.verify(bytearray(b'abcde'), 1, 3, expected_result=bytearray(b'bc'))
     get_slice_verifier.verify(bytearray(b'abcde'), -3, -1, expected_result=bytearray(b'cd'))
@@ -87,7 +105,11 @@ def test_get_slice():
 
 
 def test_get_slice_with_step():
-    get_slice_verifier = verifier_for(lambda tested, start, end, step: tested[start:end:step])
+    def get_slice_with_step(tested: bytearray, start: Union[int, None], end: Union[int, None],
+                            step: Union[int, None]) -> bytearray:
+        return tested[start:end:step]
+
+    get_slice_verifier = verifier_for(get_slice_with_step)
 
     get_slice_verifier.verify(bytearray(b'abcde'), 0, None, 2, expected_result=bytearray(b'ace'))
     get_slice_verifier.verify(bytearray(b'abcde'), 1, None, 2, expected_result=bytearray(b'bd'))
@@ -113,7 +135,10 @@ def test_get_slice_with_step():
 
 
 def test_len():
-    len_verifier = verifier_for(lambda tested: len(tested))
+    def length(tested: bytearray) -> int:
+        return len(tested)
+
+    len_verifier = verifier_for(length)
 
     len_verifier.verify(bytearray(b''), expected_result=0)
     len_verifier.verify(bytearray(b'a'), expected_result=1)
@@ -122,9 +147,18 @@ def test_len():
 
 
 def test_index():
-    index_verifier = verifier_for(lambda tested, item: tested.index(item))
-    index_start_verifier = verifier_for(lambda tested, item, start: tested.index(item, start))
-    index_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.index(item, start, end))
+    def index(tested: bytearray, item: bytearray) -> int:
+        return tested.index(item)
+
+    def index_start(tested: bytearray, item: bytearray, start: int) -> int:
+        return tested.index(item, start)
+
+    def index_start_end(tested: bytearray, item: bytearray, start: int, end: int) -> int:
+        return tested.index(item, start, end)
+
+    index_verifier = verifier_for(index)
+    index_start_verifier = verifier_for(index_start)
+    index_start_end_verifier = verifier_for(index_start_end)
 
     index_verifier.verify(bytearray(b'abcabc'), bytearray(b'a'), expected_result=0)
     index_verifier.verify(bytearray(b'abcabc'), bytearray(b'b'), expected_result=1)
@@ -153,7 +187,10 @@ def test_index():
 
 
 def test_count():
-    count_verifier = verifier_for(lambda tested, item: tested.count(item))
+    def count(tested: bytearray, item: bytearray) -> int:
+        return tested.count(item)
+
+    count_verifier = verifier_for(count)
 
     count_verifier.verify(bytearray(b'abc'), bytearray(b'a'), expected_result=1)
     count_verifier.verify(bytearray(b'abc'), bytearray(b'b'), expected_result=1)
@@ -171,7 +208,7 @@ def test_count():
 
 
 def test_set_item():
-    def set_item(tested, index, value):
+    def set_item(tested: bytearray, index: int, value: int) -> bytearray:
         tested[index] = value
         return tested
 
@@ -183,7 +220,7 @@ def test_set_item():
     set_item_verifier.verify(bytearray(b'abcde'), 10, ord('a'), expected_error=IndexError)
 
 def test_set_slice():
-    def set_slice(tested, start, stop, value):
+    def set_slice(tested: bytearray, start: Union[int, None], stop: Union[int, None], value: bytes) -> bytearray:
         tested[start:stop] = value
         return tested
 
@@ -204,7 +241,7 @@ def test_set_slice():
 
 
 def test_delete_slice():
-    def delete_slice(tested, start, stop):
+    def delete_slice(tested: bytearray, start: Union[int, None], stop: Union[int, None]) -> bytearray:
         del tested[start:stop]
         return tested
 
@@ -217,7 +254,8 @@ def test_delete_slice():
 
 
 def test_set_slice_with_step():
-    def set_slice_with_step(tested, start, stop, step, value):
+    def set_slice_with_step(tested: bytearray, start: Union[int, None], stop: Union[int, None], step: Union[int, None],
+                            value: bytes) -> bytearray:
         tested[start:stop:step] = value
         return tested
 
@@ -238,7 +276,8 @@ def test_set_slice_with_step():
 
 
 def test_delete_slice_with_step():
-    def delete_slice_with_step(tested, start, stop, step):
+    def delete_slice_with_step(tested: bytearray, start: Union[int, None], stop: Union[int, None],
+                               step: Union[int, None]) -> bytearray:
         del tested[start:stop:step]
         return tested
 
@@ -256,7 +295,7 @@ def test_delete_slice_with_step():
 
 
 def test_append():
-    def append(tested, item):
+    def append(tested: bytearray, item: int) -> bytearray:
         tested.append(item)
         return tested
 
@@ -269,7 +308,7 @@ def test_append():
 
 
 def test_clear():
-    def clear(tested):
+    def clear(tested: bytearray) -> bytearray:
         tested.clear()
         return tested
 
@@ -282,7 +321,7 @@ def test_clear():
 
 
 def test_copy():
-    def copy(tested):
+    def copy(tested: bytearray) -> tuple:
         out = tested.copy()
         return out, out is tested
 
@@ -295,7 +334,7 @@ def test_copy():
 
 
 def test_extend():
-    def extend(tested, item):
+    def extend(tested: bytearray, item: bytearray) -> bytearray:
         tested.extend(item)
         return tested
 
@@ -309,7 +348,7 @@ def test_extend():
 
 
 def test_inplace_add():
-    def extend(tested, item):
+    def extend(tested: bytearray, item: bytearray) -> bytearray:
         tested += item
         return tested
 
@@ -323,7 +362,7 @@ def test_inplace_add():
 
 
 def test_inplace_multiply():
-    def multiply(tested, item):
+    def multiply(tested: bytearray, item: int) -> bytearray:
         tested *= item
         return tested
 
@@ -338,7 +377,7 @@ def test_inplace_multiply():
 
 
 def test_insert():
-    def insert(tested, index, item):
+    def insert(tested: bytearray, index: int, item: int) -> bytearray:
         tested.insert(index, item)
         return tested
 
@@ -359,7 +398,7 @@ def test_insert():
 
 
 def test_pop():
-    def pop(tested):
+    def pop(tested: bytearray) -> tuple:
         item = tested.pop()
         return item, tested
 
@@ -375,7 +414,7 @@ def test_pop():
 
 
 def test_pop_at_index():
-    def pop_at_index(tested, index):
+    def pop_at_index(tested: bytearray, index: int) -> tuple:
         item = tested.pop(index)
         return item, tested
 
@@ -396,7 +435,7 @@ def test_pop_at_index():
 
 
 def test_remove():
-    def remove(tested, item):
+    def remove(tested: bytearray, item: int) -> bytearray:
         tested.remove(item)
         return tested
 
@@ -413,7 +452,7 @@ def test_remove():
 
 
 def test_reverse():
-    def reverse(tested):
+    def reverse(tested: bytearray) -> bytearray:
         tested.reverse()
         return tested
 
@@ -428,10 +467,14 @@ def test_reverse():
 
 
 ########################################
-# Bytes operations
+# Bytearray operations
 ########################################
 def test_interpolation():
-    interpolation_verifier = verifier_for(lambda tested, values: tested % values)
+    def interpolation(tested: bytearray, values: object) -> bytearray:  # noqa
+        # IDE thinks bytearray __mod__ returns bytes, but in reality it returns bytearray
+        return tested % values  # noqa
+
+    interpolation_verifier = verifier_for(interpolation)
 
     interpolation_verifier.verify(bytearray(b'%d'), 100, expected_result=bytearray(b'100'))
     interpolation_verifier.verify(bytearray(b'%d'), 0b1111, expected_result=bytearray(b'15'))
@@ -488,12 +531,15 @@ def test_interpolation():
 
 
 ########################################
-# String methods
+# Bytearray methods
 ########################################
 
 
 def test_capitalize():
-    capitalize_verifier = verifier_for(lambda tested: tested.capitalize())
+    def capitalize(tested: bytearray) -> bytearray:
+        return tested.capitalize()
+
+    capitalize_verifier = verifier_for(capitalize)
 
     capitalize_verifier.verify(bytearray(b''), expected_result=bytearray(b''))
     capitalize_verifier.verify(bytearray(b'test'), expected_result=bytearray(b'Test'))
@@ -504,8 +550,14 @@ def test_capitalize():
 
 
 def test_center():
-    center_verifier = verifier_for(lambda tested, width: tested.center(width))
-    center_with_fill_verifier = verifier_for(lambda tested, width, fill: tested.center(width, fill))
+    def center(tested: bytearray, width: int) -> bytearray:
+        return tested.center(width)
+
+    def center_with_fill(tested: bytearray, width: int, fill: bytearray) -> bytearray:
+        return tested.center(width, fill)
+
+    center_verifier = verifier_for(center)
+    center_with_fill_verifier = verifier_for(center_with_fill)
 
     center_verifier.verify(bytearray(b'test'), 10, expected_result=bytearray(b'   test   '))
     center_verifier.verify(bytearray(b'test'), 9, expected_result=bytearray(b'   test  '))
@@ -519,9 +571,18 @@ def test_center():
 
 
 def test_count_byte():
-    count_verifier = verifier_for(lambda tested, item: tested.count(item))
-    count_from_start_verifier = verifier_for(lambda tested, item, start: tested.count(item, start))
-    count_between_verifier = verifier_for(lambda tested, item, start, end: tested.count(item, start, end))
+    def count(tested: bytearray, item: int) -> int:
+        return tested.count(item)
+
+    def count_start(tested: bytearray, item: int, start: int) -> int:
+        return tested.count(item, start)
+
+    def count_start_end(tested: bytearray, item: int, start: int, end: int) -> int:
+        return tested.count(item, start, end)
+
+    count_verifier = verifier_for(count)
+    count_from_start_verifier = verifier_for(count_start)
+    count_between_verifier = verifier_for(count_start_end)
 
     count_verifier.verify(bytearray(b'abc'), ord(bytearray(b'a')), expected_result=1)
     count_verifier.verify(bytearray(b'abc'), ord(bytearray(b'b')), expected_result=1)
@@ -554,9 +615,18 @@ def test_count_byte():
 
 
 def test_endswith():
-    endswith_verifier = verifier_for(lambda tested, suffix: tested.endswith(suffix))
-    endswith_start_verifier = verifier_for(lambda tested, suffix, start: tested.endswith(suffix, start))
-    endswith_between_verifier = verifier_for(lambda tested, suffix, start, end: tested.endswith(suffix, start, end))
+    def endswith(tested: bytearray, suffix: bytearray) -> bool:
+        return tested.endswith(suffix)
+
+    def endswith_start(tested: bytearray, suffix: bytearray, start: int) -> bool:
+        return tested.endswith(suffix, start)
+
+    def endswith_between(tested: bytearray, suffix: bytearray, start: int, end: int) -> bool:
+        return tested.endswith(suffix, start, end)
+
+    endswith_verifier = verifier_for(endswith)
+    endswith_start_verifier = verifier_for(endswith_start)
+    endswith_between_verifier = verifier_for(endswith_between)
 
     endswith_verifier.verify(bytearray(b'hello world'), bytearray(b'world'), expected_result=True)
     endswith_verifier.verify(bytearray(b'hello world'), bytearray(b'hello'), expected_result=False)
@@ -576,8 +646,14 @@ def test_endswith():
 
 
 def test_expandtabs():
-    expandtabs_verifier = verifier_for(lambda tested: tested.expandtabs())
-    expandtabs_with_tabsize_verifier = verifier_for(lambda tested, tabsize: tested.expandtabs(tabsize))
+    def expandtabs(tested: bytearray) -> bytearray:
+        return tested.expandtabs()
+
+    def expandtabs_with_tabsize(tested: bytearray, tabsize: int) -> bytearray:
+        return tested.expandtabs(tabsize)
+
+    expandtabs_verifier = verifier_for(expandtabs)
+    expandtabs_with_tabsize_verifier = verifier_for(expandtabs_with_tabsize)
 
     expandtabs_verifier.verify(bytearray(b'01\t012\t0123\t01234'), expected_result=bytearray(b'01      012     0123    01234'))
     expandtabs_with_tabsize_verifier.verify(bytearray(b'01\t012\t0123\t01234'), 8, expected_result=bytearray(b'01      012     0123    01234'))
@@ -585,9 +661,18 @@ def test_expandtabs():
 
 
 def test_find():
-    find_verifier = verifier_for(lambda tested, item: tested.find(item))
-    find_start_verifier = verifier_for(lambda tested, item, start: tested.find(item, start))
-    find_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.find(item, start, end))
+    def find(tested: bytearray, item: bytearray) -> int:
+        return tested.find(item)
+
+    def find_start_verifier(tested: bytearray, item: bytearray, start: int) -> int:
+        return tested.find(item, start)
+
+    def find_start_end_verifier(tested: bytearray, item: bytearray, start: int, end: int) -> int:
+        return tested.find(item, start, end)
+
+    find_verifier = verifier_for(find)
+    find_start_verifier = verifier_for(find_start_verifier)
+    find_start_end_verifier = verifier_for(find_start_end_verifier)
 
     find_verifier.verify(bytearray(b'abcabc'), bytearray(b'a'), expected_result=0)
     find_verifier.verify(bytearray(b'abcabc'), bytearray(b'b'), expected_result=1)
@@ -616,7 +701,10 @@ def test_find():
 
 
 def test_isalnum():
-    isalnum_verifier = verifier_for(lambda tested: tested.isalnum())
+    def isalnum(tested: bytearray) -> bool:
+        return tested.isalnum()
+
+    isalnum_verifier = verifier_for(isalnum)
 
     isalnum_verifier.verify(bytearray(b''), expected_result=False)
     isalnum_verifier.verify(bytearray(b'abc'), expected_result=True)
@@ -633,7 +721,10 @@ def test_isalnum():
 
 
 def test_isalpha():
-    isalpha_verifier = verifier_for(lambda tested: tested.isalpha())
+    def isalpha(tested: bytearray) -> bool:
+        return tested.isalpha()
+
+    isalpha_verifier = verifier_for(isalpha)
 
     isalpha_verifier.verify(bytearray(b''), expected_result=False)
     isalpha_verifier.verify(bytearray(b'abc'), expected_result=True)
@@ -650,7 +741,10 @@ def test_isalpha():
 
 
 def test_isascii():
-    isascii_verifier = verifier_for(lambda tested: tested.isascii())
+    def isascii(tested: bytearray) -> bool:
+        return tested.isascii()
+
+    isascii_verifier = verifier_for(isascii)
 
     isascii_verifier.verify(bytearray(b''), expected_result=True)
     isascii_verifier.verify(bytearray(b'abc'), expected_result=True)
@@ -667,7 +761,10 @@ def test_isascii():
 
 
 def test_isdigit():
-    isdigit_verifier = verifier_for(lambda tested: tested.isdigit())
+    def isdigit(tested: bytearray) -> bool:
+        return tested.isdigit()
+
+    isdigit_verifier = verifier_for(isdigit)
 
     isdigit_verifier.verify(bytearray(b''), expected_result=False)
     isdigit_verifier.verify(bytearray(b'abc'), expected_result=False)
@@ -684,7 +781,10 @@ def test_isdigit():
 
 
 def test_islower():
-    islower_verifier = verifier_for(lambda tested: tested.islower())
+    def islower(tested: bytearray) -> bool:
+        return tested.islower()
+
+    islower_verifier = verifier_for(islower)
 
     islower_verifier.verify(bytearray(b''), expected_result=False)
     islower_verifier.verify(bytearray(b'abc'), expected_result=True)
@@ -701,7 +801,10 @@ def test_islower():
 
 
 def test_isspace():
-    isspace_verifier = verifier_for(lambda tested: tested.isspace())
+    def isspace(tested: bytearray) -> bool:
+        return tested.isspace()
+
+    isspace_verifier = verifier_for(isspace)
 
     isspace_verifier.verify(bytearray(b''), expected_result=False)
     isspace_verifier.verify(bytearray(b'abc'), expected_result=False)
@@ -718,7 +821,10 @@ def test_isspace():
 
 
 def test_istitle():
-    istitle_verifier = verifier_for(lambda tested: tested.istitle())
+    def istitle(tested: bytearray) -> bool:
+        return tested.istitle()
+
+    istitle_verifier = verifier_for(istitle)
 
     istitle_verifier.verify(bytearray(b''), expected_result=False)
 
@@ -740,7 +846,10 @@ def test_istitle():
 
 
 def test_isupper():
-    isupper_verifier = verifier_for(lambda tested: tested.isupper())
+    def isupper(tested: bytearray) -> bool:
+        return tested.isupper()
+
+    isupper_verifier = verifier_for(isupper)
 
     isupper_verifier.verify(bytearray(b''), expected_result=False)
     isupper_verifier.verify(bytearray(b'abc'), expected_result=False)
@@ -757,7 +866,10 @@ def test_isupper():
 
 
 def test_join():
-    join_verifier = verifier_for(lambda tested, iterable: tested.join(iterable))
+    def join(tested: bytearray, iterable: list) -> bytearray:
+        return tested.join(iterable)
+
+    join_verifier = verifier_for(join)
 
     join_verifier.verify(bytearray(b', '), [], expected_result=bytearray(b''))
     join_verifier.verify(bytearray(b', '), [bytearray(b'a')], expected_result=bytearray(b'a'))
@@ -768,8 +880,14 @@ def test_join():
 
 
 def test_ljust():
-    ljust_verifier = verifier_for(lambda tested, width: tested.ljust(width))
-    ljust_with_fill_verifier = verifier_for(lambda tested, width, fill: tested.ljust(width, fill))
+    def ljust(tested: bytearray, width: int) -> bytearray:
+        return tested.ljust(width)
+
+    def ljust_with_fill(tested: bytearray, width: int, fill: bytearray) -> bytearray:
+        return tested.ljust(width, fill)
+
+    ljust_verifier = verifier_for(ljust)
+    ljust_with_fill_verifier = verifier_for(ljust_with_fill)
 
     ljust_verifier.verify(bytearray(b'test'), 10, expected_result=bytearray(b'test      '))
     ljust_verifier.verify(bytearray(b'test'), 9, expected_result=bytearray(b'test     '))
@@ -783,7 +901,10 @@ def test_ljust():
 
 
 def test_lower():
-    lower_verifier = verifier_for(lambda tested: tested.lower())
+    def lower(tested: bytearray) -> bytearray:
+        return tested.lower()
+
+    lower_verifier = verifier_for(lower)
 
     lower_verifier.verify(bytearray(b''), expected_result=bytearray(b''))
     lower_verifier.verify(bytearray(b'abc'), expected_result=bytearray(b'abc'))
@@ -800,15 +921,24 @@ def test_lower():
 
 
 def test_lstrip():
-    lstrip_verifier = verifier_for(lambda tested: tested.lstrip())
-    lstrip_with_chars_verifier = verifier_for(lambda tested, chars: tested.lstrip(chars))
+    def lstrip(tested: bytearray) -> bytearray:
+        return tested.lstrip()
+
+    def lstrip_with_chars(tested: bytearray, chars: bytearray) -> bytearray:
+        return tested.lstrip(chars)
+
+    lstrip_verifier = verifier_for(lstrip)
+    lstrip_with_chars_verifier = verifier_for(lstrip_with_chars)
 
     lstrip_verifier.verify(bytearray(b'   spacious   '), expected_result=bytearray(b'spacious   '))
     lstrip_with_chars_verifier.verify(bytearray(b'www.example.com'), bytearray(b'cmowz.'), expected_result=bytearray(b'example.com'))
 
 
 def test_partition():
-    partition_verifier = verifier_for(lambda tested, sep: tested.partition(sep))
+    def partition(tested: bytearray, sep: bytearray) -> tuple:
+        return tested.partition(sep)
+
+    partition_verifier = verifier_for(partition)
 
     partition_verifier.verify(bytearray(b'before+after+extra'), bytearray(b'+'), expected_result=(bytearray(b'before'), bytearray(b'+'), bytearray(b'after+extra')))
     partition_verifier.verify(bytearray(b'before and after and extra'), bytearray(b'+'), expected_result=(bytearray(b'before and after and extra'),
@@ -819,7 +949,10 @@ def test_partition():
 
 
 def test_removeprefix():
-    removeprefix_verifier = verifier_for(lambda tested, prefix: tested.removeprefix(prefix))
+    def removeprefix(tested: bytearray, prefix: bytearray) -> bytearray:
+        return tested.removeprefix(prefix)
+
+    removeprefix_verifier = verifier_for(removeprefix)
 
     removeprefix_verifier.verify(bytearray(b'TestHook'), bytearray(b'Test'), expected_result=bytearray(b'Hook'))
     removeprefix_verifier.verify(bytearray(b'BaseTestCase'), bytearray(b'Test'), expected_result=bytearray(b'BaseTestCase'))
@@ -828,7 +961,10 @@ def test_removeprefix():
 
 
 def test_removesuffix():
-    removesuffix_verifier = verifier_for(lambda tested, suffix: tested.removesuffix(suffix))
+    def removesuffix(tested: bytearray, prefix: bytearray) -> bytearray:
+        return tested.removesuffix(prefix)
+
+    removesuffix_verifier = verifier_for(removesuffix)
 
     removesuffix_verifier.verify(bytearray(b'MiscTests'), bytearray(b'Tests'), expected_result=bytearray(b'Misc'))
     removesuffix_verifier.verify(bytearray(b'TmpTestsDirMixin'), bytearray(b'Tests'), expected_result=bytearray(b'TmpTestsDirMixin'))
@@ -837,9 +973,15 @@ def test_removesuffix():
 
 
 def test_replace():
-    replace_verifier = verifier_for(lambda tested, substring, replacement: tested.replace(substring, replacement))
-    replace_with_count_verifier = verifier_for(lambda tested, substring, replacement, count:
-                                               tested.replace(substring, replacement, count))
+    def replace(tested: bytearray, substring: bytearray, replacement: bytearray) -> bytearray:
+        return tested.replace(substring, replacement)
+
+    def replace_with_count(tested: bytearray, substring: bytearray, replacement: bytearray, count: int) -> bytearray:
+        return tested.replace(substring, replacement, count)
+
+
+    replace_verifier = verifier_for(replace)
+    replace_with_count_verifier = verifier_for(replace_with_count)
 
     replace_verifier.verify(bytearray(b'all cats, including the cat Alcato, are animals'), bytearray(b'cat'), bytearray(b'dog'),
                             expected_result=bytearray(b'all dogs, including the dog Aldogo, are animals'))
@@ -858,9 +1000,18 @@ def test_replace():
 
 
 def test_rfind():
-    rfind_verifier = verifier_for(lambda tested, item: tested.rfind(item))
-    rfind_start_verifier = verifier_for(lambda tested, item, start: tested.rfind(item, start))
-    rfind_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.rfind(item, start, end))
+    def rfind(tested: bytearray, item: bytearray) -> int:
+        return tested.rfind(item)
+
+    def rfind_start_verifier(tested: bytearray, item: bytearray, start: int) -> int:
+        return tested.rfind(item, start)
+
+    def rfind_start_end_verifier(tested: bytearray, item: bytearray, start: int, end: int) -> int:
+        return tested.rfind(item, start, end)
+
+    rfind_verifier = verifier_for(rfind)
+    rfind_start_verifier = verifier_for(rfind_start_verifier)
+    rfind_start_end_verifier = verifier_for(rfind_start_end_verifier)
 
     rfind_verifier.verify(bytearray(b'abcabc'), bytearray(b'a'), expected_result=3)
     rfind_verifier.verify(bytearray(b'abcabc'), bytearray(b'b'), expected_result=4)
@@ -889,9 +1040,18 @@ def test_rfind():
 
 
 def test_rindex():
-    rindex_verifier = verifier_for(lambda tested, item: tested.rindex(item))
-    rindex_start_verifier = verifier_for(lambda tested, item, start: tested.rindex(item, start))
-    rindex_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.rindex(item, start, end))
+    def rindex(tested: bytearray, item: bytearray) -> int:
+        return tested.rindex(item)
+
+    def rindex_start_verifier(tested: bytearray, item: bytearray, start: int) -> int:
+        return tested.rindex(item, start)
+
+    def rindex_start_end_verifier(tested: bytearray, item: bytearray, start: int, end: int) -> int:
+        return tested.rindex(item, start, end)
+
+    rindex_verifier = verifier_for(rindex)
+    rindex_start_verifier = verifier_for(rindex_start_verifier)
+    rindex_start_end_verifier = verifier_for(rindex_start_end_verifier)
 
     rindex_verifier.verify(bytearray(b'abcabc'), bytearray(b'a'), expected_result=3)
     rindex_verifier.verify(bytearray(b'abcabc'), bytearray(b'b'), expected_result=4)
@@ -919,8 +1079,14 @@ def test_rindex():
     rindex_start_end_verifier.verify(bytearray(b'abcabc'), bytearray(b'd'), -2, -1, expected_error=ValueError)
 
 def test_rjust():
-    rjust_verifier = verifier_for(lambda tested, width: tested.rjust(width))
-    rjust_with_fill_verifier = verifier_for(lambda tested, width, fill: tested.rjust(width, fill))
+    def rjust(tested: bytearray, width: int) -> bytearray:
+        return tested.rjust(width)
+
+    def rjust_with_fill(tested: bytearray, width: int, fill: bytearray) -> bytearray:
+        return tested.rjust(width, fill)
+
+    rjust_verifier = verifier_for(rjust)
+    rjust_with_fill_verifier = verifier_for(rjust_with_fill)
 
     rjust_verifier.verify(bytearray(b'test'), 10, expected_result=bytearray(b'      test'))
     rjust_verifier.verify(bytearray(b'test'), 9, expected_result=bytearray(b'     test'))
@@ -934,7 +1100,10 @@ def test_rjust():
 
 
 def test_rpartition():
-    rpartition_verifier = verifier_for(lambda tested, sep: tested.rpartition(sep))
+    def rpartition(tested: bytearray, sep: bytearray) -> tuple:
+        return tested.rpartition(sep)
+
+    rpartition_verifier = verifier_for(rpartition)
 
     rpartition_verifier.verify(bytearray(b'before+after+extra'), bytearray(b'+'), expected_result=(bytearray(b'before+after'), bytearray(b'+'), bytearray(b'extra')))
     rpartition_verifier.verify(bytearray(b'before and after and extra'), bytearray(b'+'), expected_result=(bytearray(b''), bytearray(b''),
@@ -945,9 +1114,18 @@ def test_rpartition():
 
 
 def test_rsplit():
-    rsplit_verifier = verifier_for(lambda tested: tested.rsplit())
-    rsplit_with_sep_verifier = verifier_for(lambda tested, sep: tested.rsplit(sep))
-    rsplit_with_sep_and_count_verifier = verifier_for(lambda tested, sep, count: tested.rsplit(sep, count))
+    def rsplit(tested: bytearray) -> list:
+        return tested.rsplit()
+
+    def rsplit_with_sep(tested: bytearray, sep: bytearray) -> list:
+        return tested.rsplit(sep)
+
+    def rsplit_with_sep_and_count(tested: bytearray, sep: bytearray, count: int) -> list:
+        return tested.rsplit(sep, count)
+
+    rsplit_verifier = verifier_for(rsplit)
+    rsplit_with_sep_verifier = verifier_for(rsplit_with_sep)
+    rsplit_with_sep_and_count_verifier = verifier_for(rsplit_with_sep_and_count)
 
     rsplit_verifier.verify(bytearray(b'123'), expected_result=[bytearray(b'123')])
     rsplit_verifier.verify(bytearray(b'1 2 3'), expected_result=[bytearray(b'1'), bytearray(b'2'), bytearray(b'3')])
@@ -967,8 +1145,14 @@ def test_rsplit():
 
 
 def test_rstrip():
-    rstrip_verifier = verifier_for(lambda tested: tested.rstrip())
-    rstrip_with_chars_verifier = verifier_for(lambda tested, chars: tested.rstrip(chars))
+    def rstrip(tested: bytearray) -> bytearray:
+        return tested.rstrip()
+
+    def rstrip_with_chars(tested: bytearray, chars: bytearray) -> bytearray:
+        return tested.rstrip(chars)
+
+    rstrip_verifier = verifier_for(rstrip)
+    rstrip_with_chars_verifier = verifier_for(rstrip_with_chars)
 
     rstrip_verifier.verify(bytearray(b'   spacious   '), expected_result=bytearray(b'   spacious'))
     rstrip_with_chars_verifier.verify(bytearray(b'www.example.com'), bytearray(b'cmowz.'), expected_result=bytearray(b'www.example'))
@@ -976,9 +1160,18 @@ def test_rstrip():
 
 
 def test_split():
-    split_verifier = verifier_for(lambda tested: tested.split())
-    split_with_sep_verifier = verifier_for(lambda tested, sep: tested.split(sep))
-    split_with_sep_and_count_verifier = verifier_for(lambda tested, sep, count: tested.split(sep, count))
+    def split(tested: bytearray) -> list:
+        return tested.split()
+
+    def split_with_sep(tested: bytearray, sep: bytearray) -> list:
+        return tested.split(sep)
+
+    def split_with_sep_and_count(tested: bytearray, sep: bytearray, count: int) -> list:
+        return tested.split(sep, count)
+
+    split_verifier = verifier_for(split)
+    split_with_sep_verifier = verifier_for(split_with_sep)
+    split_with_sep_and_count_verifier = verifier_for(split_with_sep_and_count)
 
     split_verifier.verify(bytearray(b'123'), expected_result=[bytearray(b'123')])
     split_verifier.verify(bytearray(b'1 2 3'), expected_result=[bytearray(b'1'), bytearray(b'2'), bytearray(b'3')])
@@ -998,8 +1191,14 @@ def test_split():
 
 
 def test_splitlines():
-    splitlines_verifier = verifier_for(lambda tested: tested.splitlines())
-    splitlines_keep_ends_verifier = verifier_for(lambda tested, keep_ends: tested.splitlines(keep_ends))
+    def splitlines(tested: bytearray) -> list:
+        return tested.splitlines()
+
+    def splitlines_keep_ends(tested: bytearray, keep_ends: bool) -> list:
+        return tested.splitlines(keep_ends)
+
+    splitlines_verifier = verifier_for(splitlines)
+    splitlines_keep_ends_verifier = verifier_for(splitlines_keep_ends)
 
     splitlines_verifier.verify(bytearray(b'ab c\n\nde fg\rkl\r\n'), expected_result=[bytearray(b'ab c'), bytearray(b''), bytearray(b'de fg'), bytearray(b'kl')])
     splitlines_verifier.verify(bytearray(b''), expected_result=[])
@@ -1015,9 +1214,18 @@ def test_splitlines():
 
 
 def test_startswith():
-    startswith_verifier = verifier_for(lambda tested, prefix: tested.startswith(prefix))
-    startswith_start_verifier = verifier_for(lambda tested, prefix, start: tested.startswith(prefix, start))
-    startswith_between_verifier = verifier_for(lambda tested, prefix, start, end: tested.startswith(prefix, start, end))
+    def startswith(tested: bytearray, suffix: bytearray) -> bool:
+        return tested.startswith(suffix)
+
+    def startswith_start(tested: bytearray, suffix: bytearray, start: int) -> bool:
+        return tested.startswith(suffix, start)
+
+    def startswith_between(tested: bytearray, suffix: bytearray, start: int, end: int) -> bool:
+        return tested.startswith(suffix, start, end)
+
+    startswith_verifier = verifier_for(startswith)
+    startswith_start_verifier = verifier_for(startswith_start)
+    startswith_between_verifier = verifier_for(startswith_between)
 
     startswith_verifier.verify(bytearray(b'hello world'), bytearray(b'hello'), expected_result=True)
     startswith_verifier.verify(bytearray(b'hello world'), bytearray(b'world'), expected_result=False)
@@ -1037,18 +1245,26 @@ def test_startswith():
 
 
 def test_strip():
-    strip_verifier = verifier_for(lambda tested: tested.strip())
-    strip_with_chars_verifier = verifier_for(lambda tested, chars: tested.strip(chars))
+    def strip(tested: bytearray) -> bytearray:
+        return tested.strip()
+
+    def strip_with_chars(tested: bytearray, chars: bytearray) -> bytearray:
+        return tested.strip(chars)
+
+    strip_verifier = verifier_for(strip)
+    strip_with_chars_verifier = verifier_for(strip_with_chars)
 
     strip_verifier.verify(bytearray(b'   spacious   '), expected_result=bytearray(b'spacious'))
     strip_with_chars_verifier.verify(bytearray(b'www.example.com'), bytearray(b'cmowz.'), expected_result=bytearray(b'example'))
 
 
 def test_swapcase():
-    swapcase_verifier = verifier_for(lambda tested: tested.swapcase())
+    def swapcase(tested: bytearray) -> bytearray:
+        return tested.swapcase()
+
+    swapcase_verifier = verifier_for(swapcase)
 
     swapcase_verifier.verify(bytearray(b''), expected_result=bytearray(b''))
-
     swapcase_verifier.verify(bytearray(b'abc'), expected_result=bytearray(b'ABC'))
     swapcase_verifier.verify(bytearray(b'ABC'), expected_result=bytearray(b'abc'))
     swapcase_verifier.verify(bytearray(b'123'), expected_result=bytearray(b'123'))
@@ -1063,12 +1279,15 @@ def test_swapcase():
 
 
 def test_title():
-    title_verifier = verifier_for(lambda tested: tested.title())
+    def title(tested: bytearray) -> bytearray:
+        return tested.title()
+
+    title_verifier = verifier_for(title)
 
     title_verifier.verify(bytearray(b''), expected_result=bytearray(b''))
     title_verifier.verify(bytearray(b'Hello world'), expected_result=bytearray(b'Hello World'))
-    title_verifier.verify(b"they're bill's friends from the UK",
-                              expected_result=b"They'Re Bill'S Friends From The Uk")
+    title_verifier.verify(bytearray(b"they're bill's friends from the UK"),
+                              expected_result=bytearray(b"They'Re Bill'S Friends From The Uk"))
 
     title_verifier.verify(bytearray(b'abc'), expected_result=bytearray(b'Abc'))
     title_verifier.verify(bytearray(b'ABC'), expected_result=bytearray(b'Abc'))
@@ -1084,7 +1303,10 @@ def test_title():
 
 
 def test_translate():
-    translate_verifier = verifier_for(lambda tested, mapping: tested.translate(mapping))
+    def translate(tested: bytearray, mapping: bytearray) -> bytearray:
+        return tested.translate(mapping)
+
+    translate_verifier = verifier_for(translate)
 
     mapping = bytearray(b'').join([bytes([(i + 1) % 256]) for i in range(256)])
 
@@ -1093,7 +1315,10 @@ def test_translate():
 
 
 def test_upper():
-    upper_verifier = verifier_for(lambda tested: tested.upper())
+    def upper(tested: bytearray) -> bytearray:
+        return tested.upper()
+
+    upper_verifier = verifier_for(upper)
 
     upper_verifier.verify(bytearray(b''), expected_result=bytearray(b''))
     upper_verifier.verify(bytearray(b'abc'), expected_result=bytearray(b'ABC'))
@@ -1110,7 +1335,10 @@ def test_upper():
 
 
 def test_zfill():
-    zfill_verifier = verifier_for(lambda tested, padding: tested.zfill(padding))
+    def zfill(tested: bytearray, padding: int) -> bytearray:
+        return tested.zfill(padding)
+
+    zfill_verifier = verifier_for(zfill)
 
     zfill_verifier.verify(bytearray(b'42'), 5, expected_result=bytearray(b'00042'))
     zfill_verifier.verify(bytearray(b'-42'), 5, expected_result=bytearray(b'-0042'))

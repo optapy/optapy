@@ -19,8 +19,12 @@ public class PythonKnownFunctionType extends PythonLikeType {
         return overloadFunctionSignatureList;
     }
 
-    public boolean isStatic() {
+    public boolean isStaticMethod() {
         return overloadFunctionSignatureList.get(0).getMethodDescriptor().getMethodType() == MethodDescriptor.MethodType.STATIC;
+    }
+
+    public boolean isClassMethod() {
+        return overloadFunctionSignatureList.get(0).getMethodDescriptor().getMethodType() == MethodDescriptor.MethodType.CLASS;
     }
 
     public Optional<PythonFunctionSignature> getDefaultFunctionSignature() {

@@ -18,12 +18,15 @@ def extract_python_translator_jars() -> list[str]:
     return [str(p.locate()) for p in importlib.metadata.files('jpyinterpreter') if p.name.endswith('.jar')]
 
 
-def init(*args, path: List[str] = None, include_translator_jars: bool = True):
+def init(*args, path: List[str] = None, include_translator_jars: bool = True,
+         class_output_path: pathlib.Path = None):
     """Start the JVM. Throws a RuntimeError if it is already started.
 
     :param args: JVM args.
     :param path: If not None, a list of dependencies to use as the classpath. Default to None.
     :param include_translator_jars: If True, add translators jars to path. Default to True.
+    :param class_output_path: If not None, sets the generated class output path. If None, no class
+                              files are written. Can be changed by set_class_output_directory
     :return: None
     """
     if jpype.isJVMStarted():  # noqa
@@ -34,6 +37,10 @@ def init(*args, path: List[str] = None, include_translator_jars: bool = True):
     if include_translator_jars:
         path = path + extract_python_translator_jars()
     jpype.startJVM(*args, classpath=path, convertStrings=True)  # noqa
+
+    if class_output_path is not None:
+        from org.optaplanner.python.translator import InterpreterStartupOptions # noqa
+        InterpreterStartupOptions.classOutputRootPath = class_output_path
 
     from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
     CPythonBackedPythonInterpreter.lookupPythonReferenceIdPythonFunction = GetPythonObjectId()

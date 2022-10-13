@@ -14,7 +14,7 @@ public class MethodVisitorAdapters {
     }
 
     public static MethodVisitor adapt(MethodVisitor methodVisitor, String name, String descriptor) {
-        return new CheckMethodAdapter(Modifier.PUBLIC, name, descriptor,
+        CheckMethodAdapter out = new CheckMethodAdapter(Modifier.PUBLIC, name, descriptor,
                 new HandlerSorterAdapter(methodVisitor,
                         Opcodes.ASM9,
                         Modifier.PUBLIC,
@@ -22,5 +22,7 @@ public class MethodVisitorAdapters {
                         descriptor,
                         null, null),
                 new HashMap<>());
+        out.version = Opcodes.V11;
+        return out;
     }
 }

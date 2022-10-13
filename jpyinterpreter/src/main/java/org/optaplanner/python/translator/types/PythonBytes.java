@@ -799,8 +799,13 @@ public class PythonBytes extends AbstractPythonLikeObject implements PythonBytes
     }
 
     public PythonBytes interpolate(PythonLikeObject object) {
-        return PythonString.valueOf(StringFormatter.printfInterpolate(asCharSequence(), List.of(object),
-                StringFormatter.PrintfStringType.BYTES)).asAsciiBytes();
+        if (object instanceof PythonLikeTuple) {
+            return interpolate((PythonLikeTuple) object);
+        } else if (object instanceof PythonLikeDict) {
+            return interpolate((PythonLikeDict) object);
+        } else {
+            return interpolate(PythonLikeTuple.fromList(List.of(object)));
+        }
     }
 
     public PythonBytes interpolate(PythonLikeTuple tuple) {

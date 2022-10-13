@@ -166,14 +166,16 @@ public class PythonFunctionSignature {
 
         int[] argumentLocals = new int[argumentCount];
 
+        boolean isVirtual = methodDescriptor.getMethodType() != MethodDescriptor.MethodType.STATIC
+                || methodDescriptor.getMethodType() != MethodDescriptor.MethodType.STATIC_AS_VIRTUAL;
+
         for (int i = 0; i < argumentCount; i++) {
             argumentLocals[argumentCount - i - 1] = localVariableHelper.newLocal();
             localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class),
                     argumentLocals[argumentCount - i - 1]);
         }
 
-        if (methodDescriptor.getMethodType() != MethodDescriptor.MethodType.STATIC
-                || methodDescriptor.getMethodType() != MethodDescriptor.MethodType.STATIC_AS_VIRTUAL) {
+        if (isVirtual) {
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
         }
 

@@ -1,8 +1,8 @@
 import builtins
 import dis
 import inspect
-import math
 import sys
+import abc
 
 from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, JArray
 
@@ -117,7 +117,6 @@ def init_type_to_compiled_java_class():
     type_to_compiled_java_class[bytes] = BuiltinTypes.BYTES_TYPE
     type_to_compiled_java_class[bytearray] = BuiltinTypes.BYTE_ARRAY_TYPE
     type_to_compiled_java_class[object] = BuiltinTypes.BASE_TYPE
-    type_to_compiled_java_class[any] = BuiltinTypes.BASE_TYPE
 
     type_to_compiled_java_class[list] = BuiltinTypes.LIST_TYPE
     type_to_compiled_java_class[tuple] = BuiltinTypes.TUPLE_TYPE
@@ -130,13 +129,16 @@ def init_type_to_compiled_java_class():
     type_to_compiled_java_class[datetime.time] = java_datetime_types.PythonTime.TIME_TYPE
     type_to_compiled_java_class[datetime.timedelta] = java_datetime_types.PythonTimeDelta.TIME_DELTA_TYPE
 
+    # Type aliases
+    type_to_compiled_java_class[any] = BuiltinTypes.BASE_TYPE
+    type_to_compiled_java_class[type] = BuiltinTypes.TYPE_TYPE
+
     for java_type in GlobalBuiltins.getBuiltinTypes():
         try:
             type_to_compiled_java_class[getattr(builtins, java_type.getTypeName())] = java_type
         except AttributeError:
             # This version of python does not have this builtin type; pass
             pass
-
 
 
 def copy_iterable(iterable):
@@ -758,31 +760,20 @@ def translate_python_code_to_java_class(python_function, java_function_type, *ty
                                                                                      copy_iterable(type_args))
 
 
-def wrap_java_function(java_function):
+def wrap_untyped_java_function(java_function):
     def wrapped_function(*args, **kwargs):
-        from org.optaplanner.python.translator.types import PythonLikeFunction
         from java.util import ArrayList, HashMap
 
         instance_map = HashMap()
-        java_args = None
-        java_kwargs = None
-        if isinstance(java_function, PythonLikeFunction):
-            java_args = ArrayList(len(args))
-            java_kwargs = HashMap()
+        java_args = ArrayList(len(args))
+        java_kwargs = HashMap()
 
-            for arg in args:
-                java_args.add(convert_to_java_python_like_object(arg, instance_map))
+        for arg in args:
+            java_args.add(convert_to_java_python_like_object(arg, instance_map))
 
-            for key, value in kwargs:
-                java_kwargs.put(convert_to_java_python_like_object(key, instance_map),
-                                convert_to_java_python_like_object(value, instance_map))
-        else:
-            java_args = [convert_to_java_python_like_object(arg, instance_map) for arg in args]
-            java_kwargs = {
-                convert_to_java_python_like_object(key, instance_map):
-                convert_to_java_python_like_object(value, instance_map)
-                for key, value in kwargs
-            }
+        for key, value in kwargs:
+            java_kwargs.put(convert_to_java_python_like_object(key, instance_map),
+                            convert_to_java_python_like_object(value, instance_map))
 
         try:
             return unwrap_python_like_object(getattr(java_function, '$call')(java_args, java_kwargs))
@@ -792,10 +783,38 @@ def wrap_java_function(java_function):
     return wrapped_function
 
 
+def wrap_typed_java_function(java_function):
+    def wrapped_function(*args):
+        from java.util import ArrayList, HashMap
+
+        instance_map = HashMap()
+        java_args = [convert_to_java_python_like_object(arg, instance_map) for arg in args]
+
+        try:
+            return unwrap_python_like_object(java_function.invoke(*java_args))
+        except Exception as e:
+            raise unwrap_python_like_object(e)
+
+    return wrapped_function
+
+
 def as_java(python_function):
+    return as_typed_java(python_function)
+
+
+def as_untyped_java(python_function):
     from org.optaplanner.python.translator.types import PythonLikeFunction
     java_function = translate_python_bytecode_to_java_bytecode(python_function, PythonLikeFunction)
-    return wrap_java_function(java_function)
+    return wrap_untyped_java_function(java_function)
+
+
+def as_typed_java(python_function):
+    from org.optaplanner.python.translator import PythonClassTranslator
+    function_bytecode = get_function_bytecode_object(python_function)
+    function_interface_declaration = PythonClassTranslator.getInterfaceForPythonFunction(function_bytecode)
+    function_interface_class = PythonClassTranslator.getInterfaceClassForDeclaration(function_interface_declaration)
+    java_function = translate_python_bytecode_to_java_bytecode(python_function, function_interface_class)
+    return wrap_typed_java_function(java_function)
 
 
 class MethodTypeHelper:
@@ -838,6 +857,7 @@ def translate_python_class_to_java_class(python_class):
     from java.lang import Class as JavaClass
     from java.util import ArrayList, HashMap
     from org.optaplanner.python.translator import PythonCompiledClass, PythonClassTranslator, CPythonBackedPythonInterpreter # noqa
+    from org.optaplanner.python.translator.types import BuiltinTypes
     from org.optaplanner.python.translator.types.wrappers import JavaObjectWrapper, OpaquePythonReference, CPythonType # noqa
 
     global type_to_compiled_java_class
@@ -847,6 +867,11 @@ def translate_python_class_to_java_class(python_class):
     raw_type = erase_generic_args(python_class)
     if raw_type in type_to_compiled_java_class:
         return type_to_compiled_java_class[raw_type]
+
+    if python_class == abc.ABC or inspect.isabstract(python_class):  # TODO: Implement a class for interfaces?
+        python_class_java_type = BuiltinTypes.BASE_TYPE
+        type_to_compiled_java_class[python_class] = python_class_java_type
+        return python_class_java_type
 
     if hasattr(python_class, '__module__') and python_class.__module__ is not None and \
             is_banned_module(python_class.__module__):

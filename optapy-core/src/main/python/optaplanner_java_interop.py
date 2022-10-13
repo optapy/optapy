@@ -1044,13 +1044,23 @@ def _does_class_define_eq_or_hashcode(python_class):
     return '__eq__' in python_class.__dict__ or '__hash__' in python_class.__dict__
 
 
+def compile_and_get_class(python_class):
+    from jpyinterpreter import translate_python_class_to_java_class
+    from org.optaplanner.optapy import AbstractCPythonBackedClass
+    parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
+    if parent_class.isInterface():
+        return AbstractCPythonBackedClass.class_
+    else:
+        return parent_class
+
+
 def _generate_problem_fact_class(python_class):
     ensure_init()
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
-    from jpyinterpreter import translate_python_class_to_java_class, force_update_type
+    from jpyinterpreter import force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
-    parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
+    parent_class = compile_and_get_class(python_class)
     has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
 
     out = PythonWrapperGenerator.defineProblemFactClass(_compose_unique_class_name(class_identifier),
@@ -1068,7 +1078,7 @@ def _generate_planning_entity_class(python_class: Type, annotation_data: Dict[st
     from jpyinterpreter import translate_python_class_to_java_class, force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
-    parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
+    parent_class = compile_and_get_class(python_class)
     has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
     out = PythonWrapperGenerator.definePlanningEntityClass(_compose_unique_class_name(class_identifier),
                                                            parent_class,
@@ -1086,7 +1096,7 @@ def _generate_planning_solution_class(python_class: Type) -> JClass:
     from jpyinterpreter import translate_python_class_to_java_class, force_update_type
     class_identifier = _get_class_identifier_for_object(python_class)
     optaplanner_annotations = _get_optaplanner_annotations(python_class)
-    parent_class = translate_python_class_to_java_class(python_class).getJavaClass()
+    parent_class = compile_and_get_class(python_class)
     has_eq_and_hashcode = _does_class_define_eq_or_hashcode(python_class)
     out = PythonWrapperGenerator.definePlanningSolutionClass(_compose_unique_class_name(class_identifier),
                                                              parent_class,

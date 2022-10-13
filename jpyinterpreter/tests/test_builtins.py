@@ -1,126 +1,134 @@
 import jpyinterpreter
 import pytest
 import sys
+from typing import SupportsAbs, Iterable, Callable, Sequence, Union, Iterator, Sized, Reversible, SupportsIndex
+from .conftest import verifier_for
 
 
 def test_abs():
-    def my_function(x):
+    def my_function(x: SupportsAbs) -> object:
         return abs(x)
 
     class MyClassWithAbs:
-        def __abs__(self):
+        def __abs__(self) -> int:
             return 10
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(1) == my_function(1)
-    assert java_function(-1) == my_function(-1)
-    assert java_function(1.0) == my_function(1.0)
-    assert java_function(-1.0) == my_function(-1.0)
-    assert java_function(MyClassWithAbs()) == my_function(MyClassWithAbs())
+    verifier = verifier_for(my_function)
+
+    verifier.verify(1, expected_result=1)
+    verifier.verify(-1, expected_result=1)
+    verifier.verify(1.0, expected_result=1.0)
+    verifier.verify(-1.0, expected_result=1.0)
+    verifier.verify(MyClassWithAbs(), expected_result=10)
 
 
 def test_any():
-    def my_function(x):
+    def my_function(x: Iterable) -> bool:
         return any(x)
 
     class MyClassWithoutBool:
         pass
 
     class MyClassWithBool:
-        def __init__(self, is_true):
+        is_true: bool
+
+        def __init__(self, is_true: bool):
             self.is_true = is_true
 
-        def __bool__(self):
+        def __bool__(self) -> bool:
             return self.is_true
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function([]) == my_function([])
-    assert java_function([MyClassWithBool(False), None]) == my_function([False, 0, 0.0, MyClassWithBool(False), None])
-    assert java_function([False, MyClassWithBool(True)]) == my_function([False, MyClassWithBool(True)])
-    assert java_function([MyClassWithoutBool()]) == my_function([MyClassWithoutBool()])
-    assert java_function([1]) == my_function([1])
-    assert java_function([1.0]) == my_function([1.0])
-    assert java_function([True]) == my_function([True])
+    verifier = verifier_for(my_function)
+    verifier.verify([], expected_result=False)
+    verifier.verify([False, 0, 0.0, MyClassWithBool(False), None], expected_result=False)
+    verifier.verify([False, MyClassWithBool(True)], expected_result=True)
+    verifier.verify([MyClassWithoutBool()], expected_result=True)
+    verifier.verify([1], expected_result=True)
+    verifier.verify([1.0], expected_result=True)
+    verifier.verify([True], expected_result=True)
 
 
 def test_all():
-    def my_function(x):
+    def my_function(x: Iterable) -> bool:
         return all(x)
 
     class MyClassWithoutBool:
         pass
 
     class MyClassWithBool:
-        def __init__(self, is_true):
+        is_true: bool
+
+        def __init__(self, is_true: bool):
             self.is_true = is_true
 
-        def __bool__(self):
+        def __bool__(self) -> bool:
             return self.is_true
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function([]) == my_function([])
-    assert java_function([MyClassWithBool(False), None]) == my_function([False, 0, 0.0, MyClassWithBool(False), None])
-    assert java_function([False, MyClassWithBool(True)]) == my_function([False, MyClassWithBool(True)])
-    assert java_function([MyClassWithoutBool()]) == my_function([MyClassWithoutBool()])
-    assert java_function([1]) == my_function([1])
-    assert java_function([1.0]) == my_function([1.0])
-    assert java_function([True]) == my_function([True])
+    verifier = verifier_for(my_function)
+    verifier.verify([], expected_result=True)
+    verifier.verify([True, 1, 1.0, MyClassWithBool(True)], expected_result=True)
+    verifier.verify([False, MyClassWithBool(True)], expected_result=False)
+    verifier.verify([MyClassWithoutBool()], expected_result=True)
+    verifier.verify([0], expected_result=False)
+    verifier.verify([0.0], expected_result=False)
+    verifier.verify([False], expected_result=False)
+    verifier.verify([None], expected_result=False)
 
 
 def test_ascii():
-    def my_function(x):
+    def my_function(x: object) -> str:
         return ascii(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(10) == my_function(10)
-    assert java_function("text") == my_function("text")
-    assert java_function("text\nwith\nlines") == my_function("text\nwith\nlines")
+    verifier = verifier_for(my_function)
+    verifier.verify(10, expected_result='10')
+    verifier.verify('text', expected_result="'text'")
+    verifier.verify('text\nwith\nlines', expected_result="'text\\nwith\\nlines'")
 
 
 def test_bin():
-    def my_function(x):
+    def my_function(x: int) -> str:
         return bin(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(10) == my_function(10)
-    assert java_function(-10) == my_function(-10)
+    verifier = verifier_for(my_function)
+    verifier.verify(10, expected_result=bin(10))
+    verifier.verify(-10, expected_result=bin(-10))
 
 
 def test_bool():
-    def my_function(x):
+    def my_function(x: object) -> bool:
         return bool(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(0) == my_function(0)
-    assert java_function(1) == my_function(1)
-    assert java_function(-1) == my_function(-1)
-    assert java_function("") == my_function("")
-    assert java_function("test") == my_function("test")
-    assert java_function(True) == my_function(True)
-    assert java_function(False) == my_function(False)
+    verifier = verifier_for(my_function)
+    verifier.verify(0, expected_result=False)
+    verifier.verify(1, expected_result=True)
+    verifier.verify(-1, expected_result=True)
+    verifier.verify('', expected_result=False)
+    verifier.verify('test', expected_result=True)
+    verifier.verify(True, expected_result=True)
+    verifier.verify(False, expected_result=False)
 
 
 def test_callable():
-    def my_function(x):
+    def my_function(x: Callable) -> bool:
         return callable(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(10) == my_function(10)
-    assert java_function(my_function) == my_function(my_function)
-    assert java_function(int) == my_function(int)
+    verifier = verifier_for(my_function)
+    verifier.verify(10, expected_result=False)
+    verifier.verify(my_function, expected_result=True)
+    verifier.verify(int, expected_result=True)
 
 
 def test_chr():
-    def my_function(x):
+    def my_function(x: int) -> str:
         return chr(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(30) == my_function(30)
-    assert java_function(2400) == my_function(2400)
+    verifier = verifier_for(my_function)
+    verifier.verify(30, expected_result=chr(30))
+    verifier.verify(2400, expected_result=chr(2400))
 
 
 def test_delattr():
-    def my_function(x):
+    def my_function(x: object) -> bool:
         delattr(x, 'my_attr')
         return hasattr(x, 'my_attr')
 
@@ -128,244 +136,244 @@ def test_delattr():
         pass
 
     a = TestObject()
-    b = TestObject()
     a.my_attr = 'test'
-    b.my_attr = 'test'
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(a) == my_function(b)
+
+    verifier = verifier_for(my_function)
+    verifier.verify(a, expected_result=False)
+    verifier.verify(TestObject(), expected_error=AttributeError)
 
 
 def test_divmod():
-    def my_function(x, y):
+    def my_function(x: any, y: any) -> tuple:
         return divmod(x, y)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(16, 5) == my_function(16, 5)
-    assert java_function(-16, 5) == my_function(-16, 5)
-    assert java_function(16, -5) == my_function(16, -5)
-    assert java_function(-16, -5) == my_function(-16, -5)
+    verifier = verifier_for(my_function)
+    verifier.verify(16, 5)
+    verifier.verify(-16, 5)
+    verifier.verify(16, -5)
+    verifier.verify(-16, -5)
 
-    assert java_function(16, 5.0) == my_function(16, 5.0)
-    assert java_function(-16, 5.0) == my_function(-16, 5.0)
-    assert java_function(16, -5.0) == my_function(16, -5.0)
-    assert java_function(-16, -5.0) == my_function(-16, -5.0)
+    verifier.verify(16, 5.0)
+    verifier.verify(-16, 5.0)
+    verifier.verify(16, -5.0)
+    verifier.verify(-16, -5.0)
 
-    assert java_function(16.0, 5.0) == my_function(16.0, 5.0)
-    assert java_function(-16.0, 5.0) == my_function(-16.0, 5.0)
-    assert java_function(16.0, -5.0) == my_function(16.0, -5.0)
-    assert java_function(-16.0, -5.0) == my_function(-16.0, -5.0)
+    verifier.verify(16.0, 5.0)
+    verifier.verify(-16.0, 5.0)
+    verifier.verify(16.0, -5.0)
+    verifier.verify(-16.0, -5.0)
 
 
 def test_dict():
-    def my_function(x):
+    def my_function(x: object) -> dict:
         out = dict()
         out['key'] = x
         return out
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function('value') == my_function('value')
-    assert java_function(10) == my_function(10)
+    verifier = verifier_for(my_function)
+    verifier.verify('value', expected_result={'key': 'value'})
+    verifier.verify(10, expected_result={'key': 10})
 
 
 def test_enumerate():
-    def my_function_without_start(x):
-        return enumerate(x)
+    def my_function_without_start(x: Sequence) -> tuple:
+        return tuple(enumerate(x))
 
-    def my_function_with_start(x, start):
-        return enumerate(x, start)
+    def my_function_with_start(x: Sequence, start: int) -> tuple:
+        return tuple(enumerate(x, start))
 
-    java_function = jpyinterpreter.as_java(my_function_without_start)
-    java_function_with_start = jpyinterpreter.as_java(my_function_with_start)
-    assert list(java_function(['a', 'b', 'c'])) == list(my_function_without_start(['a', 'b', 'c']))
-    assert list(java_function_with_start(['a', 'b', 'c'], 5)) == list(my_function_with_start(['a', 'b', 'c'], 5))
+    verifier = verifier_for(my_function_without_start)
+    with_start_verifier = verifier_for(my_function_with_start)
+    verifier.verify(['a', 'b', 'c'], expected_result=((0, 'a'), (1, 'b'), (2, 'c')))
+    with_start_verifier.verify(['a', 'b', 'c'], 5, expected_result=((5, 'a'), (6, 'b'), (7, 'c')))
 
 
 def test_filter():
-    def my_function(function, iterable):
-        return filter(function, iterable)
+    def my_function(function: Callable[[any], bool], iterable: Iterable) -> tuple:
+        return tuple(filter(function, iterable))
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert list(java_function(None, [0, 1, False, 2])) == list(my_function(None, [0, 1, False, 2]))
-    assert list(java_function(lambda x: x == 2 or x is False, [0, 1, False, 2])) == \
-           list(my_function(lambda x: x == 2 or x is False, [0, 1, False, 2]))
+    verifier = verifier_for(my_function)
+
+    verifier.verify(None, [0, 1, False, 2], expected_result=(1, 2))
+    verifier.verify(lambda x: x == 2 or x is False, [0, 1, False, 2], expected_result=(False, 2))
 
 
 def test_float():
-    def my_function(x):
+    def my_function(x: any) -> float:
         return float(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(10) == my_function(10)
-    assert type(java_function(10)) == type(my_function(10))
+    verifier = verifier_for(my_function)
+    verifier.verify(10, expected_result=10.0)
 
 
 def test_format():
-    def my_function(x):
+    def my_function(x: object) -> str:
         return format(x)
 
-    def my_function_with_spec(x, spec):
+    def my_function_with_spec(x: object, spec: str) -> str:
         return format(x, spec)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_spec = jpyinterpreter.as_java(my_function_with_spec)
+    verifier = verifier_for(my_function)
+    with_spec_verifier = verifier_for(my_function_with_spec)
 
-    assert java_function(10) == my_function(10)
-    assert java_function_with_spec(10, '') == my_function_with_spec(10, '')
+    verifier.verify(10, expected_result='10')
+    with_spec_verifier.verify(10, '', expected_result='10')
 
 
 def test_getattr():
-    def my_function(x, name):
+    def my_function(x: any, name: str) -> any:
         return getattr(x, name)
 
-    def my_function_with_default(x, name, default):
+    def my_function_with_default(x: any, name: str, default: any) -> any:
         return getattr(x, name, default)
 
     class TestObject:
         pass
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_default = jpyinterpreter.as_java(my_function_with_default)
+    verifier = verifier_for(my_function)
+    with_default_verifier = verifier_for(my_function_with_default)
 
     a = TestObject()
     a.test = 'value'
 
-    assert java_function(a, 'test') == my_function(a, 'test')
-    assert java_function_with_default(a, 'missing', 10) == my_function_with_default(a, 'missing', 10)
+    verifier.verify(a, 'test', expected_result='value')
+    with_default_verifier.verify(a, 'missing', 10, expected_result=10)
 
 
 global_variable = 10
 
 
 def test_globals():
-    def my_function():
+    def my_function() -> any:
         global global_variable
         x = global_variable
         return globals()
 
-    java_function = jpyinterpreter.as_java(my_function)
+    verifier = verifier_for(my_function)
     # The globals directory in Java only stores used globals
-    assert java_function()['global_variable'] == 10
+    verifier.verify_property(predicate=lambda out: out['global_variable'] == 10)
 
 
 def test_hasattr():
-    def my_function(x, name):
+    def my_function(x: any, name: str) -> bool:
         return hasattr(x, name)
 
     class TestObject:
         pass
 
-    java_function = jpyinterpreter.as_java(my_function)
+    verifier = verifier_for(my_function)
     a = TestObject()
     a.test = 'value'
-    assert java_function(a, 'test') == my_function(a, 'test')
-    assert java_function(a, 'other') == my_function(a, 'other')
+    verifier.verify(a, 'test', expected_result=True)
+    verifier.verify(a, 'other', expected_result=False)
 
 
 def test_hash():
-    def my_function(x):
+    def my_function(x: any) -> int:
         return hash(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(1) == my_function(1)
-    assert java_function(1.0) == my_function(1.0)
-    assert java_function(True) == my_function(True)
+    verifier = verifier_for(my_function)
+    verifier.verify(1)
+    verifier.verify(1.0)
+    verifier.verify(True)
 
 
 def test_id():
-    def my_function(x):
+    def my_function(x: object) -> int:
         return id(x)
 
     a = object()
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(a) == my_function(a)
+    verifier = verifier_for(my_function)
+    verifier.verify(a, clone_arguments=False)
 
 
 def test_int():
-    def my_function(x):
+    def my_function(x: any) -> int:
         return int(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(1.5) == my_function(1.5)
-    assert java_function(1.0) == my_function(1.0)
-    assert type(java_function(1.0)) == type(my_function(1.0))
+    verifier = verifier_for(my_function)
+    verifier.verify(1.5, expected_result=1)
+    verifier.verify(1.0, expected_result=1)
 
 
 def test_isinstance():
-    def my_function(x, y):
+    def my_function(x: object, y: Union[type, tuple]) -> bool:
         return isinstance(x, y)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(1, int) == my_function(1, int)
-    assert java_function(True, int) == my_function(True, int)
-    assert java_function(1.0, int) == my_function(1.0, int)
-    assert java_function(int, int) == my_function(int, int)
-    assert java_function(1.0, (int, float)) == my_function(1.0, (int, float))
+    verifier = verifier_for(my_function)
+    verifier.verify(1, int, expected_result=True)
+    verifier.verify(True, int, expected_result=True)
+    verifier.verify(1.0, int, expected_result=False)
+    verifier.verify(int, int, expected_result=False)
+    verifier.verify(1.0, (int, float), expected_result=True)
 
 
 def test_issubclass():
-    def my_function(x, y):
+    def my_function(x: any, y: Union[type, tuple]) -> bool:
         return issubclass(x, y)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(int, int) == my_function(int, int)
-    assert java_function(bool, int) == my_function(bool, int)
-    assert java_function(int, bool) == my_function(int, bool)
-    assert java_function(int, (float, int)) == my_function(int, (float, int))
+    verifier = verifier_for(my_function)
+    verifier.verify(1, int, expected_error=TypeError)
+    verifier.verify(int, int, expected_result=True)
+    verifier.verify(bool, int, expected_result=True)
+    verifier.verify(float, int, expected_result=False)
+    verifier.verify(float, (int, float), expected_result=True)
 
 
 def test_iter():
-    def my_function(x):
+    def my_function(x: Iterable) -> Iterator:
         return iter(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_iter = java_function([1, 2, 3, 4])
-    python_iter = my_function([1, 2, 3, 4])
+    def predicate(iterator):
+        for i in range(4):
+            assert next(iterator) == i + 1
 
-    for item in python_iter:
-        assert next(java_iter) == item
+        try:
+            next(iterator)
+            return False
+        except StopIteration:
+            return True
 
-    with pytest.raises(StopIteration):
-        next(java_iter)
+    verifier = verifier_for(my_function)
+    verifier.verify_property([1, 2, 3, 4], predicate=predicate)
 
 
 def test_len():
-    def my_function(x):
+    def my_function(x: Sized) -> int:
         return len(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function([1, 2, 3]) == my_function([1, 2, 3])
-    assert java_function((1, 2)) == my_function((1, 2))
-    assert java_function({1}) == my_function({1})
-
-    a_dict = {
+    verifier = verifier_for(my_function)
+    verifier.verify([1, 2, 3], expected_result=3)
+    verifier.verify((4, 5), expected_result=2)
+    verifier.verify({6}, expected_result=1)
+    verifier.verify({
         'a': 1,
         'b': 2,
         'c': 3
-    }
-    assert java_function(a_dict) == my_function(a_dict)
+    }, expected_result=3)
 
 
 def test_list():
-    def my_function(x):
+    def my_function(x: Iterable) -> list:
         return list(x)
 
-    def my_function_no_args():
+    def my_function_no_args() -> list:
         return list()
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_no_args = jpyinterpreter.as_java(my_function_no_args)
+    verifier = verifier_for(my_function)
+    no_args_verifier = verifier_for(my_function_no_args)
 
-    assert java_function_no_args() == my_function_no_args()
-    assert java_function((1, 2, 3)) == my_function((1, 2, 3))
+    verifier.verify((1, 2, 3), expected_result=[1, 2, 3])
+    no_args_verifier.verify(expected_result=[])
 
 
 def test_locals():
     def my_function():
         return locals()
 
-
+    # Not using verifier since locals is not implemented in Java since it would involve reading frame variable slots
+    # to get the current value of local variables
     java_function = jpyinterpreter.as_java(my_function)
-
     with pytest.raises(ValueError) as excinfo:
         java_function()
 
@@ -373,238 +381,223 @@ def test_locals():
 
 
 def test_map():
-    def my_function(function, iterable):
-        return map(function, iterable)
+    def my_function(function: Callable, iterable: Iterable) -> tuple:
+        return tuple(map(function, iterable))
 
-    def my_function_two_args(function, iterable1, iterable2):
-        return map(function, iterable1, iterable2)
+    def my_function_two_args(function: Callable, iterable1: Iterable, iterable2: Iterable) -> tuple:
+        return tuple(map(function, iterable1, iterable2))
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_two_args = jpyinterpreter.as_java(my_function_two_args)
+    verifier = verifier_for(my_function)
+    two_args_verifier = verifier_for(my_function_two_args)
 
-    assert list(java_function(lambda x: x + 1, [1, 2, 3])) == list(my_function(lambda x: x + 1, [1, 2, 3]))
-    assert list(java_function_two_args(lambda x, y: x + y,
-                                       [1, 2, 3],
-                                       [2, 3, 4])) == \
-           list(my_function_two_args(lambda x, y: x + y,
-                                     [1, 2, 3],
-                                     [2, 3, 4]))
-
-    assert list(java_function_two_args(lambda x, y: x + y,
-                                       [1, 2],
-                                       [2, 3, 4])) == \
-           list(my_function_two_args(lambda x, y: x + y,
-                                     [1, 2],
-                                     [2, 3, 4]))
-
-    assert list(java_function_two_args(lambda x, y: x + y,
-                                       [1, 2, 3],
-                                       [2, 3])) == \
-           list(my_function_two_args(lambda x, y: x + y,
-                                     [1, 2, 3],
-                                     [2, 3]))
+    verifier.verify(lambda x: x + 1, [1, 2, 3], expected_result=(2, 3, 4))
+    two_args_verifier.verify(lambda x, y: x + y, [1, 2, 3], [3, 4, 5], expected_result=(4, 6, 8))
+    two_args_verifier.verify(lambda x, y: x + y, [1, 2], [3, 4, 5], expected_result=(4, 6))
+    two_args_verifier.verify(lambda x, y: x + y, [1, 2, 3], [3, 4], expected_result=(4, 6))
 
 
 def test_min():
-    def my_function(x):
+    def my_function(x: Iterable) -> any:
         return min(x)
 
-    def my_function_two_args(x, y):
+    def my_function_two_args(x: any, y: any) -> any:
         return min(x, y)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_two_args = jpyinterpreter.as_java(my_function_two_args)
+    verifier = verifier_for(my_function)
+    two_args_verifier = verifier_for(my_function_two_args)
 
-    assert java_function([1, 2, 3]) == my_function([1, 2, 3])
-    assert java_function([3, 2, 1]) == my_function([3, 2, 1])
-    assert java_function_two_args(1, 2) == my_function_two_args(1, 2)
-    assert java_function_two_args(2, 1) == my_function_two_args(2, 1)
+    verifier.verify([1, 2, 3], expected_result=1)
+    verifier.verify([3, 2, 1], expected_result=1)
+    two_args_verifier.verify(1, 2, expected_result=1)
+    two_args_verifier.verify(2, 1, expected_result=1)
 
 
 def test_max():
-    def my_function(x):
+    def my_function(x: Iterable) -> any:
         return max(x)
 
-    def my_function_two_args(x, y):
+    def my_function_two_args(x: any, y: any) -> any:
         return max(x, y)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_two_args = jpyinterpreter.as_java(my_function_two_args)
+    verifier = verifier_for(my_function)
+    two_args_verifier = verifier_for(my_function_two_args)
 
-    assert java_function([1, 2, 3]) == my_function([1, 2, 3])
-    assert java_function([3, 2, 1]) == my_function([3, 2, 1])
-    assert java_function_two_args(1, 2) == my_function_two_args(1, 2)
-    assert java_function_two_args(2, 1) == my_function_two_args(2, 1)
+    verifier.verify([1, 2, 3], expected_result=3)
+    verifier.verify([3, 2, 1], expected_result=3)
+    two_args_verifier.verify(1, 2, expected_result=2)
+    two_args_verifier.verify(2, 1, expected_result=2)
 
 
 def test_next():
-    def my_function(x):
+    def my_function(x: Iterable) -> any:
         i = iter(x)
         return next(i)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function([1, 2, 3]) == my_function([1, 2, 3])
+    verifier = verifier_for(my_function)
+    verifier.verify([1, 2, 3], expected_result=1)
 
 
 def test_object():
-    def my_function(x):
+    def my_function(x: any) -> bool:
         # cannot really do anything with a plain object
         return isinstance(x, object)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(1) == my_function(1)
-    assert java_function('a') == my_function('a')
-    assert java_function(int) == my_function(int)
+    verifier = verifier_for(my_function)
+    verifier.verify(1, expected_result=True)
+    verifier.verify('a', expected_result=True)
+    verifier.verify(int, expected_result=True)
 
 
 def test_oct():
-    def my_function(x):
+    def my_function(x: int) -> str:
         return oct(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(15) == my_function(15)
-    assert java_function(-15) == my_function(-15)
+    verifier = verifier_for(my_function)
+    verifier.verify(15)
+    verifier.verify(-15)
 
 
 def test_ord():
-    def my_function(x):
+    def my_function(x: str) -> int:
         return ord(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function('a') == my_function('a')
-    assert java_function('\n') == my_function('\n')
+    verifier = verifier_for(my_function)
+    verifier.verify('a')
+    verifier.verify('\n')
 
 
 def test_pow():
-    def my_function(x, y):
+    def my_function(x: int, y: int) -> any:
         return pow(x, y)
 
-    def my_function_with_mod(x, y, z):
+    def my_function_with_mod(x: int, y: int, z: int) -> any:
         return pow(x, y, z)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_mod = jpyinterpreter.as_java(my_function_with_mod)
-    assert java_function(2, 3) == my_function(2, 3)
-    assert java_function(2, -3) == my_function(2, -3)
-    assert java_function_with_mod(2, 3, 3) == my_function_with_mod(2, 3, 3)
-    assert java_function_with_mod(2, -1, 3) == my_function_with_mod(2, -1, 3)
+    verifier = verifier_for(my_function)
+    with_mod_verifier = verifier_for(my_function_with_mod)
+
+    verifier.verify(2, 3, expected_result=8)
+    verifier.verify(2, -3, expected_result=0.125)
+
+    with_mod_verifier.verify(2, 3, 3, expected_result=2)
+    with_mod_verifier.verify(2, -1, 3, expected_result=2)
 
 
 def test_range():
-    def my_function(x):
-        return range(x)
+    def my_function(x: int) -> tuple:
+        return tuple(range(x))
 
-    def my_function_with_start(start, stop):
-        return range(start, stop)
+    def my_function_with_start(start: int, stop: int) -> tuple:
+        return tuple(range(start, stop))
 
-    def my_function_with_start_and_step(start, stop, step):
-        return range(start, stop, step)
+    def my_function_with_start_and_step(start: int, stop: int, step: int) -> tuple:
+        return tuple(range(start, stop, step))
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_start = jpyinterpreter.as_java(my_function_with_start)
-    java_function_with_start_and_step = jpyinterpreter.as_java(my_function_with_start_and_step)
+    verifier = verifier_for(my_function)
+    with_start_verifier = verifier_for(my_function_with_start)
+    with_start_and_step_verifier = verifier_for(my_function_with_start_and_step)
 
-    assert list(java_function(5)) == list(my_function(5))
-    assert list(java_function_with_start(5, 10)) == list(my_function_with_start(5, 10))
-    assert list(java_function_with_start_and_step(5, 10, 2)) == list(my_function_with_start_and_step(5, 10, 2))
-    assert list(java_function_with_start_and_step(10, 5, -2)) == list(my_function_with_start_and_step(10, 5, -2))
+    verifier.verify(5, expected_result=(0, 1, 2, 3, 4))
+
+    with_start_verifier.verify(5, 10, expected_result=(5, 6, 7, 8, 9))
+
+    with_start_and_step_verifier.verify(5, 10, 2, expected_result=(5, 7, 9))
+    with_start_and_step_verifier.verify(10, 5, -2, expected_result=(10, 8, 6))
 
 
 def test_repr():
-    def my_function(x):
+    def my_function(x: any) -> str:
         return repr(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
+    verifier = verifier_for(my_function)
 
-    assert java_function(10) == my_function(10)
-    assert java_function('a\nstring\nwith\nnew lines') == my_function('a\nstring\nwith\nnew lines')
-    assert java_function([1, '2', 3]) == my_function([1, '2', 3])
+    verifier.verify(10, expected_result='10')
+    verifier.verify('a\nstring\nwith\nnew lines', expected_result="'a\\nstring\\nwith\\nnew lines'")
+    verifier.verify([1, '2', 3], expected_result="[1, '2', 3]")
 
 
 def test_reversed():
-    def my_function(x):
-        return reversed(x)
+    def my_function(x: Reversible) -> tuple:
+        return tuple(reversed(x))
 
     class TestClass:
         def __reversed__(self):
             yield from range(10, 1, -1)
 
-    java_function = jpyinterpreter.as_java(my_function)
+    verifier = verifier_for(my_function)
 
-    assert list(java_function([1, 2, 3])) == list(my_function([1, 2, 3]))
-    assert list(java_function((1, 2, 3))) == list(my_function((1, 2, 3)))
-    assert list(java_function(TestClass())) == list(my_function(TestClass()))
+    verifier.verify([1, 2, 3], expected_result=(3, 2, 1))
+    verifier.verify((1, 2, 3), expected_result=(3, 2, 1))
+    verifier.verify(TestClass(), expected_result=(10, 9, 8, 7, 6, 5, 4, 3, 2))
 
 
 def test_round():
-    def my_function(x):
+    def my_function(x: any) -> int:
         return round(x)
 
-    def my_function_with_precision(x, y):
+    def my_function_with_precision(x: any, y: int) -> any:
         return round(x, y)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_precision = jpyinterpreter.as_java(my_function_with_precision)
-    assert java_function(15) == my_function(15)
-    assert java_function(1.5) == my_function(1.5)
-    assert java_function(1.2) == my_function(1.2)
-    assert java_function(1.7) == my_function(1.7)
-    assert java_function(2.5) == my_function(2.5)
+    verifier = verifier_for(my_function)
+    with_precision_verifier = verifier_for(my_function_with_precision)
 
-    assert java_function_with_precision(15, 0) == my_function_with_precision(15, 0)
-    assert java_function_with_precision(15, 2) == my_function_with_precision(15, 2)
-    assert java_function_with_precision(15, -1) == my_function_with_precision(15, -1)
-    assert java_function_with_precision(25, -1) == my_function_with_precision(25, -1)
+    verifier.verify(15, expected_result=15)
+    verifier.verify(1.5, expected_result=2)
+    verifier.verify(1.2, expected_result=1)
+    verifier.verify(1.7, expected_result=2)
+    verifier.verify(2.5, expected_result=2)
 
-    assert java_function_with_precision(1.076, 2) == my_function_with_precision(1.076, 2)
-    assert java_function_with_precision(1.024, 2) == my_function_with_precision(1.024, 2)
-    assert java_function_with_precision(1.045, 2) == my_function_with_precision(1.045, 2)
-    assert java_function_with_precision(1.055, 2) == my_function_with_precision(1.055, 2)
+    with_precision_verifier.verify(15, 0, expected_result=15)
+    with_precision_verifier.verify(15, 2, expected_result=15)
+    with_precision_verifier.verify(15, -1, expected_result=20)
+    with_precision_verifier.verify(25, -1, expected_result=20)
 
-    assert java_function_with_precision(176.0, -1) == my_function_with_precision(176.0, -1)
-    assert java_function_with_precision(124.0, -1) == my_function_with_precision(124.0, -1)
-    assert java_function_with_precision(145.0, -1) == my_function_with_precision(145.0, -1)
-    assert java_function_with_precision(155.0, -1) == my_function_with_precision(155.0, -1)
+    with_precision_verifier.verify(1.076, 2, expected_result=1.08)
+    with_precision_verifier.verify(1.024, 2, expected_result=1.02)
+    with_precision_verifier.verify(1.045, 2, expected_result=1.04)
+    with_precision_verifier.verify(1.055, 2, expected_result=1.05)
+
+    with_precision_verifier.verify(176.0, -1, expected_result=180.0)
+    with_precision_verifier.verify(124.0, -1, expected_result=120.0)
+    with_precision_verifier.verify(145.0, -1, expected_result=140.0)
+    with_precision_verifier.verify(155.0, -1, expected_result=160.0)
 
 
 def test_set():
-    def my_function():
+    def my_function() -> set:
         return set()
 
-    def my_function_with_arg(x):
+    def my_function_with_arg(x: Iterable) -> set:
         return set(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_arg = jpyinterpreter.as_java(my_function_with_arg)
+    verifier = verifier_for(my_function)
+    with_arg_verifier = verifier_for(my_function_with_arg)
 
-    assert java_function() == my_function()
-    assert java_function_with_arg([1, 2, 2, 3]) == my_function_with_arg([1, 2, 2, 3])
+    verifier.verify(expected_result=set())
+    with_arg_verifier.verify([1, 2, 2, 3], expected_result={1, 2, 3})
 
 
 def test_setattr():
-    def my_function(x, name, value):
+    def my_function(x: any, name: str, value: any) -> any:
         setattr(x, name, value)
         return getattr(x, name)
 
     class TestObject:
         pass
 
-    java_function = jpyinterpreter.as_java(my_function)
+    verifier = verifier_for(my_function)
 
     a = TestObject()
     a.test = 'value 1'
 
-    b = TestObject()
-    b.test = 'value 1'
-
-    assert java_function(a, 'test', 'value 2') == my_function(b, 'test', 'value 2')
+    verifier.verify(a, 'test', 'value 2', expected_result='value 2')
 
 
 def test_slice():
-    def my_function(start, stop):
+    def my_function(start: Union[int, SupportsIndex], stop: Union[int, SupportsIndex]):
         return slice(start, stop)
 
-    def my_function_with_step(start, stop, step):
+    def my_function_with_step(start: Union[int, SupportsIndex], stop: Union[int, SupportsIndex], step: int):
         return slice(start, stop, step)
 
     class MyClassWithIndex:
@@ -617,136 +610,123 @@ def test_slice():
         def __eq__(self, other):
             return self.index == other.index
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_step = jpyinterpreter.as_java(my_function_with_step)
+    verifier = verifier_for(my_function)
+    with_step_verifier = verifier_for(my_function_with_step)
 
-    assert java_function(1, 5) == my_function(1, 5)
-    assert java_function(1, MyClassWithIndex(3)) == my_function(1, MyClassWithIndex(3))
-    assert java_function_with_step(1, 5, 2) == my_function_with_step(1, 5, 2)
+    verifier.verify(1, 5, expected_result=slice(1, 5))
+    verifier.verify(1,  MyClassWithIndex(3), expected_result=slice(1,  MyClassWithIndex(3)))
+    with_step_verifier.verify(1, 5, 2, expected_result=slice(1, 5, 2))
 
 
 def test_sorted():
-    def my_function(x):
+    def my_function(x: Sequence) -> Sequence:
         return sorted(x)
 
-    def my_function_with_key(x, y):
+    def my_function_with_key(x: Sequence, y: Callable[[any], any]) -> Sequence:
         return sorted(x, key=y)
 
-    def my_function_with_reverse(x, y):
+    def my_function_with_reverse(x: Sequence, y: bool) -> Sequence:
         return sorted(x, reverse=y)
 
-    def my_function_with_key_and_reverse(x, y, z):
+    def my_function_with_key_and_reverse(x: Sequence, y: Callable[[any], any], z: bool) -> Sequence:
         return sorted(x, key=y, reverse=z)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_key = jpyinterpreter.as_java(my_function_with_key)
-    java_function_with_reverse = jpyinterpreter.as_java(my_function_with_reverse)
-    java_function_with_key_and_reverse = jpyinterpreter.as_java(my_function_with_key_and_reverse)
+    verifier = verifier_for(my_function)
+    with_key_verifier = verifier_for(my_function_with_key)
+    with_reverse_verifier = verifier_for(my_function_with_reverse)
+    with_key_and_reverse_verifier = verifier_for(my_function_with_key_and_reverse)
 
-    assert java_function([2, 3, 1, 4]) == my_function([2, 3, 1, 4])
-    assert java_function_with_key([2, 3, 1, 4], lambda x: -x) == my_function_with_key([2, 3, 1, 4], lambda x: -x)
-    assert java_function_with_reverse([2, 3, 1, 4], True) == my_function_with_reverse([2, 3, 1, 4], True)
-    assert java_function_with_key_and_reverse([2, 3, 1, 4], lambda x: -x, True) == \
-           my_function_with_key_and_reverse([2, 3, 1, 4], lambda x: -x, True)
+    verifier.verify([2, 1, 3, 4], expected_result=[1, 2, 3, 4])
+    with_key_verifier.verify([2, 1, 3, 4], lambda x: -x, expected_result=[4, 3, 2, 1])
+    with_reverse_verifier.verify([2, 1, 3, 4], True, expected_result=[4, 3, 2, 1])
+    with_key_and_reverse_verifier.verify([2, 1, 3, 4], lambda x: -x, True, expected_result=[1, 2, 3, 4])
 
 
 def test_str():
-    def my_function(x):
+    def my_function(x: any) -> str:
         return str(x)
 
     class TestObject:
         def __str__(self):
             return 'A TestObject Instance'
 
-    java_function = jpyinterpreter.as_java(my_function)
-    assert java_function(10) == my_function(10)
-    assert java_function(1.0) == my_function(1.0)
-    assert java_function('text') == my_function('text')
-    assert java_function([1, '2', 3]) == my_function([1, '2', 3])
-
-    a = TestObject()
-    assert java_function(a) == my_function(a)
+    verifier = verifier_for(my_function)
+    verifier.verify(10, expected_result='10')
+    verifier.verify(1.0, expected_result='1.0')
+    verifier.verify('text', expected_result='text')
+    verifier.verify([1, '2', 3], expected_result="[1, '2', 3]")
+    verifier.verify(TestObject(), expected_result='A TestObject Instance')
 
 
 def test_sum():
-    def my_function(x):
+    def my_function(x: Iterable) -> any:
         return sum(x)
 
-    def my_function_with_start(x, y):
+    def my_function_with_start(x: Iterable, y: any) -> any:
         return sum(x, y)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_start = jpyinterpreter.as_java(my_function_with_start)
+    verifier = verifier_for(my_function)
+    with_start_verifier = verifier_for(my_function_with_start)
 
-    assert java_function([]) == my_function([])
-    assert java_function([1, 3, 5]) == my_function([1, 3, 5])
-    assert java_function([1.0, 3.0, 5.0]) == my_function([1.0, 3.0, 5.0])
-    assert java_function_with_start([], 1.5) == my_function_with_start([], 1.5)
-    assert java_function_with_start([1, 3, 5], 1.5) == my_function_with_start([1, 3, 5], 1.5)
-    assert java_function_with_start([1.0, 3.0, 5.0], 1.5) == my_function_with_start([1.0, 3.0, 5.0], 1.5)
+    verifier.verify([], expected_result=0)
+    verifier.verify([1, 3, 5], expected_result=9)
+    verifier.verify([1.0, 3.0, 5.0], expected_result=9.0)
+    with_start_verifier.verify([], 1.5, expected_result=1.5)
+    with_start_verifier.verify([1, 3, 5], 1.5, expected_result=10.5)
+    with_start_verifier.verify([1.0, 3.0, 5.0], 1.5, expected_result=10.5)
 
 
 def test_tuple():
-    def my_function():
+    def my_function() -> tuple:
         return tuple()
 
-    def my_function_with_arg(x):
+    def my_function_with_arg(x: Iterable) -> tuple:
         return tuple(x)
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_with_arg = jpyinterpreter.as_java(my_function_with_arg)
+    verifier = verifier_for(my_function)
+    with_arg_verifier = verifier_for(my_function_with_arg)
 
-    assert java_function() == my_function()
-    assert java_function_with_arg([1, 2, 2, 3]) == my_function_with_arg([1, 2, 2, 3])
+    verifier.verify(expected_result=tuple())
+    with_arg_verifier.verify([1, 2, 2, 3], expected_result=(1, 2, 2, 3))
 
 
 def test_type():
-    def my_function(x):
+    def my_function(x: any) -> type:
         return type(x)
 
     class MyObject:
         pass
 
-    java_function = jpyinterpreter.as_java(my_function)
+    verifier = verifier_for(my_function)
 
-    assert java_function(10) == my_function(10)
-    assert java_function('text') == my_function('text')
-    assert java_function([1, 2]) == my_function([1, 2])
-    assert java_function(MyObject()) == my_function(MyObject())
-    assert java_function(MyObject) == my_function(MyObject)
+    verifier.verify(10, expected_result=int)
+    verifier.verify('text', expected_result=str)
+    verifier.verify([1, 2], expected_result=list)
+    verifier.verify(MyObject(), expected_result=MyObject)
+    verifier.verify(MyObject, expected_result=type)
 
 
 def test_zip():
-    def my_function(iterables):
-        return zip(*iterables)
+    def my_function(iterables: Iterable) -> tuple:
+        return tuple(zip(*iterables))
 
-    def my_function_strict(iterables, is_strict):
-        return zip(*iterables, strict=is_strict)
+    def my_function_strict(iterables: Iterable, is_strict: bool) -> tuple:
+        return tuple(zip(*iterables, strict=is_strict))
 
-    java_function = jpyinterpreter.as_java(my_function)
-    java_function_strict = jpyinterpreter.as_java(my_function_strict)
+    verifier = verifier_for(my_function)
+    strict_verifier = verifier_for(my_function_strict)
 
-    assert list(java_function([])) == list(my_function([]))
-    assert list(java_function(((1, 2, 3),))) == list(my_function(((1, 2, 3),)))
-    assert list(java_function(((1, 2, 3), (4, 5, 6)))) == list(my_function(((1, 2, 3), (4, 5, 6))))
-    assert list(java_function(((1, 2, 3), (4, 5)))) == list(my_function(((1, 2, 3), (4, 5))))
-    assert list(java_function(((1, 2), (4, 5, 6)))) == list(my_function(((1, 2), (4, 5, 6))))
+    verifier.verify([], expected_result=tuple())
+    verifier.verify(((1, 2, 3),), expected_result=((1,), (2,), (3,)))
+    verifier.verify(((1, 2, 3), (4, 5, 6)), expected_result=((1, 4), (2, 5), (3, 6)))
+    verifier.verify(((1, 2, 3), (4, 5)), expected_result=((1, 4), (2, 5)))
+    verifier.verify(((1, 2), (4, 5, 6)), expected_result=((1, 4), (2, 5)))
 
     if sys.version_info >= (3, 10):
-        assert list(java_function_strict(((1, 2, 3),), True)) == list(my_function_strict(((1, 2, 3),), True))
-        assert list(java_function_strict(((1, 2, 3), (4, 5, 6)), True)) == list(my_function_strict(((1, 2, 3), (4, 5, 6)), True))
-
-        with pytest.raises(ValueError):
-            try:
-                list(java_function_strict(((1, 2, 3), (4, 5)), True))
-            except Exception as e:
-                raise jpyinterpreter.unwrap_python_like_object(e)
-
-        with pytest.raises(ValueError):
-            try:
-                list(java_function_strict(((1, 2), (4, 5, 6)), True))
-            except Exception as e:
-                raise jpyinterpreter.unwrap_python_like_object(e)
+        strict_verifier.verify(((1, 2, 3),), True, expected_result=((1,), (2,), (3,)))
+        strict_verifier.verify(((1, 2, 3), (4, 5, 6)), True, expected_result=((1, 4), (2, 5), (3, 6)))
+        strict_verifier.verify(((1, 2, 3), (4, 5)), True, expected_error=ValueError)
+        strict_verifier.verify(((1, 2), (4, 5, 6)), True, expected_error=ValueError)
 
 
 def test_builtin_exceptions():
@@ -762,11 +742,9 @@ def test_builtin_exceptions():
                 # these errors take a different number of arguments, and thus the below code will not work
                 continue
 
-            def my_function():
+            def my_function() -> exception_class:
                 return exception_class("my argument")
 
-            java_function = jpyinterpreter.as_java(my_function)
-            java_out = java_function()
-            my_function_out = my_function()
-            assert type(java_out) == type(my_function_out)
-            assert java_out.args == my_function_out.args
+            verifier = verifier_for(my_function)
+            verifier.verify_property(predicate=
+                                     lambda error: type(error) == exception_class and error.args == ('my argument',))

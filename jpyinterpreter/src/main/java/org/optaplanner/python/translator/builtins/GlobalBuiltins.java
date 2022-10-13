@@ -904,13 +904,22 @@ public class GlobalBuiltins {
         PythonLikeObject classInfo;
 
         if (positionalArgs.size() == 2) {
+            if (!(positionalArgs.get(0) instanceof PythonLikeType)) {
+                throw new TypeError("issubclass argument 0 must be a class, not " + positionalArgs.get(0).__getType());
+            }
             type = (PythonLikeType) positionalArgs.get(0);
             classInfo = positionalArgs.get(1);
         } else if (positionalArgs.size() == 1 && keywordArgs.containsKey(PythonString.valueOf("classinfo"))) {
+            if (!(positionalArgs.get(0) instanceof PythonLikeType)) {
+                throw new TypeError("issubclass argument 0 must be a class, not " + positionalArgs.get(0).__getType());
+            }
             type = (PythonLikeType) positionalArgs.get(0);
             classInfo = keywordArgs.get(PythonString.valueOf("classinfo"));
         } else if (positionalArgs.size() == 0 && keywordArgs.containsKey(PythonString.valueOf("class"))
                 && keywordArgs.containsKey(PythonString.valueOf("classinfo"))) {
+            if (!(keywordArgs.get(PythonString.valueOf("class")) instanceof PythonLikeType)) {
+                throw new TypeError("issubclass argument 0 must be a class, not " + positionalArgs.get(0).__getType());
+            }
             type = (PythonLikeType) keywordArgs.get(PythonString.valueOf("class"));
             classInfo = keywordArgs.get(PythonString.valueOf("classinfo"));
         } else {

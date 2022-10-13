@@ -1,3 +1,4 @@
+from typing import Union
 from .conftest import verifier_for
 
 
@@ -6,8 +7,14 @@ from .conftest import verifier_for
 ########################################
 
 def test_membership():
-    membership_verifier = verifier_for(lambda tested, x: x in tested)
-    not_membership_verifier = verifier_for(lambda tested, x: x not in tested)
+    def membership(tested: bytes, x: bytes) -> bool:
+        return x in tested
+
+    def not_membership(tested: bytes, x: bytes) -> bool:
+        return x not in tested
+
+    membership_verifier = verifier_for(membership)
+    not_membership_verifier = verifier_for(not_membership)
 
     membership_verifier.verify(b'hello world', b'world', expected_result=True)
     not_membership_verifier.verify(b'hello world', b'world', expected_result=False)
@@ -20,7 +27,7 @@ def test_membership():
 
 
 def test_concat():
-    def concat(x, y):
+    def concat(x: bytes, y: bytes) -> tuple:
         out = x + y
         return out, out is x, out is y
 
@@ -33,29 +40,37 @@ def test_concat():
 
 
 def test_repeat():
-    def repeat(x, y):
+    def left_repeat(x: bytes, y: int) -> tuple:
         out = x * y
         return out, out is x, out is y
 
-    repeat_verifier = verifier_for(repeat)
+    def right_repeat(x: int, y: bytes) -> tuple:
+        out = x * y
+        return out, out is x, out is y
 
-    repeat_verifier.verify(b'hi', 1, expected_result=(b'hi', True, False))
-    repeat_verifier.verify(b'abc', 2, expected_result=(b'abcabc', False, False))
-    repeat_verifier.verify(b'a', 4, expected_result=(b'aaaa', False, False))
-    repeat_verifier.verify(b'test', 0, expected_result=(b'', False, False))
-    repeat_verifier.verify(b'test', -1, expected_result=(b'', False, False))
-    repeat_verifier.verify(b'test', -2, expected_result=(b'', False, False))
+    left_repeat_verifier = verifier_for(left_repeat)
+    right_repeat_verifier = verifier_for(right_repeat)
 
-    repeat_verifier.verify(1, b'hi', expected_result=(b'hi', False, True))
-    repeat_verifier.verify(2, b'abc', expected_result=(b'abcabc', False, False))
-    repeat_verifier.verify(4, b'a', expected_result=(b'aaaa', False, False))
-    repeat_verifier.verify(0, b'test', expected_result=(b'', False, False))
-    repeat_verifier.verify(-1, b'test', expected_result=(b'', False, False))
-    repeat_verifier.verify(-2, b'test', expected_result=(b'', False, False))
+    left_repeat_verifier.verify(b'hi', 1, expected_result=(b'hi', True, False))
+    left_repeat_verifier.verify(b'abc', 2, expected_result=(b'abcabc', False, False))
+    left_repeat_verifier.verify(b'a', 4, expected_result=(b'aaaa', False, False))
+    left_repeat_verifier.verify(b'test', 0, expected_result=(b'', False, False))
+    left_repeat_verifier.verify(b'test', -1, expected_result=(b'', False, False))
+    left_repeat_verifier.verify(b'test', -2, expected_result=(b'', False, False))
+
+    right_repeat_verifier.verify(1, b'hi', expected_result=(b'hi', False, True))
+    right_repeat_verifier.verify(2, b'abc', expected_result=(b'abcabc', False, False))
+    right_repeat_verifier.verify(4, b'a', expected_result=(b'aaaa', False, False))
+    right_repeat_verifier.verify(0, b'test', expected_result=(b'', False, False))
+    right_repeat_verifier.verify(-1, b'test', expected_result=(b'', False, False))
+    right_repeat_verifier.verify(-2, b'test', expected_result=(b'', False, False))
 
 
 def test_get_item():
-    get_item_verifier = verifier_for(lambda tested, index: tested[index])
+    def get_item(tested: bytes, index: int) -> int:
+        return tested[index]
+
+    get_item_verifier = verifier_for(get_item)
 
     get_item_verifier.verify(b'abc', 1, expected_result=ord(b'b'))
     get_item_verifier.verify(b'abc', -1, expected_result=ord(b'c'))
@@ -67,7 +82,10 @@ def test_get_item():
 
 
 def test_get_slice():
-    get_slice_verifier = verifier_for(lambda tested, start, end: tested[start:end])
+    def get_slice(tested: bytes, start: Union[int, None], end: Union[int, None]) -> bytes:
+        return tested[start:end]
+
+    get_slice_verifier = verifier_for(get_slice)
 
     get_slice_verifier.verify(b'abcde', 1, 3, expected_result=b'bc')
     get_slice_verifier.verify(b'abcde', -3, -1, expected_result=b'cd')
@@ -87,7 +105,11 @@ def test_get_slice():
 
 
 def test_get_slice_with_step():
-    get_slice_verifier = verifier_for(lambda tested, start, end, step: tested[start:end:step])
+    def get_slice_with_step(tested: bytes, start: Union[int, None], end: Union[int, None],
+                            step: Union[int, None]) -> bytes:
+        return tested[start:end:step]
+
+    get_slice_verifier = verifier_for(get_slice_with_step)
 
     get_slice_verifier.verify(b'abcde', 0, None, 2, expected_result=b'ace')
     get_slice_verifier.verify(b'abcde', 1, None, 2, expected_result=b'bd')
@@ -113,7 +135,10 @@ def test_get_slice_with_step():
 
 
 def test_len():
-    len_verifier = verifier_for(lambda tested: len(tested))
+    def length(tested: bytes) -> int:
+        return len(tested)
+
+    len_verifier = verifier_for(length)
 
     len_verifier.verify(b'', expected_result=0)
     len_verifier.verify(b'a', expected_result=1)
@@ -122,9 +147,18 @@ def test_len():
 
 
 def test_index():
-    index_verifier = verifier_for(lambda tested, item: tested.index(item))
-    index_start_verifier = verifier_for(lambda tested, item, start: tested.index(item, start))
-    index_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.index(item, start, end))
+    def index(tested: bytes, item: bytes) -> int:
+        return tested.index(item)
+
+    def index_start(tested: bytes, item: bytes, start: int) -> int:
+        return tested.index(item, start)
+
+    def index_start_end(tested: bytes, item: bytes, start: int, end: int) -> int:
+        return tested.index(item, start, end)
+
+    index_verifier = verifier_for(index)
+    index_start_verifier = verifier_for(index_start)
+    index_start_end_verifier = verifier_for(index_start_end)
 
     index_verifier.verify(b'abcabc', b'a', expected_result=0)
     index_verifier.verify(b'abcabc', b'b', expected_result=1)
@@ -153,7 +187,10 @@ def test_index():
 
 
 def test_count():
-    count_verifier = verifier_for(lambda tested, item: tested.count(item))
+    def count(tested: bytes, item: bytes) -> int:
+        return tested.count(item)
+
+    count_verifier = verifier_for(count)
 
     count_verifier.verify(b'abc', b'a', expected_result=1)
     count_verifier.verify(b'abc', b'b', expected_result=1)
@@ -169,7 +206,10 @@ def test_count():
 # Bytes operations
 ########################################
 def test_interpolation():
-    interpolation_verifier = verifier_for(lambda tested, values: tested % values)
+    def interpolation(tested: bytes, values: object) -> bytes:
+        return tested % values
+
+    interpolation_verifier = verifier_for(interpolation)
 
     interpolation_verifier.verify(b'%d', 100, expected_result=b'100')
     interpolation_verifier.verify(b'%d', 0b1111, expected_result=b'15')
@@ -223,12 +263,15 @@ def test_interpolation():
 
 
 ########################################
-# String methods
+# Bytes methods
 ########################################
 
 
 def test_capitalize():
-    capitalize_verifier = verifier_for(lambda tested: tested.capitalize())
+    def capitalize(tested: bytes) -> bytes:
+        return tested.capitalize()
+
+    capitalize_verifier = verifier_for(capitalize)
 
     capitalize_verifier.verify(b'', expected_result=b'')
     capitalize_verifier.verify(b'test', expected_result=b'Test')
@@ -239,8 +282,14 @@ def test_capitalize():
 
 
 def test_center():
-    center_verifier = verifier_for(lambda tested, width: tested.center(width))
-    center_with_fill_verifier = verifier_for(lambda tested, width, fill: tested.center(width, fill))
+    def center(tested: bytes, width: int) -> bytes:
+        return tested.center(width)
+
+    def center_with_fill(tested: bytes, width: int, fill: bytes) -> bytes:
+        return tested.center(width, fill)
+
+    center_verifier = verifier_for(center)
+    center_with_fill_verifier = verifier_for(center_with_fill)
 
     center_verifier.verify(b'test', 10, expected_result=b'   test   ')
     center_verifier.verify(b'test', 9, expected_result=b'   test  ')
@@ -254,9 +303,18 @@ def test_center():
 
 
 def test_count_byte():
-    count_verifier = verifier_for(lambda tested, item: tested.count(item))
-    count_from_start_verifier = verifier_for(lambda tested, item, start: tested.count(item, start))
-    count_between_verifier = verifier_for(lambda tested, item, start, end: tested.count(item, start, end))
+    def count(tested: bytes, item: int) -> int:
+        return tested.count(item)
+
+    def count_start(tested: bytes, item: int, start: int) -> int:
+        return tested.count(item, start)
+
+    def count_start_end(tested: bytes, item: int, start: int, end: int) -> int:
+        return tested.count(item, start, end)
+
+    count_verifier = verifier_for(count)
+    count_from_start_verifier = verifier_for(count_start)
+    count_between_verifier = verifier_for(count_start_end)
 
     count_verifier.verify(b'abc', ord(b'a'), expected_result=1)
     count_verifier.verify(b'abc', ord(b'b'), expected_result=1)
@@ -289,9 +347,18 @@ def test_count_byte():
 
 
 def test_endswith():
-    endswith_verifier = verifier_for(lambda tested, suffix: tested.endswith(suffix))
-    endswith_start_verifier = verifier_for(lambda tested, suffix, start: tested.endswith(suffix, start))
-    endswith_between_verifier = verifier_for(lambda tested, suffix, start, end: tested.endswith(suffix, start, end))
+    def endswith(tested: bytes, suffix: bytes) -> bool:
+        return tested.endswith(suffix)
+
+    def endswith_start(tested: bytes, suffix: bytes, start: int) -> bool:
+        return tested.endswith(suffix, start)
+
+    def endswith_between(tested: bytes, suffix: bytes, start: int, end: int) -> bool:
+        return tested.endswith(suffix, start, end)
+
+    endswith_verifier = verifier_for(endswith)
+    endswith_start_verifier = verifier_for(endswith_start)
+    endswith_between_verifier = verifier_for(endswith_between)
 
     endswith_verifier.verify(b'hello world', b'world', expected_result=True)
     endswith_verifier.verify(b'hello world', b'hello', expected_result=False)
@@ -311,8 +378,14 @@ def test_endswith():
 
 
 def test_expandtabs():
-    expandtabs_verifier = verifier_for(lambda tested: tested.expandtabs())
-    expandtabs_with_tabsize_verifier = verifier_for(lambda tested, tabsize: tested.expandtabs(tabsize))
+    def expandtabs(tested: bytes) -> bytes:
+        return tested.expandtabs()
+
+    def expandtabs_with_tabsize(tested: bytes, tabsize: int) -> bytes:
+        return tested.expandtabs(tabsize)
+
+    expandtabs_verifier = verifier_for(expandtabs)
+    expandtabs_with_tabsize_verifier = verifier_for(expandtabs_with_tabsize)
 
     expandtabs_verifier.verify(b'01\t012\t0123\t01234', expected_result=b'01      012     0123    01234')
     expandtabs_with_tabsize_verifier.verify(b'01\t012\t0123\t01234', 8, expected_result=b'01      012     0123    01234')
@@ -320,9 +393,18 @@ def test_expandtabs():
 
 
 def test_find():
-    find_verifier = verifier_for(lambda tested, item: tested.find(item))
-    find_start_verifier = verifier_for(lambda tested, item, start: tested.find(item, start))
-    find_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.find(item, start, end))
+    def find(tested: bytes, item: bytes) -> int:
+        return tested.find(item)
+
+    def find_start_verifier(tested: bytes, item: bytes, start: int) -> int:
+        return tested.find(item, start)
+
+    def find_start_end_verifier(tested: bytes, item: bytes, start: int, end: int) -> int:
+        return tested.find(item, start, end)
+
+    find_verifier = verifier_for(find)
+    find_start_verifier = verifier_for(find_start_verifier)
+    find_start_end_verifier = verifier_for(find_start_end_verifier)
 
     find_verifier.verify(b'abcabc', b'a', expected_result=0)
     find_verifier.verify(b'abcabc', b'b', expected_result=1)
@@ -351,7 +433,10 @@ def test_find():
 
 
 def test_isalnum():
-    isalnum_verifier = verifier_for(lambda tested: tested.isalnum())
+    def isalnum(tested: bytes) -> bool:
+        return tested.isalnum()
+
+    isalnum_verifier = verifier_for(isalnum)
 
     isalnum_verifier.verify(b'', expected_result=False)
     isalnum_verifier.verify(b'abc', expected_result=True)
@@ -368,7 +453,10 @@ def test_isalnum():
 
 
 def test_isalpha():
-    isalpha_verifier = verifier_for(lambda tested: tested.isalpha())
+    def isalpha(tested: bytes) -> bool:
+        return tested.isalpha()
+
+    isalpha_verifier = verifier_for(isalpha)
 
     isalpha_verifier.verify(b'', expected_result=False)
     isalpha_verifier.verify(b'abc', expected_result=True)
@@ -385,7 +473,10 @@ def test_isalpha():
 
 
 def test_isascii():
-    isascii_verifier = verifier_for(lambda tested: tested.isascii())
+    def isascii(tested: bytes) -> bool:
+        return tested.isascii()
+
+    isascii_verifier = verifier_for(isascii)
 
     isascii_verifier.verify(b'', expected_result=True)
     isascii_verifier.verify(b'abc', expected_result=True)
@@ -402,7 +493,10 @@ def test_isascii():
 
 
 def test_isdigit():
-    isdigit_verifier = verifier_for(lambda tested: tested.isdigit())
+    def isdigit(tested: bytes) -> bool:
+        return tested.isdigit()
+
+    isdigit_verifier = verifier_for(isdigit)
 
     isdigit_verifier.verify(b'', expected_result=False)
     isdigit_verifier.verify(b'abc', expected_result=False)
@@ -419,7 +513,10 @@ def test_isdigit():
 
 
 def test_islower():
-    islower_verifier = verifier_for(lambda tested: tested.islower())
+    def islower(tested: bytes) -> bool:
+        return tested.islower()
+
+    islower_verifier = verifier_for(islower)
 
     islower_verifier.verify(b'', expected_result=False)
     islower_verifier.verify(b'abc', expected_result=True)
@@ -436,7 +533,10 @@ def test_islower():
 
 
 def test_isspace():
-    isspace_verifier = verifier_for(lambda tested: tested.isspace())
+    def isspace(tested: bytes) -> bool:
+        return tested.isspace()
+
+    isspace_verifier = verifier_for(isspace)
 
     isspace_verifier.verify(b'', expected_result=False)
     isspace_verifier.verify(b'abc', expected_result=False)
@@ -453,7 +553,10 @@ def test_isspace():
 
 
 def test_istitle():
-    istitle_verifier = verifier_for(lambda tested: tested.istitle())
+    def istitle(tested: bytes) -> bool:
+        return tested.istitle()
+
+    istitle_verifier = verifier_for(istitle)
 
     istitle_verifier.verify(b'', expected_result=False)
 
@@ -475,7 +578,10 @@ def test_istitle():
 
 
 def test_isupper():
-    isupper_verifier = verifier_for(lambda tested: tested.isupper())
+    def isupper(tested: bytes) -> bool:
+        return tested.isupper()
+
+    isupper_verifier = verifier_for(isupper)
 
     isupper_verifier.verify(b'', expected_result=False)
     isupper_verifier.verify(b'abc', expected_result=False)
@@ -492,7 +598,10 @@ def test_isupper():
 
 
 def test_join():
-    join_verifier = verifier_for(lambda tested, iterable: tested.join(iterable))
+    def join(tested: bytes, iterable: list) -> bytes:
+        return tested.join(iterable)
+
+    join_verifier = verifier_for(join)
 
     join_verifier.verify(b', ', [], expected_result=b'')
     join_verifier.verify(b', ', [b'a'], expected_result=b'a')
@@ -503,8 +612,14 @@ def test_join():
 
 
 def test_ljust():
-    ljust_verifier = verifier_for(lambda tested, width: tested.ljust(width))
-    ljust_with_fill_verifier = verifier_for(lambda tested, width, fill: tested.ljust(width, fill))
+    def ljust(tested: bytes, width: int) -> bytes:
+        return tested.ljust(width)
+
+    def ljust_with_fill(tested: bytes, width: int, fill: bytes) -> bytes:
+        return tested.ljust(width, fill)
+
+    ljust_verifier = verifier_for(ljust)
+    ljust_with_fill_verifier = verifier_for(ljust_with_fill)
 
     ljust_verifier.verify(b'test', 10, expected_result=b'test      ')
     ljust_verifier.verify(b'test', 9, expected_result=b'test     ')
@@ -518,7 +633,10 @@ def test_ljust():
 
 
 def test_lower():
-    lower_verifier = verifier_for(lambda tested: tested.lower())
+    def lower(tested: bytes) -> bytes:
+        return tested.lower()
+
+    lower_verifier = verifier_for(lower)
 
     lower_verifier.verify(b'', expected_result=b'')
     lower_verifier.verify(b'abc', expected_result=b'abc')
@@ -535,15 +653,24 @@ def test_lower():
 
 
 def test_lstrip():
-    lstrip_verifier = verifier_for(lambda tested: tested.lstrip())
-    lstrip_with_chars_verifier = verifier_for(lambda tested, chars: tested.lstrip(chars))
+    def lstrip(tested: bytes) -> bytes:
+        return tested.lstrip()
+
+    def lstrip_with_chars(tested: bytes, chars: bytes) -> bytes:
+        return tested.lstrip(chars)
+
+    lstrip_verifier = verifier_for(lstrip)
+    lstrip_with_chars_verifier = verifier_for(lstrip_with_chars)
 
     lstrip_verifier.verify(b'   spacious   ', expected_result=b'spacious   ')
     lstrip_with_chars_verifier.verify(b'www.example.com', b'cmowz.', expected_result=b'example.com')
 
 
 def test_partition():
-    partition_verifier = verifier_for(lambda tested, sep: tested.partition(sep))
+    def partition(tested: bytes, sep: bytes) -> tuple:
+        return tested.partition(sep)
+
+    partition_verifier = verifier_for(partition)
 
     partition_verifier.verify(b'before+after+extra', b'+', expected_result=(b'before', b'+', b'after+extra'))
     partition_verifier.verify(b'before and after and extra', b'+', expected_result=(b'before and after and extra',
@@ -554,7 +681,10 @@ def test_partition():
 
 
 def test_removeprefix():
-    removeprefix_verifier = verifier_for(lambda tested, prefix: tested.removeprefix(prefix))
+    def removeprefix(tested: bytes, prefix: bytes) -> bytes:
+        return tested.removeprefix(prefix)
+
+    removeprefix_verifier = verifier_for(removeprefix)
 
     removeprefix_verifier.verify(b'TestHook', b'Test', expected_result=b'Hook')
     removeprefix_verifier.verify(b'BaseTestCase', b'Test', expected_result=b'BaseTestCase')
@@ -563,7 +693,10 @@ def test_removeprefix():
 
 
 def test_removesuffix():
-    removesuffix_verifier = verifier_for(lambda tested, suffix: tested.removesuffix(suffix))
+    def removesuffix(tested: bytes, prefix: bytes) -> bytes:
+        return tested.removesuffix(prefix)
+
+    removesuffix_verifier = verifier_for(removesuffix)
 
     removesuffix_verifier.verify(b'MiscTests', b'Tests', expected_result=b'Misc')
     removesuffix_verifier.verify(b'TmpTestsDirMixin', b'Tests', expected_result=b'TmpTestsDirMixin')
@@ -572,9 +705,15 @@ def test_removesuffix():
 
 
 def test_replace():
-    replace_verifier = verifier_for(lambda tested, substring, replacement: tested.replace(substring, replacement))
-    replace_with_count_verifier = verifier_for(lambda tested, substring, replacement, count:
-                                               tested.replace(substring, replacement, count))
+    def replace(tested: bytes, substring: bytes, replacement: bytes) -> bytes:
+        return tested.replace(substring, replacement)
+
+    def replace_with_count(tested: bytes, substring: bytes, replacement: bytes, count: int) -> bytes:
+        return tested.replace(substring, replacement, count)
+
+
+    replace_verifier = verifier_for(replace)
+    replace_with_count_verifier = verifier_for(replace_with_count)
 
     replace_verifier.verify(b'all cats, including the cat Alcato, are animals', b'cat', b'dog',
                             expected_result=b'all dogs, including the dog Aldogo, are animals')
@@ -593,9 +732,18 @@ def test_replace():
 
 
 def test_rfind():
-    rfind_verifier = verifier_for(lambda tested, item: tested.rfind(item))
-    rfind_start_verifier = verifier_for(lambda tested, item, start: tested.rfind(item, start))
-    rfind_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.rfind(item, start, end))
+    def rfind(tested: bytes, item: bytes) -> int:
+        return tested.rfind(item)
+
+    def rfind_start_verifier(tested: bytes, item: bytes, start: int) -> int:
+        return tested.rfind(item, start)
+
+    def rfind_start_end_verifier(tested: bytes, item: bytes, start: int, end: int) -> int:
+        return tested.rfind(item, start, end)
+
+    rfind_verifier = verifier_for(rfind)
+    rfind_start_verifier = verifier_for(rfind_start_verifier)
+    rfind_start_end_verifier = verifier_for(rfind_start_end_verifier)
 
     rfind_verifier.verify(b'abcabc', b'a', expected_result=3)
     rfind_verifier.verify(b'abcabc', b'b', expected_result=4)
@@ -624,9 +772,18 @@ def test_rfind():
 
 
 def test_rindex():
-    rindex_verifier = verifier_for(lambda tested, item: tested.rindex(item))
-    rindex_start_verifier = verifier_for(lambda tested, item, start: tested.rindex(item, start))
-    rindex_start_end_verifier = verifier_for(lambda tested, item, start, end: tested.rindex(item, start, end))
+    def rindex(tested: bytes, item: bytes) -> int:
+        return tested.rindex(item)
+
+    def rindex_start_verifier(tested: bytes, item: bytes, start: int) -> int:
+        return tested.rindex(item, start)
+
+    def rindex_start_end_verifier(tested: bytes, item: bytes, start: int, end: int) -> int:
+        return tested.rindex(item, start, end)
+
+    rindex_verifier = verifier_for(rindex)
+    rindex_start_verifier = verifier_for(rindex_start_verifier)
+    rindex_start_end_verifier = verifier_for(rindex_start_end_verifier)
 
     rindex_verifier.verify(b'abcabc', b'a', expected_result=3)
     rindex_verifier.verify(b'abcabc', b'b', expected_result=4)
@@ -654,8 +811,14 @@ def test_rindex():
     rindex_start_end_verifier.verify(b'abcabc', b'd', -2, -1, expected_error=ValueError)
 
 def test_rjust():
-    rjust_verifier = verifier_for(lambda tested, width: tested.rjust(width))
-    rjust_with_fill_verifier = verifier_for(lambda tested, width, fill: tested.rjust(width, fill))
+    def rjust(tested: bytes, width: int) -> bytes:
+        return tested.rjust(width)
+
+    def rjust_with_fill(tested: bytes, width: int, fill: bytes) -> bytes:
+        return tested.rjust(width, fill)
+
+    rjust_verifier = verifier_for(rjust)
+    rjust_with_fill_verifier = verifier_for(rjust_with_fill)
 
     rjust_verifier.verify(b'test', 10, expected_result=b'      test')
     rjust_verifier.verify(b'test', 9, expected_result=b'     test')
@@ -669,7 +832,10 @@ def test_rjust():
 
 
 def test_rpartition():
-    rpartition_verifier = verifier_for(lambda tested, sep: tested.rpartition(sep))
+    def rpartition(tested: bytes, sep: bytes) -> tuple:
+        return tested.rpartition(sep)
+
+    rpartition_verifier = verifier_for(rpartition)
 
     rpartition_verifier.verify(b'before+after+extra', b'+', expected_result=(b'before+after', b'+', b'extra'))
     rpartition_verifier.verify(b'before and after and extra', b'+', expected_result=(b'', b'',
@@ -680,9 +846,18 @@ def test_rpartition():
 
 
 def test_rsplit():
-    rsplit_verifier = verifier_for(lambda tested: tested.rsplit())
-    rsplit_with_sep_verifier = verifier_for(lambda tested, sep: tested.rsplit(sep))
-    rsplit_with_sep_and_count_verifier = verifier_for(lambda tested, sep, count: tested.rsplit(sep, count))
+    def rsplit(tested: bytes) -> list:
+        return tested.rsplit()
+
+    def rsplit_with_sep(tested: bytes, sep: bytes) -> list:
+        return tested.rsplit(sep)
+
+    def rsplit_with_sep_and_count(tested: bytes, sep: bytes, count: int) -> list:
+        return tested.rsplit(sep, count)
+
+    rsplit_verifier = verifier_for(rsplit)
+    rsplit_with_sep_verifier = verifier_for(rsplit_with_sep)
+    rsplit_with_sep_and_count_verifier = verifier_for(rsplit_with_sep_and_count)
 
     rsplit_verifier.verify(b'123', expected_result=[b'123'])
     rsplit_verifier.verify(b'1 2 3', expected_result=[b'1', b'2', b'3'])
@@ -702,8 +877,14 @@ def test_rsplit():
 
 
 def test_rstrip():
-    rstrip_verifier = verifier_for(lambda tested: tested.rstrip())
-    rstrip_with_chars_verifier = verifier_for(lambda tested, chars: tested.rstrip(chars))
+    def rstrip(tested: bytes) -> bytes:
+        return tested.rstrip()
+
+    def rstrip_with_chars(tested: bytes, chars: bytes) -> bytes:
+        return tested.rstrip(chars)
+
+    rstrip_verifier = verifier_for(rstrip)
+    rstrip_with_chars_verifier = verifier_for(rstrip_with_chars)
 
     rstrip_verifier.verify(b'   spacious   ', expected_result=b'   spacious')
     rstrip_with_chars_verifier.verify(b'www.example.com', b'cmowz.', expected_result=b'www.example')
@@ -711,9 +892,18 @@ def test_rstrip():
 
 
 def test_split():
-    split_verifier = verifier_for(lambda tested: tested.split())
-    split_with_sep_verifier = verifier_for(lambda tested, sep: tested.split(sep))
-    split_with_sep_and_count_verifier = verifier_for(lambda tested, sep, count: tested.split(sep, count))
+    def split(tested: bytes) -> list:
+        return tested.split()
+
+    def split_with_sep(tested: bytes, sep: bytes) -> list:
+        return tested.split(sep)
+
+    def split_with_sep_and_count(tested: bytes, sep: bytes, count: int) -> list:
+        return tested.split(sep, count)
+
+    split_verifier = verifier_for(split)
+    split_with_sep_verifier = verifier_for(split_with_sep)
+    split_with_sep_and_count_verifier = verifier_for(split_with_sep_and_count)
 
     split_verifier.verify(b'123', expected_result=[b'123'])
     split_verifier.verify(b'1 2 3', expected_result=[b'1', b'2', b'3'])
@@ -733,8 +923,14 @@ def test_split():
 
 
 def test_splitlines():
-    splitlines_verifier = verifier_for(lambda tested: tested.splitlines())
-    splitlines_keep_ends_verifier = verifier_for(lambda tested, keep_ends: tested.splitlines(keep_ends))
+    def splitlines(tested: bytes) -> list:
+        return tested.splitlines()
+
+    def splitlines_keep_ends(tested: bytes, keep_ends: bool) -> list:
+        return tested.splitlines(keep_ends)
+
+    splitlines_verifier = verifier_for(splitlines)
+    splitlines_keep_ends_verifier = verifier_for(splitlines_keep_ends)
 
     splitlines_verifier.verify(b'ab c\n\nde fg\rkl\r\n', expected_result=[b'ab c', b'', b'de fg', b'kl'])
     splitlines_verifier.verify(b'', expected_result=[])
@@ -750,9 +946,18 @@ def test_splitlines():
 
 
 def test_startswith():
-    startswith_verifier = verifier_for(lambda tested, prefix: tested.startswith(prefix))
-    startswith_start_verifier = verifier_for(lambda tested, prefix, start: tested.startswith(prefix, start))
-    startswith_between_verifier = verifier_for(lambda tested, prefix, start, end: tested.startswith(prefix, start, end))
+    def startswith(tested: bytes, suffix: bytes) -> bool:
+        return tested.startswith(suffix)
+
+    def startswith_start(tested: bytes, suffix: bytes, start: int) -> bool:
+        return tested.startswith(suffix, start)
+
+    def startswith_between(tested: bytes, suffix: bytes, start: int, end: int) -> bool:
+        return tested.startswith(suffix, start, end)
+
+    startswith_verifier = verifier_for(startswith)
+    startswith_start_verifier = verifier_for(startswith_start)
+    startswith_between_verifier = verifier_for(startswith_between)
 
     startswith_verifier.verify(b'hello world', b'hello', expected_result=True)
     startswith_verifier.verify(b'hello world', b'world', expected_result=False)
@@ -772,18 +977,26 @@ def test_startswith():
 
 
 def test_strip():
-    strip_verifier = verifier_for(lambda tested: tested.strip())
-    strip_with_chars_verifier = verifier_for(lambda tested, chars: tested.strip(chars))
+    def strip(tested: bytes) -> bytes:
+        return tested.strip()
+
+    def strip_with_chars(tested: bytes, chars: bytes) -> bytes:
+        return tested.strip(chars)
+
+    strip_verifier = verifier_for(strip)
+    strip_with_chars_verifier = verifier_for(strip_with_chars)
 
     strip_verifier.verify(b'   spacious   ', expected_result=b'spacious')
     strip_with_chars_verifier.verify(b'www.example.com', b'cmowz.', expected_result=b'example')
 
 
 def test_swapcase():
-    swapcase_verifier = verifier_for(lambda tested: tested.swapcase())
+    def swapcase(tested: bytes) -> bytes:
+        return tested.swapcase()
+
+    swapcase_verifier = verifier_for(swapcase)
 
     swapcase_verifier.verify(b'', expected_result=b'')
-
     swapcase_verifier.verify(b'abc', expected_result=b'ABC')
     swapcase_verifier.verify(b'ABC', expected_result=b'abc')
     swapcase_verifier.verify(b'123', expected_result=b'123')
@@ -798,7 +1011,10 @@ def test_swapcase():
 
 
 def test_title():
-    title_verifier = verifier_for(lambda tested: tested.title())
+    def title(tested: bytes) -> bytes:
+        return tested.title()
+
+    title_verifier = verifier_for(title)
 
     title_verifier.verify(b'', expected_result=b'')
     title_verifier.verify(b'Hello world', expected_result=b'Hello World')
@@ -819,7 +1035,10 @@ def test_title():
 
 
 def test_translate():
-    translate_verifier = verifier_for(lambda tested, mapping: tested.translate(mapping))
+    def translate(tested: bytes, mapping: bytes) -> bytes:
+        return tested.translate(mapping)
+
+    translate_verifier = verifier_for(translate)
 
     mapping = b''.join([bytes([(i + 1) % 256]) for i in range(256)])
 
@@ -828,7 +1047,10 @@ def test_translate():
 
 
 def test_upper():
-    upper_verifier = verifier_for(lambda tested: tested.upper())
+    def upper(tested: bytes) -> bytes:
+        return tested.upper()
+
+    upper_verifier = verifier_for(upper)
 
     upper_verifier.verify(b'', expected_result=b'')
     upper_verifier.verify(b'abc', expected_result=b'ABC')
@@ -845,7 +1067,10 @@ def test_upper():
 
 
 def test_zfill():
-    zfill_verifier = verifier_for(lambda tested, padding: tested.zfill(padding))
+    def zfill(tested: bytes, padding: int) -> bytes:
+        return tested.zfill(padding)
+
+    zfill_verifier = verifier_for(zfill)
 
     zfill_verifier.verify(b'42', 5, expected_result=b'00042')
     zfill_verifier.verify(b'-42', 5, expected_result=b'-0042')

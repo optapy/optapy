@@ -187,6 +187,7 @@ public class MethodDescriptor {
     public enum MethodType {
         VIRTUAL(Opcodes.INVOKEVIRTUAL, false),
         STATIC(Opcodes.INVOKESTATIC, true),
+        CLASS(Opcodes.INVOKESTATIC, true),
         STATIC_AS_VIRTUAL(Opcodes.INVOKESTATIC, true),
         INTERFACE(Opcodes.INVOKEINTERFACE, false),
         CONSTRUCTOR(Opcodes.INVOKESPECIAL, false);

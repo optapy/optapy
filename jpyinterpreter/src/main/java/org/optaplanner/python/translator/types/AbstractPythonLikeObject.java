@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.optaplanner.python.translator.PythonLikeObject;
+import org.optaplanner.python.translator.types.errors.AttributeError;
 
 public abstract class AbstractPythonLikeObject implements PythonLikeObject {
 
@@ -34,6 +35,9 @@ public abstract class AbstractPythonLikeObject implements PythonLikeObject {
     @Override
     public void __deleteAttribute(String attributeName) {
         // TODO: Descriptors: https://docs.python.org/3/howto/descriptor.html
+        if (!__dir__.containsKey(attributeName)) {
+            throw new AttributeError("'" + __getType().getTypeName() + "' object has no attribute '" + attributeName + "'");
+        }
         __dir__.remove(attributeName);
     }
 

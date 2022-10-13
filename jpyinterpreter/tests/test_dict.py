@@ -2,8 +2,14 @@ from .conftest import verifier_for
 
 
 def test_membership():
-    membership_verifier = verifier_for(lambda tested, x: x in tested)
-    not_membership_verifier = verifier_for(lambda tested, x: x not in tested)
+    def membership(tested: dict, x: object) -> bool:
+        return x in tested
+
+    def not_membership(tested: dict, x: object) -> bool:
+        return x not in tested
+
+    membership_verifier = verifier_for(membership)
+    not_membership_verifier = verifier_for(not_membership)
 
     membership_verifier.verify({
         1: 'a',
@@ -34,7 +40,7 @@ def test_membership():
 
 
 def test_iter():
-    def to_list(x):
+    def to_list(x: dict) -> list:
         return list(x)
 
     to_list_verifier = verifier_for(to_list)
@@ -56,7 +62,10 @@ def test_iter():
 
 
 def test_get_item():
-    get_item_verifier = verifier_for(lambda my_dict, key: my_dict[key])
+    def get_item(my_dict: dict, key: object) -> str:
+        return my_dict[key]
+
+    get_item_verifier = verifier_for(get_item)
 
     get_item_verifier.verify({
         1: 'a',
@@ -77,7 +86,7 @@ def test_get_item():
 
 
 def test_set_item():
-    def set_item(my_dict, key, value):
+    def set_item(my_dict: dict, key: str, value: int) -> dict:
         my_dict[key] = value
         return my_dict
 
@@ -102,7 +111,7 @@ def test_set_item():
 
 
 def test_delete_item():
-    def delete_item(my_dict, key):
+    def delete_item(my_dict: dict, key: object) -> dict:
         del my_dict[key]
         return my_dict
 
@@ -117,7 +126,7 @@ def test_delete_item():
 
 
 def test_clear():
-    def clear(my_dict):
+    def clear(my_dict: dict) -> dict:
         my_dict.clear()
         return my_dict
 
@@ -129,7 +138,7 @@ def test_clear():
 
 
 def test_copy():
-    def copy(my_dict):
+    def copy(my_dict: dict) -> tuple:
         out = my_dict.copy()
         return out, my_dict is out
 
@@ -141,8 +150,14 @@ def test_copy():
 
 
 def test_get():
-    get_verifier = verifier_for(lambda my_dict, key: my_dict.get(key))
-    get_with_default_verifier = verifier_for(lambda my_dict, key, default: my_dict.get(key, default))
+    def get(my_dict: dict, key: object) -> object:
+        return my_dict.get(key)
+
+    def get_with_default(my_dict: dict, key: object, default: object) -> object:
+        return my_dict.get(key, default)
+
+    get_verifier = verifier_for(get)
+    get_with_default_verifier = verifier_for(get_with_default)
 
     get_verifier.verify({
         1: 'a',
@@ -180,12 +195,16 @@ def test_get():
 
 
 def test_items():
-    def items_with_modification(my_dict):
+    def items(my_dict: dict) -> list:
+        print(my_dict)
+        return list(my_dict.items())
+
+    def items_with_modification(my_dict: dict) -> list:
         out = my_dict.items()
         my_dict['extra'] = 10
         return list(out)
 
-    items_verifier = verifier_for(lambda my_dict: list(my_dict.items()))
+    items_verifier = verifier_for(items)
     items_with_modification_verifier = verifier_for(items_with_modification)
 
     items_verifier.verify(dict(), expected_result=[])
@@ -216,12 +235,15 @@ def test_items():
 
 
 def test_keys():
-    def keys_with_modification(my_dict):
+    def keys(my_dict: dict) -> list:
+        return list(my_dict.keys())
+
+    def keys_with_modification(my_dict: dict) -> list:
         out = my_dict.keys()
         my_dict['extra'] = 10
         return list(out)
 
-    keys_verifier = verifier_for(lambda my_dict: list(my_dict.keys()))
+    keys_verifier = verifier_for(keys)
     keys_with_modification_verifier = verifier_for(keys_with_modification)
 
     keys_verifier.verify(dict(), expected_result=[])
@@ -252,12 +274,15 @@ def test_keys():
 
 
 def test_values():
-    def values_with_modification(my_dict):
+    def values(my_dict: dict) -> list:
+        return list(my_dict.values())
+
+    def values_with_modification(my_dict: dict) -> list:
         out = my_dict.values()
         my_dict['extra'] = 10
         return list(out)
 
-    values_verifier = verifier_for(lambda my_dict: list(my_dict.values()))
+    values_verifier = verifier_for(values)
     values_with_modification_verifier = verifier_for(values_with_modification)
 
     values_verifier.verify(dict(), expected_result=[])
@@ -298,11 +323,11 @@ def test_values():
 
 
 def test_pop():
-    def pop(my_dict, key):
+    def pop(my_dict: dict, key: object) -> tuple:
         out = my_dict.pop(key)
         return out, my_dict
 
-    def pop_with_default(my_dict, key, default):
+    def pop_with_default(my_dict: dict, key: object, default: object) -> tuple:
         out = my_dict.pop(key, default)
         return out, my_dict
 
@@ -337,7 +362,7 @@ def test_pop():
 
 
 def test_popitem():
-    def popitem(my_dict):
+    def popitem(my_dict: dict) -> tuple:
         out = my_dict.popitem()
         return out, my_dict
 
@@ -360,7 +385,7 @@ def test_popitem():
 
 
 def test_reversed():
-    def to_reversed_list(x):
+    def to_reversed_list(x: dict) -> list:
         return list(reversed(x))
 
     to_reversed_list_verifier = verifier_for(to_reversed_list)
@@ -382,11 +407,11 @@ def test_reversed():
 
 
 def test_setdefault():
-    def put(my_dict, key):
+    def put(my_dict: dict, key: object) -> tuple:
         out = my_dict.setdefault(key)
         return out, my_dict
 
-    def put_with_default(my_dict, key, default):
+    def put_with_default(my_dict: dict, key: object, default: object) -> tuple:
         out = my_dict.setdefault(key, default)
         return out, my_dict
 
@@ -429,34 +454,40 @@ def test_setdefault():
 
 
 def test_update():
-    def update(my_dict, items):
+    def update_dict(my_dict: dict, items: dict) -> dict:
         my_dict.update(items)
         return my_dict
 
-    update_verifier = verifier_for(update)
+    def update_list(my_dict: dict, items: list) -> dict:
+        my_dict.update(items)
+        return my_dict
 
-    update_verifier.verify({
+    update_dict_verifier = verifier_for(update_dict)
+    update_list_verifier = verifier_for(update_list)
+
+    update_dict_verifier.verify({
         'a': 1,
         'b': 2
     }, {
         'c': 3,
         'd': 4
     }, expected_result={'a': 1, 'b': 2, 'c': 3, 'd': 4})
-    update_verifier.verify({
+    update_dict_verifier.verify({
         'a': 1,
         'b': 2
     }, {
         'b': 3,
         'd': 4
     }, expected_result={'a': 1, 'b': 3, 'd': 4})
-    update_verifier.verify({
+
+    update_list_verifier.verify({
         'a': 1,
         'b': 2
     }, [
         ('c', 3),
         ('d', 4)
     ], expected_result={'a': 1, 'b': 2, 'c': 3, 'd': 4})
-    update_verifier.verify({
+    update_list_verifier.verify({
         'a': 1,
         'b': 2
     }, [

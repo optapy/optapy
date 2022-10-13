@@ -998,8 +998,13 @@ public class PythonByteArray extends AbstractPythonLikeObject implements PythonB
     }
 
     public PythonByteArray interpolate(PythonLikeObject object) {
-        return PythonString.valueOf(StringFormatter.printfInterpolate(asCharSequence(), List.of(object),
-                StringFormatter.PrintfStringType.BYTES)).asAsciiByteArray();
+        if (object instanceof PythonLikeTuple) {
+            return interpolate((PythonLikeTuple) object);
+        } else if (object instanceof PythonLikeDict) {
+            return interpolate((PythonLikeDict) object);
+        } else {
+            return interpolate(PythonLikeTuple.fromList(List.of(object)));
+        }
     }
 
     public PythonByteArray interpolate(PythonLikeTuple tuple) {

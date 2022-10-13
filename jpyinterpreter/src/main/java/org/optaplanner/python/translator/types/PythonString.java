@@ -785,7 +785,13 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     }
 
     public PythonString interpolate(PythonLikeObject object) {
-        return interpolate(PythonLikeTuple.fromList(List.of(object)));
+        if (object instanceof PythonLikeTuple) {
+            return interpolate((PythonLikeTuple) object);
+        } else if (object instanceof PythonLikeDict) {
+            return interpolate((PythonLikeDict) object);
+        } else {
+            return interpolate(PythonLikeTuple.fromList(List.of(object)));
+        }
     }
 
     public PythonString interpolate(PythonLikeTuple tuple) {

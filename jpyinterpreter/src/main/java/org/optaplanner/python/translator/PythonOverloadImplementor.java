@@ -29,6 +29,8 @@ import org.optaplanner.python.translator.types.BuiltinTypes;
 import org.optaplanner.python.translator.types.PythonKnownFunctionType;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.errors.TypeError;
 
 public class PythonOverloadImplementor {
     public static Comparator<PythonLikeType> TYPE_DEPTH_COMPARATOR = Comparator.comparingInt(PythonLikeType::getDepth)
@@ -187,11 +189,6 @@ public class PythonOverloadImplementor {
         if (pythonFunctionSignatureByArgumentLength.isEmpty()) { // only generic overload
             // No error message since we MUST have a generic overload
             createGenericDispatch(methodVisitor, type, maybeGenericFunctionSignature, "");
-        } else if (pythonFunctionSignatureByArgumentLength.size() == 1) {
-            Map.Entry<Integer, List<PythonFunctionSignature>> argCountOverloadPair = pythonFunctionSignatureByArgumentLength
-                    .entrySet().iterator().next();
-            createDispatchForArgCount(methodVisitor, argCountOverloadPair.getKey(), type, argCountOverloadPair.getValue(),
-                    maybeGenericFunctionSignature);
         } else {
             int[] argCounts = pythonFunctionSignatureByArgumentLength.keySet().stream().sorted().mapToInt(i -> i).toArray();
             Label[] argCountLabel = new Label[argCounts.length];
@@ -387,10 +384,32 @@ public class PythonOverloadImplementor {
     private static void createGenericDispatch(MethodVisitor methodVisitor,
             PythonLikeType type, Optional<PythonFunctionSignature> maybeGenericDispatch, String errorMessage) {
         if (maybeGenericDispatch.isEmpty()) {
-            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
+            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(TypeError.class));
             methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(StringBuilder.class));
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(StringBuilder.class),
+                    "<init>", Type.getMethodDescriptor(Type.VOID_TYPE),
+                    false);
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonOverloadImplementor.class),
+                    "getCallErrorInfo", Type.getMethodDescriptor(Type.getType(String.class),
+                            Type.getType(List.class),
+                            Type.getType(Map.class)),
+                    false);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
+                    "append", Type.getMethodDescriptor(Type.getType(StringBuilder.class), Type.getType(String.class)),
+                    false);
             methodVisitor.visitLdcInsn(errorMessage);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
+                    "append", Type.getMethodDescriptor(Type.getType(StringBuilder.class), Type.getType(String.class)),
+                    false);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(StringBuilder.class),
+                    "toString", Type.getMethodDescriptor(Type.getType(String.class)),
+                    false);
+
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(TypeError.class),
                     "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)),
                     false);
             methodVisitor.visitInsn(Opcodes.ATHROW);
@@ -421,6 +440,12 @@ public class PythonOverloadImplementor {
             functionSignature.methodDescriptor.callMethod(methodVisitor);
             methodVisitor.visitInsn(Opcodes.ARETURN);
         }
+    }
+
+    public static String getCallErrorInfo(List<PythonLikeObject> positionalArgs,
+            Map<PythonString, PythonLikeObject> namedArgs) {
+        return "Could not find an overload that accept " + positionalArgs.stream()
+                .map(arg -> arg.__getType().getTypeName()).collect(Collectors.joining(", ", "(", ") argument types. "));
     }
 
     private static SortedMap<PythonLikeType, List<PythonFunctionSignature>>

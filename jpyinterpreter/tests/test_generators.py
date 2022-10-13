@@ -1,23 +1,20 @@
-import jpyinterpreter
 import pytest
-
+from .conftest import verifier_for
 
 def test_loop_generator():
-    def my_function(x):
+    def my_function(x: int):
         i = 0
         while i < x:
             yield i
             i += 1
 
-    java_function = jpyinterpreter.as_java(my_function)
-    my_function_generator = my_function(10)
-    java_function_generator = java_function(10)
+    def my_function_property(generator):
+        for i in range(10):
+            if next(generator) != i:
+                return False
+        with pytest.raises(StopIteration):
+            next(generator)
+        return True
 
-    for i in range (10):
-        assert next(java_function_generator) == next(my_function_generator)
-
-    with pytest.raises(StopIteration):
-        next(my_function_generator)
-
-    with pytest.raises(StopIteration):
-        next(java_function_generator)
+    generator_verifier = verifier_for(my_function)
+    generator_verifier.verify_property(10, predicate=my_function_property)
