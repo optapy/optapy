@@ -30,6 +30,6 @@ public class CallFunctionUnpackOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        FunctionImplementor.callFunctionUnpack(functionMetadata.methodVisitor, instruction);
+        FunctionImplementor.callFunctionUnpack(functionMetadata, stackMetadata, instruction);
     }
 }

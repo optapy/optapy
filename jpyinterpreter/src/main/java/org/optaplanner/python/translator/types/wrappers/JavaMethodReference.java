@@ -41,6 +41,8 @@ public class JavaMethodReference implements PythonLikeFunction {
             throw new IllegalStateException("Method (" + method + ") is not accessible.", e);
         } catch (InvocationTargetException e) {
             throw (RuntimeException) e.getCause();
+        } catch (RuntimeException e) {
+            throw e;
         }
     }
 
@@ -56,6 +58,9 @@ public class JavaMethodReference implements PythonLikeFunction {
         }
 
         for (PythonString key : namedArguments.keySet()) {
+            if (key == PythonString.CALLER_INSTANCE_KEY) {
+                continue;
+            }
             int index = parameterNameToIndexMap.get(key.value);
             PythonLikeObject argument = namedArguments.get(key);
             out[index] = JavaPythonTypeConversionImplementor.convertPythonObjectToJavaType(parameterTypes[index], argument);

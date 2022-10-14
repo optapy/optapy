@@ -18,6 +18,10 @@ public class RuntimeError extends PythonBaseException {
                 ((positionalArguments, namedArguments) -> new RuntimeError(RUNTIME_ERROR_TYPE, positionalArguments)));
     }
 
+    public RuntimeError(String message) {
+        super(RUNTIME_ERROR_TYPE, message);
+    }
+
     public RuntimeError(PythonLikeType type) {
         super(type);
     }

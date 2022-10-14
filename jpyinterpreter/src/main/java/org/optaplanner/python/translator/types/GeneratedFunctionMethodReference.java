@@ -47,6 +47,9 @@ public class GeneratedFunctionMethodReference implements PythonLikeFunction {
         }
 
         for (PythonString key : namedArguments.keySet()) {
+            if (key == PythonString.CALLER_INSTANCE_KEY) {
+                continue;
+            }
             int index = parameterNameToIndexMap.get(key.value);
             PythonLikeObject argument = namedArguments.get(key);
             out[index] = argument;

@@ -32,6 +32,8 @@ public class BuiltinTypes {
     public static final PythonLikeType BASE_TYPE =
             new PythonLikeType("base-object", PythonLikeObject.class, Collections.emptyList());
     public static final PythonLikeType TYPE_TYPE = new PythonLikeType("type", PythonLikeType.class, List.of(BASE_TYPE));
+    public static final PythonLikeType SUPER_TYPE =
+            new PythonLikeType("super", PythonSuperObject.class, List.of(BASE_TYPE));
     public static final PythonLikeType MODULE_TYPE = new PythonLikeType("module", PythonModule.class, List.of(BASE_TYPE));
     public static final PythonLikeType FUNCTION_TYPE =
             new PythonLikeType("function", PythonLikeFunction.class, List.of(BASE_TYPE));

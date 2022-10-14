@@ -3,10 +3,9 @@ package org.optaplanner.python.translator;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.USER_PACKAGE_BASE;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.createInstance;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.getInitialStackMetadata;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.getOpcodeList;
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToClass;
+import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToInstance;
 import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
 import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.GENERATOR_TYPE;
@@ -373,12 +372,14 @@ public class PythonClassTranslator {
         Object functionInstance;
 
         try {
-            functionClass = translatePythonBytecodeToClass(methodEntry.getValue(),
+            functionInstance = translatePythonBytecodeToInstance(methodEntry.getValue(),
                     new MethodDescriptor(interfaceDeclaration.interfaceName,
                             MethodDescriptor.MethodType.INTERFACE, "invoke",
                             interfaceDeclaration.methodDescriptor),
                     pythonMethodKind == PythonMethodKind.VIRTUAL_METHOD);
-            functionInstance = createInstance(functionClass, PythonInterpreter.DEFAULT);
+            functionClass = functionInstance.getClass();
+            functionClass.getField(PythonBytecodeToJavaBytecodeTranslator.CLASS_CELL_STATIC_FIELD_NAME).set(null,
+                    pythonLikeType);
         } catch (Exception e) {
             functionClass = createPythonWrapperMethod(methodEntry.getKey(), methodEntry.getValue(),
                     interfaceDeclaration, pythonMethodKind == PythonMethodKind.VIRTUAL_METHOD);

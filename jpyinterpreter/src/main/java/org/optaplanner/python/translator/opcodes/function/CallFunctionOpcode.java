@@ -40,6 +40,6 @@ public class CallFunctionOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        FunctionImplementor.callFunction(functionMetadata.methodVisitor, stackMetadata, instruction);
+        FunctionImplementor.callFunction(functionMetadata, stackMetadata, functionMetadata.methodVisitor, instruction);
     }
 }

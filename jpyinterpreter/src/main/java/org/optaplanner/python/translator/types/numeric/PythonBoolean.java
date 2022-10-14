@@ -44,8 +44,7 @@ public class PythonBoolean extends PythonInteger {
                             PythonBoolean.class.getMethod("asString")),
                             STRING_TYPE));
             BOOLEAN_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
-                namedArguments = (namedArguments != null) ? namedArguments : Map.of();
-                if (!namedArguments.isEmpty()) {
+                if (namedArguments.size() > 1) {
                     throw new ValueError("bool does not take named arguments");
                 }
                 if (positionalArguments.isEmpty()) {

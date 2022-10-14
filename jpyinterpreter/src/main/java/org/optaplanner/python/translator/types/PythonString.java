@@ -43,6 +43,7 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     public final String value;
 
     public final static PythonString EMPTY = new PythonString("");
+    public final static PythonString CALLER_INSTANCE_KEY = new PythonString("$");
 
     static {
         PythonOverloadImplementor.deferDispatchesFor(PythonString::registerMethods);

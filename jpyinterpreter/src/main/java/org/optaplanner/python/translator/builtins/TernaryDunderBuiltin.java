@@ -27,9 +27,7 @@ public class TernaryDunderBuiltin implements PythonLikeFunction {
     @Override
     public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
             Map<PythonString, PythonLikeObject> namedArguments) {
-        namedArguments = (namedArguments != null) ? namedArguments : Map.of();
-
-        if (positionalArguments.size() != 3 || !namedArguments.isEmpty()) {
+        if (positionalArguments.size() != 3) {
             throw new ValueError("Function " + DUNDER_METHOD_NAME + " expects 3 positional arguments");
         }
 

@@ -31,6 +31,7 @@ import org.optaplanner.python.translator.types.PythonLikeFunction;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.errors.TypeError;
+import org.optaplanner.python.translator.util.MethodVisitorAdapters;
 
 public class PythonOverloadImplementor {
     public static Comparator<PythonLikeType> TYPE_DEPTH_COMPARATOR = Comparator.comparingInt(PythonLikeType::getDepth)
@@ -172,6 +173,11 @@ public class PythonOverloadImplementor {
                 null,
                 null);
 
+        methodVisitor = MethodVisitorAdapters.adapt(methodVisitor, "__call__",
+                Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class)));
+
         methodVisitor.visitParameter("positionalArguments", 0);
         methodVisitor.visitParameter("namedArguments", 0);
         methodVisitor.visitCode();
@@ -221,7 +227,7 @@ public class PythonOverloadImplementor {
                                     .collect(Collectors.joining(",\n")));
         }
 
-        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitMaxs(0, 0);
         methodVisitor.visitEnd();
     }
 

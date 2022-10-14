@@ -30,6 +30,7 @@ import org.optaplanner.python.translator.opcodes.OpcodeWithoutSource;
 import org.optaplanner.python.translator.opcodes.SelfOpcodeWithoutSource;
 import org.optaplanner.python.translator.types.BuiltinTypes;
 import org.optaplanner.python.translator.types.PythonLikeFunction;
+import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
@@ -51,6 +52,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static final String VARIABLE_NAMES_STATIC_FIELD_NAME = "co_varnames";
 
     public static final String GLOBALS_MAP_STATIC_FIELD_NAME = "__globals__";
+
+    public static final String CLASS_CELL_STATIC_FIELD_NAME = "__class_cell__";
 
     public static final String DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME = "__defaults__";
 
@@ -155,6 +158,21 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static <T> Class<T> translatePythonBytecodeToClass(PythonCompiledFunction pythonCompiledFunction,
             MethodDescriptor methodDescriptor) {
         return translatePythonBytecodeToClass(pythonCompiledFunction, methodDescriptor, false);
+    }
+
+    public static <T> T translatePythonBytecodeToInstance(PythonCompiledFunction pythonCompiledFunction,
+            MethodDescriptor methodDescriptor) {
+        return translatePythonBytecodeToInstance(pythonCompiledFunction, methodDescriptor, false);
+    }
+
+    public static <T> T translatePythonBytecodeToInstance(PythonCompiledFunction pythonCompiledFunction,
+            MethodDescriptor methodDescriptor,
+            boolean isVirtual) {
+        Class<T> compiledClass = translatePythonBytecodeToClass(pythonCompiledFunction, methodDescriptor, isVirtual);
+        return FunctionImplementor.createInstance(new PythonLikeTuple(), new PythonLikeDict(),
+                new PythonLikeTuple(), pythonCompiledFunction.closure,
+                PythonString.valueOf(compiledClass.getName()),
+                compiledClass, PythonInterpreter.DEFAULT);
     }
 
     @SuppressWarnings("unchecked")
@@ -384,6 +402,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 VARIABLE_NAMES_STATIC_FIELD_NAME, Type.getDescriptor(List.class), null, null);
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
                 GLOBALS_MAP_STATIC_FIELD_NAME, Type.getDescriptor(Map.class), null, null);
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
+                CLASS_CELL_STATIC_FIELD_NAME, Type.getDescriptor(PythonLikeType.class), null, null);
 
         // Instance fields
         classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
@@ -417,6 +437,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 pythonVariableNameList.add(PythonString.valueOf(name));
             }
             compiledClass.getField(VARIABLE_NAMES_STATIC_FIELD_NAME).set(null, pythonVariableNameList);
+            // Class cell is set by PythonClassTranslator
         } catch (IllegalAccessException | NoSuchFieldException e) {
             throw new IllegalStateException("Impossible state: generated class (" + compiledClass +
                     ") does not have static field \"" + CONSTANTS_STATIC_FIELD_NAME + "\"", e);

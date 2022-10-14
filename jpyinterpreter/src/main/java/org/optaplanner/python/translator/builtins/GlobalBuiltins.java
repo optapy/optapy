@@ -51,6 +51,7 @@ import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
 import org.optaplanner.python.translator.types.PythonSlice;
 import org.optaplanner.python.translator.types.PythonString;
+import org.optaplanner.python.translator.types.PythonSuperObject;
 import org.optaplanner.python.translator.types.collections.PythonIterator;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
 import org.optaplanner.python.translator.types.collections.PythonLikeList;
@@ -362,6 +363,8 @@ public class GlobalBuiltins {
                 return STRING_TYPE;
             case "sum":
                 return ((PythonLikeFunction) GlobalBuiltins::sum);
+            case "super":
+                return ((PythonLikeFunction) GlobalBuiltins::superOfCaller);
             case "tuple":
                 return TUPLE_TYPE;
             case "type":
@@ -390,7 +393,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             iterator = (Iterator<PythonLikeObject>) UnaryDunderBuiltin.ITERATOR.invoke(positionalArgs.get(0));
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("iterable"))) {
@@ -415,7 +418,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             iterator = (Iterator<PythonLikeObject>) UnaryDunderBuiltin.ITERATOR.invoke(positionalArgs.get(0));
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("iterable"))) {
@@ -440,7 +443,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("object"))) {
@@ -476,7 +479,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("x"))) {
@@ -508,7 +511,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("object"))) {
@@ -526,7 +529,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("i"))) {
@@ -643,7 +646,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 2 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 2 && keywordArgs.size() <= 1) {
             function = positionalArgs.get(0);
             iterable = positionalArgs.get(1);
         } else if (positionalArgs.size() == 1) {
@@ -697,7 +700,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 2 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 2 && keywordArgs.size() <= 1) {
             toFormat = positionalArgs.get(0);
             formatSpec = positionalArgs.get(1);
         } else if (positionalArgs.size() == 1) {
@@ -763,7 +766,7 @@ public class GlobalBuiltins {
             Map<PythonString, PythonLikeObject> keywordArgs) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (!positionalArgs.isEmpty() && keywordArgs.isEmpty()) {
+        if (!positionalArgs.isEmpty() && keywordArgs.size() <= 1) {
             throw new ValueError("globals expects 0 arguments, got " + positionalArgs.size());
         }
         Class<?> callerClass = stackWalker.getCallerClass();
@@ -793,7 +796,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("x"))) {
@@ -825,7 +828,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("object"))) {
@@ -952,7 +955,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() >= 2 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() >= 2 && keywordArgs.size() <= 1) {
             function = (PythonLikeFunction) positionalArgs.get(0);
             iterableList = positionalArgs.subList(1, positionalArgs.size());
         } else if (positionalArgs.size() == 1 && keywordArgs.containsKey(PythonString.valueOf("iterable"))) {
@@ -1100,7 +1103,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("x"))) {
@@ -1132,7 +1135,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
             character = (PythonString) positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("c"))) {
@@ -1156,7 +1159,7 @@ public class GlobalBuiltins {
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 3 && keywordArgs.isEmpty()) {
+        if (positionalArgs.size() == 3 && keywordArgs.size() <= 1) {
             base = positionalArgs.get(0);
             exp = positionalArgs.get(1);
             mod = positionalArgs.get(2);
@@ -1404,6 +1407,38 @@ public class GlobalBuiltins {
         }
 
         return current;
+    }
+
+    public static PythonSuperObject superOfCaller(List<PythonLikeObject> positionalArgs,
+            Map<PythonString, PythonLikeObject> keywordArgs) {
+        if (positionalArgs.isEmpty()) {
+            Class<?> callerClass = stackWalker.getCallerClass();
+            try {
+                PythonLikeType pythonClass = (PythonLikeType) callerClass
+                        .getField(PythonBytecodeToJavaBytecodeTranslator.CLASS_CELL_STATIC_FIELD_NAME).get(null);
+                PythonLikeObject instance = keywordArgs.get(PythonString.CALLER_INSTANCE_KEY);
+                if (pythonClass == null) {
+                    throw new RuntimeError("super(): no arguments");
+                }
+
+                if (instance != null) {
+                    return new PythonSuperObject(pythonClass, instance);
+                } else {
+                    return new PythonSuperObject(pythonClass);
+                }
+            } catch (IllegalAccessException | NoSuchFieldException e) {
+                throw new RuntimeError("super(): no arguments");
+            }
+        } else if (positionalArgs.size() == 1) {
+            PythonLikeType pythonClass = (PythonLikeType) positionalArgs.get(0);
+            return new PythonSuperObject(pythonClass);
+        } else if (positionalArgs.size() == 2) {
+            PythonLikeType pythonClass = (PythonLikeType) positionalArgs.get(0);
+            PythonLikeObject instance = positionalArgs.get(1);
+            return new PythonSuperObject(pythonClass, instance);
+        } else {
+            throw new TypeError("super() takes 0 to 2 arguments, got " + positionalArgs.size());
+        }
     }
 
     public static PythonLikeObject vars(List<PythonLikeObject> positionalArgs,

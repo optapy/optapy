@@ -33,7 +33,7 @@ public class BinaryDunderBuiltin implements PythonLikeFunction {
             Map<PythonString, PythonLikeObject> namedArguments) {
         namedArguments = (namedArguments != null) ? namedArguments : Map.of();
 
-        if (positionalArguments.size() != 2 || !namedArguments.isEmpty()) {
+        if (positionalArguments.size() != 2) {
             throw new ValueError("Function " + DUNDER_METHOD_NAME + " expects 2 positional arguments");
         }
 

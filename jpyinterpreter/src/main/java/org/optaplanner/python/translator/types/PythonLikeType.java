@@ -33,6 +33,7 @@ import org.optaplanner.python.translator.builtins.TernaryDunderBuiltin;
 import org.optaplanner.python.translator.types.collections.PythonLikeDict;
 import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
 import org.optaplanner.python.translator.types.errors.AttributeError;
+import org.optaplanner.python.translator.types.errors.TypeError;
 import org.optaplanner.python.translator.types.errors.ValueError;
 
 public class PythonLikeType implements PythonLikeObject,
@@ -43,6 +44,7 @@ public class PythonLikeType implements PythonLikeObject,
 
     private final String JAVA_TYPE_INTERNAL_NAME;
     private final List<PythonLikeType> PARENT_TYPES;
+    public final List<PythonLikeType> MRO;
 
     private final Map<String, PythonKnownFunctionType> functionNameToKnownFunctionType;
     private Optional<PythonKnownFunctionType> constructorKnownFunctionType;
@@ -66,6 +68,7 @@ public class PythonLikeType implements PythonLikeObject,
         functionNameToKnownFunctionType = new HashMap<>();
         constructorKnownFunctionType = Optional.empty();
         instanceFieldToFieldDescriptorMap = new HashMap<>();
+        MRO = determineMRO();
     }
 
     public PythonLikeType(String typeName, String javaTypeInternalName, List<PythonLikeType> parents) {
@@ -79,11 +82,50 @@ public class PythonLikeType implements PythonLikeObject,
         functionNameToKnownFunctionType = new HashMap<>();
         constructorKnownFunctionType = Optional.empty();
         instanceFieldToFieldDescriptorMap = new HashMap<>();
+        MRO = determineMRO();
     }
 
     public PythonLikeType(String typeName, Class<? extends PythonLikeObject> javaClass, Consumer<PythonLikeType> initializer) {
         this(typeName, javaClass, List.of(BASE_TYPE));
         initializer.accept(this);
+    }
+
+    private List<PythonLikeType> determineMRO() {
+        List<PythonLikeType> out = new ArrayList<>();
+        out.add(this);
+        out.addAll(mergeMRO());
+        return out;
+    }
+
+    private List<PythonLikeType> mergeMRO() {
+        List<PythonLikeType> out = new ArrayList<>();
+        List<List<PythonLikeType>> parentMROLists = new ArrayList<>();
+        for (PythonLikeType parent : PARENT_TYPES) {
+            parentMROLists.add(new ArrayList<>(parent.MRO));
+        }
+
+        while (!parentMROLists.stream().allMatch(List::isEmpty)) {
+            boolean candidateFound = false;
+            for (List<PythonLikeType> parentMRO : parentMROLists) {
+                if (!parentMRO.isEmpty()) {
+                    PythonLikeType candidate = parentMRO.get(0);
+                    if (parentMROLists.stream().allMatch(mro -> mro.indexOf(candidate) < 1)) {
+                        out.add(candidate);
+                        parentMROLists.forEach(mro -> {
+                            if (!mro.isEmpty() && mro.get(0) == candidate) {
+                                mro.remove(0);
+                            }
+                        });
+                        candidateFound = true;
+                        break;
+                    }
+                }
+            }
+            if (!candidateFound) {
+                throw new TypeError("Cannot calculate MRO; Cycle found");
+            }
+        }
+        return out;
     }
 
     public boolean isInstance(PythonLikeObject object) {

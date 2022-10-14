@@ -21,6 +21,7 @@ import org.optaplanner.python.translator.builtins.UnaryDunderBuiltin;
 import org.optaplanner.python.translator.types.AbstractPythonLikeObject;
 import org.optaplanner.python.translator.types.PythonLikeType;
 import org.optaplanner.python.translator.types.PythonNone;
+import org.optaplanner.python.translator.types.PythonString;
 import org.optaplanner.python.translator.types.collections.view.DictItemView;
 import org.optaplanner.python.translator.types.collections.view.DictKeyView;
 import org.optaplanner.python.translator.types.collections.view.DictValueView;
@@ -45,6 +46,7 @@ public class PythonLikeDict extends AbstractPythonLikeObject
             PythonLikeDict out = new PythonLikeDict();
             if (positionalArguments.isEmpty()) {
                 out.putAll(namedArguments);
+                out.remove(PythonString.CALLER_INSTANCE_KEY);
                 return out;
             } else if (positionalArguments.size() == 1) {
                 PythonLikeObject from = positionalArguments.get(0);
@@ -57,7 +59,12 @@ public class PythonLikeDict extends AbstractPythonLikeObject
                         out.put((PythonLikeObject) item.get(0), (PythonLikeObject) item.get(1));
                     }
                 }
-                out.putAll(namedArguments);
+                if (out.containsKey(out.remove(PythonString.CALLER_INSTANCE_KEY))) {
+                    out.putAll(namedArguments);
+                } else {
+                    out.putAll(namedArguments);
+                    out.remove(PythonString.CALLER_INSTANCE_KEY);
+                }
                 return out;
             } else {
                 throw new ValueError("dict takes 0 or 1 positional arguments, got " + positionalArguments.size());

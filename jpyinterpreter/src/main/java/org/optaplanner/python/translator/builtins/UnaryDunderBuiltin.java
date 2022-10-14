@@ -35,9 +35,7 @@ public class UnaryDunderBuiltin implements PythonLikeFunction {
     @Override
     public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
             Map<PythonString, PythonLikeObject> namedArguments) {
-        namedArguments = (namedArguments != null) ? namedArguments : Map.of();
-
-        if (positionalArguments.size() != 1 || !namedArguments.isEmpty()) {
+        if (positionalArguments.size() != 1) {
             throw new ValueError("Function " + DUNDER_METHOD_NAME + " expects 1 positional argument");
         }
         PythonLikeObject object = positionalArguments.get(0);

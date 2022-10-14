@@ -112,3 +112,58 @@ def test_override_method():
 
     verifier.verify(A(2), expected_result=2)
     verifier.verify(B(2), expected_result=3)
+
+
+def test_simple_super_method():
+    class A:
+        def __init__(self, start):
+            self.start = start
+
+        def my_method(self, text):
+            return self.start + text
+
+    class B(A):
+        def __init__(self, start, end):
+            super().__init__(start)
+            self.end = end
+
+        def my_method(self, text):
+            return super().my_method(text) + self.end
+
+    def my_function(start: str, end: str, text: str) -> str:
+        return B(start, end).my_method(text)
+
+    verifier = verifier_for(my_function)
+
+    verifier.verify('start', 'end', ' middle ', expected_result='start middle end')
+
+
+def test_chained_super_method():
+    class A:
+        def __init__(self, start):
+            self.start = start
+
+        def my_method(self, text):
+            return self.start + text
+
+    class B(A):
+        def __init__(self, start, end):
+            super().__init__(start)
+            self.end = end
+
+        def my_method(self, text):
+            return super().my_method(text) + self.end
+
+    class C(B):
+        def __init__(self, start, end):
+            super().__init__(start, end)
+
+        def my_method(self, text):
+            return '[' + super().my_method(text) + ']'
+
+    def my_function(start: str, end: str, text: str) -> str:
+        return C(start, end).my_method(text)
+
+    verifier = verifier_for(my_function)
+
+    verifier.verify('start', 'end', ' middle ', expected_result='[start middle end]')

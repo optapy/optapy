@@ -3,6 +3,7 @@ package org.optaplanner.python.translator.implementors;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,32 @@ import org.optaplanner.python.translator.types.collections.PythonLikeTuple;
  */
 public class FunctionImplementor {
 
+    public static void callBinaryMethod(FunctionMetadata functionMetadata,
+            StackMetadata stackMetadata,
+            MethodVisitor methodVisitor, String methodName) {
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                true);
+        methodVisitor.visitLdcInsn(methodName);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                "__getAttributeOrError", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(String.class)),
+                true);
+        methodVisitor.visitInsn(Opcodes.DUP_X2);
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 2);
+        loadMap(functionMetadata, stackMetadata);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class)),
+                true);
+    }
+
     public static void callBinaryMethod(MethodVisitor methodVisitor, String methodName) {
         methodVisitor.visitInsn(Opcodes.SWAP);
         methodVisitor.visitInsn(Opcodes.DUP);
@@ -50,7 +77,7 @@ public class FunctionImplementor {
         methodVisitor.visitInsn(Opcodes.SWAP);
 
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 2);
-        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
                 "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
@@ -197,7 +224,7 @@ public class FunctionImplementor {
      * (either self and an unbound method object or NULL and an arbitrary callable).
      * All of them are popped and the return value is pushed.
      */
-    public static void callMethod(MethodVisitor methodVisitor, StackMetadata stackMetadata,
+    public static void callMethod(FunctionMetadata functionMetadata, StackMetadata stackMetadata, MethodVisitor methodVisitor,
             PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
         PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(instruction.arg + 1);
         if (functionType instanceof PythonKnownFunctionType) {
@@ -215,14 +242,18 @@ public class FunctionImplementor {
                             methodVisitor.visitInsn(Opcodes.SWAP);
                             methodVisitor.visitInsn(Opcodes.POP);
                         }
-                    }, () -> callGenericMethod(methodVisitor, instruction, localVariableHelper));
+                    }, () -> callGenericMethod(functionMetadata, stackMetadata, methodVisitor, instruction,
+                            localVariableHelper));
         } else {
-            callGenericMethod(methodVisitor, instruction, localVariableHelper);
+            callGenericMethod(functionMetadata, stackMetadata, methodVisitor, instruction, localVariableHelper);
         }
     }
 
-    private static void callGenericMethod(MethodVisitor methodVisitor,
-            PythonBytecodeInstruction instruction, LocalVariableHelper localVariableHelper) {
+    private static void callGenericMethod(FunctionMetadata functionMetadata,
+            StackMetadata stackMetadata,
+            MethodVisitor methodVisitor,
+            PythonBytecodeInstruction instruction,
+            LocalVariableHelper localVariableHelper) {
         // Stack is method, (obj or null), arg0, ..., arg(argc - 1)
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, instruction.arg);
         methodVisitor.visitInsn(Opcodes.SWAP);
@@ -262,7 +293,7 @@ public class FunctionImplementor {
         methodVisitor.visitLabel(blockEnd);
 
         // Stack is method, argList
-        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        loadMap(functionMetadata, stackMetadata);
 
         // Stack is callable, argument_list, null
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
@@ -277,8 +308,9 @@ public class FunctionImplementor {
      * TOS[argc] is the function to call. TOS...TOS[argc] are all popped and
      * the result is pushed onto the stack.
      */
-    public static void callFunction(MethodVisitor methodVisitor, StackMetadata stackMetadata,
-            PythonBytecodeInstruction instruction) {
+    public static void callFunction(FunctionMetadata functionMetadata,
+            StackMetadata stackMetadata,
+            MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
         PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(instruction.arg);
         if (functionType instanceof PythonLikeGenericType) {
             functionType = ((PythonLikeGenericType) functionType).getOrigin().getConstructorType().orElse(null);
@@ -291,20 +323,37 @@ public class FunctionImplementor {
                                 instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
-                    }, () -> callGenericFunction(methodVisitor, instruction));
+                    }, () -> callGenericFunction(functionMetadata, stackMetadata, methodVisitor, instruction));
         } else {
-            callGenericFunction(methodVisitor, instruction);
+            callGenericFunction(functionMetadata, stackMetadata, methodVisitor, instruction);
         }
     }
 
-    public static void callGenericFunction(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
-        callGenericFunction(methodVisitor, instruction.arg);
+    public static void callGenericFunction(FunctionMetadata functionMetadata,
+            StackMetadata stackMetadata,
+            MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+        callGenericFunction(functionMetadata, stackMetadata, methodVisitor, instruction.arg);
     }
 
     public static void callGenericFunction(MethodVisitor methodVisitor, int argCount) {
         // stack is callable, arg0, arg1, ..., arg(argc - 1)
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, argCount);
-        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
+
+        // Stack is callable, argument_list, null
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class)),
+                true);
+    }
+
+    public static void callGenericFunction(FunctionMetadata functionMetadata,
+            StackMetadata stackMetadata,
+            MethodVisitor methodVisitor, int argCount) {
+        // stack is callable, arg0, arg1, ..., arg(argc - 1)
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, argCount);
+        loadMap(functionMetadata, stackMetadata);
 
         // Stack is callable, argument_list, null
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
@@ -321,8 +370,8 @@ public class FunctionImplementor {
      * TOS[argc + 2] is the function to call. TOS...TOS[argc + 2] are all popped and
      * the result is pushed onto the stack.
      */
-    public static void callFunctionWithKeywords(MethodVisitor methodVisitor, StackMetadata stackMetadata,
-            PythonBytecodeInstruction instruction) {
+    public static void callFunctionWithKeywords(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
         PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(instruction.arg + 1);
         if (functionType instanceof PythonLikeGenericType) {
             functionType = ((PythonLikeGenericType) functionType).getOrigin().getConstructorType().orElse(null);
@@ -335,9 +384,9 @@ public class FunctionImplementor {
                                 instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
-                    }, () -> callGenericFunction(methodVisitor, instruction));
+                    }, () -> callGenericFunction(functionMetadata, stackMetadata, methodVisitor, instruction));
         } else {
-            callGenericFunctionWithKeywords(methodVisitor, instruction);
+            callGenericFunctionWithKeywords(functionMetadata, stackMetadata, methodVisitor, instruction);
         }
     }
 
@@ -348,7 +397,9 @@ public class FunctionImplementor {
      * TOS[argc + 2] is the function to call. TOS...TOS[argc + 2] are all popped and
      * the result is pushed onto the stack.
      */
-    public static void callGenericFunctionWithKeywords(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+    public static void callGenericFunctionWithKeywords(FunctionMetadata functionMetadata,
+            StackMetadata stackMetadata,
+            MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
         // stack is callable, arg0, arg1, ..., arg(argc - len(keys)), ..., arg(argc - 1), keys
         // We know the total number of arguments, but not the number of individual positional/keyword arguments
         // Since Java Bytecode require consistent stack frames  (i.e. the body of a loop must start with
@@ -366,6 +417,8 @@ public class FunctionImplementor {
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(TupleMapPair.class), "map",
                 Type.getDescriptor(PythonLikeDict.class));
 
+        setCallerInstanceInMap(functionMetadata, stackMetadata);
+
         // Stack is callable, positionalArgs, keywordArgs
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
                 "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
@@ -379,15 +432,18 @@ public class FunctionImplementor {
      * arguments, TOS[1] is an iterable containing positional arguments and TOS[2] is callable. Otherwise,
      * TOS is an iterable containing positional arguments and TOS[1] is callable.
      */
-    public static void callFunctionUnpack(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
+    public static void callFunctionUnpack(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
         if ((instruction.arg & 1) == 1) {
-            callFunctionUnpackMapAndIterable(methodVisitor);
+            callFunctionUnpackMapAndIterable(functionMetadata, stackMetadata, functionMetadata.methodVisitor);
         } else {
-            callFunctionUnpackIterable(methodVisitor);
+            callFunctionUnpackIterable(functionMetadata, stackMetadata, functionMetadata.methodVisitor);
         }
     }
 
-    public static void callFunctionUnpackMapAndIterable(MethodVisitor methodVisitor) {
+    public static void callFunctionUnpackMapAndIterable(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            MethodVisitor methodVisitor) {
+        setCallerInstanceInMap(functionMetadata, stackMetadata);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
                 "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
@@ -395,13 +451,50 @@ public class FunctionImplementor {
                 true);
     }
 
-    public static void callFunctionUnpackIterable(MethodVisitor methodVisitor) {
-        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+    public static void callFunctionUnpackIterable(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            MethodVisitor methodVisitor) {
+        loadMap(functionMetadata, stackMetadata);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
                 "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
                         Type.getType(Map.class)),
                 true);
+    }
+
+    private static void loadMap(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(HashMap.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(HashMap.class), "<init>",
+                Type.getMethodDescriptor(Type.VOID_TYPE), false);
+
+        setCallerInstanceInMap(functionMetadata, stackMetadata);
+    }
+
+    private static void setCallerInstanceInMap(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonString.class),
+                "CALLER_INSTANCE_KEY", Type.getDescriptor(PythonString.class));
+        if (functionMetadata.pythonCompiledFunction.co_argcount > 0) {
+            // Use null as the key for the current instance, used by super()
+            stackMetadata.localVariableHelper.readLocal(methodVisitor, 0);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                    "put", Type.getMethodDescriptor(Type.getType(Object.class),
+                            Type.getType(Object.class),
+                            Type.getType(Object.class)),
+                    true);
+        } else {
+            // Put the current instance as null
+            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
+                    "put", Type.getMethodDescriptor(Type.getType(Object.class),
+                            Type.getType(Object.class),
+                            Type.getType(Object.class)),
+                    true);
+        }
+        methodVisitor.visitInsn(Opcodes.POP);
     }
 
     /**
@@ -537,6 +630,9 @@ public class FunctionImplementor {
 
         Set<PythonString> toRemoveNamedArgs = new HashSet<>();
         for (PythonString key : namedArguments.keySet()) {
+            if (key == PythonString.CALLER_INSTANCE_KEY) {
+                continue;
+            }
             int index = variableNameList.indexOf(key);
             if (index == -1 || index >= totalArgCount) {
                 if (!isGeneric) {

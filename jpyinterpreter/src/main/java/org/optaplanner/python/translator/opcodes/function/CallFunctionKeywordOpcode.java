@@ -40,7 +40,7 @@ public class CallFunctionKeywordOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        FunctionImplementor.callFunctionWithKeywords(functionMetadata.methodVisitor, stackMetadata,
+        FunctionImplementor.callFunctionWithKeywords(functionMetadata, stackMetadata, functionMetadata.methodVisitor,
                 instruction);
     }
 }
