@@ -9,6 +9,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.List;
+import java.util.Map;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -42,7 +43,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         PythonLikeComparable.setup(FLOAT_TYPE);
 
         // Constructor
-        FLOAT_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+        FLOAT_TYPE.setConstructor((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.isEmpty()) {
                 return new PythonFloat(0.0);
             } else if (positionalArguments.size() == 1) {
@@ -54,7 +55,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
                 } else {
                     PythonLikeType valueType = value.__getType();
                     PythonLikeFunction asFloatFunction = (PythonLikeFunction) (valueType.__getAttributeOrError("__float__"));
-                    return asFloatFunction.__call__(List.of(value), null);
+                    return asFloatFunction.$call(List.of(value), Map.of(), null);
                 }
             } else {
                 throw new ValueError("float takes 0 or 1 arguments, got " + positionalArguments.size());

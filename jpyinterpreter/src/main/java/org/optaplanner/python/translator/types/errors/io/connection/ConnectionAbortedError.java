@@ -15,7 +15,8 @@ public class ConnectionAbortedError extends ConnectionError {
 
     static {
         CONNECTION_ABORTED_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new ConnectionAbortedError(CONNECTION_ABORTED_ERROR_TYPE, positionalArguments)));
+                namedArguments,
+                callerInstance) -> new ConnectionAbortedError(CONNECTION_ABORTED_ERROR_TYPE, positionalArguments)));
     }
 
     public ConnectionAbortedError(PythonLikeType type) {

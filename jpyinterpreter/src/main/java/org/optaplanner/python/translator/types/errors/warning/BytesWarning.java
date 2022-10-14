@@ -12,7 +12,8 @@ public class BytesWarning extends Warning {
 
     static {
         BYTES_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new BytesWarning(BYTES_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new BytesWarning(BYTES_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public BytesWarning() {

@@ -25,8 +25,8 @@ public class TernaryDunderBuiltin implements PythonLikeFunction {
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         if (positionalArguments.size() != 3) {
             throw new ValueError("Function " + DUNDER_METHOD_NAME + " expects 3 positional arguments");
         }
@@ -35,11 +35,11 @@ public class TernaryDunderBuiltin implements PythonLikeFunction {
         PythonLikeObject arg1 = positionalArguments.get(1);
         PythonLikeObject arg2 = positionalArguments.get(2);
         PythonLikeFunction dunderMethod = (PythonLikeFunction) object.__getType().__getAttributeOrError(DUNDER_METHOD_NAME);
-        return dunderMethod.__call__(List.of(object, arg1, arg2), Map.of());
+        return dunderMethod.$call(List.of(object, arg1, arg2), Map.of(), null);
     }
 
     public PythonLikeObject invoke(PythonLikeObject object, PythonLikeObject arg1, PythonLikeObject arg2) {
         PythonLikeFunction dunderMethod = (PythonLikeFunction) object.__getType().__getAttributeOrError(DUNDER_METHOD_NAME);
-        return dunderMethod.__call__(List.of(object, arg1, arg2), Map.of());
+        return dunderMethod.$call(List.of(object, arg1, arg2), Map.of(), null);
     }
 }

@@ -12,7 +12,8 @@ public class UnicodeTranslateError extends UnicodeError {
 
     static {
         UNICODE_TRANSLATE_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new UnicodeTranslateError(UNICODE_TRANSLATE_ERROR_TYPE, positionalArguments)));
+                namedArguments,
+                callerInstance) -> new UnicodeTranslateError(UNICODE_TRANSLATE_ERROR_TYPE, positionalArguments)));
     }
 
     public UnicodeTranslateError() {

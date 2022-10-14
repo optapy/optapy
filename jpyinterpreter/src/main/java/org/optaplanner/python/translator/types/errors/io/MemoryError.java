@@ -16,7 +16,8 @@ public class MemoryError extends PythonBaseException {
 
     static {
         MEMORY_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new MemoryError(MEMORY_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new MemoryError(MEMORY_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public MemoryError(PythonLikeType type) {

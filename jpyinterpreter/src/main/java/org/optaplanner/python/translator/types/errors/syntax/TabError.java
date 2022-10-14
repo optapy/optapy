@@ -15,7 +15,8 @@ public class TabError extends IndentationError {
 
     static {
         TAB_ERROR_TYPE
-                .setConstructor(((positionalArguments, namedArguments) -> new TabError(TAB_ERROR_TYPE, positionalArguments)));
+                .setConstructor(((positionalArguments, namedArguments, callerInstance) -> new TabError(TAB_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public TabError(PythonLikeType type) {

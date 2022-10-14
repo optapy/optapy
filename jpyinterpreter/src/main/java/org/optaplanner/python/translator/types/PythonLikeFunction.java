@@ -23,16 +23,11 @@ public interface PythonLikeFunction extends PythonLikeObject {
      *
      * @param positionalArguments Positional arguments
      * @param namedArguments Named arguments
+     * @param callerInstance The first argument passed to the caller, if any; null otherwise (used for super)
      * @return The function result
      */
-    PythonLikeObject __call__(List<PythonLikeObject> positionalArguments, Map<PythonString, PythonLikeObject> namedArguments);
-
-    // TODO: Replace __call__ with $call
-    // needed since __call__ not accessible in Python via JPype
-    default PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
-        return __call__(positionalArguments, namedArguments);
-    }
+    PythonLikeObject $call(List<PythonLikeObject> positionalArguments, Map<PythonString, PythonLikeObject> namedArguments,
+            PythonLikeObject callerInstance);
 
     @Override
     default PythonLikeObject __getAttributeOrNull(String attributeName) {

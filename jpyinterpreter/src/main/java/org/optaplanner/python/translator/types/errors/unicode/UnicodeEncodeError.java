@@ -12,7 +12,7 @@ public class UnicodeEncodeError extends UnicodeError {
 
     static {
         UNICODE_ENCODE_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new UnicodeEncodeError(UNICODE_ENCODE_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new UnicodeEncodeError(UNICODE_ENCODE_ERROR_TYPE, positionalArguments)));
     }
 
     public UnicodeEncodeError() {

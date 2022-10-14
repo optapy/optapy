@@ -31,7 +31,7 @@ public class PythonLikeFrozenSet extends AbstractPythonLikeObject implements Set
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
-        FROZEN_SET_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+        FROZEN_SET_TYPE.setConstructor((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.size() == 0) {
                 return new PythonLikeFrozenSet();
             } else if (positionalArguments.size() == 1) {

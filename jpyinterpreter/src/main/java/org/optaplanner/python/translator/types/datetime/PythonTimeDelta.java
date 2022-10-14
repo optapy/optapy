@@ -48,7 +48,7 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
                     .minusNanos(1000)));
             TIME_DELTA_TYPE.__setAttribute("resolution", new PythonTimeDelta(Duration.ofNanos(1000)));
 
-            TIME_DELTA_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+            TIME_DELTA_TYPE.setConstructor(((positionalArguments, namedArguments, callerInstance) -> {
                 // days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0
                 namedArguments = (namedArguments != null) ? namedArguments : Map.of();
                 PythonNumber days = PythonInteger.ZERO, seconds = PythonInteger.ZERO, microseconds = PythonInteger.ZERO,

@@ -15,7 +15,8 @@ public class RecursionError extends RuntimeError {
 
     static {
         RECURSION_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new RecursionError(RECURSION_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new RecursionError(RECURSION_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public RecursionError(PythonLikeType type) {

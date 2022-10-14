@@ -12,7 +12,8 @@ public class Warning extends PythonException {
             $TYPE = WARNING_TYPE;
 
     static {
-        WARNING_TYPE.setConstructor(((positionalArguments, namedArguments) -> new Warning(WARNING_TYPE, positionalArguments)));
+        WARNING_TYPE.setConstructor(
+                ((positionalArguments, namedArguments, callerInstance) -> new Warning(WARNING_TYPE, positionalArguments)));
     }
 
     public Warning() {

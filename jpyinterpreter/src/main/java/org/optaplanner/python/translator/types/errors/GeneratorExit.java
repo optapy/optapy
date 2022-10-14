@@ -16,7 +16,8 @@ public class GeneratorExit extends PythonException {
 
     static {
         GENERATOR_EXIT_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new GeneratorExit(GENERATOR_EXIT_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new GeneratorExit(GENERATOR_EXIT_TYPE,
+                        positionalArguments)));
     }
 
     private final PythonLikeObject value;

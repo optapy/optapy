@@ -7,6 +7,7 @@ import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.List;
+import java.util.Map;
 
 import org.optaplanner.python.translator.PythonBinaryOperators;
 import org.optaplanner.python.translator.PythonLikeObject;
@@ -40,7 +41,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
-        INT_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+        INT_TYPE.setConstructor(((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.size() == 0) {
                 return PythonInteger.valueOf(0);
             } else if (positionalArguments.size() == 1) {
@@ -52,7 +53,7 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
                 } else {
                     PythonLikeType valueType = value.__getType();
                     PythonLikeFunction asIntFunction = (PythonLikeFunction) (valueType.__getAttributeOrError("__int__"));
-                    return asIntFunction.__call__(List.of(value), null);
+                    return asIntFunction.$call(List.of(value), Map.of(), null);
                 }
             } else {
                 throw new ValueError("int expects 0 or 1 arguments, got " + positionalArguments.size());

@@ -12,7 +12,7 @@ public class TypeError extends PythonException {
 
     static {
         TYPE_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new TypeError(TYPE_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new TypeError(TYPE_ERROR_TYPE, positionalArguments)));
     }
 
     public TypeError() {

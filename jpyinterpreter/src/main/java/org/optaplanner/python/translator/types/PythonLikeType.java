@@ -61,7 +61,7 @@ public class PythonLikeType implements PythonLikeObject,
         TYPE_NAME = typeName;
         JAVA_TYPE_INTERNAL_NAME = Type.getInternalName(javaClass);
         PARENT_TYPES = parents;
-        constructor = (positional, keywords) -> {
+        constructor = (positional, keywords, callerInstance) -> {
             throw new UnsupportedOperationException("Cannot create instance of type (" + TYPE_NAME + ").");
         };
         __dir__ = new HashMap<>();
@@ -75,7 +75,7 @@ public class PythonLikeType implements PythonLikeObject,
         TYPE_NAME = typeName;
         JAVA_TYPE_INTERNAL_NAME = javaTypeInternalName;
         PARENT_TYPES = parents;
-        constructor = (positional, keywords) -> {
+        constructor = (positional, keywords, callerInstance) -> {
             throw new UnsupportedOperationException("Cannot create instance of type (" + TYPE_NAME + ").");
         };
         __dir__ = new HashMap<>();
@@ -150,7 +150,7 @@ public class PythonLikeType implements PythonLikeObject,
             BASE_TYPE.addUnaryMethod(PythonUnaryOperator.HASH, PythonLikeObject.class.getMethod("$method$__hash__"));
             BASE_TYPE.addBinaryMethod(PythonBinaryOperators.FORMAT,
                     PythonLikeObject.class.getMethod("$method$__format__", PythonLikeObject.class));
-            BASE_TYPE.setConstructor((vargs, kwargs) -> new AbstractPythonLikeObject(BASE_TYPE) {
+            BASE_TYPE.setConstructor((vargs, kwargs, callerInstance) -> new AbstractPythonLikeObject(BASE_TYPE) {
             });
 
             PythonOverloadImplementor.createDispatchesFor(BASE_TYPE);
@@ -161,7 +161,7 @@ public class PythonLikeType implements PythonLikeObject,
     }
 
     public static PythonLikeType registerTypeType() {
-        TYPE_TYPE.setConstructor((positional, keywords) -> {
+        TYPE_TYPE.setConstructor((positional, keywords, callerInstance) -> {
             if (positional.size() == 1) {
                 return positional.get(0).__getType();
             } else if (positional.size() == 3) {
@@ -447,9 +447,9 @@ public class PythonLikeType implements PythonLikeObject,
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
-        return constructor.__call__(positionalArguments, namedArguments);
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
+        return constructor.$call(positionalArguments, namedArguments, null);
     }
 
     public PythonLikeObject loadMethod(String methodName) {

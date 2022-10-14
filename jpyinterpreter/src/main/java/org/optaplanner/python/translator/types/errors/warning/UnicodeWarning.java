@@ -12,7 +12,8 @@ public class UnicodeWarning extends Warning {
 
     static {
         UNICODE_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new UnicodeWarning(UNICODE_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new UnicodeWarning(UNICODE_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public UnicodeWarning() {

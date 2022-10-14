@@ -24,8 +24,8 @@ public class GeneratedFunctionMethodReference implements PythonLikeFunction {
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         Object[] args = unwrapPrimitiveArguments(positionalArguments, namedArguments);
         try {
             return (PythonLikeObject) method.invoke(instance, args);
@@ -47,9 +47,6 @@ public class GeneratedFunctionMethodReference implements PythonLikeFunction {
         }
 
         for (PythonString key : namedArguments.keySet()) {
-            if (key == PythonString.CALLER_INSTANCE_KEY) {
-                continue;
-            }
             int index = parameterNameToIndexMap.get(key.value);
             PythonLikeObject argument = namedArguments.get(key);
             out[index] = argument;

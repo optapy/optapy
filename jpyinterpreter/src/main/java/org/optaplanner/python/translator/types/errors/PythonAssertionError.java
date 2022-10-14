@@ -13,7 +13,8 @@ public class PythonAssertionError extends PythonException {
 
     static {
         ASSERTION_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new PythonAssertionError(ASSERTION_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new PythonAssertionError(ASSERTION_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public PythonAssertionError() {

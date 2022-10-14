@@ -12,7 +12,8 @@ public class ResourceWarning extends Warning {
 
     static {
         RESOURCE_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new ResourceWarning(RESOURCE_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new ResourceWarning(RESOURCE_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public ResourceWarning() {

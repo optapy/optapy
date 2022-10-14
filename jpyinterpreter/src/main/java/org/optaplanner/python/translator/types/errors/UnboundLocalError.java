@@ -12,7 +12,7 @@ public class UnboundLocalError extends NameError {
 
     static {
         UNBOUND_LOCAL_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new UnboundLocalError(UNBOUND_LOCAL_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new UnboundLocalError(UNBOUND_LOCAL_ERROR_TYPE, positionalArguments)));
     }
 
     public UnboundLocalError() {

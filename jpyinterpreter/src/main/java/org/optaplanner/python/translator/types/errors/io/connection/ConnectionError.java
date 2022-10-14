@@ -16,7 +16,8 @@ public class ConnectionError extends OSError {
 
     static {
         CONNECTION_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new ConnectionError(CONNECTION_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new ConnectionError(CONNECTION_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public ConnectionError(PythonLikeType type) {

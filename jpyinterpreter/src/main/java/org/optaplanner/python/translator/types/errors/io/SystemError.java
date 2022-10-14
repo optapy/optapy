@@ -16,7 +16,8 @@ public class SystemError extends PythonBaseException {
 
     static {
         SYSTEM_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new SystemError(SYSTEM_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new SystemError(SYSTEM_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public SystemError(PythonLikeType type) {

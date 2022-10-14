@@ -15,7 +15,7 @@ public class ModuleNotFoundError extends ImportError {
 
     static {
         MODULE_NOT_FOUND_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new ModuleNotFoundError(MODULE_NOT_FOUND_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new ModuleNotFoundError(MODULE_NOT_FOUND_ERROR_TYPE, positionalArguments)));
     }
 
     public ModuleNotFoundError(PythonLikeType type) {

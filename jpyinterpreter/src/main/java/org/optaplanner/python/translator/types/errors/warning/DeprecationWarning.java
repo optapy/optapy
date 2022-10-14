@@ -12,7 +12,7 @@ public class DeprecationWarning extends Warning {
 
     static {
         DEPRECATION_WARNING_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new DeprecationWarning(DEPRECATION_WARNING_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new DeprecationWarning(DEPRECATION_WARNING_TYPE, positionalArguments)));
     }
 
     public DeprecationWarning() {

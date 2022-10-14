@@ -15,7 +15,8 @@ public class ReferenceError extends PythonBaseException {
 
     static {
         REFERENCE_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new ReferenceError(REFERENCE_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new ReferenceError(REFERENCE_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public ReferenceError(PythonLikeType type) {

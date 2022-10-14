@@ -128,7 +128,7 @@ public class PythonBytes extends AbstractPythonLikeObject implements PythonBytes
     }
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
-        BYTES_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+        BYTES_TYPE.setConstructor(((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.isEmpty()) {
                 return new PythonBytes(new byte[] {});
             } else if (positionalArguments.size() == 1) {

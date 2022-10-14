@@ -12,7 +12,8 @@ public class RuntimeWarning extends Warning {
 
     static {
         RUNTIME_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new RuntimeWarning(RUNTIME_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new RuntimeWarning(RUNTIME_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public RuntimeWarning() {

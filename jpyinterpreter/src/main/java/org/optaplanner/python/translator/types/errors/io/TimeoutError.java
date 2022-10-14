@@ -15,7 +15,8 @@ public class TimeoutError extends OSError {
 
     static {
         TIMEOUT_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new TimeoutError(TIMEOUT_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new TimeoutError(TIMEOUT_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public TimeoutError(PythonLikeType type) {

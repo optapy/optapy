@@ -12,7 +12,8 @@ public class EncodingWarning extends Warning {
 
     static {
         ENCODING_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new EncodingWarning(ENCODING_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new EncodingWarning(ENCODING_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public EncodingWarning() {

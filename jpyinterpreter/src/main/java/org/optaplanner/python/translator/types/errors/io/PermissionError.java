@@ -15,7 +15,8 @@ public class PermissionError extends OSError {
 
     static {
         PERMISSION_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new PermissionError(PERMISSION_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new PermissionError(PERMISSION_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public PermissionError(PythonLikeType type) {

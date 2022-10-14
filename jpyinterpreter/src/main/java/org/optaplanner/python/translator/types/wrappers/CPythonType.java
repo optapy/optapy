@@ -55,8 +55,8 @@ public class CPythonType extends PythonLikeType {
                                             attributeName);
                             if (equals instanceof PythonLikeFunction) {
                                 final PythonLikeFunction function = (PythonLikeFunction) equals;
-                                return (PythonLikeFunction) (pos, named) -> {
-                                    PythonLikeObject result = function.__call__(pos, named);
+                                return (PythonLikeFunction) (pos, named, callerInstance) -> {
+                                    PythonLikeObject result = function.$call(pos, named, null);
                                     if (result instanceof PythonBoolean) {
                                         return result;
                                     } else {
@@ -75,8 +75,8 @@ public class CPythonType extends PythonLikeType {
                                             attributeName);
                             if (notEquals instanceof PythonLikeFunction) {
                                 final PythonLikeFunction function = (PythonLikeFunction) notEquals;
-                                return (PythonLikeFunction) (pos, named) -> {
-                                    PythonLikeObject result = function.__call__(pos, named);
+                                return (PythonLikeFunction) (pos, named, callerInstance) -> {
+                                    PythonLikeObject result = function.$call(pos, named, null);
                                     if (result instanceof PythonBoolean) {
                                         return result;
                                     } else {
@@ -95,8 +95,8 @@ public class CPythonType extends PythonLikeType {
                                             attributeName);
                             if (hash instanceof PythonLikeFunction) {
                                 final PythonLikeFunction function = (PythonLikeFunction) hash;
-                                return (PythonLikeFunction) (pos, named) -> {
-                                    PythonLikeObject result = function.__call__(pos, named);
+                                return (PythonLikeFunction) (pos, named, callerInstance) -> {
+                                    PythonLikeObject result = function.$call(pos, named, null);
                                     if (result instanceof PythonInteger) {
                                         return result;
                                     } else {
@@ -132,8 +132,8 @@ public class CPythonType extends PythonLikeType {
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         return CPythonBackedPythonInterpreter.callPythonReference(pythonReference, positionalArguments, namedArguments);
     }
 

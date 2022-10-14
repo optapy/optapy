@@ -15,7 +15,7 @@ public class NotImplementedError extends RuntimeError {
 
     static {
         NOT_IMPLEMENTED_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new NotImplementedError(NOT_IMPLEMENTED_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new NotImplementedError(NOT_IMPLEMENTED_ERROR_TYPE, positionalArguments)));
     }
 
     public NotImplementedError() {

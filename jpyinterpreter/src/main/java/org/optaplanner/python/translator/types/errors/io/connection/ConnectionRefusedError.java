@@ -15,7 +15,8 @@ public class ConnectionRefusedError extends ConnectionError {
 
     static {
         CONNECTION_REFUSED_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new ConnectionRefusedError(CONNECTION_REFUSED_ERROR_TYPE, positionalArguments)));
+                namedArguments,
+                callerInstance) -> new ConnectionRefusedError(CONNECTION_REFUSED_ERROR_TYPE, positionalArguments)));
     }
 
     public ConnectionRefusedError(PythonLikeType type) {

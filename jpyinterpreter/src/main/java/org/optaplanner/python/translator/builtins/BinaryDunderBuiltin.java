@@ -29,8 +29,8 @@ public class BinaryDunderBuiltin implements PythonLikeFunction {
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         namedArguments = (namedArguments != null) ? namedArguments : Map.of();
 
         if (positionalArguments.size() != 2) {
@@ -40,11 +40,11 @@ public class BinaryDunderBuiltin implements PythonLikeFunction {
         PythonLikeObject object = positionalArguments.get(0);
         PythonLikeObject arg = positionalArguments.get(1);
         PythonLikeFunction dunderMethod = (PythonLikeFunction) object.__getType().__getAttributeOrError(DUNDER_METHOD_NAME);
-        return dunderMethod.__call__(List.of(object, arg), Map.of());
+        return dunderMethod.$call(List.of(object, arg), Map.of(), null);
     }
 
     public PythonLikeObject invoke(PythonLikeObject object, PythonLikeObject arg) {
         PythonLikeFunction dunderMethod = (PythonLikeFunction) object.__getType().__getAttributeOrError(DUNDER_METHOD_NAME);
-        return dunderMethod.__call__(List.of(object, arg), Map.of());
+        return dunderMethod.$call(List.of(object, arg), Map.of(), null);
     }
 }

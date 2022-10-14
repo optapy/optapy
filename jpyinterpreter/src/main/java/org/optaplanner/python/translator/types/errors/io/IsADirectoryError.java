@@ -15,7 +15,7 @@ public class IsADirectoryError extends OSError {
 
     static {
         IS_A_DIRECTORY_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new IsADirectoryError(IS_A_DIRECTORY_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new IsADirectoryError(IS_A_DIRECTORY_ERROR_TYPE, positionalArguments)));
     }
 
     public IsADirectoryError(PythonLikeType type) {

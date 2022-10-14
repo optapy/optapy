@@ -15,7 +15,7 @@ public class FloatingPointError extends ArithmeticError {
 
     static {
         FLOATING_POINT_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new FloatingPointError(FLOATING_POINT_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new FloatingPointError(FLOATING_POINT_ERROR_TYPE, positionalArguments)));
     }
 
     public FloatingPointError(PythonLikeType type) {

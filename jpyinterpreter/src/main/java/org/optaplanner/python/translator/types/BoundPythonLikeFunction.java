@@ -20,11 +20,11 @@ public class BoundPythonLikeFunction implements PythonLikeFunction {
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         ArrayList<PythonLikeObject> actualPositionalArgs = new ArrayList<>(positionalArguments.size() + 1);
         actualPositionalArgs.add(instance);
         actualPositionalArgs.addAll(positionalArguments);
-        return function.__call__(actualPositionalArgs, namedArguments);
+        return function.$call(actualPositionalArgs, namedArguments, null);
     }
 }

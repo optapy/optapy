@@ -19,7 +19,8 @@ public class PythonBaseException extends RuntimeException implements PythonLikeO
 
     static {
         BASE_EXCEPTION_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new PythonBaseException(BASE_EXCEPTION_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new PythonBaseException(BASE_EXCEPTION_TYPE,
+                        positionalArguments)));
     }
 
     Map<String, PythonLikeObject> dict;

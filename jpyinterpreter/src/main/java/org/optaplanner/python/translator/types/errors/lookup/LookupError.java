@@ -16,7 +16,8 @@ public class LookupError extends PythonException {
 
     static {
         LOOKUP_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new LookupError(LOOKUP_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new LookupError(LOOKUP_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public LookupError(PythonLikeType type) {

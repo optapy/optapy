@@ -507,9 +507,11 @@ public class PythonClassTranslator {
                 Type.getMethodDescriptor(Type.getType(Map.class)),
                 false);
 
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class), "__call__",
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class), "$call",
                 Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class), Type.getType(PythonLikeObject.class)),
                 true);
 
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
@@ -559,9 +561,9 @@ public class PythonClassTranslator {
         methodVisitor.visitEnd();
 
         Type generatedClassType = Type.getType('L' + classInternalName + ';');
-        methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "__call__",
+        methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "$call",
                 Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
-                        Type.getType(List.class), Type.getType(Map.class)),
+                        Type.getType(List.class), Type.getType(Map.class), Type.getType(PythonLikeObject.class)),
                 null, null);
 
         methodVisitor.visitCode();

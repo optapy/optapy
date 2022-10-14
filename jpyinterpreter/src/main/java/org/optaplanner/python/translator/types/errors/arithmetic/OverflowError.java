@@ -15,7 +15,8 @@ public class OverflowError extends ArithmeticError {
 
     static {
         OVERFLOW_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new OverflowError(OVERFLOW_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new OverflowError(OVERFLOW_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public OverflowError(PythonLikeType type) {

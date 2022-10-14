@@ -166,20 +166,23 @@ public class PythonOverloadImplementor {
 
     private static void createDispatchFunction(PythonLikeType type, PythonKnownFunctionType knownFunctionType,
             ClassWriter classWriter) {
-        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "__call__",
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "$call",
                 Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
                 null,
                 null);
 
-        methodVisitor = MethodVisitorAdapters.adapt(methodVisitor, "__call__",
+        methodVisitor = MethodVisitorAdapters.adapt(methodVisitor, "$call",
                 Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)));
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)));
 
         methodVisitor.visitParameter("positionalArguments", 0);
         methodVisitor.visitParameter("namedArguments", 0);
+        methodVisitor.visitParameter("callerInstance", 0);
         methodVisitor.visitCode();
 
         List<PythonFunctionSignature> overloadList = knownFunctionType.getOverloadFunctionSignatureList();

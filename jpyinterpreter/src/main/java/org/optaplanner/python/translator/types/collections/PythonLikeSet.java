@@ -32,7 +32,7 @@ public class PythonLikeSet extends AbstractPythonLikeObject implements Set<Pytho
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
-        SET_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+        SET_TYPE.setConstructor((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.size() == 0) {
                 return new PythonLikeSet();
             } else if (positionalArguments.size() == 1) {

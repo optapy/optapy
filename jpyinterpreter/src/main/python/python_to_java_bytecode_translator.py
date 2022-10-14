@@ -776,7 +776,7 @@ def wrap_untyped_java_function(java_function):
                             convert_to_java_python_like_object(value, instance_map))
 
         try:
-            return unwrap_python_like_object(getattr(java_function, '$call')(java_args, java_kwargs))
+            return unwrap_python_like_object(getattr(java_function, '$call')(java_args, java_kwargs, None))
         except Exception as e:
             raise unwrap_python_like_object(e)
 

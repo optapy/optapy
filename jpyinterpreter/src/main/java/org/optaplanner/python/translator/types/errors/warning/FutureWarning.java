@@ -12,7 +12,8 @@ public class FutureWarning extends Warning {
 
     static {
         FUTURE_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new FutureWarning(FUTURE_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new FutureWarning(FUTURE_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public FutureWarning() {

@@ -16,7 +16,8 @@ public class EOFError extends PythonBaseException {
 
     static {
         EOF_ERROR_TYPE
-                .setConstructor(((positionalArguments, namedArguments) -> new EOFError(EOF_ERROR_TYPE, positionalArguments)));
+                .setConstructor(((positionalArguments, namedArguments, callerInstance) -> new EOFError(EOF_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public EOFError(PythonLikeType type) {

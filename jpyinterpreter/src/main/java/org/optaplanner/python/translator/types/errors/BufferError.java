@@ -15,7 +15,8 @@ public class BufferError extends PythonException {
 
     static {
         BUFFER_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new BufferError(BUFFER_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new BufferError(BUFFER_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public BufferError(PythonLikeType type) {

@@ -26,7 +26,7 @@ public class PythonOverloadImplementorTest {
 
         SingleOverload instance = new SingleOverload();
         PythonLikeFunction overload = (PythonLikeFunction) SingleOverload.TYPE.__getAttributeOrError("overload");
-        assertThat(overload.__call__(List.of(instance), Map.of())).isEqualTo(PythonString.valueOf("1"));
+        assertThat(overload.$call(List.of(instance), Map.of(), null)).isEqualTo(PythonString.valueOf("1"));
     }
 
     @Test
@@ -39,10 +39,10 @@ public class PythonOverloadImplementorTest {
 
         DifferentArgCountOverloads instance = new DifferentArgCountOverloads();
         PythonLikeFunction overload = (PythonLikeFunction) DifferentArgCountOverloads.TYPE.__getAttributeOrError("overload");
-        assertThat(overload.__call__(List.of(instance), Map.of())).isEqualTo(PythonString.valueOf("1"));
-        assertThat(overload.__call__(List.of(instance, PythonInteger.valueOf(2)), Map.of()))
+        assertThat(overload.$call(List.of(instance), Map.of(), null)).isEqualTo(PythonString.valueOf("1"));
+        assertThat(overload.$call(List.of(instance, PythonInteger.valueOf(2)), Map.of(), null))
                 .isEqualTo(PythonInteger.valueOf(2));
-        assertThat(overload.__call__(List.of(instance, PythonInteger.valueOf(3)), Map.of()))
+        assertThat(overload.$call(List.of(instance, PythonInteger.valueOf(3)), Map.of(), null))
                 .isEqualTo(PythonInteger.valueOf(3));
     }
 
@@ -58,16 +58,16 @@ public class PythonOverloadImplementorTest {
 
         DifferentArgTypeOverloads instance = new DifferentArgTypeOverloads();
         PythonLikeFunction overload = (PythonLikeFunction) DifferentArgTypeOverloads.TYPE.__getAttributeOrError("overload");
-        assertThat(overload.__call__(List.of(instance, PythonString.valueOf("1")), Map.of()))
+        assertThat(overload.$call(List.of(instance, PythonString.valueOf("1")), Map.of(), null))
                 .isEqualTo(PythonString.valueOf("1"));
 
-        assertThat(overload.__call__(List.of(instance, PythonInteger.valueOf(2)), Map.of()))
+        assertThat(overload.$call(List.of(instance, PythonInteger.valueOf(2)), Map.of(), null))
                 .isEqualTo(PythonInteger.valueOf(2));
-        assertThat(overload.__call__(List.of(instance, PythonInteger.valueOf(3)), Map.of()))
+        assertThat(overload.$call(List.of(instance, PythonInteger.valueOf(3)), Map.of(), null))
                 .isEqualTo(PythonInteger.valueOf(3));
 
-        assertThat(overload.__call__(List.of(instance, PythonBoolean.TRUE), Map.of())).isEqualTo(PythonBoolean.FALSE);
-        assertThat(overload.__call__(List.of(instance, PythonBoolean.FALSE), Map.of())).isEqualTo(PythonBoolean.TRUE);
+        assertThat(overload.$call(List.of(instance, PythonBoolean.TRUE), Map.of(), null)).isEqualTo(PythonBoolean.FALSE);
+        assertThat(overload.$call(List.of(instance, PythonBoolean.FALSE), Map.of(), null)).isEqualTo(PythonBoolean.TRUE);
     }
 
     @Test
@@ -88,14 +88,14 @@ public class PythonOverloadImplementorTest {
 
         VariousOverloads instance = new VariousOverloads();
         PythonLikeFunction overload = (PythonLikeFunction) VariousOverloads.TYPE.__getAttributeOrError("overload");
-        assertThat(overload.__call__(List.of(instance), Map.of())).isEqualTo(PythonString.valueOf("1"));
-        assertThat(overload.__call__(List.of(instance, PythonString.valueOf("a")), Map.of()))
+        assertThat(overload.$call(List.of(instance), Map.of(), null)).isEqualTo(PythonString.valueOf("1"));
+        assertThat(overload.$call(List.of(instance, PythonString.valueOf("a")), Map.of(), null))
                 .isEqualTo(PythonString.valueOf("a 1"));
-        assertThat(overload.__call__(List.of(instance, PythonInteger.valueOf(2)), Map.of()))
+        assertThat(overload.$call(List.of(instance, PythonInteger.valueOf(2)), Map.of(), null))
                 .isEqualTo(PythonInteger.valueOf(2));
-        assertThat(overload.__call__(List.of(instance, PythonString.valueOf("a"), PythonString.valueOf("b")), Map.of()))
+        assertThat(overload.$call(List.of(instance, PythonString.valueOf("a"), PythonString.valueOf("b")), Map.of(), null))
                 .isEqualTo(PythonString.valueOf("a b"));
-        assertThat(overload.__call__(List.of(instance, PythonInteger.valueOf(1), PythonInteger.valueOf(2)), Map.of()))
+        assertThat(overload.$call(List.of(instance, PythonInteger.valueOf(1), PythonInteger.valueOf(2)), Map.of(), null))
                 .isEqualTo(PythonInteger.valueOf(3));
     }
 

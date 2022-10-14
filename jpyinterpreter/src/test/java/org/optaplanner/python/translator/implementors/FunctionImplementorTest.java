@@ -130,7 +130,8 @@ public class FunctionImplementorTest {
 
         Function javaFunction = translatePythonBytecode(pythonCompiledFunction, Function.class);
         MyObject object = new MyObject();
-        object.attributeFunction = (positionalArgs, namedArgs) -> PythonString.valueOf("My name" + positionalArgs.get(0));
+        object.attributeFunction =
+                (positionalArgs, namedArgs, callerInstance) -> PythonString.valueOf("My name" + positionalArgs.get(0));
 
         assertThat(javaFunction.apply(object)).isEqualTo("My name is awesome!");
     }

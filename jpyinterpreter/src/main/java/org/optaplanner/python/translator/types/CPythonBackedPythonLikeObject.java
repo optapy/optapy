@@ -72,8 +72,8 @@ public class CPythonBackedPythonLikeObject extends AbstractPythonLikeObject impl
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         return PythonNone.INSTANCE;
     }
 }

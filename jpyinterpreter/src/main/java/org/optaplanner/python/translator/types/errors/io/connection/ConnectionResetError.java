@@ -15,7 +15,7 @@ public class ConnectionResetError extends ConnectionError {
 
     static {
         CONNECTION_RESET_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new ConnectionResetError(CONNECTION_RESET_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new ConnectionResetError(CONNECTION_RESET_ERROR_TYPE, positionalArguments)));
     }
 
     public ConnectionResetError(PythonLikeType type) {

@@ -16,7 +16,8 @@ public class OSError extends PythonBaseException {
 
     static {
         OS_ERROR_TYPE
-                .setConstructor(((positionalArguments, namedArguments) -> new OSError(OS_ERROR_TYPE, positionalArguments)));
+                .setConstructor(((positionalArguments, namedArguments, callerInstance) -> new OSError(OS_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public OSError(PythonLikeType type) {

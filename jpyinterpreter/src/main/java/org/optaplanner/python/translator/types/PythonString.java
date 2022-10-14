@@ -43,7 +43,6 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
     public final String value;
 
     public final static PythonString EMPTY = new PythonString("");
-    public final static PythonString CALLER_INSTANCE_KEY = new PythonString("$");
 
     static {
         PythonOverloadImplementor.deferDispatchesFor(PythonString::registerMethods);
@@ -51,7 +50,7 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         PythonLikeComparable.setup(STRING_TYPE);
-        STRING_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+        STRING_TYPE.setConstructor((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.size() == 1) { // TODO: Named arguments
                 return UnaryDunderBuiltin.STR.invoke(positionalArguments.get(0));
             } else if (positionalArguments.size() == 2) {

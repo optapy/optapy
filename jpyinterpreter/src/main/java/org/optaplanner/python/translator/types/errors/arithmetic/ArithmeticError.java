@@ -16,7 +16,8 @@ public class ArithmeticError extends PythonException {
 
     static {
         ARITHMETIC_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new ArithmeticError(ARITHMETIC_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new ArithmeticError(ARITHMETIC_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public ArithmeticError(PythonLikeType type) {

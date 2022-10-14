@@ -16,7 +16,7 @@ public class StopAsyncIteration extends PythonException {
 
     static {
         STOP_ASYNC_ITERATION_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new StopAsyncIteration(STOP_ASYNC_ITERATION_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new StopAsyncIteration(STOP_ASYNC_ITERATION_TYPE, positionalArguments)));
     }
 
     private final PythonLikeObject value;

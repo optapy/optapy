@@ -15,7 +15,7 @@ public class FileNotFoundError extends OSError {
 
     static {
         FILE_NOT_FOUND_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new FileNotFoundError(FILE_NOT_FOUND_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new FileNotFoundError(FILE_NOT_FOUND_ERROR_TYPE, positionalArguments)));
     }
 
     public FileNotFoundError(PythonLikeType type) {

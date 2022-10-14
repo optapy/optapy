@@ -15,7 +15,8 @@ public class FileExistsError extends OSError {
 
     static {
         FILE_EXISTS_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new FileExistsError(FILE_EXISTS_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new FileExistsError(FILE_EXISTS_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public FileExistsError(PythonLikeType type) {

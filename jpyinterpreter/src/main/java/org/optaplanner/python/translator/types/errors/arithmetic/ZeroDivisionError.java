@@ -15,7 +15,7 @@ public class ZeroDivisionError extends ArithmeticError {
 
     static {
         ZERO_DIVISION_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new ZeroDivisionError(ZERO_DIVISION_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new ZeroDivisionError(ZERO_DIVISION_ERROR_TYPE, positionalArguments)));
     }
 
     public ZeroDivisionError(PythonLikeType type) {

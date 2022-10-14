@@ -33,18 +33,18 @@ public class UnaryDunderBuiltin implements PythonLikeFunction {
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         if (positionalArguments.size() != 1) {
             throw new ValueError("Function " + DUNDER_METHOD_NAME + " expects 1 positional argument");
         }
         PythonLikeObject object = positionalArguments.get(0);
         PythonLikeFunction dunderMethod = (PythonLikeFunction) object.__getType().__getAttributeOrError(DUNDER_METHOD_NAME);
-        return dunderMethod.__call__(List.of(object), Map.of());
+        return dunderMethod.$call(List.of(object), Map.of(), null);
     }
 
     public PythonLikeObject invoke(PythonLikeObject object) {
         PythonLikeFunction dunderMethod = (PythonLikeFunction) object.__getType().__getAttributeOrError(DUNDER_METHOD_NAME);
-        return dunderMethod.__call__(List.of(object), Map.of());
+        return dunderMethod.$call(List.of(object), Map.of(), null);
     }
 }

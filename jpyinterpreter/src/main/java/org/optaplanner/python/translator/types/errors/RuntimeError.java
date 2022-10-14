@@ -15,7 +15,8 @@ public class RuntimeError extends PythonBaseException {
 
     static {
         RUNTIME_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new RuntimeError(RUNTIME_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new RuntimeError(RUNTIME_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public RuntimeError(String message) {

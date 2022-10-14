@@ -15,7 +15,8 @@ public class ImportError extends PythonBaseException {
 
     static {
         IMPORT_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new ImportError(IMPORT_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new ImportError(IMPORT_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public ImportError(PythonLikeType type) {

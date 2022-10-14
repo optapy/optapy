@@ -15,7 +15,8 @@ public class BlockingIOError extends OSError {
 
     static {
         BLOCKING_IO_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new BlockingIOError(BLOCKING_IO_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new BlockingIOError(BLOCKING_IO_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public BlockingIOError(PythonLikeType type) {

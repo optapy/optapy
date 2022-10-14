@@ -12,7 +12,8 @@ public class ImportWarning extends Warning {
 
     static {
         IMPORT_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new ImportWarning(IMPORT_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new ImportWarning(IMPORT_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public ImportWarning() {

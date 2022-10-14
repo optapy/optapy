@@ -15,7 +15,8 @@ public class BrokenPipeError extends ConnectionError {
 
     static {
         BROKEN_PIPE_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new BrokenPipeError(BROKEN_PIPE_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new BrokenPipeError(BROKEN_PIPE_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public BrokenPipeError(PythonLikeType type) {

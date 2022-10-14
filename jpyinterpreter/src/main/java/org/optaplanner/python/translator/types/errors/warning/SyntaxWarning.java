@@ -12,7 +12,8 @@ public class SyntaxWarning extends Warning {
 
     static {
         SYNTAX_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new SyntaxWarning(SYNTAX_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new SyntaxWarning(SYNTAX_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public SyntaxWarning() {

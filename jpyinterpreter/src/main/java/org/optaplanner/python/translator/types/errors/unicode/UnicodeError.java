@@ -13,7 +13,8 @@ public class UnicodeError extends ValueError {
 
     static {
         UNICODE_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new UnicodeError(UNICODE_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new UnicodeError(UNICODE_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public UnicodeError() {

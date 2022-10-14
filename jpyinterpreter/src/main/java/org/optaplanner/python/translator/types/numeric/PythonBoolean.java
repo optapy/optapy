@@ -43,7 +43,7 @@ public class PythonBoolean extends PythonInteger {
                     new PythonFunctionSignature(new MethodDescriptor(
                             PythonBoolean.class.getMethod("asString")),
                             STRING_TYPE));
-            BOOLEAN_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+            BOOLEAN_TYPE.setConstructor(((positionalArguments, namedArguments, callerInstance) -> {
                 if (namedArguments.size() > 1) {
                     throw new ValueError("bool does not take named arguments");
                 }
@@ -100,12 +100,12 @@ public class PythonBoolean extends PythonInteger {
             PythonLikeType testedType = tested.__getType();
             PythonLikeFunction boolMethod = (PythonLikeFunction) testedType.__getAttributeOrNull("__bool__");
             if (boolMethod != null) {
-                return isTruthful(boolMethod.__call__(List.of(tested), Map.of()));
+                return isTruthful(boolMethod.$call(List.of(tested), Map.of(), null));
             }
 
             PythonLikeFunction lenMethod = (PythonLikeFunction) testedType.__getAttributeOrNull("__len__");
             if (lenMethod != null) {
-                return isTruthful(lenMethod.__call__(List.of(tested), Map.of()));
+                return isTruthful(lenMethod.$call(List.of(tested), Map.of(), null));
             }
 
             return true;

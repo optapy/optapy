@@ -33,7 +33,7 @@ public class PythonRange extends AbstractPythonLikeObject implements List<Python
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
-        RANGE_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+        RANGE_TYPE.setConstructor(((positionalArguments, namedArguments, callerInstance) -> {
             PythonLikeObject start;
             PythonLikeObject stop;
             PythonLikeObject step;

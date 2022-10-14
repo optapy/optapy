@@ -34,7 +34,7 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
-        TUPLE_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+        TUPLE_TYPE.setConstructor((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.isEmpty()) {
                 return new PythonLikeTuple();
             } else if (positionalArguments.size() == 1) {

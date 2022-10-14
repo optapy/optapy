@@ -38,7 +38,7 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
-        LIST_TYPE.setConstructor((positionalArguments, namedArguments) -> {
+        LIST_TYPE.setConstructor((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.size() == 0) {
                 return new PythonLikeList();
             } else if (positionalArguments.size() == 1) {

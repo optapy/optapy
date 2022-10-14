@@ -21,8 +21,8 @@ public class JavaMethodReference implements PythonLikeFunction {
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         Object self;
         Object[] args;
         if (Modifier.isStatic(method.getModifiers())) {
@@ -58,9 +58,6 @@ public class JavaMethodReference implements PythonLikeFunction {
         }
 
         for (PythonString key : namedArguments.keySet()) {
-            if (key == PythonString.CALLER_INSTANCE_KEY) {
-                continue;
-            }
             int index = parameterNameToIndexMap.get(key.value);
             PythonLikeObject argument = namedArguments.get(key);
             out[index] = JavaPythonTypeConversionImplementor.convertPythonObjectToJavaType(parameterTypes[index], argument);

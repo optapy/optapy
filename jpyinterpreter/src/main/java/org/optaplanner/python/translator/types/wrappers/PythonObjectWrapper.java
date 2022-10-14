@@ -52,8 +52,8 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
     }
 
     @Override
-    public PythonLikeObject __call__(List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments) {
+    public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
+            Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
         return CPythonBackedPythonInterpreter.callPythonReference($cpythonReference, positionalArguments, namedArguments);
     }
 
@@ -64,7 +64,7 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
         }
 
         PythonLikeFunction lessThan = (PythonLikeFunction) __getType().__getAttributeOrError("__lt__");
-        PythonLikeObject result = lessThan.__call__(List.of(this, other), Map.of());
+        PythonLikeObject result = lessThan.$call(List.of(this, other), Map.of(), null);
 
         if (result instanceof PythonBoolean) {
             if (((PythonBoolean) result).getBooleanValue()) {
@@ -92,7 +92,7 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
             return super.equals(o);
         }
         PythonLikeFunction equals = (PythonLikeFunction) maybeEquals;
-        PythonLikeObject result = equals.__call__(List.of(this, other), Map.of());
+        PythonLikeObject result = equals.$call(List.of(this, other), Map.of(), null);
         if (result instanceof PythonBoolean) {
             return ((PythonBoolean) result).getBooleanValue();
         }
@@ -106,7 +106,7 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
             return super.hashCode();
         }
         PythonLikeFunction hash = (PythonLikeFunction) maybeHash;
-        PythonLikeObject result = hash.__call__(List.of(this), Map.of());
+        PythonLikeObject result = hash.$call(List.of(this), Map.of(), null);
         if (result instanceof PythonInteger) {
             return ((PythonInteger) result).value.hashCode();
         } else {
@@ -126,7 +126,7 @@ public class PythonObjectWrapper extends CPythonBackedPythonLikeObject
             return super.toString();
         }
         PythonLikeFunction str = (PythonLikeFunction) maybeStr;
-        PythonLikeObject result = str.__call__(List.of(this), Map.of());
+        PythonLikeObject result = str.$call(List.of(this), Map.of(), null);
         return result.toString();
     }
 }

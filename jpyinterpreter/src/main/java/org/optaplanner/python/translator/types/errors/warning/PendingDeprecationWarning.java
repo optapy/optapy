@@ -12,7 +12,8 @@ public class PendingDeprecationWarning extends Warning {
 
     static {
         PENDING_DEPRECATION_WARNING_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new PendingDeprecationWarning(PENDING_DEPRECATION_WARNING_TYPE, positionalArguments)));
+                namedArguments,
+                callerInstance) -> new PendingDeprecationWarning(PENDING_DEPRECATION_WARNING_TYPE, positionalArguments)));
     }
 
     public PendingDeprecationWarning() {

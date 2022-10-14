@@ -16,7 +16,8 @@ public class SystemExit extends PythonBaseException {
 
     static {
         SYSTEM_EXIT_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new SystemExit(SYSTEM_EXIT_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new SystemExit(SYSTEM_EXIT_TYPE,
+                        positionalArguments)));
     }
 
     public SystemExit(PythonLikeType type) {

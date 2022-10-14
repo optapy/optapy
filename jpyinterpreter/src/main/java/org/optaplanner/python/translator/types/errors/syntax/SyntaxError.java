@@ -16,7 +16,8 @@ public class SyntaxError extends PythonException {
 
     static {
         SYNTAX_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new SyntaxError(SYNTAX_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new SyntaxError(SYNTAX_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public SyntaxError(PythonLikeType type) {

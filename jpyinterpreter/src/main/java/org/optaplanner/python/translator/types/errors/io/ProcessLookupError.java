@@ -15,7 +15,7 @@ public class ProcessLookupError extends OSError {
 
     static {
         PROCESS_LOOKUP_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new ProcessLookupError(PROCESS_LOOKUP_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new ProcessLookupError(PROCESS_LOOKUP_ERROR_TYPE, positionalArguments)));
     }
 
     public ProcessLookupError(PythonLikeType type) {

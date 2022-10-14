@@ -12,7 +12,8 @@ public class NameError extends PythonException {
 
     static {
         NAME_ERROR_TYPE
-                .setConstructor(((positionalArguments, namedArguments) -> new NameError(NAME_ERROR_TYPE, positionalArguments)));
+                .setConstructor(((positionalArguments, namedArguments, callerInstance) -> new NameError(NAME_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public NameError() {

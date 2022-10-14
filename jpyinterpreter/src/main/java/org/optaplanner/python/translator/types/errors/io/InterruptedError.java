@@ -15,7 +15,8 @@ public class InterruptedError extends OSError {
 
     static {
         INTERRUPTED_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new InterruptedError(INTERRUPTED_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new InterruptedError(INTERRUPTED_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public InterruptedError(PythonLikeType type) {

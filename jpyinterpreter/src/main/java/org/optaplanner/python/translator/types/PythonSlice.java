@@ -29,7 +29,7 @@ public class PythonSlice extends AbstractPythonLikeObject {
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
         // Constructor
-        SLICE_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+        SLICE_TYPE.setConstructor(((positionalArguments, namedArguments, callerInstance) -> {
             PythonLikeObject start;
             PythonLikeObject stop;
             PythonLikeObject step;

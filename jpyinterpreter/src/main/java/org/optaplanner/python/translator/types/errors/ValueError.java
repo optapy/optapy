@@ -12,7 +12,8 @@ public class ValueError extends PythonException {
 
     static {
         VALUE_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new ValueError(VALUE_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new ValueError(VALUE_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public ValueError() {

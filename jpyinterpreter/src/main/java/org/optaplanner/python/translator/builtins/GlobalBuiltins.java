@@ -388,12 +388,13 @@ public class GlobalBuiltins {
         return out;
     }
 
-    public static PythonBoolean all(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs) {
+    public static PythonBoolean all(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs,
+            PythonLikeObject instance) {
         Iterator<PythonLikeObject> iterator;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             iterator = (Iterator<PythonLikeObject>) UnaryDunderBuiltin.ITERATOR.invoke(positionalArgs.get(0));
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("iterable"))) {
@@ -413,12 +414,13 @@ public class GlobalBuiltins {
         return PythonBoolean.TRUE;
     }
 
-    public static PythonBoolean any(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs) {
+    public static PythonBoolean any(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs,
+            PythonLikeObject instance) {
         Iterator<PythonLikeObject> iterator;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             iterator = (Iterator<PythonLikeObject>) UnaryDunderBuiltin.ITERATOR.invoke(positionalArgs.get(0));
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("iterable"))) {
@@ -438,12 +440,13 @@ public class GlobalBuiltins {
         return PythonBoolean.FALSE;
     }
 
-    public static PythonString ascii(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs) {
+    public static PythonString ascii(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs,
+            PythonLikeObject instance) {
         PythonLikeObject object;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("object"))) {
@@ -474,12 +477,12 @@ public class GlobalBuiltins {
     }
 
     public static PythonString bin(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("x"))) {
@@ -506,12 +509,12 @@ public class GlobalBuiltins {
     }
 
     public static PythonBoolean callable(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("object"))) {
@@ -524,12 +527,12 @@ public class GlobalBuiltins {
     }
 
     public static PythonString chr(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("i"))) {
@@ -548,7 +551,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonNone delattr(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
         PythonString name;
 
@@ -574,7 +577,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeObject enumerate(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject iterable;
         PythonLikeObject start = PythonInteger.valueOf(0);
 
@@ -640,13 +643,13 @@ public class GlobalBuiltins {
     }
 
     public static PythonIterator filter(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject function;
         PythonLikeObject iterable;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 2 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 2 && keywordArgs.isEmpty()) {
             function = positionalArgs.get(0);
             iterable = positionalArgs.get(1);
         } else if (positionalArgs.size() == 1) {
@@ -681,7 +684,7 @@ public class GlobalBuiltins {
         PythonLikeFunction predicate;
 
         if (function == PythonNone.INSTANCE) {
-            predicate = (pos, keywords) -> pos.get(0);
+            predicate = (pos, keywords, callerInstance) -> pos.get(0);
         } else {
             predicate = (PythonLikeFunction) function;
         }
@@ -689,18 +692,19 @@ public class GlobalBuiltins {
         return new PythonIterator(StreamSupport.stream(
                 Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED),
                 false)
-                .filter(element -> PythonBoolean.isTruthful(predicate.__call__(List.of((PythonLikeObject) element), null)))
+                .filter(element -> PythonBoolean
+                        .isTruthful(predicate.$call(List.of((PythonLikeObject) element), Map.of(), null)))
                 .iterator());
     }
 
     public static PythonLikeObject format(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject toFormat;
         PythonLikeObject formatSpec = PythonString.valueOf("");
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 2 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 2 && keywordArgs.isEmpty()) {
             toFormat = positionalArgs.get(0);
             formatSpec = positionalArgs.get(1);
         } else if (positionalArgs.size() == 1) {
@@ -721,7 +725,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeObject getattr(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
         PythonString name;
         PythonLikeObject defaultValue = null;
@@ -752,7 +756,7 @@ public class GlobalBuiltins {
         PythonLikeFunction getAttribute = (PythonLikeFunction) object.__getType().__getAttributeOrError("__getattribute__");
 
         try {
-            return getAttribute.__call__(List.of(object, name), null);
+            return getAttribute.$call(List.of(object, name), Map.of(), null);
         } catch (AttributeError attributeError) {
             if (defaultValue != null) {
                 return defaultValue;
@@ -763,10 +767,10 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeDict globals(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (!positionalArgs.isEmpty() && keywordArgs.size() <= 1) {
+        if (!positionalArgs.isEmpty() && keywordArgs.isEmpty()) {
             throw new ValueError("globals expects 0 arguments, got " + positionalArgs.size());
         }
         Class<?> callerClass = stackWalker.getCallerClass();
@@ -776,14 +780,14 @@ public class GlobalBuiltins {
                     (Map) callerClass.getField(PythonBytecodeToJavaBytecodeTranslator.GLOBALS_MAP_STATIC_FIELD_NAME).get(null);
             return PythonLikeDict.mirror(globalsMap);
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new IllegalStateException("Caller is not a generated class");
+            throw new IllegalStateException("Caller (" + callerClass + ") is not a generated class", e);
         }
     }
 
     public static PythonBoolean hasattr(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         try {
-            getattr(positionalArgs, keywordArgs);
+            getattr(positionalArgs, keywordArgs, instance);
             return PythonBoolean.TRUE;
         } catch (AttributeError error) {
             return PythonBoolean.FALSE;
@@ -791,12 +795,12 @@ public class GlobalBuiltins {
     }
 
     public static PythonString hex(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("x"))) {
@@ -823,12 +827,12 @@ public class GlobalBuiltins {
     }
 
     public static PythonInteger id(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("object"))) {
@@ -848,7 +852,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeFunction input(PythonInterpreter interpreter) {
-        return (positionalArguments, namedArguments) -> {
+        return (positionalArguments, namedArguments, callerInstance) -> {
             PythonString prompt = null;
             if (positionalArguments.size() == 1) {
                 prompt = (PythonString) positionalArguments.get(0);
@@ -869,7 +873,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonBoolean isinstance(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
         PythonLikeObject classInfo;
 
@@ -891,7 +895,7 @@ public class GlobalBuiltins {
             return PythonBoolean.valueOf(((PythonLikeType) classInfo).isInstance(object));
         } else if (classInfo instanceof List) {
             for (PythonLikeObject possibleType : (List<PythonLikeObject>) classInfo) {
-                if (isinstance(List.of(object, possibleType), null).getBooleanValue()) {
+                if (isinstance(List.of(object, possibleType), null, instance).getBooleanValue()) {
                     return PythonBoolean.TRUE;
                 }
             }
@@ -902,7 +906,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonBoolean issubclass(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeType type;
         PythonLikeObject classInfo;
 
@@ -933,7 +937,7 @@ public class GlobalBuiltins {
             return PythonBoolean.valueOf(type.isSubclassOf((PythonLikeType) classInfo));
         } else if (classInfo instanceof List) {
             for (PythonLikeObject possibleType : (List<PythonLikeObject>) classInfo) {
-                if (issubclass(List.of(type, possibleType), null).getBooleanValue()) {
+                if (issubclass(List.of(type, possibleType), null, instance).getBooleanValue()) {
                     return PythonBoolean.TRUE;
                 }
             }
@@ -944,18 +948,18 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeDict locals(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         throw new ValueError("builtin locals is not supported when executed in Java bytecode");
     }
 
     public static PythonIterator map(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeFunction function;
         List<PythonLikeObject> iterableList = new ArrayList<>();
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() >= 2 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() >= 2 && keywordArgs.isEmpty()) {
             function = (PythonLikeFunction) positionalArgs.get(0);
             iterableList = positionalArgs.subList(1, positionalArgs.size());
         } else if (positionalArgs.size() == 1 && keywordArgs.containsKey(PythonString.valueOf("iterable"))) {
@@ -1003,11 +1007,12 @@ public class GlobalBuiltins {
         return new PythonIterator(StreamSupport.stream(
                 Spliterators.spliteratorUnknownSize(iteratorIterator, Spliterator.ORDERED),
                 false)
-                .map(element -> function.__call__(element, null))
+                .map(element -> function.$call(element, Map.of(), null))
                 .iterator());
     }
 
-    public static PythonLikeObject min(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs) {
+    public static PythonLikeObject min(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs,
+            PythonLikeObject instance) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
         if (positionalArgs.isEmpty()) {
@@ -1018,8 +1023,8 @@ public class GlobalBuiltins {
             return defaultValue;
         } else if (positionalArgs.size() == 1) {
             Iterator<Comparable> iterator = (Iterator<Comparable>) ((PythonLikeFunction) (positionalArgs.get(0).__getType()
-                    .__getAttributeOrError("__iter__"))).__call__(List.of(positionalArgs.get(0)),
-                            Map.of());
+                    .__getAttributeOrError("__iter__"))).$call(List.of(positionalArgs.get(0)),
+                            Map.of(), null);
             Comparable min = null;
             for (Iterator<Comparable> it = iterator; it.hasNext();) {
                 Comparable item = it.next();
@@ -1052,7 +1057,8 @@ public class GlobalBuiltins {
         }
     }
 
-    public static PythonLikeObject max(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs) {
+    public static PythonLikeObject max(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs,
+            PythonLikeObject instance) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
         if (positionalArgs.isEmpty()) {
@@ -1063,8 +1069,8 @@ public class GlobalBuiltins {
             return defaultValue;
         } else if (positionalArgs.size() == 1) {
             Iterator<Comparable> iterator = (Iterator<Comparable>) ((PythonLikeFunction) (positionalArgs.get(0).__getType()
-                    .__getAttributeOrError("__iter__"))).__call__(List.of(positionalArgs.get(0)),
-                            Map.of());
+                    .__getAttributeOrError("__iter__"))).$call(List.of(positionalArgs.get(0)),
+                            Map.of(), null);
             Comparable max = null;
             for (Iterator<Comparable> it = iterator; it.hasNext();) {
                 Comparable item = it.next();
@@ -1098,12 +1104,12 @@ public class GlobalBuiltins {
     }
 
     public static PythonString oct(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             object = positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("x"))) {
@@ -1130,12 +1136,12 @@ public class GlobalBuiltins {
     }
 
     public static PythonInteger ord(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonString character;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 1 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 1 && keywordArgs.isEmpty()) {
             character = (PythonString) positionalArgs.get(0);
         } else if (positionalArgs.isEmpty() && keywordArgs.size() == 1
                 && keywordArgs.containsKey(PythonString.valueOf("c"))) {
@@ -1152,14 +1158,14 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeObject pow(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject base;
         PythonLikeObject exp;
         PythonLikeObject mod = null;
 
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
-        if (positionalArgs.size() == 3 && keywordArgs.size() <= 1) {
+        if (positionalArgs.size() == 3 && keywordArgs.isEmpty()) {
             base = positionalArgs.get(0);
             exp = positionalArgs.get(1);
             mod = positionalArgs.get(2);
@@ -1189,11 +1195,8 @@ public class GlobalBuiltins {
 
     public static PythonLikeFunction print(PythonInterpreter interpreter) {
 
-        return (positionalArgs, keywordArgs) -> {
+        return (positionalArgs, keywordArgs, callerInstance) -> {
             List<PythonLikeObject> objects = positionalArgs;
-            if (keywordArgs == null) {
-                keywordArgs = Map.of();
-            }
 
             String sep;
             if (!keywordArgs.containsKey(PythonString.valueOf("sep"))
@@ -1237,7 +1240,7 @@ public class GlobalBuiltins {
     };
 
     public static PythonLikeObject reversed(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
         PythonLikeObject sequence;
@@ -1277,7 +1280,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeObject round(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
         if (!(positionalArgs.size() == 1 || positionalArgs.size() == 2)) {
@@ -1287,14 +1290,14 @@ public class GlobalBuiltins {
         PythonLikeObject number = positionalArgs.get(0);
         PythonLikeType numberType = number.__getType();
         if (numberType.__getAttributeOrNull("__round__") != null) {
-            return ((PythonLikeFunction) numberType.__getAttributeOrNull("__round__")).__call__(positionalArgs, keywordArgs);
+            return ((PythonLikeFunction) numberType.__getAttributeOrNull("__round__")).$call(positionalArgs, keywordArgs, null);
         }
 
         throw new ValueError(numberType + " does not has a __round__ method");
     }
 
     public static PythonLikeObject setattr(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         PythonLikeObject object;
         PythonString name;
         PythonLikeObject value;
@@ -1328,7 +1331,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeObject sorted(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
         PythonLikeObject iterable = positionalArgs.get(0);
@@ -1353,7 +1356,7 @@ public class GlobalBuiltins {
             PythonLikeObject key = keywordArgs.get(PythonString.valueOf("key"));
             if (key != PythonNone.INSTANCE) {
                 final PythonLikeFunction keyFunction = (PythonLikeFunction) key;
-                final Function keyExtractor = item -> keyFunction.__call__(List.of((PythonLikeObject) item), null);
+                final Function keyExtractor = item -> keyFunction.$call(List.of((PythonLikeObject) item), Map.of(), null);
                 decoratedList = new ArrayList<>(out.size());
                 for (int i = 0; i < out.size(); i++) {
                     decoratedList.add(
@@ -1379,7 +1382,8 @@ public class GlobalBuiltins {
         return out;
     }
 
-    public static PythonLikeObject sum(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs) {
+    public static PythonLikeObject sum(List<PythonLikeObject> positionalArgs, Map<PythonString, PythonLikeObject> keywordArgs,
+            PythonLikeObject instance) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
 
         PythonLikeObject iterable;
@@ -1410,13 +1414,13 @@ public class GlobalBuiltins {
     }
 
     public static PythonSuperObject superOfCaller(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs,
+            PythonLikeObject instance) {
         if (positionalArgs.isEmpty()) {
             Class<?> callerClass = stackWalker.getCallerClass();
             try {
                 PythonLikeType pythonClass = (PythonLikeType) callerClass
                         .getField(PythonBytecodeToJavaBytecodeTranslator.CLASS_CELL_STATIC_FIELD_NAME).get(null);
-                PythonLikeObject instance = keywordArgs.get(PythonString.CALLER_INSTANCE_KEY);
                 if (pythonClass == null) {
                     throw new RuntimeError("super(): no arguments");
                 }
@@ -1434,7 +1438,7 @@ public class GlobalBuiltins {
             return new PythonSuperObject(pythonClass);
         } else if (positionalArgs.size() == 2) {
             PythonLikeType pythonClass = (PythonLikeType) positionalArgs.get(0);
-            PythonLikeObject instance = positionalArgs.get(1);
+            instance = positionalArgs.get(1);
             return new PythonSuperObject(pythonClass, instance);
         } else {
             throw new TypeError("super() takes 0 to 2 arguments, got " + positionalArgs.size());
@@ -1442,7 +1446,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeObject vars(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         if (positionalArgs.isEmpty()) {
             throw new ValueError("0-argument version of vars is not supported when executed in Java bytecode");
         }
@@ -1451,7 +1455,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonIterator zip(List<PythonLikeObject> positionalArgs,
-            Map<PythonString, PythonLikeObject> keywordArgs) {
+            Map<PythonString, PythonLikeObject> keywordArgs, PythonLikeObject instance) {
         keywordArgs = (keywordArgs != null) ? keywordArgs : Map.of();
         List<PythonLikeObject> iterableList = positionalArgs;
         boolean isStrict = false;
@@ -1519,9 +1523,7 @@ public class GlobalBuiltins {
     }
 
     public static PythonLikeFunction importFunction(PythonInterpreter pythonInterpreter) {
-        return (positionalArguments, namedArguments) -> {
-            namedArguments = (namedArguments) != null ? namedArguments : Map.of();
-
+        return (positionalArguments, namedArguments, callerInstance) -> {
             PythonString name;
             PythonLikeDict globals;
             PythonLikeDict locals;

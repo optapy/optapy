@@ -15,7 +15,8 @@ public class IndexError extends LookupError {
 
     static {
         INDEX_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new IndexError(INDEX_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new IndexError(INDEX_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public IndexError(PythonLikeType type) {

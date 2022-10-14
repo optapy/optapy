@@ -15,7 +15,8 @@ public class KeyError extends LookupError {
 
     static {
         KEY_ERROR_TYPE
-                .setConstructor(((positionalArguments, namedArguments) -> new KeyError(KEY_ERROR_TYPE, positionalArguments)));
+                .setConstructor(((positionalArguments, namedArguments, callerInstance) -> new KeyError(KEY_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public KeyError(PythonLikeType type) {

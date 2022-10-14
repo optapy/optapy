@@ -15,7 +15,8 @@ public class IndentationError extends SyntaxError {
 
     static {
         INDENTATION_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new IndentationError(INDENTATION_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new IndentationError(INDENTATION_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public IndentationError(PythonLikeType type) {

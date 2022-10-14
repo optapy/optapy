@@ -16,7 +16,8 @@ public class StopIteration extends PythonException {
 
     static {
         STOP_ITERATION_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new StopIteration(STOP_ITERATION_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new StopIteration(STOP_ITERATION_TYPE,
+                        positionalArguments)));
     }
 
     private final PythonLikeObject value;

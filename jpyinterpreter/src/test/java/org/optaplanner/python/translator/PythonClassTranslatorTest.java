@@ -62,10 +62,10 @@ public class PythonClassTranslatorTest {
                 PythonClassTranslator.getJavaMethodName("get_age"));
         assertThat(generatedClass.getMethod(PythonClassTranslator.getJavaMethodName("get_age")).getParameterTypes()).isEmpty();
 
-        PythonLikeObject classObject = classType.__call__(List.of(PythonInteger.valueOf(10)), Map.of());
+        PythonLikeObject classObject = classType.$call(List.of(PythonInteger.valueOf(10)), Map.of(), null);
         PythonLikeFunction getAgeFunction =
                 (PythonLikeFunction) classObject.$method$__getattribute__(PythonString.valueOf("get_age"));
-        assertThat(getAgeFunction.__call__(List.of(), Map.of())).isEqualTo(PythonInteger.valueOf(10));
+        assertThat(getAgeFunction.$call(List.of(), Map.of(), null)).isEqualTo(PythonInteger.valueOf(10));
     }
 
     @Test
@@ -113,9 +113,12 @@ public class PythonClassTranslatorTest {
                     PythonClassTranslator.getJavaMethodName("__init__"),
                     "compareTo");
 
-            Comparable<Object> object1 = (Comparable<Object>) classType.__call__(List.of(PythonInteger.valueOf(1)), Map.of());
-            Comparable<Object> object2 = (Comparable<Object>) classType.__call__(List.of(PythonInteger.valueOf(2)), Map.of());
-            Comparable<Object> object1b = (Comparable<Object>) classType.__call__(List.of(PythonInteger.valueOf(1)), Map.of());
+            Comparable<Object> object1 =
+                    (Comparable<Object>) classType.$call(List.of(PythonInteger.valueOf(1)), Map.of(), null);
+            Comparable<Object> object2 =
+                    (Comparable<Object>) classType.$call(List.of(PythonInteger.valueOf(2)), Map.of(), null);
+            Comparable<Object> object1b =
+                    (Comparable<Object>) classType.$call(List.of(PythonInteger.valueOf(1)), Map.of(), null);
 
             assertThat(object1.compareTo(object2))
                     .withFailMessage(compareOp.name() + " a < b incorrect")
@@ -178,10 +181,10 @@ public class PythonClassTranslatorTest {
                 PythonClassTranslator.getJavaMethodName("__init__"),
                 "equals");
 
-        Object object1a = classType.__call__(List.of(PythonInteger.valueOf(1)), Map.of());
-        Object object1b = classType.__call__(List.of(PythonInteger.valueOf(1)), Map.of());
-        Object object2 = classType.__call__(List.of(PythonInteger.valueOf(2)), Map.of());
-        Object object3 = classType.__call__(List.of(PythonInteger.valueOf(Long.MAX_VALUE)), Map.of());
+        Object object1a = classType.$call(List.of(PythonInteger.valueOf(1)), Map.of(), null);
+        Object object1b = classType.$call(List.of(PythonInteger.valueOf(1)), Map.of(), null);
+        Object object2 = classType.$call(List.of(PythonInteger.valueOf(2)), Map.of(), null);
+        Object object3 = classType.$call(List.of(PythonInteger.valueOf(Long.MAX_VALUE)), Map.of(), null);
 
         assertThat(object1a.equals(object2))
                 .isFalse();

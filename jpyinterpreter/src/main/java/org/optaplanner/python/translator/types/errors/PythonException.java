@@ -15,7 +15,8 @@ public class PythonException extends PythonBaseException {
 
     static {
         EXCEPTION_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new PythonException(EXCEPTION_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new PythonException(EXCEPTION_TYPE,
+                        positionalArguments)));
     }
 
     public PythonException(PythonLikeType type) {

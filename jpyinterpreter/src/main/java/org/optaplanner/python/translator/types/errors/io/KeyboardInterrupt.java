@@ -16,7 +16,8 @@ public class KeyboardInterrupt extends PythonBaseException {
 
     static {
         KEYBOARD_INTERRUPT_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new KeyboardInterrupt(KEYBOARD_INTERRUPT_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new KeyboardInterrupt(KEYBOARD_INTERRUPT_TYPE,
+                        positionalArguments)));
     }
 
     public KeyboardInterrupt(PythonLikeType type) {

@@ -45,7 +45,7 @@ public class PythonByteArray extends AbstractPythonLikeObject implements PythonB
     }
 
     private static PythonLikeType registerMethods() throws NoSuchMethodException {
-        BYTE_ARRAY_TYPE.setConstructor(((positionalArguments, namedArguments) -> {
+        BYTE_ARRAY_TYPE.setConstructor(((positionalArguments, namedArguments, callerInstance) -> {
             if (positionalArguments.isEmpty()) {
                 return new PythonByteArray();
             } else if (positionalArguments.size() == 1) {

@@ -79,7 +79,7 @@ public class StringImplementorTest {
         PythonInterpreter interpreter = Mockito.mock(PythonInterpreter.class);
 
         Mockito.when(interpreter.getGlobal(Mockito.anyMap(), Mockito.same("print")))
-                .thenReturn(((PythonLikeFunction) (pos, keywords) -> {
+                .thenReturn(((PythonLikeFunction) (pos, keywords, callerInstance) -> {
                     interpreter.write(UnaryDunderBuiltin.STR.invoke(pos.get(0)) + "\n");
                     return PythonNone.INSTANCE;
                 }));

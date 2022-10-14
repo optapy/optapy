@@ -15,7 +15,7 @@ public class ChildProcessError extends OSError {
 
     static {
         CHILD_PROCESS_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new ChildProcessError(CHILD_PROCESS_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new ChildProcessError(CHILD_PROCESS_ERROR_TYPE, positionalArguments)));
     }
 
     public ChildProcessError(PythonLikeType type) {

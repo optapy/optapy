@@ -1,5 +1,6 @@
 package org.optaplanner.python.translator.implementors;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -140,10 +141,13 @@ public class StringImplementor {
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeFunction.class));
         methodVisitor.visitInsn(Opcodes.SWAP);
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 1);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                Type.getMethodDescriptor(Type.getType(Map.class)),
+                false);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class), "__call__",
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class), "$call",
                 Type.getMethodDescriptor(Type.getType(PythonLikeObject.class), Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class), Type.getType(PythonLikeObject.class)),
                 true);
     }
 }

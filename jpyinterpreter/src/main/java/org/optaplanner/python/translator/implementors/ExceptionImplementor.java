@@ -2,6 +2,7 @@ package org.optaplanner.python.translator.implementors;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -71,11 +72,15 @@ public class ExceptionImplementor {
 
         // Construct an instance of the type and throw it
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                Type.getMethodDescriptor(Type.getType(Map.class)),
+                false);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
-                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                "$call", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
                 true);
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Throwable.class));
         methodVisitor.visitInsn(Opcodes.ATHROW);
@@ -344,13 +349,16 @@ public class ExceptionImplementor {
         methodVisitor.visitInsn(Opcodes.POP);
 
         // Use null for keywords
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                Type.getMethodDescriptor(Type.getType(Map.class)),
+                false);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-
         // Call the exit function
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
-                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                "$call", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
                 true);
 
         // Restore the stack, raising the returned value to the top of the stack

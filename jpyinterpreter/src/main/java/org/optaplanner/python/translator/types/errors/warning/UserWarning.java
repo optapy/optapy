@@ -12,7 +12,8 @@ public class UserWarning extends Warning {
 
     static {
         USER_WARNING_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new UserWarning(USER_WARNING_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new UserWarning(USER_WARNING_TYPE,
+                        positionalArguments)));
     }
 
     public UserWarning() {

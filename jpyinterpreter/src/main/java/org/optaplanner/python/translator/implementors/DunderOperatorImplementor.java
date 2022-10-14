@@ -3,6 +3,7 @@ package org.optaplanner.python.translator.implementors;
 import static org.optaplanner.python.translator.types.BuiltinTypes.BASE_TYPE;
 import static org.optaplanner.python.translator.types.BuiltinTypes.NOT_IMPLEMENTED_TYPE;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -96,11 +97,15 @@ public class DunderOperatorImplementor {
         pushArgumentIntoList(methodVisitor);
 
         // Stack is now method, argList
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                Type.getMethodDescriptor(Type.getType(Map.class)),
+                false);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
-                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                "$call", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
                 true);
     }
 
@@ -344,11 +349,15 @@ public class DunderOperatorImplementor {
         pushArgumentIntoList(methodVisitor);
 
         // Stack is now (TOS1, TOS,)? method, argList
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                Type.getMethodDescriptor(Type.getType(Map.class)),
+                false);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
-                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                "$call", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
                 true);
 
         // Stack is now (TOS1, TOS,)? method_result
@@ -405,11 +414,15 @@ public class DunderOperatorImplementor {
             pushArgumentIntoList(methodVisitor);
 
             // Stack is now method, argList
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                    Type.getMethodDescriptor(Type.getType(Map.class)),
+                    false);
             methodVisitor.visitInsn(Opcodes.ACONST_NULL);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
-                    "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                    "$call", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                             Type.getType(List.class),
-                            Type.getType(Map.class)),
+                            Type.getType(Map.class),
+                            Type.getType(PythonLikeObject.class)),
                     true);
 
             // Stack is now method_result
@@ -474,11 +487,15 @@ public class DunderOperatorImplementor {
         pushArgumentIntoList(methodVisitor);
 
         // Stack is now method, argList
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                Type.getMethodDescriptor(Type.getType(Map.class)),
+                false);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
-                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                "$call", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
                 true);
 
         // Stack is now method_result
@@ -550,11 +567,15 @@ public class DunderOperatorImplementor {
         pushArgumentIntoList(methodVisitor);
 
         // Stack is now method, argList
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Collections.class), "emptyMap",
+                Type.getMethodDescriptor(Type.getType(Map.class)),
+                false);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
-                "__call__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                "$call", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                         Type.getType(List.class),
-                        Type.getType(Map.class)),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
                 true);
     }
 

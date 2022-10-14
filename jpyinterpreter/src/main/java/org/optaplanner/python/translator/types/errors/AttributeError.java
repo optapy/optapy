@@ -12,7 +12,8 @@ public class AttributeError extends PythonException {
 
     static {
         ATTRIBUTE_ERROR_TYPE.setConstructor(
-                ((positionalArguments, namedArguments) -> new AttributeError(ATTRIBUTE_ERROR_TYPE, positionalArguments)));
+                ((positionalArguments, namedArguments, callerInstance) -> new AttributeError(ATTRIBUTE_ERROR_TYPE,
+                        positionalArguments)));
     }
 
     public AttributeError() {

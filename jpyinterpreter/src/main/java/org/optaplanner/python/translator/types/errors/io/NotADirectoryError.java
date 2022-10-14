@@ -15,7 +15,7 @@ public class NotADirectoryError extends OSError {
 
     static {
         NOT_A_DIRECTORY_ERROR_TYPE.setConstructor(((positionalArguments,
-                namedArguments) -> new NotADirectoryError(NOT_A_DIRECTORY_ERROR_TYPE, positionalArguments)));
+                namedArguments, callerInstance) -> new NotADirectoryError(NOT_A_DIRECTORY_ERROR_TYPE, positionalArguments)));
     }
 
     public NotADirectoryError(PythonLikeType type) {

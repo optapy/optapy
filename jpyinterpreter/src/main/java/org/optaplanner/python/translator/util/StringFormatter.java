@@ -453,7 +453,7 @@ public class StringFormatter {
                 break;
             }
             case ASCII_STRING: {
-                result = GlobalBuiltins.ascii(List.of(toConvert), null).value;
+                result = GlobalBuiltins.ascii(List.of(toConvert), Map.of(), null).value;
                 break;
             }
             case LITERAL_PERCENT: {
@@ -561,7 +561,7 @@ public class StringFormatter {
                         toConvert = UnaryDunderBuiltin.REPRESENTATION.invoke(toConvert);
                         break;
                     case "a":
-                        toConvert = GlobalBuiltins.ascii(List.of(toConvert), null);
+                        toConvert = GlobalBuiltins.ascii(List.of(toConvert), Map.of(), null);
                         break;
                 }
             }
