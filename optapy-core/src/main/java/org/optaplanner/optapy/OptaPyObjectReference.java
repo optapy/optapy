@@ -2,8 +2,8 @@ package org.optaplanner.optapy;
 
 import java.util.Objects;
 
-import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
+import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 
 public class OptaPyObjectReference implements PythonLikeObject {
     final long id;

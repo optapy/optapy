@@ -184,7 +184,7 @@ def _has_java_class(item):
 
 
 def _proxy(value):
-    from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference  # noqa
+    from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference  # noqa
     return JProxy(OpaquePythonReference, inst=value, convert=True)
 
 

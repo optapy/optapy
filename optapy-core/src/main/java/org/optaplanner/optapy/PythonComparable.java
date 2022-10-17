@@ -3,10 +3,10 @@ package org.optaplanner.optapy;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.wrappers.OpaqueJavaReference;
-import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
-import org.optaplanner.python.translator.types.wrappers.PythonObjectWrapper;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
+import org.optaplanner.jpyinterpreter.types.wrappers.OpaqueJavaReference;
+import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
+import org.optaplanner.jpyinterpreter.types.wrappers.PythonObjectWrapper;
 
 @SuppressWarnings("unused")
 public class PythonComparable implements Comparable<PythonComparable>, OpaqueJavaReference {

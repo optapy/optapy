@@ -1,7 +1,7 @@
 package org.optaplanner.optapy;
 
-import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
-import org.optaplanner.python.translator.types.PythonLikeType;
+import org.optaplanner.jpyinterpreter.types.CPythonBackedPythonLikeObject;
+import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 
 public class AbstractCPythonBackedClass extends CPythonBackedPythonLikeObject {
     public static final PythonLikeType $TYPE = CPythonBackedPythonLikeObject.OBJECT_TYPE;

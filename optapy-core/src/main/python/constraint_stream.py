@@ -114,7 +114,7 @@ def function_cast(function, *type_args):
     if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import Function, BiFunction
         from org.optaplanner.core.api.function import TriFunction, QuadFunction, PentaFunction
-        from org.optaplanner.python.translator import PythonLikeObject
+        from org.optaplanner.jpyinterpreter import PythonLikeObject
 
         try:
             _check_if_bytecode_translation_possible()

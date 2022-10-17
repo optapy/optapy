@@ -4,8 +4,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.optaplanner.core.api.function.TriFunction;
-import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
+import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
 
 /**
  * A PythonObject holds a reference to {@link OpaquePythonReference}.

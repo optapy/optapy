@@ -1,8 +1,8 @@
 package org.optaplanner.optapy;
 
-import static org.optaplanner.python.translator.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
-import static org.optaplanner.python.translator.types.BuiltinTypes.asmClassLoader;
-import static org.optaplanner.python.translator.types.BuiltinTypes.classNameToBytecode;
+import static org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator.writeClassOutput;
+import static org.optaplanner.jpyinterpreter.types.BuiltinTypes.asmClassLoader;
+import static org.optaplanner.jpyinterpreter.types.BuiltinTypes.classNameToBytecode;
 
 import java.io.PrintStream;
 import java.lang.annotation.RetentionPolicy;
@@ -49,14 +49,14 @@ import org.optaplanner.core.api.score.calculator.ConstraintMatchAwareIncremental
 import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
 import org.optaplanner.core.api.score.calculator.IncrementalScoreCalculator;
 import org.optaplanner.core.api.score.stream.ConstraintProvider;
-import org.optaplanner.python.translator.CPythonBackedPythonInterpreter;
-import org.optaplanner.python.translator.PythonClassTranslator;
-import org.optaplanner.python.translator.PythonLikeObject;
-import org.optaplanner.python.translator.implementors.JavaPythonTypeConversionImplementor;
-import org.optaplanner.python.translator.types.CPythonBackedPythonLikeObject;
-import org.optaplanner.python.translator.types.PythonLikeType;
-import org.optaplanner.python.translator.types.PythonNone;
-import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference;
+import org.optaplanner.jpyinterpreter.CPythonBackedPythonInterpreter;
+import org.optaplanner.jpyinterpreter.PythonClassTranslator;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
+import org.optaplanner.jpyinterpreter.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.jpyinterpreter.types.CPythonBackedPythonLikeObject;
+import org.optaplanner.jpyinterpreter.types.PythonLikeType;
+import org.optaplanner.jpyinterpreter.types.PythonNone;
+import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
 
 import io.quarkus.gizmo.AnnotationCreator;
 import io.quarkus.gizmo.AssignableResultHandle;

@@ -78,10 +78,10 @@ def _get_python_object_attribute(object_id, name):
             return out
         elif hasattr(python_object_getter, '__optaplannerPlanningId'):
             return PythonComparable(
-                JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference, inst=python_object,
+                JProxy(org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference, inst=python_object,
                        convert=True))
         else:
-            return JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference, inst=python_object,
+            return JProxy(org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference, inst=python_object,
                           convert=True)
     except Exception as e:
         from org.optaplanner.optapy import OptaPyException  # noqa
@@ -91,8 +91,8 @@ def _get_python_object_attribute(object_id, name):
 
 def _get_python_array_to_id_array(the_object: List):
     """Maps a Python List to a Java List of OpaquePythonReference"""
-    import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference
-    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference,
+    import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference
+    out = _to_java_list(list(map(lambda x: JProxy(org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference,
                                                   inst=x, convert=True), the_object)))
     return out
 
@@ -111,7 +111,7 @@ def _get_python_object_java_class(the_object):
 def _set_python_object_attribute(object_id: int, name: str, value: Any) -> None:
     """Sets an attribute on an Python Object"""
     from org.optaplanner.optapy import PythonObject  # noqa
-    from org.optaplanner.python.translator.types.wrappers import PythonObjectWrapper
+    from org.optaplanner.jpyinterpreter.types.wrappers import PythonObjectWrapper
 
     the_object = object_id
     the_value = value
@@ -132,7 +132,7 @@ def _deep_clone_python_object(the_object: Any):
     :parameter the_object: the object to be cloned.
     :return: An OpaquePythonReference of the cloned Python Object
     """
-    import org.optaplanner.python.translator.types.wrappers.OpaquePythonReference
+    import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference
     from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
     item = PythonWrapperGenerator.getPythonObject(the_object)
     run_id = item._optapy_solver_run_id  # noqa ; cannot use __ since then we cannot access it here
@@ -141,7 +141,7 @@ def _deep_clone_python_object(the_object: Any):
     # Only need to keep two references: the best solution, and the working solution
     solver_run_id_to_refs[run_id].append(the_clone)  # add the new working solution
     solver_run_id_to_refs[run_id].pop(0)  # pop the old best solution
-    return JProxy(org.optaplanner.python.translator.types.wrappers.OpaquePythonReference, inst=the_clone, convert=True)
+    return JProxy(org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference, inst=the_clone, convert=True)
 
 
 def _is_deep_planning_clone(object):
@@ -410,7 +410,7 @@ def ensure_init():
 def set_class_output_directory(path: pathlib.Path):
     ensure_init()
 
-    from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
+    from org.optaplanner.jpyinterpreter import PythonBytecodeToJavaBytecodeTranslator # noqa
     PythonBytecodeToJavaBytecodeTranslator.classOutputRootPath = path
 
 
@@ -989,7 +989,7 @@ def _get_optaplanner_annotations(python_class: Type) -> List[Tuple[str, JClass, 
 def get_class(python_class: Union[Type, Callable]) -> JClass:
     """Return the Java Class for the given Python Class"""
     from java.lang import Object, Class
-    from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference
+    from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference
     from jpyinterpreter import is_c_native
 
     if isinstance(python_class, jpype.JClass):
@@ -1029,8 +1029,8 @@ def _get_class_identifier_for_object(python_object):
 
 def _compose_unique_class_name(class_identifier: str):
     from jpype import JInt
-    from org.optaplanner.python.translator.util import JavaIdentifierUtils
-    from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator
+    from org.optaplanner.jpyinterpreter.util import JavaIdentifierUtils
+    from org.optaplanner.jpyinterpreter import PythonBytecodeToJavaBytecodeTranslator
     unique_class_name = f'org.javapython.user.{class_identifier}'
     unique_class_name = JavaIdentifierUtils.sanitizeClassName(unique_class_name)
     number_of_instances = PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount.merge(

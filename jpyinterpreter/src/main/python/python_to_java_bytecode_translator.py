@@ -33,7 +33,7 @@ def check_current_python_version_supported():
 
 
 def get_translated_java_system_error_message(error):
-    from org.optaplanner.python.translator.util import TracebackUtils
+    from org.optaplanner.jpyinterpreter.util import TracebackUtils
     top_line = f'{error.getClass().getSimpleName()}:  {error.getMessage()}'
     traceback = TracebackUtils.getTraceback(error)
     return f'{top_line}\n{traceback}'
@@ -93,9 +93,9 @@ def is_c_native(item):
 
 
 def init_type_to_compiled_java_class():
-    from org.optaplanner.python.translator.builtins import GlobalBuiltins
-    from org.optaplanner.python.translator.types import BuiltinTypes
-    import org.optaplanner.python.translator.types.datetime as java_datetime_types
+    from org.optaplanner.jpyinterpreter.builtins import GlobalBuiltins
+    from org.optaplanner.jpyinterpreter.types import BuiltinTypes
+    import org.optaplanner.jpyinterpreter.types.datetime as java_datetime_types
     import datetime
     import builtins
 
@@ -153,7 +153,7 @@ def copy_iterable(iterable):
 
 def copy_variable_names(iterable):
     from java.util import ArrayList
-    from org.optaplanner.python.translator.util import JavaIdentifierUtils
+    from org.optaplanner.jpyinterpreter.util import JavaIdentifierUtils
 
     if iterable is None:
         return None
@@ -176,10 +176,10 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
     import datetime
     from java.lang import Object
     from java.util import HashMap
-    from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
-    from org.optaplanner.python.translator.types import PythonLikeType, AbstractPythonLikeObject, CPythonBackedPythonLikeObject
-    from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference, CPythonType, JavaObjectWrapper
-    from org.optaplanner.python.translator.types.datetime import PythonDate, PythonDateTime, PythonTime, PythonTimeDelta
+    from org.optaplanner.jpyinterpreter import CPythonBackedPythonInterpreter
+    from org.optaplanner.jpyinterpreter.types import PythonLikeType, AbstractPythonLikeObject, CPythonBackedPythonLikeObject
+    from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference, CPythonType, JavaObjectWrapper
+    from org.optaplanner.jpyinterpreter.types.datetime import PythonDate, PythonDateTime, PythonTime, PythonTimeDelta
 
     if instance_map is None:
         instance_map = HashMap()
@@ -207,7 +207,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
         return out
     elif inspect.iscode(value):
         try:
-            from org.optaplanner.python.translator.types import PythonLikeFunction, PythonCode
+            from org.optaplanner.jpyinterpreter.types import PythonLikeFunction, PythonCode
             java_class = translate_python_code_to_java_class(value, PythonLikeFunction)
             out = PythonCode(java_class)
             put_in_instance_map(instance_map, value, out)
@@ -246,7 +246,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
         return None
     elif inspect.isfunction(value):
         try:
-            from org.optaplanner.python.translator.types import PythonLikeFunction
+            from org.optaplanner.jpyinterpreter.types import PythonLikeFunction
             out = translate_python_bytecode_to_java_bytecode(value, PythonLikeFunction)
             put_in_instance_map(instance_map, value, out)
             return out
@@ -292,13 +292,13 @@ def convert_to_java_python_like_object(value, instance_map=None):
     from java.util import HashMap
     from java.math import BigInteger
     from types import ModuleType
-    from org.optaplanner.python.translator import PythonLikeObject, CPythonBackedPythonInterpreter
-    from org.optaplanner.python.translator.types import PythonString, PythonBytes, PythonByteArray, PythonNone, \
+    from org.optaplanner.jpyinterpreter import PythonLikeObject, CPythonBackedPythonInterpreter
+    from org.optaplanner.jpyinterpreter.types import PythonString, PythonBytes, PythonByteArray, PythonNone, \
         PythonModule, PythonSlice, PythonRange, NotImplemented as JavaNotImplemented
-    from org.optaplanner.python.translator.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
+    from org.optaplanner.jpyinterpreter.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
         PythonLikeFrozenSet, PythonLikeDict
-    from org.optaplanner.python.translator.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
-    from org.optaplanner.python.translator.types.wrappers import PythonObjectWrapper, CPythonType, OpaquePythonReference
+    from org.optaplanner.jpyinterpreter.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
+    from org.optaplanner.jpyinterpreter.types.wrappers import PythonObjectWrapper, CPythonType, OpaquePythonReference
 
     global type_to_compiled_java_class
 
@@ -418,15 +418,15 @@ def convert_to_java_python_like_object(value, instance_map=None):
 
 
 def unwrap_python_like_object(python_like_object, default=NotImplementedError):
-    from org.optaplanner.python.translator import PythonLikeObject
+    from org.optaplanner.jpyinterpreter import PythonLikeObject
     from java.util import List, Map, Set, Iterator
-    from org.optaplanner.python.translator.types import PythonString, PythonBytes, PythonByteArray, PythonNone, \
+    from org.optaplanner.jpyinterpreter.types import PythonString, PythonBytes, PythonByteArray, PythonNone, \
         PythonModule, PythonSlice, PythonRange, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType, \
         NotImplemented as JavaNotImplemented
-    from org.optaplanner.python.translator.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
+    from org.optaplanner.jpyinterpreter.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
         PythonLikeFrozenSet, PythonLikeDict
-    from org.optaplanner.python.translator.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
-    from org.optaplanner.python.translator.types.wrappers import JavaObjectWrapper, PythonObjectWrapper, CPythonType, \
+    from org.optaplanner.jpyinterpreter.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
+    from org.optaplanner.jpyinterpreter.types.wrappers import JavaObjectWrapper, PythonObjectWrapper, CPythonType, \
         OpaquePythonReference
 
     if isinstance(python_like_object, (PythonObjectWrapper, JavaObjectWrapper)):
@@ -541,7 +541,7 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
 
 
 def get_java_type_for_python_type(the_type):
-    from org.optaplanner.python.translator.types import PythonLikeType
+    from org.optaplanner.jpyinterpreter.types import PythonLikeType
     global type_to_compiled_java_class
 
     if isinstance(the_type, type):
@@ -569,7 +569,7 @@ def get_java_type_for_python_type(the_type):
 def copy_type_annotations(annotations_dict):
     from java.util import HashMap
     from java.lang import Class as JavaClass
-    from org.optaplanner.python.translator.types.wrappers import OpaquePythonReference, JavaObjectWrapper, CPythonType # noqa
+    from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference, JavaObjectWrapper, CPythonType # noqa
 
     global type_to_compiled_java_class
 
@@ -593,7 +593,7 @@ def copy_type_annotations(annotations_dict):
 
 def copy_constants(constants_iterable):
     from java.util import ArrayList
-    from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
+    from org.optaplanner.jpyinterpreter import CPythonBackedPythonInterpreter
     if constants_iterable is None:
         return None
     iterable_copy = ArrayList()
@@ -603,9 +603,9 @@ def copy_constants(constants_iterable):
 
 
 def copy_closure(closure):
-    from org.optaplanner.python.translator.types import PythonCell
-    from org.optaplanner.python.translator.types.collections import PythonLikeTuple
-    from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
+    from org.optaplanner.jpyinterpreter.types import PythonCell
+    from org.optaplanner.jpyinterpreter.types.collections import PythonLikeTuple
+    from org.optaplanner.jpyinterpreter import CPythonBackedPythonInterpreter
     out = PythonLikeTuple()
     if closure is None:
         return out
@@ -621,7 +621,7 @@ def copy_globals(globals_dict, co_names):
     global global_dict_to_instance
     global global_dict_to_key_set
     from java.util import HashMap
-    from org.optaplanner.python.translator import CPythonBackedPythonInterpreter
+    from org.optaplanner.jpyinterpreter import CPythonBackedPythonInterpreter
 
     globals_dict_key = id(globals_dict)
     if globals_dict_key in global_dict_to_instance:
@@ -644,7 +644,7 @@ def copy_globals(globals_dict, co_names):
 
 def get_function_bytecode_object(python_function):
     from java.util import ArrayList
-    from org.optaplanner.python.translator import PythonBytecodeInstruction, PythonCompiledFunction, PythonVersion, OpcodeIdentifier # noqa
+    from org.optaplanner.jpyinterpreter import PythonBytecodeInstruction, PythonCompiledFunction, PythonVersion, OpcodeIdentifier # noqa
 
     init_type_to_compiled_java_class()
 
@@ -692,7 +692,7 @@ def get_static_function_bytecode_object(the_class, python_function):
 
 def get_code_bytecode_object(python_code):
     from java.util import ArrayList, HashMap
-    from org.optaplanner.python.translator import PythonBytecodeInstruction, PythonCompiledFunction, PythonVersion, OpcodeIdentifier # noqa
+    from org.optaplanner.jpyinterpreter import PythonBytecodeInstruction, PythonCompiledFunction, PythonVersion, OpcodeIdentifier # noqa
 
     init_type_to_compiled_java_class()
 
@@ -735,7 +735,7 @@ def get_code_bytecode_object(python_code):
 
 
 def translate_python_bytecode_to_java_bytecode(python_function, java_function_type, *type_args):
-    from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
+    from org.optaplanner.jpyinterpreter import PythonBytecodeToJavaBytecodeTranslator # noqa
     python_compiled_function = get_function_bytecode_object(python_function)
 
     if len(type_args) == 0:
@@ -748,7 +748,7 @@ def translate_python_bytecode_to_java_bytecode(python_function, java_function_ty
 
 
 def translate_python_code_to_java_class(python_function, java_function_type, *type_args):
-    from org.optaplanner.python.translator import PythonBytecodeToJavaBytecodeTranslator # noqa
+    from org.optaplanner.jpyinterpreter import PythonBytecodeToJavaBytecodeTranslator # noqa
     python_compiled_function = get_code_bytecode_object(python_function)
 
     if len(type_args) == 0:
@@ -803,13 +803,13 @@ def as_java(python_function):
 
 
 def as_untyped_java(python_function):
-    from org.optaplanner.python.translator.types import PythonLikeFunction
+    from org.optaplanner.jpyinterpreter.types import PythonLikeFunction
     java_function = translate_python_bytecode_to_java_bytecode(python_function, PythonLikeFunction)
     return wrap_untyped_java_function(java_function)
 
 
 def as_typed_java(python_function):
-    from org.optaplanner.python.translator import PythonClassTranslator
+    from org.optaplanner.jpyinterpreter import PythonClassTranslator
     function_bytecode = get_function_bytecode_object(python_function)
     function_interface_declaration = PythonClassTranslator.getInterfaceForPythonFunction(function_bytecode)
     function_interface_class = PythonClassTranslator.getInterfaceClassForDeclaration(function_interface_declaration)
@@ -856,9 +856,9 @@ def erase_generic_args(python_type):
 def translate_python_class_to_java_class(python_class):
     from java.lang import Class as JavaClass
     from java.util import ArrayList, HashMap
-    from org.optaplanner.python.translator import PythonCompiledClass, PythonClassTranslator, CPythonBackedPythonInterpreter # noqa
-    from org.optaplanner.python.translator.types import BuiltinTypes
-    from org.optaplanner.python.translator.types.wrappers import JavaObjectWrapper, OpaquePythonReference, CPythonType # noqa
+    from org.optaplanner.jpyinterpreter import PythonCompiledClass, PythonClassTranslator, CPythonBackedPythonInterpreter # noqa
+    from org.optaplanner.jpyinterpreter.types import BuiltinTypes
+    from org.optaplanner.jpyinterpreter.types.wrappers import JavaObjectWrapper, OpaquePythonReference, CPythonType # noqa
 
     global type_to_compiled_java_class
 
