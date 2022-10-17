@@ -97,6 +97,7 @@ public class PythonLikeType implements PythonLikeObject,
         for (PythonLikeType parent : PARENT_TYPES) {
             parentMROLists.add(new ArrayList<>(parent.MRO));
         }
+        parentMROLists.add(new ArrayList<>(PARENT_TYPES)); // to preserve local precedent order, add list of parents last
 
         while (!parentMROLists.stream().allMatch(List::isEmpty)) {
             boolean candidateFound = false;
