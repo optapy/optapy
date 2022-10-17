@@ -38,21 +38,23 @@ public class LocalVariableHelper {
 
         pythonBoundVariables = compiledFunction.co_cellvars.size();
         pythonFreeVariables = compiledFunction.co_freevars.size();
-
-        boundCellIndexToVariableIndex = new HashMap<>();
-        for (int i = 0; i < compiledFunction.co_cellvars.size(); i++) {
-            for (int j = 0; j < compiledFunction.co_varnames.size(); j++) {
-                if (compiledFunction.co_cellvars.get(i).equals(compiledFunction.co_varnames.get(j))) {
-                    boundCellIndexToVariableIndex.put(i, j);
-                }
-            }
-        }
-
         parameterSlotsEnd = slotsUsedByParameters;
         pythonCellVariablesStart = parameterSlotsEnd + compiledFunction.co_varnames.size();
         pythonFreeVariablesStart = pythonCellVariablesStart + pythonBoundVariables;
         currentExceptionVariableSlot = pythonFreeVariablesStart + pythonFreeVariables;
         pythonLocalVariablesSlotEnd = currentExceptionVariableSlot + 1;
+        boundCellIndexToVariableIndex = new HashMap<>();
+        for (int i = 0; i < compiledFunction.co_cellvars.size(); i++) {
+            for (int j = 0; j < compiledFunction.co_varnames.size(); j++) {
+                if (compiledFunction.co_cellvars.get(i).equals(compiledFunction.co_varnames.get(j))) {
+                    boundCellIndexToVariableIndex.put(i, j);
+                    break;
+                }
+            }
+            if (!boundCellIndexToVariableIndex.containsKey(i)) {
+                boundCellIndexToVariableIndex.put(i, pythonCellVariablesStart + i);
+            }
+        }
     }
 
     LocalVariableHelper(Type[] parameters, int argcount, int parameterSlotsEnd, int pythonCellVariablesStart,
@@ -154,8 +156,10 @@ public class LocalVariableHelper {
             } else { // it is a parameter
                 readLocal(methodVisitor, boundCellIndexToVariableIndex.get(cell));
             }
+        } else {
+            throw new IllegalStateException("Cannot find corresponding slot for bounded cell " + cell + " in map "
+                    + boundCellIndexToVariableIndex);
         }
-        // TODO: Free cells?
     }
 
     public void readCell(MethodVisitor methodVisitor, int cell) {

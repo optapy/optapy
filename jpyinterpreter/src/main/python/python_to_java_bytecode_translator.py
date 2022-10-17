@@ -213,6 +213,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
             put_in_instance_map(instance_map, value, out)
             return out
         except:
+            # TODO: Create a PythonCode wrapper for the untranslatable code object
             return None
     elif type(value) is object:
         java_type = type_to_compiled_java_class[type(value)]
