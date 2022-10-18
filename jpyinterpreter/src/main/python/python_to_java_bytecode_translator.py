@@ -1,4 +1,5 @@
 import builtins
+import ctypes
 import dis
 import inspect
 import sys
@@ -172,6 +173,17 @@ def put_in_instance_map(instance_map, python_object, java_object):
     instance_map.put(id(python_object), java_object)
 
 
+class CodeWrapper:
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+
+    def __getitem__(self, item):
+        if item == 'wrapped':
+            return self.wrapped
+        else:
+            raise KeyError(f'No item: {item}')
+
+
 def convert_object_to_java_python_like_object(value, instance_map=None):
     import datetime
     from java.lang import Object
@@ -213,8 +225,11 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
             put_in_instance_map(instance_map, value, out)
             return out
         except:
-            # TODO: Create a PythonCode wrapper for the untranslatable code object
-            return None
+            from org.optaplanner.jpyinterpreter.types import PythonLikeFunction, PythonCode
+            java_class = translate_python_code_to_python_wrapper_class(value)
+            out = PythonCode(java_class)
+            put_in_instance_map(instance_map, value, out)
+            return out
     elif type(value) is object:
         java_type = type_to_compiled_java_class[type(value)]
         out = CPythonBackedPythonLikeObject(java_type)
@@ -423,12 +438,13 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     from java.util import List, Map, Set, Iterator
     from org.optaplanner.jpyinterpreter.types import PythonString, PythonBytes, PythonByteArray, PythonNone, \
         PythonModule, PythonSlice, PythonRange, CPythonBackedPythonLikeObject, PythonLikeType, PythonLikeGenericType, \
-        NotImplemented as JavaNotImplemented
+        NotImplemented as JavaNotImplemented, PythonCell
     from org.optaplanner.jpyinterpreter.types.collections import PythonLikeList, PythonLikeTuple, PythonLikeSet, \
         PythonLikeFrozenSet, PythonLikeDict
     from org.optaplanner.jpyinterpreter.types.numeric import PythonInteger, PythonFloat, PythonBoolean, PythonComplex
     from org.optaplanner.jpyinterpreter.types.wrappers import JavaObjectWrapper, PythonObjectWrapper, CPythonType, \
         OpaquePythonReference
+    from types import CellType
 
     if isinstance(python_like_object, (PythonObjectWrapper, JavaObjectWrapper)):
         out = python_like_object.getWrappedObject()
@@ -500,6 +516,10 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
                     return unwrap_python_like_object(self.iterator.next())
 
         return JavaIterator(python_like_object)
+    elif isinstance(python_like_object, PythonCell):
+        out = CellType()
+        out.cell_contents = python_like_object.cellValue
+        return out
     elif isinstance(python_like_object, PythonModule):
         return python_like_object.getPythonReference()
     elif isinstance(python_like_object, CPythonBackedPythonLikeObject):
@@ -643,6 +663,14 @@ def copy_globals(globals_dict, co_names):
     return out
 
 
+def find_globals_dict_for_java_map(java_globals):
+    for python_global_id in global_dict_to_instance:
+        if global_dict_to_instance[python_global_id] == java_globals:
+            return ctypes.cast(python_global_id, ctypes.py_object).value
+
+    raise ValueError(f'Could not find python globals corresponding to {str(java_globals.toString())}')
+
+
 def get_function_bytecode_object(python_function):
     from java.util import ArrayList
     from org.optaplanner.jpyinterpreter import PythonBytecodeInstruction, PythonCompiledFunction, PythonVersion, OpcodeIdentifier # noqa
@@ -760,6 +788,16 @@ def translate_python_code_to_java_class(python_function, java_function_type, *ty
                                                                                      java_function_type,
                                                                                      copy_iterable(type_args))
 
+
+def translate_python_code_to_python_wrapper_class(python_function):
+    from org.optaplanner.jpyinterpreter import PythonBytecodeToJavaBytecodeTranslator # noqa
+    from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference # noqa
+
+    python_compiled_function = get_code_bytecode_object(python_function)
+    return PythonBytecodeToJavaBytecodeTranslator.\
+        translatePythonBytecodeToPythonWrapperClass(python_compiled_function, JProxy(OpaquePythonReference,
+                                                                                     CodeWrapper(python_function),
+                                                                                     convert=True))
 
 def wrap_untyped_java_function(java_function):
     def wrapped_function(*args, **kwargs):

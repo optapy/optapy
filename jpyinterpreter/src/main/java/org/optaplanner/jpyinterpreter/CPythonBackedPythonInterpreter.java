@@ -15,9 +15,11 @@ import org.optaplanner.jpyinterpreter.builtins.GlobalBuiltins;
 import org.optaplanner.jpyinterpreter.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.jpyinterpreter.types.PythonModule;
 import org.optaplanner.jpyinterpreter.types.PythonString;
+import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.PythonTraceback;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
+import org.optaplanner.jpyinterpreter.types.wrappers.PythonObjectWrapper;
 
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     InputStream standardInput;
@@ -42,6 +44,7 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     public static TriFunction<OpaquePythonReference, List<PythonLikeObject>, Map<PythonString, PythonLikeObject>, PythonLikeObject> callPythonFunction;
 
     public static PentaFunction<String, Map<String, PythonLikeObject>, Map<String, PythonLikeObject>, List<String>, Long, PythonModule> importModuleFunction;
+    public static QuadFunction<OpaquePythonReference, Map<String, PythonLikeObject>, PythonLikeTuple, PythonString, PythonObjectWrapper> createFunctionFromCodeFunction;
 
     public CPythonBackedPythonInterpreter() {
         this(System.in, System.out);
@@ -112,6 +115,14 @@ public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     public static PythonLikeObject callPythonReference(OpaquePythonReference object, List<PythonLikeObject> positionalArguments,
             Map<PythonString, PythonLikeObject> keywordArguments) {
         return callPythonFunction.apply(object, positionalArguments, keywordArguments);
+    }
+
+    public static PythonObjectWrapper createPythonFunctionWrapper(
+            OpaquePythonReference codeObject,
+            Map<String, PythonLikeObject> globals,
+            PythonLikeTuple closure,
+            PythonString name) {
+        return createFunctionFromCodeFunction.apply(codeObject, globals, closure, name);
     }
 
     @Override

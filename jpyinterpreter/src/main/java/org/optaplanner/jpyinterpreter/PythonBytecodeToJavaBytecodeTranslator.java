@@ -32,6 +32,8 @@ import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
+import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
+import org.optaplanner.jpyinterpreter.types.wrappers.PythonObjectWrapper;
 import org.optaplanner.jpyinterpreter.util.JavaPythonClassWriter;
 import org.optaplanner.jpyinterpreter.util.MethodVisitorAdapters;
 import org.slf4j.Logger;
@@ -53,6 +55,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
     public static final String CLASS_CELL_STATIC_FIELD_NAME = "__class_cell__";
 
+    public static final String PYTHON_WRAPPER_CODE_STATIC_FIELD_NAME = "__code__";
+
     public static final String DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME = "__defaults__";
 
     public static final String DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME = "__kwdefaults__";
@@ -63,6 +67,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static final String QUALIFIED_NAME_INSTANCE_FIELD_NAME = "__qualname__";
 
     public static final String INTERPRETER_INSTANCE_FIELD_NAME = "__interpreter__";
+
+    public static final String PYTHON_WRAPPER_FUNCTION_INSTANCE_FIELD_NAME = "__function__";
     public static final Map<String, Integer> classNameToSharedInstanceCount = new HashMap<>();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PythonBytecodeToJavaBytecodeTranslator.class);
@@ -279,6 +285,70 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public static <T> Class<T> translatePythonBytecodeToPythonWrapperClass(PythonCompiledFunction pythonCompiledFunction,
+            OpaquePythonReference codeReference) {
+        String maybeClassName = USER_PACKAGE_BASE + pythonCompiledFunction.getGeneratedClassBaseName();
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String className = maybeClassName;
+        String internalClassName = className.replace('.', '/');
+        ClassWriter classWriter = new JavaPythonClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null, Type.getInternalName(Object.class),
+                new String[] { Type.getInternalName(PythonLikeFunction.class) });
+
+        createFields(classWriter);
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, PYTHON_WRAPPER_CODE_STATIC_FIELD_NAME,
+                Type.getDescriptor(OpaquePythonReference.class),
+                null, null);
+        classWriter.visitField(Modifier.PUBLIC | Modifier.FINAL, PYTHON_WRAPPER_FUNCTION_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonObjectWrapper.class),
+                null, null);
+        createPythonWrapperConstructor(classWriter, internalClassName);
+
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC,
+                "$call",
+                Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
+                null,
+                null);
+
+        methodVisitor.visitCode();
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, PYTHON_WRAPPER_FUNCTION_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonObjectWrapper.class));
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 3);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonObjectWrapper.class), "$call",
+                Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
+                false);
+        methodVisitor.visitInsn(Opcodes.ARETURN);
+        methodVisitor.visitMaxs(0, 0);
+        methodVisitor.visitEnd();
+
+        classWriter.visitEnd();
+
+        writeClassOutput(BuiltinTypes.classNameToBytecode, className, classWriter.toByteArray());
+
+        try {
+            Class<T> compiledClass = (Class<T>) BuiltinTypes.asmClassLoader.loadClass(className);
+            setStaticFields(compiledClass, pythonCompiledFunction);
+            compiledClass.getField(PYTHON_WRAPPER_CODE_STATIC_FIELD_NAME).set(null, codeReference);
+            return compiledClass;
+        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            throw new IllegalStateException("Impossible State: Unable to load generated class (" +
+                    className + ") despite it being just generated.", e);
+        }
+    }
+
     private static void createConstructor(ClassWriter classWriter, String className) {
         // Empty constructor, for java code
         MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "<init>",
@@ -384,6 +454,180 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
+
+        methodVisitor.visitInsn(Opcodes.RETURN);
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+    }
+
+    private static void createPythonWrapperConstructor(ClassWriter classWriter, String className) {
+        // Empty constructor, for java code
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "<init>",
+                Type.getMethodDescriptor(Type.VOID_TYPE),
+                null, null);
+        methodVisitor.visitCode();
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>",
+                "()V", false);
+
+        // Positional only and Positional/Keyword default arguments
+        methodVisitor.visitInsn(Opcodes.DUP);
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        // Keyword only default arguments
+        methodVisitor.visitInsn(Opcodes.DUP);
+        CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeDict.class));
+
+        // Annotation Directory as key/value tuple
+        methodVisitor.visitInsn(Opcodes.DUP);
+        CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, ANNOTATION_DIRECTORY_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeDict.class));
+
+        // Free variable cells
+        methodVisitor.visitInsn(Opcodes.DUP);
+        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, CELLS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        // Function name
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitLdcInsn(className.replace('/', '.'));
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class),
+                "valueOf", Type.getMethodDescriptor(Type.getType(PythonString.class), Type.getType(String.class)),
+                false);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonString.class));
+
+        // Interpreter
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonInterpreter.class), "DEFAULT",
+                Type.getDescriptor(PythonInterpreter.class));
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, INTERPRETER_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonInterpreter.class));
+
+        // Function object
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, PYTHON_WRAPPER_CODE_STATIC_FIELD_NAME,
+                Type.getDescriptor(OpaquePythonReference.class));
+
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.DUP_X1);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, GLOBALS_MAP_STATIC_FIELD_NAME,
+                Type.getDescriptor(Map.class));
+
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, CELLS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonString.class));
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(CPythonBackedPythonInterpreter.class),
+                "createPythonFunctionWrapper",
+                Type.getMethodDescriptor(Type.getType(PythonObjectWrapper.class),
+                        Type.getType(OpaquePythonReference.class),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeTuple.class),
+                        Type.getType(PythonString.class)),
+                false);
+
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, PYTHON_WRAPPER_FUNCTION_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonObjectWrapper.class));
+
+        methodVisitor.visitInsn(Opcodes.RETURN);
+
+        methodVisitor.visitMaxs(-1, -1);
+        methodVisitor.visitEnd();
+
+        // Full constructor, for MAKE_FUNCTION
+        methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "<init>",
+                Type.getMethodDescriptor(Type.VOID_TYPE,
+                        Type.getType(PythonLikeTuple.class),
+                        Type.getType(PythonLikeDict.class),
+                        Type.getType(PythonLikeDict.class),
+                        Type.getType(PythonLikeTuple.class),
+                        Type.getType(PythonString.class),
+                        Type.getType(PythonInterpreter.class)),
+                null, null);
+        methodVisitor.visitCode();
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>",
+                "()V", false);
+
+        // Positional only and Positional/Keyword default arguments
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        // Keyword only default arguments
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeDict.class));
+
+        // Annotation Directory as key/value tuple
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 3);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, ANNOTATION_DIRECTORY_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeDict.class));
+
+        // Free variable cells
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 4);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, CELLS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        // Function name
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 5);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonString.class));
+
+        // Interpreter
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, INTERPRETER_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonInterpreter.class));
+
+        // Function object
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, PYTHON_WRAPPER_CODE_STATIC_FIELD_NAME,
+                Type.getDescriptor(OpaquePythonReference.class));
+
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.DUP_X1);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, GLOBALS_MAP_STATIC_FIELD_NAME,
+                Type.getDescriptor(Map.class));
+
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, CELLS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonString.class));
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(CPythonBackedPythonInterpreter.class),
+                "createPythonFunctionWrapper",
+                Type.getMethodDescriptor(Type.getType(PythonObjectWrapper.class),
+                        Type.getType(OpaquePythonReference.class),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeTuple.class),
+                        Type.getType(PythonString.class)),
+                false);
+
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, PYTHON_WRAPPER_FUNCTION_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonObjectWrapper.class));
 
         methodVisitor.visitInsn(Opcodes.RETURN);
         methodVisitor.visitMaxs(-1, -1);

@@ -68,3 +68,26 @@ def test_nested_cell_variable():
     verifier.verify(1, expected_result=(2, 1))
     verifier.verify(2, expected_result=(6, 4))
     verifier.verify(3, expected_result=(12, 9))
+
+
+def test_code_works_if_compilation_failed():
+    def my_function(x):
+        def inner_function(y):
+            nonlocal x
+
+            class MyClass:  # TODO: Replace this with something else that fails when class creation is supported
+                def __init__(self):
+                    self.outer_arg = x
+                    self.inner_arg = y
+
+                def get_args(self):
+                    return self.outer_arg, self.inner_arg
+
+            return MyClass
+
+        return inner_function(2 * x)().get_args()
+
+    verifier = verifier_for(my_function)
+    verifier.verify(1, expected_result=(1, 2))
+    verifier.verify(2, expected_result=(2, 4))
+    verifier.verify(3, expected_result=(3, 6))

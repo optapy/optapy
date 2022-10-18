@@ -56,6 +56,7 @@ def init(*args, path: List[str] = None, include_translator_jars: bool = True,
     CPythonBackedPythonInterpreter.setAttributeOnPythonReferencePythonFunction = SetAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.deleteAttributeOnPythonReferencePythonFunction = DeleteAttributeOnPythonObject()
     CPythonBackedPythonInterpreter.callPythonFunction = CallPythonFunction()
+    CPythonBackedPythonInterpreter.createFunctionFromCodeFunction = CreateFunctionFromCode()
     CPythonBackedPythonInterpreter.importModuleFunction = ImportModule()
 
 
@@ -173,6 +174,37 @@ class CallPythonFunction:
             from org.optaplanner.jpyinterpreter.types.errors import CPythonException
             print(e)
             raise CPythonException(str(e))
+
+
+@jpype.JImplements('org.optaplanner.jpyinterpreter.QuadFunction', deferred=True)
+class CreateFunctionFromCode:
+    @jpype.JOverride()
+    def apply(self, code_object, function_globals, closure, name):
+        from types import FunctionType
+        from .python_to_java_bytecode_translator import unwrap_python_like_object, find_globals_dict_for_java_map
+        from org.optaplanner.jpyinterpreter import CPythonBackedPythonInterpreter  # noqa
+        from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference, PythonObjectWrapper  # noqa
+        from java.util import HashMap
+        from jpype import JProxy
+
+        instance_map = HashMap()
+        python_code = JProxy.unwrap(code_object).wrapped
+        python_globals_args = find_globals_dict_for_java_map(function_globals)
+        python_closure = unwrap_python_like_object(closure)
+        python_name = unwrap_python_like_object(name)
+
+        python_function = FunctionType(code=python_code,
+                                       globals=python_globals_args,
+                                       name=python_name,
+                                       closure=python_closure)
+
+        proxy = JProxy(OpaquePythonReference, inst=python_function, convert=True)
+        out = PythonObjectWrapper(proxy)
+        CPythonBackedPythonInterpreter.updateJavaObjectFromPythonObject(out,
+                                                                        proxy,
+                                                                        instance_map)
+        return out
+
 
 
 @jpype.JImplements('org.optaplanner.jpyinterpreter.PentaFunction', deferred=True)
