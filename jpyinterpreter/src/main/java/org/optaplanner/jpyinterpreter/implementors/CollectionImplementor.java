@@ -489,22 +489,29 @@ public class CollectionImplementor {
     /**
      * Implements TOS1[TOS] = TOS2. TOS1 must be a collection/object that implement the "__setitem__" dunder method.
      */
-    public static void setItem(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper) {
+    public static void setItem(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         // Stack is TOS2, TOS1, TOS
         StackManipulationImplementor.rotateThree(methodVisitor);
         StackManipulationImplementor.rotateThree(methodVisitor);
         // Stack is TOS1, TOS, TOS2
-        DunderOperatorImplementor.ternaryOperator(methodVisitor, PythonTernaryOperators.SET_ITEM, localVariableHelper);
+        DunderOperatorImplementor.ternaryOperator(functionMetadata, stackMetadata.pop(3)
+                .push(stackMetadata.getValueSourceForStackIndex(1))
+                .push(stackMetadata.getValueSourceForStackIndex(0))
+                .push(stackMetadata.getValueSourceForStackIndex(2)), PythonTernaryOperators.SET_ITEM);
         StackManipulationImplementor.popTOS(methodVisitor);
     }
 
     /**
      * Calls collection.add(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to implement list/set comprehensions.
      */
-    public static void collectionAdd(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
+    public static void collectionAdd(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
+        StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
                 "add",
@@ -516,10 +523,12 @@ public class CollectionImplementor {
     /**
      * Calls collection.addAll(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to build lists/maps.
      */
-    public static void collectionAddAll(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
+    public static void collectionAddAll(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
+        StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
                 "addAll",
@@ -532,10 +541,12 @@ public class CollectionImplementor {
      * Calls map.put(TOS1[i], TOS1, TOS). TOS1[i] remains on stack; TOS and TOS1 are popped. Used to implement map
      * comprehensions.
      */
-    public static void mapPut(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
+    public static void mapPut(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
+        StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.rotateThree(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
                 "put",
@@ -547,10 +558,11 @@ public class CollectionImplementor {
     /**
      * Calls map.putAll(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to build maps
      */
-    public static void mapPutAll(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
+    public static void mapPutAll(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
+        StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
                 "putAll",
@@ -563,10 +575,12 @@ public class CollectionImplementor {
      * If TOS shares common keys with TOS[i], an exception is thrown.
      * TOS1[i] remains on stack; TOS is popped. Used to build maps
      */
-    public static void mapPutAllOnlyIfAllNewElseThrow(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
+    public static void mapPutAllOnlyIfAllNewElseThrow(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, instruction.arg);
+        StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
 
         // Duplicate both maps so we can get their key sets

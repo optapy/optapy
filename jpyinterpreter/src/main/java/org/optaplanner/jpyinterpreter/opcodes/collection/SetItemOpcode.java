@@ -19,6 +19,6 @@ public class SetItemOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        CollectionImplementor.setItem(functionMetadata.methodVisitor, stackMetadata.localVariableHelper);
+        CollectionImplementor.setItem(functionMetadata, stackMetadata);
     }
 }

@@ -18,6 +18,24 @@ import org.optaplanner.jpyinterpreter.types.errors.StopIteration;
 
 public class GeneratorImplementor {
 
+    public static void restoreGeneratorState(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, functionMetadata.className, PythonGeneratorTranslator.GENERATOR_STACK,
+                Type.getDescriptor(List.class));
+
+        for (int i = stackMetadata.getStackSize() - 1; i >= 0; i--) {
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitLdcInsn(i);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
+                    Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE), true);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, stackMetadata.getTypeAtStackIndex(i).getJavaTypeInternalName());
+            methodVisitor.visitInsn(Opcodes.SWAP);
+        }
+        methodVisitor.visitInsn(Opcodes.POP);
+    }
+
     private static void saveGeneratorState(PythonBytecodeInstruction instruction, FunctionMetadata functionMetadata,
             StackMetadata stackMetadata) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;

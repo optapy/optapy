@@ -10,6 +10,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.CompareOp;
+import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.LocalVariableHelper;
 import org.optaplanner.jpyinterpreter.MethodDescriptor;
 import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
@@ -535,8 +536,10 @@ public class DunderOperatorImplementor {
      * </code>
      *
      */
-    public static void ternaryOperator(MethodVisitor methodVisitor, PythonTernaryOperators operator,
-            LocalVariableHelper localVariableHelper) {
+    public static void ternaryOperator(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonTernaryOperators operator) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         StackManipulationImplementor.rotateThree(methodVisitor);
         methodVisitor.visitInsn(Opcodes.SWAP);
         // Stack is now TOS, TOS1, TOS2
@@ -550,7 +553,11 @@ public class DunderOperatorImplementor {
                         Type.getType(String.class)),
                 true);
         // Stack is now TOS, TOS1, TOS2, method
-        StackManipulationImplementor.rotateFour(methodVisitor, localVariableHelper);
+        StackManipulationImplementor.rotateFour(functionMetadata, stackMetadata.pop(3)
+                .push(stackMetadata.getValueSourceForStackIndex(0))
+                .push(stackMetadata.getValueSourceForStackIndex(1))
+                .push(stackMetadata.getValueSourceForStackIndex(2))
+                .pushTemp(BuiltinTypes.FUNCTION_TYPE));
 
         // Stack is now method, TOS, TOS1, TOS2
         methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(PythonLikeList.class));

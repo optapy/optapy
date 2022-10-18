@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.optaplanner.jpyinterpreter.opcodes.OpcodeWithoutSource;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 
 public class StackMetadata {
@@ -195,6 +196,10 @@ public class StackMetadata {
         return out;
     }
 
+    public StackMetadata pushTemp(PythonLikeType type) {
+        return push(ValueSourceInfo.of(new OpcodeWithoutSource(), type));
+    }
+
     /**
      * Return a new StackMetadata with {@code types} added as the new
      * elements. The last element of {@code types} is TOS.
@@ -204,6 +209,21 @@ public class StackMetadata {
     public StackMetadata push(ValueSourceInfo... types) {
         StackMetadata out = copy();
         out.stackValueSources.addAll(Arrays.asList(types));
+        return out;
+    }
+
+    public StackMetadata pushTemps(PythonLikeType... types) {
+        StackMetadata out = copy();
+        for (PythonLikeType type : types) {
+            out.stackValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(), type));
+        }
+        return out;
+    }
+
+    public StackMetadata insertTemp(int tosIndex, PythonLikeType type) {
+        StackMetadata out = copy();
+        out.stackValueSources.add(stackValueSources.size() - tosIndex,
+                ValueSourceInfo.of(new OpcodeWithoutSource(), type));
         return out;
     }
 

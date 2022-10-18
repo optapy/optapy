@@ -19,7 +19,6 @@ public class CollectionAddAllOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        CollectionImplementor.collectionAddAll(functionMetadata.methodVisitor, instruction,
-                stackMetadata.localVariableHelper);
+        CollectionImplementor.collectionAddAll(functionMetadata, stackMetadata, instruction);
     }
 }

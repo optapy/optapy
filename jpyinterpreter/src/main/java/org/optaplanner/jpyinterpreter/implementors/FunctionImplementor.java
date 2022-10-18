@@ -22,6 +22,7 @@ import org.optaplanner.jpyinterpreter.PythonInterpreter;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonVersion;
 import org.optaplanner.jpyinterpreter.StackMetadata;
+import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonCode;
 import org.optaplanner.jpyinterpreter.types.PythonKnownFunctionType;
 import org.optaplanner.jpyinterpreter.types.PythonLikeFunction;
@@ -276,7 +277,7 @@ public class FunctionImplementor {
         methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, ifNullStart);
 
         // Stack is method, argList, obj
-        StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, 1);
+        StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, 1);
         StackManipulationImplementor.swap(methodVisitor);
 
         // Stack is method, argList, argList, obj
@@ -333,7 +334,7 @@ public class FunctionImplementor {
             PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
             knownFunctionType.getDefaultFunctionSignature()
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.callWithoutKeywords(methodVisitor, stackMetadata.localVariableHelper,
+                        functionSignature.callWithoutKeywords(functionMetadata, stackMetadata,
                                 instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
@@ -403,7 +404,7 @@ public class FunctionImplementor {
             PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
             knownFunctionType.getDefaultFunctionSignature()
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.callWithKeywords(methodVisitor, stackMetadata.localVariableHelper,
+                        functionSignature.callWithKeywords(functionMetadata, stackMetadata,
                                 instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
@@ -529,7 +530,6 @@ public class FunctionImplementor {
             PythonBytecodeInstruction instruction) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
         String className = functionMetadata.className;
-        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
 
         int providedOptionalArgs = Integer.bitCount(instruction.arg);
 
@@ -538,16 +538,24 @@ public class FunctionImplementor {
         // Ex: present, present, missing, present -> need to shift default for missing down by 3 = 2 + (3 - 2)
         // Ex: present, missing1, missing2, present -> need to shift default for missing1 down by 3 = 2 + (2 - 1),
         //                                             need to shift default for missing2 down by 3 = 2 + (2 - 1)
+        StackMetadata tempStackmetadata = stackMetadata;
+
         if ((instruction.arg & 1) != 1) {
             CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
-            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+
+            tempStackmetadata = tempStackmetadata.pushTemp(BuiltinTypes.TUPLE_TYPE);
+            tempStackmetadata =
+                    StackManipulationImplementor.shiftTOSDownBy(functionMetadata, tempStackmetadata, 2 + providedOptionalArgs);
         } else {
             providedOptionalArgs--;
         }
 
         if ((instruction.arg & 2) != 2) {
             CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
-            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+
+            tempStackmetadata = tempStackmetadata.pushTemp(BuiltinTypes.DICT_TYPE);
+            tempStackmetadata =
+                    StackManipulationImplementor.shiftTOSDownBy(functionMetadata, tempStackmetadata, 2 + providedOptionalArgs);
         } else {
             providedOptionalArgs--;
         }
@@ -556,10 +564,17 @@ public class FunctionImplementor {
             // In Python 3.10 and above, it a tuple of string; in 3.9 and below, a dict
             if (functionMetadata.pythonCompiledFunction.pythonVersion.isBefore(PythonVersion.PYTHON_3_10)) {
                 CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
-                StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+
+                tempStackmetadata = tempStackmetadata.pushTemp(BuiltinTypes.DICT_TYPE);
+                tempStackmetadata = StackManipulationImplementor.shiftTOSDownBy(functionMetadata, tempStackmetadata,
+                        2 + providedOptionalArgs);
+
             } else {
                 CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
-                StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+
+                tempStackmetadata = tempStackmetadata.pushTemp(BuiltinTypes.TUPLE_TYPE);
+                tempStackmetadata = StackManipulationImplementor.shiftTOSDownBy(functionMetadata, tempStackmetadata,
+                        2 + providedOptionalArgs);
             }
         } else {
             providedOptionalArgs--;
@@ -567,7 +582,10 @@ public class FunctionImplementor {
 
         if ((instruction.arg & 8) != 8) {
             CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
-            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+
+            tempStackmetadata = tempStackmetadata.pushTemp(BuiltinTypes.TUPLE_TYPE);
+            tempStackmetadata =
+                    StackManipulationImplementor.shiftTOSDownBy(functionMetadata, tempStackmetadata, 2 + providedOptionalArgs);
         }
 
         // Stack is now:

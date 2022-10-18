@@ -11,8 +11,6 @@ import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
 import org.optaplanner.jpyinterpreter.PythonTernaryOperators;
 import org.optaplanner.jpyinterpreter.StackMetadata;
-import org.optaplanner.jpyinterpreter.ValueSourceInfo;
-import org.optaplanner.jpyinterpreter.opcodes.OpcodeWithoutSource;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 
@@ -40,8 +38,7 @@ public class ObjectImplementor {
         } else {
             PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
             DunderOperatorImplementor.binaryOperator(methodVisitor,
-                    stackMetadata.push(ValueSourceInfo.of(new OpcodeWithoutSource(),
-                            BuiltinTypes.STRING_TYPE)),
+                    stackMetadata.pushTemp(BuiltinTypes.STRING_TYPE),
                     PythonBinaryOperators.GET_ATTRIBUTE);
         }
     }
@@ -65,8 +62,7 @@ public class ObjectImplementor {
         } else {
             PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
             DunderOperatorImplementor.binaryOperator(methodVisitor,
-                    stackMetadata.push(ValueSourceInfo.of(new OpcodeWithoutSource(),
-                            BuiltinTypes.STRING_TYPE)),
+                    stackMetadata.pushTemp(BuiltinTypes.STRING_TYPE),
                     PythonBinaryOperators.DELETE_ATTRIBUTE);
         }
     }
@@ -92,7 +88,11 @@ public class ObjectImplementor {
             StackManipulationImplementor.swap(methodVisitor);
             PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
             StackManipulationImplementor.swap(methodVisitor);
-            DunderOperatorImplementor.ternaryOperator(methodVisitor, PythonTernaryOperators.SET_ATTRIBUTE, localVariableHelper);
+            DunderOperatorImplementor.ternaryOperator(functionMetadata, stackMetadata.pop(2)
+                    .push(stackMetadata.getValueSourceForStackIndex(0))
+                    .pushTemp(BuiltinTypes.STRING_TYPE)
+                    .push(stackMetadata.getValueSourceForStackIndex(1)),
+                    PythonTernaryOperators.SET_ATTRIBUTE);
         }
     }
 }

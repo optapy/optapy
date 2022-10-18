@@ -509,11 +509,30 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
 
             def __iter__(self):
                 return self
+
             def __next__(self):
-                if not self.iterator.hasNext():
-                    raise StopIteration()
-                else:
-                    return unwrap_python_like_object(self.iterator.next())
+                try:
+                    if not self.iterator.hasNext():
+                        raise StopIteration()
+                    else:
+                        return unwrap_python_like_object(self.iterator.next())
+                except StopIteration:
+                    raise
+                except Exception as e:
+                    raise unwrap_python_like_object(e)
+
+            def send(self, sent):
+                try:
+                    return unwrap_python_like_object(self.iterator.send(convert_to_java_python_like_object(sent)))
+                except Exception as e:
+                    raise unwrap_python_like_object(e)
+
+            def throw(self, thrown):
+                try:
+                    return unwrap_python_like_object(
+                        self.iterator.throwValue(convert_to_java_python_like_object(thrown)))
+                except Exception as e:
+                    raise unwrap_python_like_object(e)
 
         return JavaIterator(python_like_object)
     elif isinstance(python_like_object, PythonCell):

@@ -147,15 +147,17 @@ public class PythonFunctionSignature {
         return true;
     }
 
-    void unwrapBoundMethod(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int posFromTOS) {
+    void unwrapBoundMethod(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int posFromTOS) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         if (methodDescriptor.methodType == MethodDescriptor.MethodType.VIRTUAL ||
                 methodDescriptor.methodType == MethodDescriptor.MethodType.INTERFACE) {
-            StackManipulationImplementor.duplicateToTOS(methodVisitor, localVariableHelper, posFromTOS);
+            StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, posFromTOS);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(BoundPythonLikeFunction.class),
                     "getInstance", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class)),
                     false);
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
-            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, posFromTOS);
+            StackManipulationImplementor.shiftTOSDownBy(functionMetadata, stackMetadata, posFromTOS);
         }
     }
 
@@ -198,18 +200,22 @@ public class PythonFunctionSignature {
         methodDescriptor.callMethod(methodVisitor);
     }
 
-    public void callWithoutKeywords(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int argumentCount) {
+    public void callWithoutKeywords(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int argumentCount) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
-        callWithKeywords(methodVisitor, localVariableHelper, argumentCount);
+        callWithKeywords(functionMetadata, stackMetadata, argumentCount);
     }
 
-    public void callWithKeywords(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper,
+    public void callWithKeywords(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
             int argumentCount) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         if (argumentCount != parameterTypes.length && defaultArgumentHolderClass == null) {
             throw new IllegalStateException("Cannot call " + this + " because there are not enough arguments");
         }
 
-        unwrapBoundMethod(methodVisitor, localVariableHelper, argumentCount + 1);
+        unwrapBoundMethod(functionMetadata, stackMetadata, argumentCount + 1);
 
         // TOS is a tuple of keys
         methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(defaultArgumentHolderClass));

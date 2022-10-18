@@ -21,6 +21,10 @@ public class PythonAssertionError extends PythonException {
         super(ASSERTION_ERROR_TYPE);
     }
 
+    public PythonAssertionError(PythonLikeType type) {
+        super(type);
+    }
+
     public PythonAssertionError(PythonLikeType type, List<PythonLikeObject> args) {
         super(type, args);
     }

@@ -19,7 +19,6 @@ public class MapMergeOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        CollectionImplementor.mapPutAllOnlyIfAllNewElseThrow(functionMetadata.methodVisitor, instruction,
-                stackMetadata.localVariableHelper);
+        CollectionImplementor.mapPutAllOnlyIfAllNewElseThrow(functionMetadata, stackMetadata, instruction);
     }
 }

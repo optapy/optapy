@@ -46,7 +46,7 @@ public abstract class PythonGenerator extends AbstractPythonLikeObject implement
 
     public PythonGenerator() {
         super(BuiltinTypes.GENERATOR_TYPE);
-        sentValue = BuiltinTypes.NONE_TYPE;
+        sentValue = PythonNone.INSTANCE;
         thrownValue = null;
     }
 

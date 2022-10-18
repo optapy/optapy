@@ -19,7 +19,6 @@ public class MapPutOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        CollectionImplementor.mapPut(functionMetadata.methodVisitor, instruction,
-                stackMetadata.localVariableHelper);
+        CollectionImplementor.mapPut(functionMetadata, stackMetadata, instruction);
     }
 }

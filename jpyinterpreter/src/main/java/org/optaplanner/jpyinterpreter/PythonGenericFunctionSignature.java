@@ -39,18 +39,20 @@ public class PythonGenericFunctionSignature extends PythonFunctionSignature {
         return false;
     }
 
-    public void callMethod(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int argumentCount) {
-        callWithoutKeywords(methodVisitor, localVariableHelper, argumentCount);
+    public void callMethod(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int argumentCount) {
+        callWithoutKeywords(functionMetadata, stackMetadata, argumentCount);
     }
 
-    public void callWithoutKeywords(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int argumentCount) {
+    public void callWithoutKeywords(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int argumentCount) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
         CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
-        callWithKeywords(methodVisitor, localVariableHelper, argumentCount);
+        callWithKeywords(functionMetadata, stackMetadata.pushTemp(BuiltinTypes.TUPLE_TYPE), argumentCount);
     }
 
-    public void callWithKeywords(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper,
+    public void callWithKeywords(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
             int argumentCount) {
-        unwrapBoundMethod(methodVisitor, localVariableHelper, argumentCount + 1);
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        unwrapBoundMethod(functionMetadata, stackMetadata, argumentCount + 1);
 
         // stack is callable, arg0, arg1, ..., arg(argc - len(keys)), ..., arg(argc - 1), keys
         // We know the total number of arguments, but not the number of individual positional/keyword arguments

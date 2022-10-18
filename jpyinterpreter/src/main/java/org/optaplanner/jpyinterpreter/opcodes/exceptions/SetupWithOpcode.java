@@ -7,7 +7,6 @@ import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.ValueSourceInfo;
 import org.optaplanner.jpyinterpreter.implementors.ExceptionImplementor;
-import org.optaplanner.jpyinterpreter.opcodes.OpcodeWithoutSource;
 import org.optaplanner.jpyinterpreter.opcodes.controlflow.AbstractControlFlowOpcode;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeFunction;
@@ -40,12 +39,12 @@ public class SetupWithOpcode extends AbstractControlFlowOpcode {
                 stackMetadata
                         .pop()
                         .push(ValueSourceInfo.of(this, PythonLikeFunction.getFunctionType(), stackMetadata.getTOSValueSource()))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.NONE_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.INT_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.NONE_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonTraceback.TRACEBACK_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), PythonBaseException.BASE_EXCEPTION_TYPE))
-                        .push(ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.TYPE_TYPE)));
+                        .pushTemp(BuiltinTypes.NONE_TYPE)
+                        .pushTemp(BuiltinTypes.INT_TYPE)
+                        .pushTemp(BuiltinTypes.NONE_TYPE)
+                        .pushTemp(PythonTraceback.TRACEBACK_TYPE)
+                        .pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE)
+                        .pushTemp(BuiltinTypes.TYPE_TYPE));
     }
 
     @Override

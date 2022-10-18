@@ -28,6 +28,6 @@ public class RotateFourOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        StackManipulationImplementor.rotateFour(functionMetadata.methodVisitor, stackMetadata.localVariableHelper);
+        StackManipulationImplementor.rotateFour(functionMetadata, stackMetadata);
     }
 }

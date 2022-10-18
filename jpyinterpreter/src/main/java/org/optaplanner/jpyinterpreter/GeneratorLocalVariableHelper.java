@@ -187,6 +187,7 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
 
         switch (type.getSort()) {
             case Type.OBJECT:
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type.getInternalName());
                 return;
 
             case Type.INT: {

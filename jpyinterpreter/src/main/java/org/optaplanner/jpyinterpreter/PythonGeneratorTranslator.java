@@ -25,6 +25,7 @@ import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.dag.FlowGraph;
 import org.optaplanner.jpyinterpreter.implementors.DunderOperatorImplementor;
 import org.optaplanner.jpyinterpreter.implementors.FunctionImplementor;
+import org.optaplanner.jpyinterpreter.implementors.GeneratorImplementor;
 import org.optaplanner.jpyinterpreter.implementors.PythonConstantsImplementor;
 import org.optaplanner.jpyinterpreter.implementors.VariableImplementor;
 import org.optaplanner.jpyinterpreter.opcodes.AbstractOpcode;
@@ -436,17 +437,8 @@ public class PythonGeneratorTranslator {
         // First, restore stack
         methodVisitor.visitCode();
 
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, GENERATOR_STACK, Type.getDescriptor(List.class));
-
-        for (int i = 0; i < generatorMethodPart.initialStackMetadata.getStackSize(); i++) {
-            methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitLdcInsn(i);
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
-                    Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE), true);
-            methodVisitor.visitInsn(Opcodes.SWAP);
-        }
-        methodVisitor.visitInsn(Opcodes.POP);
+        GeneratorImplementor.restoreGeneratorState(generatorMethodPart.functionMetadata,
+                generatorMethodPart.initialStackMetadata);
 
         // Push the sent value to the stack
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -710,18 +702,8 @@ public class PythonGeneratorTranslator {
                         Type.getDescriptor(PythonLikeObject.class));
 
                 // Restore the stack
-                methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-                methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, GENERATOR_STACK,
-                        Type.getDescriptor(List.class));
-
-                for (int stackIndex = 0; stackIndex < generatorMethodPart.initialStackMetadata.getStackSize(); stackIndex++) {
-                    methodVisitor.visitInsn(Opcodes.DUP);
-                    methodVisitor.visitLdcInsn(stackIndex);
-                    methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
-                            Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE), true);
-                    methodVisitor.visitInsn(Opcodes.SWAP);
-                }
-                methodVisitor.visitInsn(Opcodes.POP);
+                GeneratorImplementor.restoreGeneratorState(generatorMethodPart.functionMetadata,
+                        generatorMethodPart.initialStackMetadata);
 
                 // Push the last yielded value to TOS
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
