@@ -20,6 +20,7 @@ import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.jpyinterpreter.PythonCompiledFunction;
 import org.optaplanner.jpyinterpreter.PythonInterpreter;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
+import org.optaplanner.jpyinterpreter.PythonVersion;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.types.PythonCode;
 import org.optaplanner.jpyinterpreter.types.PythonKnownFunctionType;
@@ -524,8 +525,12 @@ public class FunctionImplementor {
      *
      * All arguments are popped. A new instance of Class is created with the arguments and pushed to the stack.
      */
-    public static void createFunction(MethodVisitor methodVisitor, String className, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
+    public static void createFunction(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonBytecodeInstruction instruction) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        String className = functionMetadata.className;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+
         int providedOptionalArgs = Integer.bitCount(instruction.arg);
 
         // If the argument present, decrement providedOptionalArgs to keep argument shifting logic the same
@@ -548,8 +553,14 @@ public class FunctionImplementor {
         }
 
         if ((instruction.arg & 4) != 4) {
-            CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
-            StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+            // In Python 3.10 and above, it a tuple of string; in 3.9 and below, a dict
+            if (functionMetadata.pythonCompiledFunction.pythonVersion.isBefore(PythonVersion.PYTHON_3_10)) {
+                CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
+                StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+            } else {
+                CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+                StackManipulationImplementor.shiftTOSDownBy(methodVisitor, localVariableHelper, 2 + providedOptionalArgs);
+            }
         } else {
             providedOptionalArgs--;
         }
@@ -573,17 +584,30 @@ public class FunctionImplementor {
                 PythonBytecodeToJavaBytecodeTranslator.INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
 
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class),
-                "createInstance", Type.getMethodDescriptor(Type.getType(PythonLikeFunction.class),
-                        Type.getType(PythonLikeTuple.class),
-                        Type.getType(PythonLikeDict.class),
-                        Type.getType(PythonLikeTuple.class),
-                        Type.getType(PythonLikeTuple.class),
-                        Type.getType(PythonString.class),
-                        Type.getType(PythonCode.class),
-                        Type.getType(PythonInterpreter.class)),
-                false);
-
+        // Need to change constructor depending on Python version
+        if (functionMetadata.pythonCompiledFunction.pythonVersion.isBefore(PythonVersion.PYTHON_3_10)) {
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class),
+                    "createInstance", Type.getMethodDescriptor(Type.getType(PythonLikeFunction.class),
+                            Type.getType(PythonLikeTuple.class),
+                            Type.getType(PythonLikeDict.class),
+                            Type.getType(PythonLikeDict.class),
+                            Type.getType(PythonLikeTuple.class),
+                            Type.getType(PythonString.class),
+                            Type.getType(PythonCode.class),
+                            Type.getType(PythonInterpreter.class)),
+                    false);
+        } else {
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class),
+                    "createInstance", Type.getMethodDescriptor(Type.getType(PythonLikeFunction.class),
+                            Type.getType(PythonLikeTuple.class),
+                            Type.getType(PythonLikeDict.class),
+                            Type.getType(PythonLikeTuple.class),
+                            Type.getType(PythonLikeTuple.class),
+                            Type.getType(PythonString.class),
+                            Type.getType(PythonCode.class),
+                            Type.getType(PythonInterpreter.class)),
+                    false);
+        }
     }
 
     @SuppressWarnings("unused")
@@ -659,6 +683,20 @@ public class FunctionImplementor {
         return out;
     }
 
+    // For Python 3.9 and below
+    @SuppressWarnings("unused")
+    public static PythonLikeFunction createInstance(PythonLikeTuple defaultPositionalArgs,
+            PythonLikeDict defaultKeywordArgs,
+            PythonLikeDict annotationDict,
+            PythonLikeTuple closure,
+            PythonString functionName,
+            PythonCode code,
+            PythonInterpreter pythonInterpreter) {
+        return createInstance(defaultPositionalArgs, defaultKeywordArgs, annotationDict.toFlattenKeyValueTuple(),
+                closure, functionName, code.functionClass, pythonInterpreter);
+    }
+
+    // For Python 3.10 and above
     @SuppressWarnings("unused")
     public static PythonLikeFunction createInstance(PythonLikeTuple defaultPositionalArgs,
             PythonLikeDict defaultKeywordArgs,
@@ -679,7 +717,7 @@ public class FunctionImplementor {
             Class<T> functionClass,
             PythonInterpreter pythonInterpreter) {
         PythonLikeDict annotationDirectory = new PythonLikeDict();
-        for (int i = 0; i < annotationTuple.size(); i++) {
+        for (int i = 0; i < (annotationTuple.size() >> 1); i++) {
             annotationDirectory.put(annotationTuple.get(i * 2), annotationTuple.get(i * 2 + 1));
         }
 

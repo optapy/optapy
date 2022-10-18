@@ -23,7 +23,6 @@ public class MakeFunctionOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        FunctionImplementor.createFunction(functionMetadata.methodVisitor, functionMetadata.className,
-                instruction, stackMetadata.localVariableHelper);
+        FunctionImplementor.createFunction(functionMetadata, stackMetadata, instruction);
     }
 }

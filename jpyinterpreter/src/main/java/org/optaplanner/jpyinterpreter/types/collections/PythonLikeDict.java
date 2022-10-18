@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.collections4.OrderedMap;
 import org.apache.commons.collections4.map.LinkedMap;
@@ -122,6 +124,12 @@ public class PythonLikeDict extends AbstractPythonLikeObject
 
     public static PythonLikeDict mirror(Map<String, PythonLikeObject> globals) {
         return new PythonLikeDict(new JavaStringMapMirror(globals));
+    }
+
+    public PythonLikeTuple toFlattenKeyValueTuple() {
+        return PythonLikeTuple.fromList(delegate.entrySet().stream()
+                .flatMap(entry -> Stream.of(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList()));
     }
 
     public PythonLikeDict copy() {
