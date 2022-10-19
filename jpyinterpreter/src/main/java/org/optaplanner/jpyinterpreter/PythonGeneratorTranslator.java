@@ -30,6 +30,7 @@ import org.optaplanner.jpyinterpreter.implementors.PythonConstantsImplementor;
 import org.optaplanner.jpyinterpreter.implementors.VariableImplementor;
 import org.optaplanner.jpyinterpreter.opcodes.AbstractOpcode;
 import org.optaplanner.jpyinterpreter.opcodes.Opcode;
+import org.optaplanner.jpyinterpreter.opcodes.generator.GeneratorStartOpcode;
 import org.optaplanner.jpyinterpreter.opcodes.generator.YieldFromOpcode;
 import org.optaplanner.jpyinterpreter.opcodes.generator.YieldValueOpcode;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
@@ -40,6 +41,7 @@ import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.StopIteration;
+import org.optaplanner.jpyinterpreter.util.JavaPythonClassWriter;
 import org.optaplanner.jpyinterpreter.util.MethodVisitorAdapters;
 
 public class PythonGeneratorTranslator {
@@ -75,7 +77,7 @@ public class PythonGeneratorTranslator {
         String className = maybeClassName;
         String internalClassName = className.replace('.', '/');
 
-        ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        ClassWriter classWriter = new JavaPythonClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 
         classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null,
                 Type.getInternalName(PythonGenerator.class), null);
@@ -105,13 +107,9 @@ public class PythonGeneratorTranslator {
 
         // Create fields for parameters, cells and local variables
         {
-            int variable = 0;
-            for (; variable < pythonCompiledFunction.getParameterTypes().size(); variable++) {
-                classWriter.visitField(Modifier.PRIVATE, pythonCompiledFunction.co_varnames.get(variable),
-                        pythonCompiledFunction.getParameterTypes().get(variable).getJavaTypeDescriptor(),
-                        null, null);
-            }
-            for (; variable < pythonCompiledFunction.co_varnames.size(); variable++) {
+            // Cannot use parameter types as the type descriptor, since the variables assigned to the
+            // Python parameter can change types in the middle of code
+            for (int variable = 0; variable < pythonCompiledFunction.co_varnames.size(); variable++) {
                 classWriter.visitField(Modifier.PRIVATE, pythonCompiledFunction.co_varnames.get(variable),
                         Type.getDescriptor(PythonLikeObject.class),
                         null, null);
@@ -224,7 +222,7 @@ public class PythonGeneratorTranslator {
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, parameter + 7);
                 methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName,
                         pythonCompiledFunction.co_varnames.get(parameter),
-                        pythonCompiledFunction.getParameterTypes().get(parameter).getJavaTypeDescriptor());
+                        Type.getDescriptor(PythonLikeObject.class));
             }
         }
 
@@ -433,6 +431,7 @@ public class PythonGeneratorTranslator {
     private static void generateAdvanceGeneratorMethodForYieldValue(ClassWriter classWriter, String internalClassName,
             GeneratorMethodPart generatorMethodPart) {
         MethodVisitor methodVisitor = generatorMethodPart.functionMetadata.methodVisitor;
+        List<Opcode> opcodeList = getOpcodeList(generatorMethodPart.functionMetadata.pythonCompiledFunction);
 
         // First, restore stack
         methodVisitor.visitCode();
@@ -440,22 +439,24 @@ public class PythonGeneratorTranslator {
         GeneratorImplementor.restoreGeneratorState(generatorMethodPart.functionMetadata,
                 generatorMethodPart.initialStackMetadata);
 
-        // Push the sent value to the stack
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(PythonGenerator.class), "sentValue",
-                Type.getDescriptor(PythonLikeObject.class));
+        if (generatorMethodPart.afterYield != 0
+                || (opcodeList.size() > 0 && opcodeList.get(0) instanceof GeneratorStartOpcode)) {
+            // Push the sent value to the stack
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+            methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(PythonGenerator.class), "sentValue",
+                    Type.getDescriptor(PythonLikeObject.class));
 
-        // Set the sent value to None
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-        PythonConstantsImplementor.loadNone(methodVisitor);
-        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(PythonGenerator.class), "sentValue",
-                Type.getDescriptor(PythonLikeObject.class));
+            // Set the sent value to None
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+            PythonConstantsImplementor.loadNone(methodVisitor);
+            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(PythonGenerator.class), "sentValue",
+                    Type.getDescriptor(PythonLikeObject.class));
+        }
 
         // Now generate bytecode for method
         StackMetadata initialStackMetadata =
                 getInitialStackMetadata(generatorMethodPart.initialStackMetadata.localVariableHelper,
                         generatorMethodPart.originalMethodDescriptor, false);
-        List<Opcode> opcodeList = getOpcodeList(generatorMethodPart.functionMetadata.pythonCompiledFunction);
         FlowGraph flowGraph = FlowGraph.createFlowGraph(generatorMethodPart.functionMetadata, initialStackMetadata, opcodeList);
         List<StackMetadata> stackMetadataForOpcodeIndex = flowGraph.getStackMetadataForOperations();
 

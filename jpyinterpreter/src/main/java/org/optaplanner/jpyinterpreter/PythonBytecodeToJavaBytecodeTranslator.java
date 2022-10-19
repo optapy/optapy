@@ -143,6 +143,20 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 compiledClass, PythonInterpreter.DEFAULT);
     }
 
+    public static <T> T forceTranslatePythonBytecodeToGenerator(PythonCompiledFunction pythonCompiledFunction,
+            Class<T> javaFunctionalInterfaceType) {
+        Method methodWithoutGenerics = getFunctionalInterfaceMethod(javaFunctionalInterfaceType);
+        MethodDescriptor methodDescriptor = new MethodDescriptor(javaFunctionalInterfaceType,
+                methodWithoutGenerics,
+                List.of());
+        Class<T> compiledClass = forceTranslatePythonBytecodeToGeneratorClass(pythonCompiledFunction, methodDescriptor,
+                methodWithoutGenerics, false);
+        return FunctionImplementor.createInstance(new PythonLikeTuple(), new PythonLikeDict(),
+                new PythonLikeTuple(), pythonCompiledFunction.closure,
+                PythonString.valueOf(compiledClass.getName()),
+                compiledClass, PythonInterpreter.DEFAULT);
+    }
+
     public static <T> Class<T> translatePythonBytecodeToClass(PythonCompiledFunction pythonCompiledFunction,
             Class<T> javaFunctionalInterfaceType) {
         MethodDescriptor methodDescriptor = new MethodDescriptor(getFunctionalInterfaceMethod(javaFunctionalInterfaceType));
@@ -344,6 +358,93 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             compiledClass.getField(PYTHON_WRAPPER_CODE_STATIC_FIELD_NAME).set(null, codeReference);
             return compiledClass;
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            throw new IllegalStateException("Impossible State: Unable to load generated class (" +
+                    className + ") despite it being just generated.", e);
+        }
+    }
+
+    /**
+     * Used for testing; force translate the python to a generator, even if it is not a generator
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> Class<T> forceTranslatePythonBytecodeToGeneratorClass(PythonCompiledFunction pythonCompiledFunction,
+            MethodDescriptor methodDescriptor, Method methodWithoutGenerics,
+            boolean isVirtual) {
+        String maybeClassName = USER_PACKAGE_BASE + pythonCompiledFunction.getGeneratedClassBaseName();
+        int numberOfInstances = classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
+        if (numberOfInstances > 1) {
+            maybeClassName = maybeClassName + "$$" + numberOfInstances;
+        }
+        String className = maybeClassName;
+        String internalClassName = className.replace('.', '/');
+        ClassWriter classWriter = new JavaPythonClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null, Type.getInternalName(Object.class),
+                new String[] { methodDescriptor.declaringClassInternalName });
+
+        final boolean isPythonLikeFunction =
+                methodDescriptor.declaringClassInternalName.equals(Type.getInternalName(PythonLikeFunction.class));
+
+        createFields(classWriter);
+        createConstructor(classWriter, internalClassName);
+
+        MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC,
+                methodDescriptor.methodName,
+                methodDescriptor.methodDescriptor,
+                null,
+                null);
+
+        LocalVariableHelper localVariableHelper =
+                new LocalVariableHelper(methodDescriptor.getParameterTypes(), pythonCompiledFunction);
+
+        if (!isPythonLikeFunction) {
+            // Need to convert Java parameters
+            for (int i = 0; i < localVariableHelper.parameters.length; i++) {
+                JavaPythonTypeConversionImplementor.copyParameter(methodVisitor, localVariableHelper, i);
+            }
+        } else {
+            // Need to move Python parameters from the argument list + keyword list to their variable slots
+            movePythonParametersToSlots(methodVisitor, internalClassName, pythonCompiledFunction, localVariableHelper);
+        }
+
+        for (int i = 0; i < localVariableHelper.getNumberOfBoundCells(); i++) {
+            VariableImplementor.createCell(methodVisitor, localVariableHelper, i);
+        }
+
+        for (int i = 0; i < localVariableHelper.getNumberOfFreeCells(); i++) {
+            VariableImplementor.setupFreeVariableCell(methodVisitor, internalClassName, localVariableHelper, i);
+        }
+
+        translateGeneratorBytecode(methodVisitor, methodDescriptor, internalClassName, localVariableHelper,
+                pythonCompiledFunction); // TODO: Use actual python version
+
+        String withoutGenericsSignature = Type.getMethodDescriptor(methodWithoutGenerics);
+        if (!withoutGenericsSignature.equals(methodDescriptor.methodDescriptor)) {
+            methodVisitor =
+                    classWriter.visitMethod(Modifier.PUBLIC, methodDescriptor.methodName, withoutGenericsSignature, null, null);
+
+            methodVisitor.visitCode();
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+            for (int i = 0; i < methodWithoutGenerics.getParameterCount(); i++) {
+                Type parameterType = Type.getType(methodWithoutGenerics.getParameterTypes()[i]);
+                methodVisitor.visitVarInsn(parameterType.getOpcode(Opcodes.ILOAD), i + 1);
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getParameterTypes()[i].getInternalName());
+            }
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, internalClassName, methodDescriptor.methodName,
+                    methodDescriptor.methodDescriptor, false);
+            methodVisitor.visitInsn(methodDescriptor.getReturnType().getOpcode(Opcodes.IRETURN));
+
+            methodVisitor.visitMaxs(-1, -1);
+            methodVisitor.visitEnd();
+        }
+        classWriter.visitEnd();
+
+        writeClassOutput(BuiltinTypes.classNameToBytecode, className, classWriter.toByteArray());
+
+        try {
+            Class<T> compiledClass = (Class<T>) BuiltinTypes.asmClassLoader.loadClass(className);
+            setStaticFields(compiledClass, pythonCompiledFunction);
+            return compiledClass;
+        } catch (ClassNotFoundException e) {
             throw new IllegalStateException("Impossible State: Unable to load generated class (" +
                     className + ") despite it being just generated.", e);
         }

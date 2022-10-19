@@ -123,6 +123,11 @@ def verifier_for(the_function: Callable[..., Any]) -> FunctionVerifier:
 
     java_function = jpyinterpreter.as_typed_java(the_function)
     untyped_java_function = jpyinterpreter.as_untyped_java(the_function)
+
+    # Generator code use a different local variable helper than normal function;
+    # this is to make sure no verification error come up
+    jpyinterpreter._force_as_java_generator(the_function)
+
     return FunctionVerifier(the_function, java_function, untyped_java_function)
 
 

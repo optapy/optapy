@@ -2,7 +2,6 @@ package org.optaplanner.jpyinterpreter;
 
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.objectweb.asm.ClassWriter;
@@ -10,7 +9,6 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.types.PythonCell;
-import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 
 public class GeneratorLocalVariableHelper extends LocalVariableHelper {
 
@@ -52,12 +50,9 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
                     compiledFunction.co_freevars.get(i));
         }
 
-        List<PythonLikeType> parameterTypes = compiledFunction.getParameterTypes();
-        for (int i = 0; i < parameterTypes.size(); i++) {
-            slotToLocalTypeDescriptor.put(i, parameterTypes.get(i).getJavaTypeDescriptor());
-        }
-
-        for (int i = parameterTypes.size(); i < compiledFunction.co_varnames.size(); i++) {
+        // Cannot use parameter types as the type descriptor, since the variables assigned to the
+        // Python parameter can change types in the middle of code
+        for (int i = 0; i < compiledFunction.co_varnames.size(); i++) {
             slotToLocalTypeDescriptor.put(i, Type.getDescriptor(PythonLikeObject.class));
         }
 

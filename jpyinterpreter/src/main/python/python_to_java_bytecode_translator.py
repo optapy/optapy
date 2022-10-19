@@ -794,6 +794,13 @@ def translate_python_bytecode_to_java_bytecode(python_function, java_function_ty
                                                                               java_function_type,
                                                                               copy_iterable(type_args))
 
+def _force_translate_python_bytecode_to_generator_java_bytecode(python_function, java_function_type):
+    from org.optaplanner.jpyinterpreter import PythonBytecodeToJavaBytecodeTranslator # noqa
+    python_compiled_function = get_function_bytecode_object(python_function)
+
+    return PythonBytecodeToJavaBytecodeTranslator.forceTranslatePythonBytecodeToGenerator(python_compiled_function,
+                                                                                          java_function_type)
+
 
 def translate_python_code_to_java_class(python_function, java_function_type, *type_args):
     from org.optaplanner.jpyinterpreter import PythonBytecodeToJavaBytecodeTranslator # noqa
@@ -873,6 +880,13 @@ def as_typed_java(python_function):
     function_interface_class = PythonClassTranslator.getInterfaceClassForDeclaration(function_interface_declaration)
     java_function = translate_python_bytecode_to_java_bytecode(python_function, function_interface_class)
     return wrap_typed_java_function(java_function)
+
+
+def _force_as_java_generator(python_function):
+    from org.optaplanner.jpyinterpreter.types import PythonLikeFunction
+    java_function = _force_translate_python_bytecode_to_generator_java_bytecode(python_function,
+                                                                                PythonLikeFunction)
+    return wrap_untyped_java_function(java_function)
 
 
 class MethodTypeHelper:
