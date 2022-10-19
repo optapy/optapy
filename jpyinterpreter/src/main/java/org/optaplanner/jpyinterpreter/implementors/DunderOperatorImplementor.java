@@ -109,29 +109,45 @@ public class DunderOperatorImplementor {
 
     public static void binaryOperator(MethodVisitor methodVisitor, StackMetadata stackMetadata,
             PythonBinaryOperators operator) {
-        binaryOperator(methodVisitor, stackMetadata, operator, true, true);
+        binaryOperator(methodVisitor, stackMetadata, operator, true, true, false);
     }
 
     private static void binaryOperator(MethodVisitor methodVisitor, StackMetadata stackMetadata,
-            PythonBinaryOperators operator, boolean isLeft, boolean leftCheckSuccessful) {
+            PythonBinaryOperators operator, boolean isLeft, boolean leftCheckSuccessful,
+            boolean forceFallback) {
         PythonLikeType leftOperand =
                 Optional.ofNullable(stackMetadata.getTypeAtStackIndex(1)).orElse(BuiltinTypes.BASE_TYPE);
         PythonLikeType rightOperand =
                 Optional.ofNullable(stackMetadata.getTypeAtStackIndex(0)).orElse(BuiltinTypes.BASE_TYPE);
 
+        PythonBinaryOperators actualOperator = operator;
+        if (forceFallback || (!isLeft && operator.getFallbackOperation().isPresent())) {
+            actualOperator = operator.getFallbackOperation().get();
+        }
+
         Optional<PythonKnownFunctionType> maybeKnownFunctionType =
-                isLeft ? leftOperand.getMethodType(operator.getDunderMethod())
-                        : rightOperand.getMethodType(operator.getRightDunderMethod());
+                isLeft ? leftOperand.getMethodType(actualOperator.getDunderMethod())
+                        : rightOperand.getMethodType(actualOperator.getRightDunderMethod());
+
+        if (maybeKnownFunctionType.isEmpty() && operator.getFallbackOperation().isPresent()) {
+            maybeKnownFunctionType =
+                    isLeft ? leftOperand.getMethodType(operator.getFallbackOperation().get().getDunderMethod())
+                            : rightOperand.getMethodType(operator.getFallbackOperation().get().getRightDunderMethod());
+            actualOperator = operator.getFallbackOperation().get();
+        }
+
         if (maybeKnownFunctionType.isPresent()) {
             PythonKnownFunctionType knownFunctionType = maybeKnownFunctionType.get();
             Optional<PythonFunctionSignature> maybeFunctionSignature =
                     isLeft ? knownFunctionType.getFunctionForParameters(rightOperand)
                             : knownFunctionType.getFunctionForParameters(leftOperand);
+
             if (maybeFunctionSignature.isPresent()) {
                 PythonFunctionSignature functionSignature = maybeFunctionSignature.get();
                 MethodDescriptor methodDescriptor = functionSignature.getMethodDescriptor();
-                boolean needToCheckForNotImplemented = operator.hasRightDunderMethod() &&
-                        BuiltinTypes.NOT_IMPLEMENTED_TYPE.isSubclassOf(functionSignature.getReturnType());
+                boolean needToCheckForNotImplemented =
+                        (actualOperator.hasRightDunderMethod() || actualOperator.getFallbackOperation().isPresent())
+                                && BuiltinTypes.NOT_IMPLEMENTED_TYPE.isSubclassOf(functionSignature.getReturnType());
 
                 if (isLeft) {
                     if (methodDescriptor.getParameterTypes().length < 2) {
@@ -191,24 +207,28 @@ public class DunderOperatorImplementor {
                     methodVisitor.visitLabel(ifNotImplemented);
                     if (isLeft) {
                         methodVisitor.visitInsn(Opcodes.POP);
-                        binaryOperator(methodVisitor, stackMetadata, operator, false, true);
+                        if (actualOperator.getFallbackOperation().isPresent()) {
+                            binaryOperator(methodVisitor, stackMetadata, operator, true, true, true);
+                        } else {
+                            binaryOperator(methodVisitor, stackMetadata, operator, false, true, false);
+                        }
                     } else {
                         methodVisitor.visitInsn(Opcodes.POP);
                         raiseUnsupportedType(methodVisitor, stackMetadata.localVariableHelper, operator);
                     }
                     methodVisitor.visitLabel(done);
                 }
-            } else if (isLeft && operator.hasRightDunderMethod()) {
-                binaryOperator(methodVisitor, stackMetadata, operator, false, false);
+            } else if (isLeft && actualOperator.hasRightDunderMethod()) {
+                binaryOperator(methodVisitor, stackMetadata, operator, false, false, false);
             } else if (!isLeft && leftCheckSuccessful) {
-                binaryOperatorOnlyRight(methodVisitor, stackMetadata.localVariableHelper, operator);
+                binaryOperatorOnlyRight(methodVisitor, stackMetadata.localVariableHelper, actualOperator);
             } else {
                 binaryOperator(methodVisitor, stackMetadata.localVariableHelper, operator);
             }
-        } else if (isLeft && operator.hasRightDunderMethod()) {
-            binaryOperator(methodVisitor, stackMetadata, operator, false, false);
+        } else if (isLeft && actualOperator.hasRightDunderMethod()) {
+            binaryOperator(methodVisitor, stackMetadata, operator, false, false, false);
         } else if (!isLeft && leftCheckSuccessful) {
-            binaryOperatorOnlyRight(methodVisitor, stackMetadata.localVariableHelper, operator);
+            binaryOperatorOnlyRight(methodVisitor, stackMetadata.localVariableHelper, actualOperator);
         } else {
             binaryOperator(methodVisitor, stackMetadata.localVariableHelper, operator);
         }
@@ -313,7 +333,7 @@ public class DunderOperatorImplementor {
             PythonBinaryOperators operator) {
         Label noLeftMethod = new Label();
         methodVisitor.visitInsn(Opcodes.DUP2);
-        if (operator.hasRightDunderMethod()) {
+        if (operator.hasRightDunderMethod() || operator.getFallbackOperation().isPresent()) {
             methodVisitor.visitInsn(Opcodes.DUP2);
         }
         methodVisitor.visitInsn(Opcodes.SWAP);
@@ -367,7 +387,7 @@ public class DunderOperatorImplementor {
 
         methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, ifNotImplemented);
         // Stack is TOS1, TOS, method_result
-        if (operator.hasRightDunderMethod()) {
+        if (operator.hasRightDunderMethod() || operator.getFallbackOperation().isPresent()) {
             methodVisitor.visitInsn(Opcodes.DUP_X2);
             methodVisitor.visitInsn(Opcodes.POP);
             methodVisitor.visitInsn(Opcodes.POP2);
@@ -381,7 +401,10 @@ public class DunderOperatorImplementor {
         methodVisitor.visitInsn(Opcodes.POP);
 
         Label raiseError = new Label();
-        if (operator.hasRightDunderMethod()) {
+        if (operator.getFallbackOperation().isPresent()) {
+            binaryOperator(methodVisitor, localVariableHelper, operator.getFallbackOperation().get());
+            methodVisitor.visitJumpInsn(Opcodes.GOTO, done);
+        } else if (operator.hasRightDunderMethod()) {
             Label noRightMethod = new Label();
             // Stack is now TOS1, TOS
             methodVisitor.visitInsn(Opcodes.DUP);
@@ -445,7 +468,6 @@ public class DunderOperatorImplementor {
         methodVisitor.visitInsn(Opcodes.DUP_X2);
         methodVisitor.visitInsn(Opcodes.POP);
         methodVisitor.visitInsn(Opcodes.POP2);
-
     }
 
     public static void binaryOperatorOnlyRight(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper,

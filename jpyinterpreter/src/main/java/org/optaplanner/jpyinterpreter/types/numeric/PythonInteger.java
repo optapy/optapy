@@ -152,46 +152,6 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
         BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.XOR,
                 PythonInteger.class.getMethod("bitwiseXor", PythonInteger.class));
 
-        // Inplace Binary (identical to Binary)
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_ADD,
-                PythonInteger.class.getMethod("add", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_ADD,
-                PythonInteger.class.getMethod("add", PythonFloat.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
-                PythonInteger.class.getMethod("subtract", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
-                PythonInteger.class.getMethod("subtract", PythonFloat.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
-                PythonInteger.class.getMethod("multiply", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
-                PythonInteger.class.getMethod("multiply", PythonFloat.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
-                PythonInteger.class.getMethod("trueDivide", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
-                PythonInteger.class.getMethod("trueDivide", PythonFloat.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
-                PythonInteger.class.getMethod("floorDivide", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
-                PythonInteger.class.getMethod("floorDivide", PythonFloat.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MODULO,
-                PythonInteger.class.getMethod("modulo", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MODULO,
-                PythonInteger.class.getMethod("modulo", PythonFloat.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_POWER,
-                PythonInteger.class.getMethod("power", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_POWER,
-                PythonInteger.class.getMethod("power", PythonFloat.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_LSHIFT,
-                PythonInteger.class.getMethod("shiftLeft", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_RSHIFT,
-                PythonInteger.class.getMethod("shiftRight", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_AND,
-                PythonInteger.class.getMethod("bitwiseAnd", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_OR,
-                PythonInteger.class.getMethod("bitwiseOr", PythonInteger.class));
-        BuiltinTypes.INT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_XOR,
-                PythonInteger.class.getMethod("bitwiseXor", PythonInteger.class));
-
         // Ternary
         BuiltinTypes.INT_TYPE.addBinaryMethod(PythonBinaryOperators.POWER,
                 PythonInteger.class.getMethod("power", PythonInteger.class, PythonInteger.class));

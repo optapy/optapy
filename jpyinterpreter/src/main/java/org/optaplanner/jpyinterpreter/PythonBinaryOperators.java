@@ -1,5 +1,7 @@
 package org.optaplanner.jpyinterpreter;
 
+import java.util.Optional;
+
 /**
  * The list of all Python Binary Operators, which are performed
  * by calling the left operand's corresponding dunder method on the
@@ -32,19 +34,19 @@ public enum PythonBinaryOperators {
     OR("|", "__or__", "__ror__"),
 
     // In-place numeric binary operations variations
-    INPLACE_POWER("**=", "__ipow__"),
-    INPLACE_MULTIPLY("*=", "__imul__"),
-    INPLACE_MATRIX_MULTIPLY("@=", "__imatmul__"),
-    INPLACE_FLOOR_DIVIDE("//=", "__ifloordiv__"),
-    INPLACE_TRUE_DIVIDE("/=", "__itruediv__"),
-    INPLACE_MODULO("%=", "__imod__"),
-    INPLACE_ADD("+=", "__iadd__"),
-    INPLACE_SUBTRACT("-=", "__isub__"),
-    INPLACE_LSHIFT("<<=", "__ilshift__"),
-    INPLACE_RSHIFT(">>=", "__irshift__"),
-    INPLACE_AND("&=", "__iand__"),
-    INPLACE_XOR("^=", "__ixor__"),
-    INPLACE_OR("|=", "__ior__"),
+    INPLACE_POWER("**=", "__ipow__", PythonBinaryOperators.POWER),
+    INPLACE_MULTIPLY("*=", "__imul__", PythonBinaryOperators.MULTIPLY),
+    INPLACE_MATRIX_MULTIPLY("@=", "__imatmul__", PythonBinaryOperators.MATRIX_MULTIPLY),
+    INPLACE_FLOOR_DIVIDE("//=", "__ifloordiv__", PythonBinaryOperators.FLOOR_DIVIDE),
+    INPLACE_TRUE_DIVIDE("/=", "__itruediv__", PythonBinaryOperators.TRUE_DIVIDE),
+    INPLACE_MODULO("%=", "__imod__", PythonBinaryOperators.MODULO),
+    INPLACE_ADD("+=", "__iadd__", PythonBinaryOperators.ADD),
+    INPLACE_SUBTRACT("-=", "__isub__", PythonBinaryOperators.SUBTRACT),
+    INPLACE_LSHIFT("<<=", "__ilshift__", PythonBinaryOperators.LSHIFT),
+    INPLACE_RSHIFT(">>=", "__irshift__", PythonBinaryOperators.RSHIFT),
+    INPLACE_AND("&=", "__iand__", PythonBinaryOperators.AND),
+    INPLACE_XOR("^=", "__ixor__", PythonBinaryOperators.XOR),
+    INPLACE_OR("|=", "__ior__", PythonBinaryOperators.OR),
 
     // List operations
     // https://docs.python.org/3/reference/datamodel.html#object.__getitem__
@@ -79,12 +81,14 @@ public enum PythonBinaryOperators {
     public final String dunderMethod;
     public final String rightDunderMethod;
     public final boolean isComparisonMethod;
+    public final PythonBinaryOperators fallbackOperation;
 
     PythonBinaryOperators(String operatorSymbol, String dunderMethod) {
         this.operatorSymbol = operatorSymbol;
         this.dunderMethod = dunderMethod;
         this.rightDunderMethod = null;
         this.isComparisonMethod = false;
+        this.fallbackOperation = null;
     }
 
     PythonBinaryOperators(String operatorSymbol, String dunderMethod, String rightDunderMethod) {
@@ -92,6 +96,7 @@ public enum PythonBinaryOperators {
         this.dunderMethod = dunderMethod;
         this.rightDunderMethod = rightDunderMethod;
         this.isComparisonMethod = false;
+        this.fallbackOperation = null;
     }
 
     PythonBinaryOperators(String operatorSymbol, String dunderMethod, String rightDunderMethod, boolean isComparisonMethod) {
@@ -99,6 +104,15 @@ public enum PythonBinaryOperators {
         this.dunderMethod = dunderMethod;
         this.rightDunderMethod = rightDunderMethod;
         this.isComparisonMethod = isComparisonMethod;
+        this.fallbackOperation = null;
+    }
+
+    PythonBinaryOperators(String operatorSymbol, String dunderMethod, PythonBinaryOperators fallbackOperation) {
+        this.operatorSymbol = operatorSymbol;
+        this.dunderMethod = dunderMethod;
+        this.rightDunderMethod = null;
+        this.isComparisonMethod = false;
+        this.fallbackOperation = fallbackOperation;
     }
 
     public String getOperatorSymbol() {
@@ -119,5 +133,9 @@ public enum PythonBinaryOperators {
 
     public boolean isComparisonMethod() {
         return isComparisonMethod;
+    }
+
+    public Optional<PythonBinaryOperators> getFallbackOperation() {
+        return Optional.ofNullable(fallbackOperation);
     }
 }

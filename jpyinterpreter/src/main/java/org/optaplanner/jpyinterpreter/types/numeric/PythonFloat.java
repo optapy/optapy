@@ -122,36 +122,6 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.POWER,
                 PythonFloat.class.getMethod("power", PythonFloat.class));
 
-        // Inplace Binary (identical to Binary)
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_ADD,
-                PythonFloat.class.getMethod("add", PythonInteger.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_ADD,
-                PythonFloat.class.getMethod("add", PythonFloat.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
-                PythonFloat.class.getMethod("subtract", PythonInteger.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_SUBTRACT,
-                PythonFloat.class.getMethod("subtract", PythonFloat.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
-                PythonFloat.class.getMethod("multiply", PythonInteger.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MULTIPLY,
-                PythonFloat.class.getMethod("multiply", PythonFloat.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
-                PythonFloat.class.getMethod("trueDivide", PythonInteger.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_TRUE_DIVIDE,
-                PythonFloat.class.getMethod("trueDivide", PythonFloat.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
-                PythonFloat.class.getMethod("floorDivide", PythonInteger.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_FLOOR_DIVIDE,
-                PythonFloat.class.getMethod("floorDivide", PythonFloat.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MODULO,
-                PythonFloat.class.getMethod("modulo", PythonInteger.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_MODULO,
-                PythonFloat.class.getMethod("modulo", PythonFloat.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_POWER,
-                PythonFloat.class.getMethod("power", PythonInteger.class));
-        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.INPLACE_POWER,
-                PythonFloat.class.getMethod("power", PythonFloat.class));
-
         // Comparisons
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.EQUAL,
                 PythonFloat.class.getMethod("equal", PythonLikeObject.class));

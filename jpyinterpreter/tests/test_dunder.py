@@ -137,6 +137,204 @@ def test_both_return_not_implemented():
     verifier.verify(A(3), B(2), expected_error=TypeError)
 
 
+def test_inplace_same_operand():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+        def __sub__(self, other):
+            return self.value - other.value
+
+    def function(a: A, b: A) -> int:
+        a -= b
+        return a  # noqa
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), A(2), expected_result=1)
+
+
+def test_inplace_defined():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+        def __isub__(self, other):
+            return self.value - other.value
+
+        def __sub__(self, other):
+            return self.value + other.value
+
+    class B:
+        def __init__(self, value):
+            self.value = value
+
+        def __sub__(self, other):
+            return self.value + other.value
+
+        def __rsub__(self, other):
+            return self.value + other.value
+
+    def function(a: A, b: B) -> int:
+        a -= b
+        return a  # noqa
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), B(2), expected_result=1)
+
+
+def test_inplace_only_left_defined():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+        def __sub__(self, other):
+            return self.value - other.value
+
+    class B:
+        def __init__(self, value):
+            self.value = value
+
+    def function(a: A, b: B) -> int:
+        a -= b
+        return a  # noqa
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), B(2), expected_result=1)
+
+
+def test_inplace_only_right_defined():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+    class B:
+        def __init__(self, value):
+            self.value = value
+
+        def __rsub__(self, other):
+            return other.value - self.value
+
+    def function(a: A, b: B) -> int:
+        a -= b
+        return a  # noqa
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), B(2), expected_result=1)
+
+
+def test_inplace_both_defined():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+        def __sub__(self, other):
+            return self.value - other.value
+
+    class B:
+        def __init__(self, value):
+            self.value = value
+
+        def __rsub__(self, other):
+            return self.value - other.value
+
+    def function(a: A, b: B) -> int:
+        a -= b
+        return a  # noqa
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), B(2), expected_result=1)
+
+
+def test_inplace_neither_defined():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+    class B:
+        def __init__(self, value):
+            self.value = value
+
+    # We are testing raising TypeError here, so we should ignore the IDE warnings this function gives
+    def function(a: A, b: B) -> object:  # noqa
+        a -= b  # noqa
+        return a
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), B(2), expected_error=TypeError)
+
+
+def test_inplace_left_inplace_return_not_implemented():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+        def __isub__(self, other):
+            return NotImplemented
+
+        def __sub__(self, other):
+            return self.value - other.value
+
+    class B:
+        def __init__(self, value):
+            self.value = value
+
+        def __rsub__(self, other):
+            return other.value + self.value
+
+    def function(a: A, b: B) -> int:
+        a -= b
+        return a  # noqa
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), B(2), expected_result=1)
+
+
+def test_inplace_left_return_not_implemented():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+        def __sub__(self, other):
+            return NotImplemented
+
+    class B:
+        def __init__(self, value):
+            self.value = value
+
+        def __rsub__(self, other):
+            return other.value - self.value
+
+    def function(a: A, b: B) -> int:
+        a -= b
+        return a  # noqa
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), B(2), expected_result=1)
+
+
+def test_inplace_both_return_not_implemented():
+    class A:
+        def __init__(self, value):
+            self.value = value
+
+        def __sub__(self, other):
+            return NotImplemented
+
+    class B:
+        def __init__(self, value):
+            self.value = value
+
+        def __rsub__(self, other):
+            return NotImplemented
+
+    def function(a: A, b: B) -> object:
+        a -= b
+        return a
+
+    verifier = verifier_for(function)
+    verifier.verify(A(3), B(2), expected_error=TypeError)
+
+
 def test_inverted_comparisons():
     class A:
         def __init__(self, value):
