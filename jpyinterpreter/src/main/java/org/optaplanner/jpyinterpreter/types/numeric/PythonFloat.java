@@ -1,5 +1,7 @@
 package org.optaplanner.jpyinterpreter.types.numeric;
 
+import static org.optaplanner.jpyinterpreter.types.numeric.PythonInteger.ZERO;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -23,6 +25,7 @@ import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.TypeError;
 import org.optaplanner.jpyinterpreter.types.errors.ValueError;
+import org.optaplanner.jpyinterpreter.types.errors.arithmetic.ZeroDivisionError;
 import org.optaplanner.jpyinterpreter.util.DefaultFormatSpec;
 import org.optaplanner.jpyinterpreter.util.StringFormatter;
 
@@ -294,39 +297,87 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     }
 
     public PythonFloat trueDivide(PythonInteger other) {
+        if (other.value.equals(BigInteger.ZERO)) {
+            throw new ZeroDivisionError("float division");
+        }
         return new PythonFloat(value / other.value.doubleValue());
     }
 
     public PythonFloat trueDivide(PythonFloat other) {
+        if (other.value == 0) {
+            throw new ZeroDivisionError("float division");
+        }
         return new PythonFloat(value / other.value);
     }
 
     public PythonFloat floorDivide(PythonInteger other) {
+        if (other.value.equals(BigInteger.ZERO)) {
+            throw new ZeroDivisionError("float division");
+        }
         return new PythonFloat(BigDecimal.valueOf(value)
                 .divideToIntegralValue(new BigDecimal(other.value))
                 .doubleValue());
     }
 
     public PythonFloat floorDivide(PythonFloat other) {
+        if (other.value == 0) {
+            throw new ZeroDivisionError("float division");
+        }
         return PythonFloat.valueOf(Math.floor(value / other.value));
     }
 
     public PythonFloat ceilDivide(PythonInteger other) {
+        if (other.value.equals(BigInteger.ZERO)) {
+            throw new ZeroDivisionError("float division");
+        }
         return new PythonFloat(BigDecimal.valueOf(value)
                 .divide(new BigDecimal(other.value), RoundingMode.CEILING)
                 .doubleValue());
     }
 
     public PythonFloat ceilDivide(PythonFloat other) {
+        if (other.value == 0) {
+            throw new ZeroDivisionError("float division");
+        }
         return PythonFloat.valueOf(Math.ceil(value / other.value));
     }
 
     public PythonFloat modulo(PythonInteger other) {
-        return new PythonFloat(value % other.value.doubleValue());
+        int remainderSign = other.compareTo(ZERO);
+
+        if (remainderSign == 0) {
+            throw new ZeroDivisionError("float modulo");
+        } else if (remainderSign > 0) {
+            double remainder = value % other.value.doubleValue();
+            if (remainder < 0) {
+                remainder = remainder + other.value.doubleValue();
+            }
+            return new PythonFloat(remainder);
+        } else {
+            double remainder = value % other.value.doubleValue();
+            if (remainder > 0) {
+                remainder = remainder + other.value.doubleValue();
+            }
+            return new PythonFloat(remainder);
+        }
     }
 
     public PythonFloat modulo(PythonFloat other) {
-        return new PythonFloat(value % other.value);
+        if (other.value == 0) {
+            throw new ZeroDivisionError("float modulo");
+        } else if (other.value > 0) {
+            double remainder = value % other.value;
+            if (remainder < 0) {
+                remainder = remainder + other.value;
+            }
+            return new PythonFloat(remainder);
+        } else {
+            double remainder = value % other.value;
+            if (remainder > 0) {
+                remainder = remainder + other.value;
+            }
+            return new PythonFloat(remainder);
+        }
     }
 
     public PythonLikeTuple divmod(PythonInteger other) {
@@ -340,22 +391,21 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
             quotient = ceilDivide(other);
         }
         PythonInteger.valueOf(Math.round(value / other.value.doubleValue()));
-        PythonFloat remainder = modulo(other);
+        double remainder = value % other.value.doubleValue();
 
         // Python remainder has sign of divisor
         if (other.value.compareTo(BigInteger.ZERO) < 0) {
-            if (remainder.value > 0) {
+            if (remainder > 0) {
                 quotient = quotient.subtract(PythonInteger.ONE);
-                remainder = remainder.add(other);
+                remainder = remainder + other.value.doubleValue();
             }
         } else {
-            if (remainder.value < 0) {
+            if (remainder < 0) {
                 quotient = quotient.subtract(PythonInteger.ONE);
-                remainder = remainder.add(other);
+                remainder = remainder + other.value.doubleValue();
             }
         }
-        return PythonLikeTuple.fromList(List.of(quotient.asFloat(),
-                remainder));
+        return PythonLikeTuple.fromList(List.of(quotient, new PythonFloat(remainder)));
     }
 
     public PythonLikeTuple divmod(PythonFloat other) {
@@ -368,22 +418,21 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
             // Different sign, use ceil division
             quotient = ceilDivide(other);
         }
-        PythonFloat remainder = modulo(other);
+        double remainder = value % other.value;
 
         // Python remainder has sign of divisor
         if (other.value < 0) {
-            if (remainder.value > 0) {
+            if (remainder > 0) {
                 quotient = quotient.subtract(PythonInteger.ONE);
-                remainder = remainder.add(other);
+                remainder = remainder + other.value;
             }
         } else {
-            if (remainder.value < 0) {
+            if (remainder < 0) {
                 quotient = quotient.subtract(PythonInteger.ONE);
-                remainder = remainder.add(other);
+                remainder = remainder + other.value;
             }
         }
-        return PythonLikeTuple.fromList(List.of(quotient.asFloat(),
-                remainder));
+        return PythonLikeTuple.fromList(List.of(quotient, new PythonFloat(remainder)));
     }
 
     public PythonInteger round() {
@@ -399,7 +448,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     }
 
     public PythonNumber round(PythonInteger digitsAfterDecimal) {
-        if (digitsAfterDecimal.equals(PythonInteger.ZERO)) {
+        if (digitsAfterDecimal.equals(ZERO)) {
             return round();
         }
 

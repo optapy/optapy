@@ -18,6 +18,10 @@ public class ZeroDivisionError extends ArithmeticError {
                 namedArguments, callerInstance) -> new ZeroDivisionError(ZERO_DIVISION_ERROR_TYPE, positionalArguments)));
     }
 
+    public ZeroDivisionError(String message) {
+        super(ZERO_DIVISION_ERROR_TYPE, message);
+    }
+
     public ZeroDivisionError(PythonLikeType type) {
         super(type);
     }

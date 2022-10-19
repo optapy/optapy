@@ -21,6 +21,7 @@ import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.TypeError;
 import org.optaplanner.jpyinterpreter.types.errors.ValueError;
+import org.optaplanner.jpyinterpreter.types.errors.arithmetic.ZeroDivisionError;
 import org.optaplanner.jpyinterpreter.util.DefaultFormatSpec;
 import org.optaplanner.jpyinterpreter.util.StringFormatter;
 
@@ -416,10 +417,16 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public PythonFloat trueDivide(PythonInteger other) {
+        if (other.value.equals(BigInteger.ZERO)) {
+            throw new ZeroDivisionError("integer division or modulo by zero");
+        }
         return new PythonFloat(value.doubleValue() / other.value.doubleValue());
     }
 
     public PythonFloat trueDivide(PythonFloat other) {
+        if (other.value == 0.0) {
+            throw new ZeroDivisionError("integer division or modulo by zero");
+        }
         return new PythonFloat(value.doubleValue() / other.value);
     }
 
@@ -434,16 +441,25 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public PythonInteger floorDivide(PythonInteger other) {
+        if (other.value.equals(BigInteger.ZERO)) {
+            throw new ZeroDivisionError("integer division or modulo by zero");
+        }
         return new PythonInteger(value.divide(other.value));
     }
 
     public PythonFloat floorDivide(PythonFloat other) {
+        if (other.value == 0.0) {
+            throw new ZeroDivisionError("integer division or modulo by zero");
+        }
         return PythonFloat.valueOf(new BigDecimal(value)
                 .divideToIntegralValue(BigDecimal.valueOf(other.value))
                 .doubleValue());
     }
 
     public PythonFloat ceilDivide(PythonFloat other) {
+        if (other.value == 0.0) {
+            throw new ZeroDivisionError("integer division or modulo by zero");
+        }
         return PythonFloat.valueOf(new BigDecimal(value)
                 .divide(BigDecimal.valueOf(other.value), RoundingMode.CEILING)
                 .doubleValue());
@@ -460,11 +476,44 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
     }
 
     public PythonInteger modulo(PythonInteger other) {
-        return new PythonInteger(value.remainder(other.value));
+        int remainderSign = other.compareTo(ZERO);
+
+        if (remainderSign == 0) {
+            throw new ZeroDivisionError("integer division or modulo by zero");
+        } else if (remainderSign > 0) {
+            BigInteger remainder = value.remainder(other.value);
+            if (remainder.compareTo(BigInteger.ZERO) < 0) {
+                remainder = other.value.add(remainder);
+            }
+            return new PythonInteger(remainder);
+        } else {
+            BigInteger remainder = value.remainder(other.value);
+            if (remainder.compareTo(BigInteger.ZERO) > 0) {
+                remainder = other.value.add(remainder);
+            }
+            return new PythonInteger(remainder);
+        }
     }
 
     public PythonFloat modulo(PythonFloat other) {
-        return new PythonFloat(value.doubleValue() % other.value);
+        int remainderSign = other.compareTo(ZERO);
+        double doubleValue = value.doubleValue();
+
+        if (remainderSign == 0) {
+            throw new ZeroDivisionError("integer division or modulo by zero");
+        } else if (remainderSign > 0) {
+            double remainder = doubleValue % other.value;
+            if (remainder < 0) {
+                remainder = remainder + other.value;
+            }
+            return new PythonFloat(remainder);
+        } else {
+            double remainder = doubleValue % other.value;
+            if (remainder > 0) {
+                remainder = remainder + other.value;
+            }
+            return new PythonFloat(remainder);
+        }
     }
 
     public PythonLikeTuple divmod(PythonInteger other) {
@@ -496,22 +545,21 @@ public class PythonInteger extends AbstractPythonLikeObject implements PythonNum
             // Different sign, use ceil division
             quotient = ceilDivide(other);
         }
-        PythonFloat remainder = modulo(other);
+        double remainder = value.doubleValue() % other.value;
 
         // Python remainder has sign of divisor
         if (other.value < 0) {
-            if (remainder.value > 0) {
+            if (remainder > 0) {
                 quotient = quotient.subtract(PythonInteger.ONE);
-                remainder = remainder.add(other);
+                remainder = remainder + other.value;
             }
         } else {
-            if (remainder.value < 0) {
+            if (remainder < 0) {
                 quotient = quotient.subtract(PythonInteger.ONE);
-                remainder = remainder.add(other);
+                remainder = remainder + other.value;
             }
         }
-        return PythonLikeTuple.fromList(List.of(quotient.asFloat(),
-                remainder));
+        return PythonLikeTuple.fromList(List.of(quotient, new PythonFloat(remainder)));
     }
 
     public PythonInteger round() {
