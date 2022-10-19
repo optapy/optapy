@@ -17,6 +17,7 @@ import org.optaplanner.jpyinterpreter.PythonOverloadImplementor;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
 import org.optaplanner.jpyinterpreter.types.AbstractPythonLikeObject;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
+import org.optaplanner.jpyinterpreter.types.NotImplemented;
 import org.optaplanner.jpyinterpreter.types.PythonLikeComparable;
 import org.optaplanner.jpyinterpreter.types.PythonLikeFunction;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
@@ -73,33 +74,49 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
 
         // Binary
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.ADD,
+                PythonFloat.class.getMethod("add", PythonLikeObject.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.ADD,
                 PythonFloat.class.getMethod("add", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.ADD,
                 PythonFloat.class.getMethod("add", PythonFloat.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.SUBTRACT,
+                PythonFloat.class.getMethod("subtract", PythonLikeObject.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 PythonFloat.class.getMethod("subtract", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.SUBTRACT,
                 PythonFloat.class.getMethod("subtract", PythonFloat.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MULTIPLY,
+                PythonFloat.class.getMethod("multiply", PythonLikeObject.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MULTIPLY,
                 PythonFloat.class.getMethod("multiply", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MULTIPLY,
                 PythonFloat.class.getMethod("multiply", PythonFloat.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
+                PythonFloat.class.getMethod("trueDivide", PythonLikeObject.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
                 PythonFloat.class.getMethod("trueDivide", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
                 PythonFloat.class.getMethod("trueDivide", PythonFloat.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
+                PythonFloat.class.getMethod("floorDivide", PythonLikeObject.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
                 PythonFloat.class.getMethod("floorDivide", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
                 PythonFloat.class.getMethod("floorDivide", PythonFloat.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.DIVMOD,
+                PythonFloat.class.getMethod("divmod", PythonLikeObject.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.DIVMOD,
                 PythonFloat.class.getMethod("divmod", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.DIVMOD,
                 PythonFloat.class.getMethod("divmod", PythonFloat.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MODULO,
+                PythonFloat.class.getMethod("modulo", PythonLikeObject.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MODULO,
                 PythonFloat.class.getMethod("modulo", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.MODULO,
                 PythonFloat.class.getMethod("modulo", PythonFloat.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.POWER,
+                PythonFloat.class.getMethod("power", PythonLikeObject.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.POWER,
                 PythonFloat.class.getMethod("power", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.POWER,
@@ -137,25 +154,37 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
 
         // Comparisons
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.EQUAL,
+                PythonFloat.class.getMethod("equal", PythonLikeObject.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.EQUAL,
                 PythonFloat.class.getMethod("equal", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.EQUAL,
                 PythonFloat.class.getMethod("equal", PythonFloat.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.NOT_EQUAL,
+                PythonFloat.class.getMethod("notEqual", PythonLikeObject.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.NOT_EQUAL,
                 PythonFloat.class.getMethod("notEqual", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.NOT_EQUAL,
                 PythonFloat.class.getMethod("notEqual", PythonFloat.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN,
+                PythonFloat.class.getMethod("lessThan", PythonLikeObject.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN,
                 PythonFloat.class.getMethod("lessThan", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN,
                 PythonFloat.class.getMethod("lessThan", PythonFloat.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
+                PythonFloat.class.getMethod("lessThanOrEqual", PythonLikeObject.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 PythonFloat.class.getMethod("lessThanOrEqual", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.LESS_THAN_OR_EQUAL,
                 PythonFloat.class.getMethod("lessThanOrEqual", PythonFloat.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN,
+                PythonFloat.class.getMethod("greaterThan", PythonLikeObject.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN,
                 PythonFloat.class.getMethod("greaterThan", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN,
                 PythonFloat.class.getMethod("greaterThan", PythonFloat.class));
+        BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
+                PythonFloat.class.getMethod("greaterThanOrEqual", PythonLikeObject.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
                 PythonFloat.class.getMethod("greaterThanOrEqual", PythonInteger.class));
         BuiltinTypes.FLOAT_TYPE.addLeftBinaryMethod(PythonBinaryOperators.GREATER_THAN_OR_EQUAL,
@@ -272,12 +301,32 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         return new PythonFloat(Math.abs(value));
     }
 
+    public PythonLikeObject add(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return add((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return add((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
+    }
+
     public PythonFloat add(PythonInteger other) {
         return new PythonFloat(value + other.value.doubleValue());
     }
 
     public PythonFloat add(PythonFloat other) {
         return new PythonFloat(value + other.value);
+    }
+
+    public PythonLikeObject subtract(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return subtract((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return subtract((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
     }
 
     public PythonFloat subtract(PythonInteger other) {
@@ -288,12 +337,32 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         return new PythonFloat(value - other.value);
     }
 
+    public PythonLikeObject multiply(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return multiply((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return multiply((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
+    }
+
     public PythonFloat multiply(PythonInteger other) {
         return new PythonFloat(value * other.value.doubleValue());
     }
 
     public PythonFloat multiply(PythonFloat other) {
         return new PythonFloat(value * other.value);
+    }
+
+    public PythonLikeObject trueDivide(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return trueDivide((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return trueDivide((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
     }
 
     public PythonFloat trueDivide(PythonInteger other) {
@@ -308,6 +377,16 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
             throw new ZeroDivisionError("float division");
         }
         return new PythonFloat(value / other.value);
+    }
+
+    public PythonLikeObject floorDivide(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return floorDivide((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return floorDivide((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
     }
 
     public PythonFloat floorDivide(PythonInteger other) {
@@ -340,6 +419,16 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
             throw new ZeroDivisionError("float division");
         }
         return PythonFloat.valueOf(Math.ceil(value / other.value));
+    }
+
+    public PythonLikeObject modulo(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return modulo((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return modulo((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
     }
 
     public PythonFloat modulo(PythonInteger other) {
@@ -377,6 +466,16 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
                 remainder = remainder + other.value;
             }
             return new PythonFloat(remainder);
+        }
+    }
+
+    public PythonLikeObject divmod(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return divmod((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return divmod((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
         }
     }
 
@@ -457,12 +556,82 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
                 asDecimal.setScale(digitsAfterDecimal.value.intValueExact(), RoundingMode.HALF_EVEN).doubleValue());
     }
 
+    public PythonLikeObject power(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return power((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return power((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
+    }
+
     public PythonFloat power(PythonInteger other) {
         return new PythonFloat(Math.pow(value, other.value.doubleValue()));
     }
 
     public PythonFloat power(PythonFloat other) {
         return new PythonFloat(Math.pow(value, other.value));
+    }
+
+    public PythonLikeObject equal(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return equal((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return equal((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
+    }
+
+    public PythonLikeObject notEqual(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return notEqual((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return notEqual((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
+    }
+
+    public PythonLikeObject lessThan(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return lessThan((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return lessThan((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
+    }
+
+    public PythonLikeObject greaterThan(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return greaterThan((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return greaterThan((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
+    }
+
+    public PythonLikeObject lessThanOrEqual(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return lessThanOrEqual((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return lessThanOrEqual((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
+    }
+
+    public PythonLikeObject greaterThanOrEqual(PythonLikeObject other) {
+        if (other instanceof PythonInteger) {
+            return greaterThanOrEqual((PythonInteger) other);
+        } else if (other instanceof PythonFloat) {
+            return greaterThanOrEqual((PythonFloat) other);
+        } else {
+            return NotImplemented.INSTANCE;
+        }
     }
 
     public PythonBoolean equal(PythonInteger other) {
