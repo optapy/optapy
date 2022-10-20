@@ -570,8 +570,6 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
                 return key
         else:
             raise KeyError(f'Cannot find corresponding Python type for Java class {python_like_object.getClass().getName()}')
-    elif hasattr(python_like_object, 'get__optapy_Id'):
-        return python_like_object.get__optapy_Id()
     elif not isinstance(python_like_object, PythonLikeObject):
         return python_like_object
     else:

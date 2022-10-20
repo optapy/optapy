@@ -1031,7 +1031,7 @@ def _compose_unique_class_name(class_identifier: str):
     from jpype import JInt
     from org.optaplanner.jpyinterpreter.util import JavaIdentifierUtils
     from org.optaplanner.jpyinterpreter import PythonBytecodeToJavaBytecodeTranslator
-    unique_class_name = f'org.javapython.user.{class_identifier}'
+    unique_class_name = f'org.jpyinterpreter.user.{class_identifier}'
     unique_class_name = JavaIdentifierUtils.sanitizeClassName(unique_class_name)
     number_of_instances = PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount.merge(
         unique_class_name, JInt(1), lambda a, b: JInt(a + b))
