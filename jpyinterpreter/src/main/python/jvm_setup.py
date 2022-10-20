@@ -113,7 +113,7 @@ class GetAttributePointerArrayOnPythonObject:
         return out_array
 
 
-@jpype.JImplements('org.optaplanner.jpyinterpreter.TriFunction', deferred=True)
+@jpype.JImplements('org.optaplanner.jpyinterpreter.util.function.TriFunction', deferred=True)
 class GetAttributeOnPythonObjectWithMap:
     @jpype.JOverride()
     def apply(self, python_object, attribute_name, instance_map):
@@ -129,7 +129,7 @@ class GetAttributeOnPythonObjectWithMap:
             raise e
 
 
-@jpype.JImplements('org.optaplanner.jpyinterpreter.TriConsumer', deferred=True)
+@jpype.JImplements('org.optaplanner.jpyinterpreter.util.function.TriConsumer', deferred=True)
 class SetAttributeOnPythonObject:
     @jpype.JOverride()
     def accept(self, python_object, attribute_name, value):
@@ -158,7 +158,7 @@ class GetDictOnPythonObject:
         return out
 
 
-@jpype.JImplements('org.optaplanner.jpyinterpreter.TriFunction', deferred=True)
+@jpype.JImplements('org.optaplanner.jpyinterpreter.util.function.TriFunction', deferred=True)
 class CallPythonFunction:
     @jpype.JOverride()
     def apply(self, python_object, var_args_list, keyword_args_map):
@@ -176,7 +176,7 @@ class CallPythonFunction:
             raise CPythonException(str(e))
 
 
-@jpype.JImplements('org.optaplanner.jpyinterpreter.QuadFunction', deferred=True)
+@jpype.JImplements('org.optaplanner.jpyinterpreter.util.function.QuadFunction', deferred=True)
 class CreateFunctionFromCode:
     @jpype.JOverride()
     def apply(self, code_object, function_globals, closure, name):
@@ -207,7 +207,7 @@ class CreateFunctionFromCode:
 
 
 
-@jpype.JImplements('org.optaplanner.jpyinterpreter.PentaFunction', deferred=True)
+@jpype.JImplements('org.optaplanner.jpyinterpreter.util.function.PentaFunction', deferred=True)
 class ImportModule:
     @jpype.JOverride()
     def apply(self, module_name, globals_map, locals_map, from_list, level):

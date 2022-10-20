@@ -20,6 +20,10 @@ import org.optaplanner.jpyinterpreter.types.errors.PythonTraceback;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
 import org.optaplanner.jpyinterpreter.types.wrappers.PythonObjectWrapper;
+import org.optaplanner.jpyinterpreter.util.function.PentaFunction;
+import org.optaplanner.jpyinterpreter.util.function.QuadFunction;
+import org.optaplanner.jpyinterpreter.util.function.TriConsumer;
+import org.optaplanner.jpyinterpreter.util.function.TriFunction;
 
 public class CPythonBackedPythonInterpreter implements PythonInterpreter {
     InputStream standardInput;

@@ -5,10 +5,10 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
-import org.optaplanner.jpyinterpreter.QuadFunction;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
+import org.optaplanner.jpyinterpreter.util.function.QuadFunction;
 
 public class FourArgumentSpec<Out_ extends PythonLikeObject, Arg1_ extends PythonLikeObject, Arg2_ extends PythonLikeObject, Arg3_ extends PythonLikeObject, Arg4_ extends PythonLikeObject>
         extends ArgumentSpec<Out_, ThreeArgumentSpec<Out_, Arg1_, Arg2_, ?>, QuadFunction<Arg1_, Arg2_, Arg3_, Arg4_, Out_>> {

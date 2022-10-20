@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.optaplanner.jpyinterpreter.PentaFunction;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
+import org.optaplanner.jpyinterpreter.util.function.PentaFunction;
 
 public class FiveArgumentSpec<Out_ extends PythonLikeObject, Arg1_ extends PythonLikeObject, Arg2_ extends PythonLikeObject, Arg3_ extends PythonLikeObject, Arg4_ extends PythonLikeObject, Arg5_ extends PythonLikeObject>
         extends ArgumentSpec<Out_, Object, PentaFunction<Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, Out_>> {

@@ -16,12 +16,12 @@ import org.junit.jupiter.api.Test;
 import org.optaplanner.jpyinterpreter.OpcodeIdentifier;
 import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.jpyinterpreter.PythonCompiledFunction;
-import org.optaplanner.jpyinterpreter.TriFunction;
 import org.optaplanner.jpyinterpreter.types.PythonSlice;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeList;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 import org.optaplanner.jpyinterpreter.util.PythonFunctionBuilder;
+import org.optaplanner.jpyinterpreter.util.function.TriFunction;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class CollectionImplementorTest {

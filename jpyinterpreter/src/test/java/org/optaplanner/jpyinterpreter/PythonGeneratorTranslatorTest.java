@@ -18,6 +18,7 @@ import org.optaplanner.jpyinterpreter.types.errors.ValueError;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonBoolean;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 import org.optaplanner.jpyinterpreter.util.PythonFunctionBuilder;
+import org.optaplanner.jpyinterpreter.util.function.TriFunction;
 
 public class PythonGeneratorTranslatorTest {
 
