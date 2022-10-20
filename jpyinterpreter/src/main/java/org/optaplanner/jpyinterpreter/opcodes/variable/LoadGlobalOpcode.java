@@ -33,10 +33,7 @@ public class LoadGlobalOpcode extends AbstractOpcode {
         PythonLikeObject global = functionMetadata.pythonCompiledFunction.globalsMap.get(
                 functionMetadata.pythonCompiledFunction.co_names.get(instruction.arg));
         if (global instanceof CPythonType || global instanceof PythonObjectWrapper) {
-            throw new UnsupportedOperationException("Detected untranslated object " + global + " (assigned to " +
-                    functionMetadata.pythonCompiledFunction.co_names.get(instruction.arg) +
-                    ") in the bytecode; "
-                    + "native Python will likely be faster");
+            // TODO: note native objects are used somewhere
         }
         VariableImplementor.loadGlobalVariable(functionMetadata.methodVisitor, functionMetadata.className,
                 functionMetadata.pythonCompiledFunction, instruction,

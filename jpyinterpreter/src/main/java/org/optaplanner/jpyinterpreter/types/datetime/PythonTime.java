@@ -107,6 +107,22 @@ public class PythonTime extends AbstractPythonLikeObject {
         this.fold = PythonInteger.valueOf(fold);
     }
 
+    @Override
+    public PythonLikeObject __getAttributeOrNull(String name) {
+        switch (name) {
+            case "hour":
+                return hour;
+            case "minute":
+                return minute;
+            case "microsecond":
+                return microsecond;
+            case "fold":
+                return fold;
+            default:
+                return super.__getAttributeOrNull(name);
+        }
+    }
+
     public static PythonTime of(int hour, int minute, int second, int microsecond, String tzname, int fold) {
         return new PythonTime(LocalTime.of(hour, minute, second, microsecond * 1000),
                 (tzname != null) ? ZoneId.of(tzname) : null, fold);

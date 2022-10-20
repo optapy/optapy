@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import org.optaplanner.jpyinterpreter.MethodDescriptor;
 import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
 import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonOverloadImplementor;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
 import org.optaplanner.jpyinterpreter.types.AbstractPythonLikeObject;
@@ -134,6 +135,20 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
 
     public static PythonDate of(int year, int month, int day) {
         return new PythonDate(LocalDate.of(year, month, day));
+    }
+
+    @Override
+    public PythonLikeObject __getAttributeOrNull(String name) {
+        switch (name) {
+            case "year":
+                return year;
+            case "month":
+                return month;
+            case "day":
+                return day;
+            default:
+                return super.__getAttributeOrNull(name);
+        }
     }
 
     public static PythonDate today() {

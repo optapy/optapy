@@ -239,6 +239,24 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
                 (tzname != null) ? ZoneId.of(tzname) : null, fold);
     }
 
+    @Override
+    public PythonLikeObject __getAttributeOrNull(String name) {
+        switch (name) {
+            case "hour":
+                return hour;
+            case "minute":
+                return minute;
+            case "microsecond":
+                return microsecond;
+            case "fold":
+                return fold;
+            case "tzinfo":
+                return (zoneId != null) ? new PythonTzinfo(zoneId) : PythonNone.INSTANCE;
+            default:
+                return super.__getAttributeOrNull(name);
+        }
+    }
+
     public static PythonDateTime now() {
         return new PythonDateTime(LocalDateTime.now());
     }

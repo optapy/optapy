@@ -46,8 +46,13 @@ class TranslatedJavaSystemError(SystemError):
 
 
 # Taken from https://stackoverflow.com/a/60953150
-def is_c_native(item):
-    import importlib
+def is_native_module(module):
+    """ is_native_module(thing) -> boolean predicate, True if `module`
+        is a native-compiled ("extension") module.
+
+        Q.v. this fine StackOverflow answer on this subject:
+            https://stackoverflow.com/a/39304199/298171
+    """
     import importlib.machinery
     import inspect
 
@@ -55,42 +60,37 @@ def is_c_native(item):
     EXTENSION_SUFFIXES = tuple(suffix.lstrip(QUALIFIER)
                                for suffix
                                in importlib.machinery.EXTENSION_SUFFIXES)
-    moduleof = lambda thing: getattr(thing, '__module__', '')
+
     suffix = lambda filename: QUALIFIER in filename \
                               and filename.rpartition(QUALIFIER)[-1] \
                               or ''
+    # Step one: modules only beyond this point:
+    if not inspect.ismodule(module):
+        return False
 
-    def isnativemodule(module):
-        """ isnativemodule(thing) -> boolean predicate, True if `module`
-            is a native-compiled ("extension") module.
+    # Step two: return truly when “__loader__” is set:
+    if isinstance(getattr(module, '__loader__', None),
+                  importlib.machinery.ExtensionFileLoader):
+        return True
 
-            Q.v. this fine StackOverflow answer on this subject:
-                https://stackoverflow.com/a/39304199/298171
-        """
-        # Step one: modules only beyond this point:
-        if not inspect.ismodule(module):
-            return False
+    # Step three: in leu of either of those indicators,
+    # check the module path’s file suffix:
+    try:
+        ext = suffix(inspect.getfile(module))
+    except TypeError as exc:
+        return 'is a built-in' in str(exc)
 
-        # Step two: return truly when “__loader__” is set:
-        if isinstance(getattr(module, '__loader__', None),
-                      importlib.machinery.ExtensionFileLoader):
-            return True
+    return ext in EXTENSION_SUFFIXES
 
-        # Step three: in leu of either of those indicators,
-        # check the module path’s file suffix:
-        try:
-            ext = suffix(inspect.getfile(module))
-        except TypeError as exc:
-            return 'is a built-in' in str(exc)
 
-        return ext in EXTENSION_SUFFIXES
+def is_c_native(item):
+    import importlib
+    module = getattr(item, '__module__', '')
 
-    module = moduleof(item)
     if module == 'builtins' or module == '':  # if we cannot find module, assume it is not native
         return False
-    return isnativemodule(
-        importlib.import_module(
-            module))
+
+    return is_native_module(importlib.import_module(module))
 
 
 def init_type_to_compiled_java_class():
@@ -291,7 +291,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
 
 
 def is_banned_module(module: str):
-    banned_modules = {'jpype', 'importlib'}
+    banned_modules = {'jpype', 'importlib', 'builtins'}
     for banned_module in banned_modules:
         if module == banned_module:
             return True

@@ -9,6 +9,7 @@ import java.util.Map;
 import org.optaplanner.jpyinterpreter.MethodDescriptor;
 import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
 import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonOverloadImplementor;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
 import org.optaplanner.jpyinterpreter.types.AbstractPythonLikeObject;
@@ -222,6 +223,20 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
         days = PythonInteger.valueOf(duration.toDays());
         seconds = PythonInteger.valueOf(Math.abs(duration.toSeconds() % SECONDS_IN_DAY));
         microseconds = PythonInteger.valueOf(duration.toNanosPart() / 1000);
+    }
+
+    @Override
+    public PythonLikeObject __getAttributeOrNull(String name) {
+        switch (name) {
+            case "days":
+                return days;
+            case "seconds":
+                return seconds;
+            case "microseconds":
+                return microseconds;
+            default:
+                return super.__getAttributeOrNull(name);
+        }
     }
 
     public static PythonTimeDelta of(int days, int seconds, int microseconds) {

@@ -276,11 +276,6 @@ def test_python_object():
         def set_value(self, value):
             self.value = value
 
-    @optapy.problem_fact
-    class Value:
-        def __init__(self, code):
-            self.code = code
-
     @optapy.constraint_provider
     def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
         return [
@@ -288,31 +283,26 @@ def test_python_object():
                 .filter(lambda entity: entity.value == pointer1)
                 .reward('Same as value', optapy.score.SimpleScore.ONE),
             constraint_factory.for_each(Entity)
-                .group_by(lambda entity: entity.value, optapy.constraint.ConstraintCollectors.count())
+                .group_by(lambda entity: entity.value.value, optapy.constraint.ConstraintCollectors.count())
                 .reward('Entity have same value', optapy.score.SimpleScore.ONE, lambda value, count: count * count),
             constraint_factory.for_each(Entity)
-                .group_by(lambda entity: (entity.code, entity.value))
+                .group_by(lambda entity: (entity.code, entity.value.value))
                 .join(Entity,
                       optapy.constraint.Joiners.equal(lambda pair: pair[0], lambda entity: entity.code),
-                      optapy.constraint.Joiners.equal(lambda pair: pair[1], lambda entity: entity.value))
+                      optapy.constraint.Joiners.equal(lambda pair: pair[1], lambda entity: entity.value.value))
                 .reward('Entity for pair', optapy.score.SimpleScore.ONE),
         ]
 
     @optapy.planning_solution
     class Solution:
-        def __init__(self, entity, value, value_range, score=None):
+        def __init__(self, entity, value_range, score=None):
             self.entity = entity
-            self.value = value
             self.value_range = value_range
             self.score = score
 
         @optapy.planning_entity_property(Entity)
         def get_entity(self):
             return self.entity
-
-        @optapy.problem_fact_property(Value)
-        def get_value(self):
-            return self.value
 
         @optapy.value_range_provider(range_id='value_range', value_range_type=ctypes.c_void_p)
         def get_value_range(self):
@@ -327,15 +317,15 @@ def test_python_object():
 
     solver_config = optapy.config.solver.SolverConfig()
     termination_config = optapy.config.solver.termination.TerminationConfig()
-    termination_config.setBestScoreLimit('2')
+    termination_config.setBestScoreLimit('3')
     solver_config.withSolutionClass(optapy.get_class(Solution)) \
         .withEntityClasses(Entity) \
         .withConstraintProviderClass(my_constraints) \
         .withTerminationConfig(termination_config)
-    problem: Solution = Solution(Entity('A'), Value(pointer1), [pointer1, pointer2, pointer3])
+    problem: Solution = Solution(Entity('A'), [pointer1, pointer2, pointer3])
     solver = optapy.solver_factory_create(solver_config).buildSolver()
     solution = solver.solve(problem)
-    assert solution.get_score().getScore() == 2
+    assert solution.get_score().getScore() == 3
     assert solution.entity.value is pointer1
 
 
