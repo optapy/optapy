@@ -573,10 +573,47 @@ def unwrap_python_like_object(python_like_object, default=NotImplementedError):
     elif not isinstance(python_like_object, PythonLikeObject):
         return python_like_object
     else:
+        out = unwrap_python_like_builtin_module_object(python_like_object)
+        if out is not None:
+            return out
+
         if default == NotImplementedError:
             raise NotImplementedError(f'Unable to convert object of type {type(python_like_object)}')
         return default
 
+
+def unwrap_python_like_builtin_module_object(python_like_object):
+    from org.optaplanner.jpyinterpreter.types.datetime import PythonDate, PythonTime, PythonDateTime, PythonTimeDelta
+    import datetime
+
+    if isinstance(python_like_object, PythonDateTime):
+        return datetime.datetime(unwrap_python_like_object(python_like_object.year),
+                                 unwrap_python_like_object(python_like_object.month),
+                                 unwrap_python_like_object(python_like_object.day),
+                                 unwrap_python_like_object(python_like_object.hour),
+                                 unwrap_python_like_object(python_like_object.minute),
+                                 unwrap_python_like_object(python_like_object.second),
+                                 unwrap_python_like_object(python_like_object.microsecond),
+                                 unwrap_python_like_object(python_like_object.fold))
+
+    if isinstance(python_like_object, PythonDate):
+        return datetime.date(unwrap_python_like_object(python_like_object.year),
+                             unwrap_python_like_object(python_like_object.month),
+                             unwrap_python_like_object(python_like_object.day))
+
+    if isinstance(python_like_object, PythonTime):
+        return datetime.time(unwrap_python_like_object(python_like_object.hour),
+                             unwrap_python_like_object(python_like_object.minute),
+                             unwrap_python_like_object(python_like_object.second),
+                             unwrap_python_like_object(python_like_object.microsecond),
+                             unwrap_python_like_object(python_like_object.fold))
+
+    if isinstance(python_like_object, PythonTimeDelta):
+        return datetime.timedelta(unwrap_python_like_object(python_like_object.days),
+                                  unwrap_python_like_object(python_like_object.seconds),
+                                  unwrap_python_like_object(python_like_object.microseconds))
+
+    return None
 
 def get_java_type_for_python_type(the_type):
     from org.optaplanner.jpyinterpreter.types import PythonLikeType

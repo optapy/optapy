@@ -114,6 +114,8 @@ public class PythonTime extends AbstractPythonLikeObject {
                 return hour;
             case "minute":
                 return minute;
+            case "second":
+                return second;
             case "microsecond":
                 return microsecond;
             case "fold":

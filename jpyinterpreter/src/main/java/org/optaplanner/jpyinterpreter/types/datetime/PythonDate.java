@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
@@ -21,8 +22,10 @@ import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeComparable;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonString;
+import org.optaplanner.jpyinterpreter.types.errors.ValueError;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonFloat;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
 
 /**
  * Python docs: <a href="https://docs.python.org/3/library/datetime.html#datetime.date">date objects</a>
@@ -54,6 +57,14 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
     }
 
     private static void registerMethods() throws NoSuchMethodException {
+        // Constructor
+        DATE_TYPE.setConstructor(ArgumentSpec.forFunctionReturning("date", PythonDate.class)
+                .addArgument("year", PythonInteger.class)
+                .addArgument("month", PythonInteger.class)
+                .addArgument("day", PythonInteger.class)
+                .asStaticPythonLikeFunction((year, month, day) -> of(year.value.intValueExact(),
+                        month.value.intValueExact(),
+                        day.value.intValueExact())));
         // Unary Operators
         DATE_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING,
                 new PythonFunctionSignature(new MethodDescriptor(
@@ -112,6 +123,12 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
                         PythonDate.class.getMethod("ctime")),
                         BuiltinTypes.STRING_TYPE));
 
+        // Static methods
+        DATE_TYPE.__setAttribute("fromordinal",
+                ArgumentSpec.forFunctionReturning("fromordinal", PythonDate.class)
+                        .addArgument("ordinal", PythonInteger.class)
+                        .asStaticPythonLikeFunction(PythonDate::from_ordinal));
+
     }
 
     final LocalDate localDate;
@@ -134,6 +151,12 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
     }
 
     public static PythonDate of(int year, int month, int day) {
+        if (month < 1 || month > 12) {
+            throw new ValueError("month must be between 1 and 12");
+        }
+        if (!YearMonth.of(year, month).isValidDay(day)) {
+            throw new ValueError("day must be between 1 and " + YearMonth.of(year, month).lengthOfMonth());
+        }
         return new PythonDate(LocalDate.of(year, month, day));
     }
 
@@ -167,7 +190,7 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
     }
 
     public static PythonDate from_ordinal(PythonInteger ordinal) {
-        return new PythonDate(LocalDate.ofEpochDay(ordinal.getValue().longValue() + EPOCH_ORDINAL_OFFSET));
+        return new PythonDate(LocalDate.ofEpochDay(ordinal.getValue().longValue() - EPOCH_ORDINAL_OFFSET));
     }
 
     public static PythonDate from_iso_format(PythonString dateString) {
