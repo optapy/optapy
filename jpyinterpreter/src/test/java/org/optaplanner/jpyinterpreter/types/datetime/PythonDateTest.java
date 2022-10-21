@@ -17,7 +17,7 @@ public class PythonDateTest {
     @Test
     public void testCTime() {
         PythonDate pythonDate = new PythonDate(LocalDate.of(2002, 3, 11));
-        assertThat(pythonDate.ctime()).isEqualTo("Mon, Mar 11 00:00:00 2002");
+        assertThat(pythonDate.ctime()).isEqualTo("Mon Mar 11 00:00:00 2002");
     }
 
     @Test

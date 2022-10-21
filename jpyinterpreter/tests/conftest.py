@@ -13,7 +13,7 @@ class FunctionVerifier:
         self.java_function = java_function
         self.untyped_java_function = untyped_java_function
 
-    def verify(self, *args, expected_result=..., expected_error=..., clone_arguments=True):
+    def verify(self, *args, expected_result=..., expected_error=..., clone_arguments=True, type_check=True):
         cloner = get_argument_cloner(clone_arguments)
         try:
             expected = self.python_function(*cloner(args))
@@ -41,12 +41,12 @@ class FunctionVerifier:
             raise AssertionError(f'Python function did not raise expected error ({expected_error}) '
                                  f'for arguments {args}; it returned ({expected}) instead.')
 
-        if expected_result is not ... and type(expected_result) is not type(expected):
+        if type_check and expected_result is not ... and type(expected_result) is not type(expected):
             raise AssertionError(f'Python function did not return expected result ({expected_result}, '
                                  f'{type(expected_result)}) for arguments {args}; it returned the equal but different '
                                  f'type ({expected}, {type(expected)}) instead.')
 
-        self.expect(expected, *args, clone_arguments=clone_arguments)
+        self.expect(expected, *args, clone_arguments=clone_arguments, type_check=type_check)
 
 
     def verify_property(self, *args, predicate, clone_arguments=True):
@@ -75,7 +75,7 @@ class FunctionVerifier:
                                      f'property ({inspect.getsource(predicate)}) '
                                      f'for arguments {args}.')
 
-    def expect(self, expected, *args, clone_arguments=True):
+    def expect(self, expected, *args, clone_arguments=True, type_check=True):
         cloner = get_argument_cloner(clone_arguments)
         java_result = self.java_function(*cloner(args))
         untyped_java_result = self.untyped_java_function(*cloner(args))
@@ -92,7 +92,7 @@ class FunctionVerifier:
                 raise AssertionError(f'Typed translated bytecode did not return expected result '
                                      f'({expected}) for arguments {args}; it returned ({java_result}) '
                                      f'(typed) instead.')
-        if type(java_result) is not type(expected) or type(untyped_java_result) is not type(expected):
+        if type_check and (type(java_result) is not type(expected) or type(untyped_java_result) is not type(expected)):
             if type(java_result) is not type(expected) and type(untyped_java_result) is not type(expected):
                 raise AssertionError(f'Typed and untyped translated bytecode did not return expected result '
                                      f'({expected}, {type(expected)}) for arguments {args}; it returned the equal but '

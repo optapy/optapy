@@ -28,6 +28,7 @@ import org.optaplanner.jpyinterpreter.types.PythonLikeComparable;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonNone;
 import org.optaplanner.jpyinterpreter.types.PythonString;
+import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonFloat;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 
@@ -520,8 +521,20 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
     }
 
     @Override
-    public Object timetuple() {
-        throw new UnsupportedOperationException();
+    public PythonLikeTuple timetuple() {
+        PythonInteger yday =
+                to_ordinal().subtract(PythonDate.of(year.value.intValueExact(), 1, 1).to_ordinal()).add(PythonInteger.ONE);
+        PythonInteger dst;
+        if (zoneId != null) {
+            dst = zoneId.getRules().isDaylightSavings(((ZonedDateTime) dateTime).toInstant()) ? PythonInteger.ONE
+                    : PythonInteger.ZERO;
+        } else {
+            dst = PythonInteger.valueOf(-1);
+        }
+        return PythonLikeTuple.fromList(List.of(
+                year, month, day,
+                hour, minute, second,
+                weekday(), yday, dst));
     }
 
     public Object utctimetuple() {
