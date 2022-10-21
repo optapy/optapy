@@ -10,10 +10,11 @@ import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.util.function.PentaFunction;
 
-public class FiveArgumentSpec<Out_ extends PythonLikeObject, Arg1_ extends PythonLikeObject, Arg2_ extends PythonLikeObject, Arg3_ extends PythonLikeObject, Arg4_ extends PythonLikeObject, Arg5_ extends PythonLikeObject>
-        extends ArgumentSpec<Out_, Object, PentaFunction<Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, Out_>> {
+public class FiveArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_>
+        extends
+        ArgumentSpec<Out_, SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, ?>, PentaFunction<Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, Out_>> {
 
-    protected FiveArgumentSpec(String argumentName, Class<?> argumentType, ArgumentKind argumentKind, Arg4_ defaultValue,
+    protected FiveArgumentSpec(String argumentName, Class<?> argumentType, ArgumentKind argumentKind, Arg5_ defaultValue,
             Optional<Integer> extraPositionalsArgumentIndex, Optional<Integer> extraKeywordsArgumentIndex,
             ArgumentSpec<?, ?, ?> previousSpec) {
         super(argumentName, argumentType, argumentKind, defaultValue, extraPositionalsArgumentIndex, extraKeywordsArgumentIndex,
@@ -21,62 +22,67 @@ public class FiveArgumentSpec<Out_ extends PythonLikeObject, Arg1_ extends Pytho
     }
 
     @Override
-    protected <ArgumentType_ extends PythonLikeObject> ThreeArgumentSpec<Out_, Arg1_, Arg2_, ArgumentType_> addArgument(
-            String argumentName, Class<ArgumentType_> argumentType, ArgumentKind argumentKind, ArgumentType_ defaultValue,
-            Optional<Integer> extraPositionalsArgumentIndex, Optional<Integer> extraKeywordsArgumentIndex) {
-        throw new UnsupportedOperationException("No support for cardinality above 5");
+    protected <ArgumentType_ extends PythonLikeObject> SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, ArgumentType_>
+            addArgument(
+                    String argumentName, Class<ArgumentType_> argumentType, ArgumentKind argumentKind,
+                    ArgumentType_ defaultValue,
+                    Optional<Integer> extraPositionalsArgumentIndex, Optional<Integer> extraKeywordsArgumentIndex) {
+        return new SixArgumentSpec<>(argumentName, argumentType, argumentKind, defaultValue,
+                extraPositionalsArgumentIndex, extraKeywordsArgumentIndex, this);
     }
 
     @Override
-    public <ArgumentType_ extends PythonLikeObject> ThreeArgumentSpec<Out_, Arg1_, Arg2_, ArgumentType_>
+    public <ArgumentType_ extends PythonLikeObject> SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, ArgumentType_>
             addArgument(String argumentName, Class<ArgumentType_> argumentType) {
         return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_AND_KEYWORD, null,
                 Optional.empty(), Optional.empty());
     }
 
     @Override
-    public <ArgumentType_ extends PythonLikeObject> ThreeArgumentSpec<Out_, Arg1_, Arg2_, ArgumentType_>
+    public <ArgumentType_ extends PythonLikeObject> SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, ArgumentType_>
             addPositionalOnlyArgument(String argumentName, Class<ArgumentType_> argumentType) {
         return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_ONLY, null,
                 Optional.empty(), Optional.empty());
     }
 
     @Override
-    public <ArgumentType_ extends PythonLikeObject> ThreeArgumentSpec<Out_, Arg1_, Arg2_, ArgumentType_>
+    public <ArgumentType_ extends PythonLikeObject> SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, ArgumentType_>
             addKeywordOnlyArgument(String argumentName, Class<ArgumentType_> argumentType) {
         return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, null,
                 Optional.empty(), Optional.empty());
     }
 
     @Override
-    public <ArgumentType_ extends PythonLikeObject> ThreeArgumentSpec<Out_, Arg1_, Arg2_, ArgumentType_>
+    public <ArgumentType_ extends PythonLikeObject> SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, ArgumentType_>
             addArgument(String argumentName, Class<ArgumentType_> argumentType, ArgumentType_ defaultValue) {
         return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_AND_KEYWORD, defaultValue,
                 Optional.empty(), Optional.empty());
     }
 
     @Override
-    public <ArgumentType_ extends PythonLikeObject> ThreeArgumentSpec<Out_, Arg1_, Arg2_, ArgumentType_>
+    public <ArgumentType_ extends PythonLikeObject> SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, ArgumentType_>
             addPositionalOnlyArgument(String argumentName, Class<ArgumentType_> argumentType, ArgumentType_ defaultValue) {
         return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_ONLY, defaultValue,
                 Optional.empty(), Optional.empty());
     }
 
     @Override
-    public <ArgumentType_ extends PythonLikeObject> ThreeArgumentSpec<Out_, Arg1_, Arg2_, ArgumentType_>
+    public <ArgumentType_ extends PythonLikeObject> SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, ArgumentType_>
             addKeywordOnlyArgument(String argumentName, Class<ArgumentType_> argumentType, ArgumentType_ defaultValue) {
         return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, defaultValue,
                 Optional.empty(), Optional.empty());
     }
 
     @Override
-    public ThreeArgumentSpec<Out_, Arg1_, Arg2_, PythonLikeTuple> addExtraPositionalVarArgument(String argumentName) {
+    public SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, PythonLikeTuple>
+            addExtraPositionalVarArgument(String argumentName) {
         return addArgument(argumentName, PythonLikeTuple.class, ArgumentKind.VARARGS, null,
                 Optional.of(getArgCount()), Optional.empty());
     }
 
     @Override
-    public ThreeArgumentSpec<Out_, Arg1_, Arg2_, PythonLikeDict> addExtraKeywordVarArgument(String argumentName) {
+    public SixArgumentSpec<Out_, Arg1_, Arg2_, Arg3_, Arg4_, Arg5_, PythonLikeDict>
+            addExtraKeywordVarArgument(String argumentName) {
         return addArgument(argumentName, PythonLikeDict.class, ArgumentKind.VARARGS, null,
                 Optional.empty(), Optional.of(getArgCount()));
     }

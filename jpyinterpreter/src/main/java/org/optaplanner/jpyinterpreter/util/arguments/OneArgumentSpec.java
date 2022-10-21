@@ -10,7 +10,7 @@ import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 
-public class OneArgumentSpec<Out_ extends PythonLikeObject, Arg1_ extends PythonLikeObject>
+public class OneArgumentSpec<Out_, Arg1_>
         extends ArgumentSpec<Out_, TwoArgumentSpec<Out_, Arg1_, ?>, Function<Arg1_, Out_>> {
 
     protected OneArgumentSpec(String argumentName, Class<?> argumentType, ArgumentKind argumentKind, Arg1_ defaultValue,

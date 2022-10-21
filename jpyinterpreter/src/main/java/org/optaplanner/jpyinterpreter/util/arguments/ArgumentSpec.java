@@ -15,12 +15,12 @@ import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.TypeError;
 
-public abstract class ArgumentSpec<Out_ extends PythonLikeObject, NextSpec_, Extractor_> {
+public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>, Extractor_> {
     private final String functionName;
     private final List<String> argumentNameList;
     private final List<Class<?>> argumentTypeList;
     private final List<ArgumentKind> argumentKindList;
-    private final List<PythonLikeObject> argumentDefaultList;
+    private final List<Object> argumentDefaultList;
     private final Optional<Integer> extraPositionalsArgumentIndex;
     private final Optional<Integer> extraKeywordsArgumentIndex;
 
@@ -39,7 +39,7 @@ public abstract class ArgumentSpec<Out_ extends PythonLikeObject, NextSpec_, Ext
         extraKeywordsArgumentIndex = Optional.empty();
     }
 
-    protected ArgumentSpec(String argumentName, Class<?> argumentType, ArgumentKind argumentKind, PythonLikeObject defaultValue,
+    protected ArgumentSpec(String argumentName, Class<?> argumentType, ArgumentKind argumentKind, Object defaultValue,
             Optional<Integer> extraPositionalsArgumentIndex, Optional<Integer> extraKeywordsArgumentIndex,
             ArgumentSpec<?, ?, ?> previousSpec) {
         functionName = previousSpec.functionName;
@@ -127,12 +127,12 @@ public abstract class ArgumentSpec<Out_ extends PythonLikeObject, NextSpec_, Ext
                     " required positional " + argumentString + ": '" + String.join("', ", missingArgumentNames) + "'");
         }
 
-        out.addAll(positionalArguments.subList(0, numberOfPositionalArguments));
+        out.addAll(positionalArguments.subList(0, Math.min(numberOfPositionalArguments, positionalArguments.size())));
         for (int i = positionalArguments.size(); i < argumentNameList.size(); i++) {
             out.add(null);
         }
 
-        int remaining = argumentNameList.size() - 1;
+        int remaining = argumentNameList.size() - positionalArguments.size();
 
         if (extraPositionalsArgumentIndex.isPresent()) {
             remaining--;
@@ -174,12 +174,12 @@ public abstract class ArgumentSpec<Out_ extends PythonLikeObject, NextSpec_, Ext
                     extraKeywordArguments);
         }
 
-        if (remaining > argumentNameList.size()) {
+        if (remaining > 0) {
             List<Integer> missing = new ArrayList<>(remaining);
             for (int i = 0; i < out.size(); i++) {
                 if (out.get(i) == null) {
                     if (argumentDefaultList.get(i) != null) {
-                        out.set(i, argumentDefaultList.get(i));
+                        out.set(i, (PythonLikeObject) argumentDefaultList.get(i));
                         remaining--;
                     } else {
                         missing.add(i);
@@ -257,7 +257,7 @@ public abstract class ArgumentSpec<Out_ extends PythonLikeObject, NextSpec_, Ext
             @Override
             public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
                     Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
-                return apply(positionalArguments, namedArguments, extractor);
+                return (PythonLikeObject) apply(positionalArguments, namedArguments, extractor);
             }
 
             @Override
@@ -272,7 +272,7 @@ public abstract class ArgumentSpec<Out_ extends PythonLikeObject, NextSpec_, Ext
             @Override
             public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
                     Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
-                return apply(positionalArguments, namedArguments, extractor);
+                return (PythonLikeObject) apply(positionalArguments, namedArguments, extractor);
             }
 
             @Override
@@ -283,6 +283,7 @@ public abstract class ArgumentSpec<Out_ extends PythonLikeObject, NextSpec_, Ext
     }
 
     public final PythonLikeFunction asVirtualPythonLikeFunction(final Extractor_ extractor) {
-        return (positionalArguments, namedArguments, callerInstance) -> apply(positionalArguments, namedArguments, extractor);
+        return (positionalArguments, namedArguments,
+                callerInstance) -> (PythonLikeObject) apply(positionalArguments, namedArguments, extractor);
     }
 }

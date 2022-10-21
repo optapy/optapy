@@ -10,7 +10,7 @@ import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 
-public class TwoArgumentSpec<Out_ extends PythonLikeObject, Arg1_ extends PythonLikeObject, Arg2_ extends PythonLikeObject>
+public class TwoArgumentSpec<Out_, Arg1_, Arg2_>
         extends ArgumentSpec<Out_, ThreeArgumentSpec<Out_, Arg1_, Arg2_, ?>, BiFunction<Arg1_, Arg2_, Out_>> {
 
     protected TwoArgumentSpec(String argumentName, Class<?> argumentType, ArgumentKind argumentKind, Arg2_ defaultValue,

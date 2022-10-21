@@ -10,7 +10,7 @@ import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 
-public class ZeroArgumentSpec<Out_ extends PythonLikeObject>
+public class ZeroArgumentSpec<Out_>
         extends ArgumentSpec<Out_, OneArgumentSpec<Out_, ?>, Supplier<Out_>> {
 
     protected ZeroArgumentSpec(String functionName) {
