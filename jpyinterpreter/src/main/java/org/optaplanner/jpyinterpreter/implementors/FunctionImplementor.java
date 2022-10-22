@@ -2,8 +2,6 @@ package org.optaplanner.jpyinterpreter.implementors;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -22,20 +20,14 @@ import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonVersion;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
-import org.optaplanner.jpyinterpreter.types.PythonCell;
 import org.optaplanner.jpyinterpreter.types.PythonCode;
 import org.optaplanner.jpyinterpreter.types.PythonKnownFunctionType;
 import org.optaplanner.jpyinterpreter.types.PythonLikeFunction;
 import org.optaplanner.jpyinterpreter.types.PythonLikeGenericType;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonString;
-import org.optaplanner.jpyinterpreter.types.RecursionMarker;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
-import org.optaplanner.jpyinterpreter.types.errors.PythonBaseException;
-import org.optaplanner.jpyinterpreter.types.errors.TypeError;
-import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
-import org.optaplanner.jpyinterpreter.util.arguments.GenericArgumentSpec;
 
 /**
  * Implements opcodes related to functions
@@ -678,38 +670,8 @@ public class FunctionImplementor {
                     PythonLikeTuple.class,
                     PythonString.class,
                     PythonInterpreter.class);
-            T out = (T) constructor.newInstance(defaultPositionalArgs, defaultKeywordArgs, annotationDirectory, closure,
+            return (T) constructor.newInstance(defaultPositionalArgs, defaultKeywordArgs, annotationDirectory, closure,
                     functionName, pythonInterpreter);
-
-            if (closure != null) {
-                for (PythonLikeObject cell : closure) {
-                    if (((PythonCell) cell).cellValue == RecursionMarker.INSTANCE) {
-                        if (out instanceof PythonLikeObject) {
-                            ((PythonCell) cell).cellValue = (PythonLikeObject) out;
-                        } else {
-                            for (Method method : functionClass.getDeclaredMethods()) {
-                                GenericArgumentSpec<PythonLikeObject> spec =
-                                        ArgumentSpec.typelessSpec(functionName.value, PythonLikeObject.class);
-                                for (Parameter parameter : method.getParameters()) {
-                                    spec = spec.addPositionalOnlyArgument(parameter.getName(), PythonLikeObject.class);
-                                }
-                                ((PythonCell) cell).cellValue = spec.asStaticPythonLikeFunction(args -> {
-                                    try {
-                                        return JavaPythonTypeConversionImplementor
-                                                .wrapJavaObject(method.invoke(out, args.toArray()));
-                                    } catch (IllegalAccessException e) {
-                                        throw new TypeError();
-                                    } catch (InvocationTargetException e) {
-                                        throw (PythonBaseException) e.getCause();
-                                    }
-                                });
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            return out;
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }

@@ -192,7 +192,7 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
     from java.util import HashMap
     from org.optaplanner.jpyinterpreter import CPythonBackedPythonInterpreter
     from org.optaplanner.jpyinterpreter.types import PythonLikeType, AbstractPythonLikeObject, CPythonBackedPythonLikeObject
-    from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference, CPythonType, JavaObjectWrapper
+    from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference, CPythonType, JavaObjectWrapper, PythonLikeFunctionWrapper
     from org.optaplanner.jpyinterpreter.types.datetime import PythonDate, PythonDateTime, PythonTime, PythonTimeDelta
 
     if instance_map is None:
@@ -265,7 +265,10 @@ def convert_object_to_java_python_like_object(value, instance_map=None):
     elif inspect.isfunction(value):
         try:
             from org.optaplanner.jpyinterpreter.types import PythonLikeFunction
+            wrapped = PythonLikeFunctionWrapper()
+            put_in_instance_map(instance_map, value, wrapped)
             out = translate_python_bytecode_to_java_bytecode(value, PythonLikeFunction)
+            wrapped.setWrapped(out)
             put_in_instance_map(instance_map, value, out)
             return out
         except:
@@ -679,8 +682,8 @@ def copy_constants(constants_iterable):
     return iterable_copy
 
 
-def copy_closure(python_function, closure):
-    from org.optaplanner.jpyinterpreter.types import PythonCell, RecursionMarker
+def copy_closure(closure):
+    from org.optaplanner.jpyinterpreter.types import PythonCell
     from org.optaplanner.jpyinterpreter.types.collections import PythonLikeTuple
     from org.optaplanner.jpyinterpreter import CPythonBackedPythonInterpreter
     out = PythonLikeTuple()
@@ -689,10 +692,7 @@ def copy_closure(python_function, closure):
     else:
         for cell in closure:
             java_cell = PythonCell()
-            if cell.cell_contents is python_function:
-                java_cell.cellValue = RecursionMarker.INSTANCE
-            else:
-                java_cell.cellValue = convert_to_java_python_like_object(cell.cell_contents, CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap)
+            java_cell.cellValue = convert_to_java_python_like_object(cell.cell_contents, CPythonBackedPythonInterpreter.pythonObjectIdToConvertedObjectMap)
             out.add(java_cell)
         return out
 
@@ -766,7 +766,7 @@ def get_function_bytecode_object(python_function):
     python_compiled_function.co_constants = copy_constants(python_function.__code__.co_consts)
     python_compiled_function.co_argcount = python_function.__code__.co_argcount
     python_compiled_function.co_kwonlyargcount = python_function.__code__.co_kwonlyargcount
-    python_compiled_function.closure = copy_closure(python_function, python_function.__closure__)
+    python_compiled_function.closure = copy_closure(python_function.__closure__)
     python_compiled_function.globalsMap = copy_globals(python_function.__globals__, python_function.__code__.co_names)
     python_compiled_function.typeAnnotations = copy_type_annotations(python_function.__annotations__)
     python_compiled_function.defaultPositionalArguments = convert_to_java_python_like_object(
@@ -819,7 +819,7 @@ def get_code_bytecode_object(python_code):
     python_compiled_function.co_constants = copy_constants(python_code.co_consts)
     python_compiled_function.co_argcount = python_code.co_argcount
     python_compiled_function.co_kwonlyargcount = python_code.co_kwonlyargcount
-    python_compiled_function.closure = copy_closure(python_code, None)
+    python_compiled_function.closure = copy_closure(None)
     python_compiled_function.globalsMap = HashMap()
     python_compiled_function.typeAnnotations = HashMap()
     python_compiled_function.defaultPositionalArguments = convert_to_java_python_like_object(tuple())
