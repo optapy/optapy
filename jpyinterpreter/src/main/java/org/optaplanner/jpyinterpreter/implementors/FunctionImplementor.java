@@ -4,12 +4,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -634,79 +631,6 @@ public class FunctionImplementor {
                             Type.getType(PythonInterpreter.class)),
                     false);
         }
-    }
-
-    @SuppressWarnings("unused")
-    public static List<PythonLikeObject> extractArguments(int totalArgCount,
-            int keywordOnlyArgCount,
-            List<PythonString> variableNameList,
-            List<PythonLikeObject> defaultPositionalArguments,
-            Map<PythonString, PythonLikeObject> defaultNamedArguments,
-            List<PythonLikeObject> positionalArguments,
-            Map<PythonString, PythonLikeObject> namedArguments,
-            boolean isGeneric) {
-        if (positionalArguments == null) {
-            positionalArguments = List.of();
-        }
-
-        if (namedArguments == null) {
-            namedArguments = Map.of();
-        }
-
-        if (positionalArguments.size() + namedArguments.size() + defaultPositionalArguments.size()
-                + defaultNamedArguments.size() < totalArgCount) {
-            // TODO: explain missing positional/named arguments
-            System.out.println(positionalArguments);
-            throw new IllegalArgumentException();
-        }
-
-        int positionalArgumentEnd = totalArgCount - keywordOnlyArgCount;
-        List<PythonLikeObject> out = new ArrayList<>(totalArgCount);
-
-        out.addAll(positionalArguments);
-        if (out.size() < positionalArgumentEnd) {
-            int defaultPositionalArgumentsStart = positionalArgumentEnd - defaultPositionalArguments.size() - out.size();
-            if (defaultPositionalArgumentsStart < 0) {
-                // TODO: explain missing positional/named arguments
-                throw new IllegalArgumentException("missing " + -defaultPositionalArgumentsStart + " required arguments");
-            }
-            out.addAll(defaultPositionalArguments.subList(defaultPositionalArgumentsStart, defaultPositionalArguments.size()));
-        }
-
-        for (int i = out.size(); i < totalArgCount; i++) {
-            out.add(null);
-        }
-
-        for (PythonString key : defaultNamedArguments.keySet()) {
-            int index = variableNameList.indexOf(key);
-            out.set(index, namedArguments.get(key));
-        }
-
-        Set<PythonString> toRemoveNamedArgs = new HashSet<>();
-        for (PythonString key : namedArguments.keySet()) {
-            int index = variableNameList.indexOf(key);
-            if (index == -1 || index >= totalArgCount) {
-                if (!isGeneric) {
-                    // TODO: explain invalid named arguments
-                    throw new IllegalArgumentException("Function is not generic and got extra keyword arg " + key);
-                } else {
-                    // remove unused element from out
-                    out.remove(out.size() - 1);
-                }
-            } else {
-                out.set(index, namedArguments.get(key));
-                toRemoveNamedArgs.add(key);
-            }
-        }
-        toRemoveNamedArgs.forEach(namedArguments::remove);
-
-        if (out.size() != totalArgCount) {
-            // TODO: explain invalid argument count
-            throw new IllegalArgumentException("Mismatch arg counts: actual " + out.size() + " expected " + totalArgCount +
-                    " args: " + positionalArguments + "; names: " + namedArguments);
-        }
-
-        return out;
     }
 
     // For Python 3.9 and below

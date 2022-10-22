@@ -133,7 +133,8 @@ def test_default_with_vargs():
     verifier.verify((1, 2, 3), expected_result=16)
     verifier.verify((1, 2), expected_result=13)
 
-def test_default_with_manatory_args():
+
+def test_vargs_with_manatory_args():
     def helper(start: int, *items: int) -> int:
         total = start
         for item in items:

@@ -100,7 +100,7 @@ public class PythonCompiledFunction {
     public int co_posonlyargcount;
 
     /**
-     * True if the python function can take extra keyword arguments that were not specified in its arguments
+     * True if the python function can take extra positional arguments that were not specified in its arguments
      */
     public boolean supportExtraPositionalArgs = false;
 
