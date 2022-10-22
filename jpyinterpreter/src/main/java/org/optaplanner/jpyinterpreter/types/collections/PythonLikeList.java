@@ -558,7 +558,9 @@ public class PythonLikeList<T> extends AbstractPythonLikeObject implements List<
             out.append(UnaryDunderBuiltin.REPRESENTATION.invoke((PythonLikeObject) delegate.get(i)));
             out.append(", ");
         }
-        out.append(UnaryDunderBuiltin.REPRESENTATION.invoke((PythonLikeObject) delegate.get(delegate.size() - 1)));
+        if (!delegate.isEmpty()) {
+            out.append(UnaryDunderBuiltin.REPRESENTATION.invoke((PythonLikeObject) delegate.get(delegate.size() - 1)));
+        }
         out.append(']');
 
         return out.toString();

@@ -4,6 +4,7 @@ import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -11,10 +12,13 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.jpyinterpreter.implementors.CollectionImplementor;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeFunction;
 import org.optaplanner.jpyinterpreter.types.PythonString;
+import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
+import org.optaplanner.jpyinterpreter.types.errors.TypeError;
 
 /**
  * Implement classes that hold static constants used for default arguments when calling
@@ -39,7 +43,8 @@ public class PythonDefaultArgumentImplementor {
 
     public static Class<?> createDefaultArgumentFor(MethodDescriptor methodDescriptor,
             List<PythonLikeObject> defaultArgumentList,
-            Map<String, Integer> argumentNameToIndexMap) {
+            Map<String, Integer> argumentNameToIndexMap, Optional<Integer> extraPositionalArgumentsVariableIndex,
+            Optional<Integer> extraKeywordArgumentsVariableIndex) {
         String maybeClassName = PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE +
                 methodDescriptor.declaringClassInternalName.replace('/', '.') +
                 "."
@@ -78,16 +83,29 @@ public class PythonDefaultArgumentImplementor {
                 Type.getDescriptor(int.class), null, null);
         for (int i = 0; i < methodDescriptor.getParameterTypes().length; i++) {
             String fieldName = getArgumentName(i);
-            classWriter.visitField(Modifier.PUBLIC, fieldName,
-                    methodDescriptor.getParameterTypes()[i].getDescriptor(),
-                    null,
-                    null);
+
+            if (extraPositionalArgumentsVariableIndex.isPresent() && extraPositionalArgumentsVariableIndex.get() == i) {
+                classWriter.visitField(Modifier.PUBLIC, fieldName,
+                        Type.getDescriptor(PythonLikeTuple.class),
+                        null,
+                        null);
+            } else if (extraKeywordArgumentsVariableIndex.isPresent() && extraKeywordArgumentsVariableIndex.get() == i) {
+                classWriter.visitField(Modifier.PUBLIC, fieldName,
+                        Type.getDescriptor(PythonLikeDict.class),
+                        null,
+                        null);
+            } else {
+                classWriter.visitField(Modifier.PUBLIC, fieldName,
+                        methodDescriptor.getParameterTypes()[i].getDescriptor(),
+                        null,
+                        null);
+            }
         }
 
         // public constructor; an instance is created for keyword function calls, since we need consistent stack frames
         MethodVisitor methodVisitor =
                 classWriter.visitMethod(Modifier.PUBLIC, "<init>", Type.getMethodDescriptor(Type.VOID_TYPE,
-                        Type.getType(PythonLikeTuple.class)),
+                        Type.getType(PythonLikeTuple.class), Type.INT_TYPE),
                         null, null);
         methodVisitor.visitCode();
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -104,7 +122,7 @@ public class PythonDefaultArgumentImplementor {
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName, REMAINING_KEY_ARGUMENTS_FIELD_NAME,
                 Type.getDescriptor(int.class));
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-        methodVisitor.visitInsn(Opcodes.ICONST_0);
+        methodVisitor.visitVarInsn(Opcodes.ILOAD, 2);
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName, POSITIONAL_INDEX, Type.getDescriptor(int.class));
 
         for (int i = 0; i < defaultArgumentList.size(); i++) {
@@ -116,12 +134,29 @@ public class PythonDefaultArgumentImplementor {
                     getArgumentName(argumentIndex),
                     methodDescriptor.getParameterTypes()[argumentIndex].getDescriptor());
         }
+
+        if (extraPositionalArgumentsVariableIndex.isPresent()) {
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+            CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
+            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName,
+                    getArgumentName(extraPositionalArgumentsVariableIndex.get()),
+                    Type.getDescriptor(PythonLikeTuple.class));
+        }
+
+        if (extraKeywordArgumentsVariableIndex.isPresent()) {
+            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+            CollectionImplementor.buildMap(PythonLikeDict.class, methodVisitor, 0);
+            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName,
+                    getArgumentName(extraKeywordArgumentsVariableIndex.get()),
+                    Type.getDescriptor(PythonLikeDict.class));
+        }
         methodVisitor.visitInsn(Opcodes.RETURN);
 
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
 
-        createAddArgumentMethod(classWriter, internalClassName, methodDescriptor, argumentNameToIndexMap);
+        createAddArgumentMethod(classWriter, internalClassName, methodDescriptor, argumentNameToIndexMap,
+                extraPositionalArgumentsVariableIndex, extraKeywordArgumentsVariableIndex);
 
         classWriter.visitEnd();
         PythonBytecodeToJavaBytecodeTranslator.writeClassOutput(BuiltinTypes.classNameToBytecode, className,
@@ -159,6 +194,14 @@ public class PythonDefaultArgumentImplementor {
      *                 argument_1 = (Argument1Type) argument;
      *                 break;
      *             ...
+     *             default:
+     *                 #ifdef EXTRA_KEYWORD_VAR
+     *                 EXTRA_KEYWORD_VAR.put(keyword, argument);
+     *                 #endif
+     *
+     *                 #ifndef EXTRA_KEYWORD_VAR
+     *                 throw new TypeError();
+     *                 #endif
      *         }
      *         remainingKeywords--;
      *         return;
@@ -171,8 +214,16 @@ public class PythonDefaultArgumentImplementor {
      *                 argument_1 = (Argument1Type) argument;
      *                 break;
      *             ...
+     *             default:
+     *                 #ifdef EXTRA_POSITIONAL_VAR
+     *                 EXTRA_POSITIONAL_VAR.add(0, argument);
+     *                 #endif
+     *
+     *                 #ifndef EXTRA_POSITIONAL_VAR
+     *                 throw new TypeError();
+     *                 #endif
      *         }
-     *         positionalIndex++;
+     *         positionalIndex--;
      *         return;
      *     }
      * }
@@ -185,7 +236,8 @@ public class PythonDefaultArgumentImplementor {
      */
     private static void createAddArgumentMethod(ClassVisitor classVisitor, String classInternalName,
             MethodDescriptor methodDescriptor,
-            Map<String, Integer> argumentNameToIndexMap) {
+            Map<String, Integer> argumentNameToIndexMap, Optional<Integer> extraPositionalArgumentsVariableIndex,
+            Optional<Integer> extraKeywordArgumentsVariableIndex) {
         MethodVisitor methodVisitor = classVisitor.visitMethod(Modifier.PUBLIC, "addArgument",
                 Type.getMethodDescriptor(Type.VOID_TYPE,
                         Type.getType(PythonLikeObject.class)),
@@ -234,11 +286,47 @@ public class PythonDefaultArgumentImplementor {
                             parameterType.getDescriptor());
                 },
                 () -> {
-                    methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
-                    methodVisitor.visitInsn(Opcodes.DUP);
-                    methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
-                            "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
-                    methodVisitor.visitInsn(Opcodes.ATHROW);
+                    if (extraKeywordArgumentsVariableIndex.isPresent()) {
+                        // Extra keys dict
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName,
+                                getArgumentName(extraKeywordArgumentsVariableIndex.get()),
+                                Type.getDescriptor(PythonLikeDict.class));
+
+                        // Key
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, KEY_TUPLE_FIELD_NAME,
+                                Type.getDescriptor(PythonLikeTuple.class));
+
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, REMAINING_KEY_ARGUMENTS_FIELD_NAME,
+                                Type.getDescriptor(int.class));
+
+                        methodVisitor.visitInsn(Opcodes.ICONST_1);
+                        methodVisitor.visitInsn(Opcodes.ISUB);
+
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
+                                Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
+                                true);
+
+                        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonString.class));
+
+                        // Value
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeDict.class),
+                                "put", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(PythonLikeObject.class),
+                                        Type.getType(PythonLikeObject.class)),
+                                false);
+                        methodVisitor.visitInsn(Opcodes.POP);
+                    } else {
+                        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(TypeError.class));
+                        methodVisitor.visitInsn(Opcodes.DUP);
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(TypeError.class),
+                                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
+                        methodVisitor.visitInsn(Opcodes.ATHROW);
+                    }
                 },
                 false);
 
@@ -268,11 +356,31 @@ public class PythonDefaultArgumentImplementor {
                             parameterType.getDescriptor());
                 },
                 () -> {
-                    methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalArgumentException.class));
-                    methodVisitor.visitInsn(Opcodes.DUP);
-                    methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(IllegalArgumentException.class),
-                            "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
-                    methodVisitor.visitInsn(Opcodes.ATHROW);
+                    if (extraPositionalArgumentsVariableIndex.isPresent()) {
+                        // Extra argument tuple
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName,
+                                getArgumentName(extraPositionalArgumentsVariableIndex.get()),
+                                Type.getDescriptor(PythonLikeTuple.class));
+
+                        // Index (need to insert in front of list since positional arguments are read in reverse)
+                        methodVisitor.visitInsn(Opcodes.ICONST_0);
+
+                        // Item
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
+
+                        // Insert at front of list (since positional arguments are read in reverse)
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeTuple.class), "add",
+                                Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE, Type.getType(PythonLikeObject.class)),
+                                false);
+
+                    } else {
+                        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(TypeError.class));
+                        methodVisitor.visitInsn(Opcodes.DUP);
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(TypeError.class),
+                                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
+                        methodVisitor.visitInsn(Opcodes.ATHROW);
+                    }
                 },
                 false);
 
@@ -280,7 +388,7 @@ public class PythonDefaultArgumentImplementor {
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, POSITIONAL_INDEX, Type.getDescriptor(int.class));
         methodVisitor.visitInsn(Opcodes.ICONST_1);
-        methodVisitor.visitInsn(Opcodes.IADD);
+        methodVisitor.visitInsn(Opcodes.ISUB);
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, POSITIONAL_INDEX, Type.getDescriptor(int.class));
 
         methodVisitor.visitInsn(Opcodes.RETURN);

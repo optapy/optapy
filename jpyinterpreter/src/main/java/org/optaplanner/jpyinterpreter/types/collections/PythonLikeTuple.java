@@ -146,6 +146,22 @@ public class PythonLikeTuple extends AbstractPythonLikeObject implements List<Py
         return new PythonIterator(delegate.iterator());
     }
 
+    public PythonIterator getReversedIterator() {
+
+        final ListIterator<PythonLikeObject> listIterator = delegate.listIterator(delegate.size());
+        return new PythonIterator<>(new Iterator<>() {
+            @Override
+            public boolean hasNext() {
+                return listIterator.hasPrevious();
+            }
+
+            @Override
+            public Object next() {
+                return listIterator.previous();
+            }
+        });
+    }
+
     public PythonLikeObject getItem(PythonInteger index) {
         int indexAsInt = index.value.intValueExact();
 

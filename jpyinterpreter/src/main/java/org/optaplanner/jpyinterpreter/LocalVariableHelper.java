@@ -25,7 +25,7 @@ public class LocalVariableHelper {
     int usedLocals;
 
     public LocalVariableHelper(Type[] parameters, PythonCompiledFunction compiledFunction) {
-        this.argcount = compiledFunction.co_argcount;
+        this.argcount = compiledFunction.totalArgCount();
         this.parameters = parameters;
         int slotsUsedByParameters = 1;
         for (Type parameter : parameters) {

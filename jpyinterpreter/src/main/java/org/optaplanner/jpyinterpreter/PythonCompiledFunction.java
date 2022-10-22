@@ -4,13 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
+import org.optaplanner.jpyinterpreter.types.PythonString;
+import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.util.JavaIdentifierUtils;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
+import org.optaplanner.jpyinterpreter.util.arguments.GenericArgumentSpec;
 
 public class PythonCompiledFunction {
     /**
@@ -45,6 +50,16 @@ public class PythonCompiledFunction {
     public Map<String, PythonLikeType> typeAnnotations;
 
     /**
+     * Default positional arguments
+     */
+    public PythonLikeTuple defaultPositionalArguments = new PythonLikeTuple();
+
+    /**
+     * Default keyword arguments
+     */
+    public PythonLikeDict defaultKeywordArguments = new PythonLikeDict();
+
+    /**
      * List of all names used in the function
      */
     public List<String> co_names;
@@ -70,7 +85,7 @@ public class PythonCompiledFunction {
     public List<PythonLikeObject> co_constants;
 
     /**
-     * The number of arguments the function takes
+     * The number of not keyword only arguments the function takes
      */
     public int co_argcount;
 
@@ -80,14 +95,26 @@ public class PythonCompiledFunction {
     public int co_kwonlyargcount;
 
     /**
+     * The number of positional only arguments the function takes
+     */
+    public int co_posonlyargcount;
+
+    /**
      * True if the python function can take extra keyword arguments that were not specified in its arguments
      */
-    public boolean supportExtraKeywordsArgs;
+    public boolean supportExtraPositionalArgs = false;
+
+    /**
+     * True if the python function can take extra keyword arguments that were not specified in its arguments
+     */
+    public boolean supportExtraKeywordsArgs = false;
 
     /**
      * The python version this function was compiled in (see sys.hexversion)
      */
     public PythonVersion pythonVersion;
+
+    public PythonClassTranslator.PythonMethodKind methodKind = PythonClassTranslator.PythonMethodKind.STATIC_METHOD;
 
     public PythonCompiledFunction() {
     }
@@ -102,6 +129,8 @@ public class PythonCompiledFunction {
         out.closure = closure;
         out.globalsMap = globalsMap;
         out.typeAnnotations = typeAnnotations;
+        out.defaultPositionalArguments = defaultPositionalArguments;
+        out.defaultKeywordArguments = defaultKeywordArguments;
         out.co_names = new ArrayList<>(co_names);
         out.co_varnames = new ArrayList<>(co_varnames);
         out.co_cellvars = new ArrayList<>(co_cellvars);
@@ -110,15 +139,16 @@ public class PythonCompiledFunction {
         out.co_argcount = co_argcount;
         out.co_kwonlyargcount = co_kwonlyargcount;
         out.pythonVersion = pythonVersion;
+        out.methodKind = methodKind;
 
         return out;
     }
 
     public List<PythonLikeType> getParameterTypes() {
-        List<PythonLikeType> out = new ArrayList<>(co_argcount);
+        List<PythonLikeType> out = new ArrayList<>(totalArgCount());
         PythonLikeType defaultType = BuiltinTypes.BASE_TYPE;
 
-        for (int i = 0; i < co_argcount; i++) {
+        for (int i = 0; i < totalArgCount(); i++) {
             String parameterName = co_varnames.get(i);
             PythonLikeType parameterType = typeAnnotations.get(parameterName);
             if (parameterType == null) { // map may have nulls
@@ -137,9 +167,9 @@ public class PythonCompiledFunction {
         Type returnType = Type.getType('L' + getReturnType().map(PythonLikeType::getJavaTypeInternalName)
                 .orElseGet(BuiltinTypes.BASE_TYPE::getJavaTypeInternalName) + ';');
         List<PythonLikeType> parameterPythonTypeList = getParameterTypes();
-        Type[] parameterTypes = new Type[co_argcount];
+        Type[] parameterTypes = new Type[totalArgCount()];
 
-        for (int i = 0; i < co_argcount; i++) {
+        for (int i = 0; i < totalArgCount(); i++) {
             parameterTypes[i] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
         }
         return Type.getMethodDescriptor(returnType, parameterTypes);
@@ -151,5 +181,75 @@ public class PythonCompiledFunction {
         }
         return JavaIdentifierUtils
                 .sanitizeClassName((qualifiedName != null) ? module + "." + qualifiedName : module + "." + "PythonFunction");
+    }
+
+    public BiFunction<PythonLikeTuple, PythonLikeDict, GenericArgumentSpec<PythonLikeObject>> getArgumentSpecMapper() {
+        return (defaultPositionalArguments, defaultKeywordArguments) -> {
+            GenericArgumentSpec<PythonLikeObject> out = ArgumentSpec.typelessSpec(qualifiedName, PythonLikeObject.class);
+
+            int variableIndex = 0;
+            int defaultPositionalStartIndex = co_argcount - defaultPositionalArguments.size();
+
+            if (methodKind != PythonClassTranslator.PythonMethodKind.STATIC_METHOD) {
+                variableIndex = 1;
+            }
+
+            for (; variableIndex < co_posonlyargcount; variableIndex++) {
+                if (variableIndex >= defaultPositionalStartIndex) {
+                    out = out.addPositionalOnlyArgument(co_varnames.get(variableIndex), PythonLikeObject.class,
+                            defaultPositionalArguments.get(variableIndex - defaultPositionalStartIndex));
+                } else {
+                    out = out.addPositionalOnlyArgument(co_varnames.get(variableIndex), PythonLikeObject.class);
+                }
+            }
+
+            for (; variableIndex < co_argcount; variableIndex++) {
+                if (variableIndex >= defaultPositionalStartIndex) {
+                    out = out.addArgument(co_varnames.get(variableIndex), PythonLikeObject.class,
+                            defaultPositionalArguments.get(variableIndex - defaultPositionalStartIndex));
+                } else {
+                    out = out.addArgument(co_varnames.get(variableIndex), PythonLikeObject.class);
+                }
+            }
+
+            for (int i = 0; i < co_kwonlyargcount; i++) {
+                PythonLikeObject maybeDefault =
+                        defaultKeywordArguments.get(PythonString.valueOf(co_varnames.get(variableIndex)));
+                if (maybeDefault != null) {
+                    out = out.addKeywordOnlyArgument(co_varnames.get(variableIndex), PythonLikeObject.class,
+                            maybeDefault);
+                } else {
+                    out = out.addKeywordOnlyArgument(co_varnames.get(variableIndex), PythonLikeObject.class);
+                }
+                variableIndex++;
+            }
+
+            // vargs and kwargs are always last, despite position in signature
+            if (supportExtraPositionalArgs) {
+                out = out.addExtraPositionalVarArgument(co_varnames.get(variableIndex));
+                variableIndex++;
+            }
+
+            if (supportExtraKeywordsArgs) {
+                out = out.addExtraKeywordVarArgument(co_varnames.get(variableIndex));
+            }
+
+            return out;
+        };
+    }
+
+    /**
+     * The total number of arguments the function takes
+     */
+    public int totalArgCount() {
+        int extraArgs = 0;
+        if (supportExtraPositionalArgs) {
+            extraArgs++;
+        }
+        if (supportExtraKeywordsArgs) {
+            extraArgs++;
+        }
+
+        return co_argcount + co_kwonlyargcount + extraArgs;
     }
 }

@@ -1,5 +1,6 @@
 package org.optaplanner.jpyinterpreter;
 
+import static org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator.ARGUMENT_SPEC_INSTANCE_FIELD_NAME;
 import static org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator.translatePythonBytecodeToInstance;
 
 import java.lang.reflect.InvocationTargetException;
@@ -24,7 +25,6 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.dag.FlowGraph;
-import org.optaplanner.jpyinterpreter.implementors.FunctionImplementor;
 import org.optaplanner.jpyinterpreter.implementors.JavaComparableImplementor;
 import org.optaplanner.jpyinterpreter.implementors.JavaEqualsImplementor;
 import org.optaplanner.jpyinterpreter.implementors.JavaHashCodeImplementor;
@@ -48,6 +48,7 @@ import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
+import org.optaplanner.jpyinterpreter.util.arguments.GenericArgumentSpec;
 
 public class PythonClassTranslator {
     static Map<FunctionSignature, InterfaceDeclaration> functionSignatureToInterfaceName = new HashMap<>();
@@ -219,18 +220,21 @@ public class PythonClassTranslator {
 
         for (Map.Entry<String, PythonCompiledFunction> instanceMethodEntry : pythonCompiledClass.instanceFunctionNameToPythonBytecode
                 .entrySet()) {
+            instanceMethodEntry.getValue().methodKind = PythonMethodKind.VIRTUAL_METHOD;
             createInstanceMethod(pythonLikeType, classWriter, internalClassName, instanceMethodEntry.getKey(),
                     instanceMethodEntry.getValue());
         }
 
         for (Map.Entry<String, PythonCompiledFunction> staticMethodEntry : pythonCompiledClass.staticFunctionNameToPythonBytecode
                 .entrySet()) {
+            staticMethodEntry.getValue().methodKind = PythonMethodKind.STATIC_METHOD;
             createStaticMethod(pythonLikeType, classWriter, internalClassName, staticMethodEntry.getKey(),
                     staticMethodEntry.getValue());
         }
 
         for (Map.Entry<String, PythonCompiledFunction> classMethodEntry : pythonCompiledClass.classFunctionNameToPythonBytecode
                 .entrySet()) {
+            classMethodEntry.getValue().methodKind = PythonMethodKind.CLASS_METHOD;
             createClassMethod(pythonLikeType, classWriter, internalClassName, classMethodEntry.getKey(),
                     classMethodEntry.getValue());
         }
@@ -280,13 +284,18 @@ public class PythonClassTranslator {
                     + className + ").", e);
         }
 
+        Class<?> initFunctionClass = null;
         for (Map.Entry<String, PythonCompiledFunction> instanceMethodEntry : pythonCompiledClass.instanceFunctionNameToPythonBytecode
                 .entrySet()) {
             InterfaceDeclaration interfaceDeclaration =
                     getInterfaceForInstancePythonFunction(internalClassName, instanceMethodEntry.getValue());
-            createBytecodeForMethodAndSetOnClass(className, pythonLikeType, pythonCompiledClass.binaryType, generatedClass,
+            Class<?> createdFunctionClass = createBytecodeForMethodAndSetOnClass(className, pythonLikeType,
+                    pythonCompiledClass.binaryType, generatedClass,
                     instanceMethodEntry,
                     interfaceDeclaration, PythonMethodKind.VIRTUAL_METHOD);
+            if (instanceMethodEntry.getKey().equals("__init__")) {
+                initFunctionClass = createdFunctionClass;
+            }
         }
 
         for (Map.Entry<String, PythonCompiledFunction> staticMethodEntry : pythonCompiledClass.staticFunctionNameToPythonBytecode
@@ -305,9 +314,10 @@ public class PythonClassTranslator {
                     interfaceDeclaration, PythonMethodKind.CLASS_METHOD);
         }
 
-        if (pythonCompiledClass.instanceFunctionNameToPythonBytecode.containsKey("__init__")) {
+        if (initFunctionClass != null) {
             pythonLikeType.setConstructor(createConstructor(internalClassName,
-                    pythonCompiledClass.instanceFunctionNameToPythonBytecode.get("__init__")));
+                    pythonCompiledClass.instanceFunctionNameToPythonBytecode.get("__init__"),
+                    generatedClass));
         }
 
         PythonOverloadImplementor.createDispatchesFor(pythonLikeType);
@@ -354,7 +364,7 @@ public class PythonClassTranslator {
         return javaMethodName.substring("$method$".length());
     }
 
-    private static void createBytecodeForMethodAndSetOnClass(String className, PythonLikeType pythonLikeType,
+    private static Class<?> createBytecodeForMethodAndSetOnClass(String className, PythonLikeType pythonLikeType,
             PythonLikeType cPythonType,
             Class<? extends PythonLikeObject> generatedClass,
             Map.Entry<String, PythonCompiledFunction> methodEntry,
@@ -415,6 +425,7 @@ public class PythonClassTranslator {
             generatedClass.getField(getJavaMethodName(methodEntry.getKey()))
                     .set(null, functionInstance);
             pythonLikeType.__setAttribute(methodEntry.getKey(), translatedPythonMethodWrapper);
+            return functionClass;
         } catch (IllegalAccessException | NoSuchFieldException e) {
             throw new IllegalStateException("Impossible State: could not access method (" + methodEntry.getKey()
                     + ") static field for generated class ("
@@ -468,7 +479,7 @@ public class PythonClassTranslator {
         methodVisitor = classWriter.visitMethod(Modifier.PUBLIC, "invoke", interfaceDeclaration.methodDescriptor,
                 null, null);
 
-        for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
+        for (int i = 0; i < pythonCompiledFunction.totalArgCount(); i++) {
             methodVisitor.visitParameter("parameter" + i, 0);
         }
 
@@ -484,9 +495,9 @@ public class PythonClassTranslator {
                 true);
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeFunction.class));
 
-        methodVisitor.visitLdcInsn(pythonCompiledFunction.co_argcount);
+        methodVisitor.visitLdcInsn(pythonCompiledFunction.totalArgCount());
         methodVisitor.visitTypeInsn(Opcodes.ANEWARRAY, Type.getInternalName(Object.class));
-        for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
+        for (int i = 0; i < pythonCompiledFunction.totalArgCount(); i++) {
             methodVisitor.visitInsn(Opcodes.DUP);
             methodVisitor.visitLdcInsn(i);
             methodVisitor.visitVarInsn(Opcodes.ALOAD, i + 1);
@@ -528,7 +539,8 @@ public class PythonClassTranslator {
     }
 
     private static PythonLikeFunction createConstructor(String classInternalName,
-            PythonCompiledFunction initFunction) {
+            PythonCompiledFunction initFunction,
+            Class<?> typeGeneratedClass) {
         String maybeClassName = PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE
                 + classInternalName.replace('/', '.') + "$$Constructor";
         int numberOfInstances =
@@ -544,6 +556,10 @@ public class PythonClassTranslator {
                 new String[] {
                         Type.getInternalName(PythonLikeFunction.class)
                 });
+
+        classWriter.visitField(Modifier.STATIC | Modifier.PUBLIC, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(GenericArgumentSpec.class),
+                null, null);
 
         MethodVisitor methodVisitor =
                 classWriter.visitMethod(Modifier.PUBLIC, "<init>", Type.getMethodDescriptor(Type.VOID_TYPE),
@@ -571,27 +587,14 @@ public class PythonClassTranslator {
                 Type.getMethodDescriptor(Type.VOID_TYPE), false);
         methodVisitor.visitInsn(Opcodes.DUP);
 
-        methodVisitor.visitLdcInsn(initFunction.co_argcount - 1);
-        methodVisitor.visitLdcInsn(initFunction.co_kwonlyargcount);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(List.class), "of",
-                Type.getMethodDescriptor(Type.getType(List.class)), true);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(List.class), "of",
-                Type.getMethodDescriptor(Type.getType(List.class)), true);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Map.class), "of",
-                Type.getMethodDescriptor(Type.getType(Map.class)), true);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, constructorInternalClassName, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(GenericArgumentSpec.class));
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
-        methodVisitor.visitInsn(initFunction.supportExtraKeywordsArgs ? Opcodes.ICONST_1 : Opcodes.ICONST_0);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class), "extractArguments",
-                Type.getMethodDescriptor(Type.getType(List.class),
-                        Type.INT_TYPE,
-                        Type.INT_TYPE,
-                        Type.getType(List.class),
-                        Type.getType(List.class),
-                        Type.getType(Map.class),
-                        Type.getType(List.class),
-                        Type.getType(Map.class),
-                        Type.BOOLEAN_TYPE),
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(GenericArgumentSpec.class),
+                "extractArgumentList",
+                Type.getMethodDescriptor(Type.getType(List.class), Type.getType(List.class), Type.getType(Map.class)),
                 false);
 
         List<PythonLikeType> initParameterTypes = initFunction.getParameterTypes();
@@ -606,7 +609,7 @@ public class PythonClassTranslator {
         }
         methodVisitor.visitInsn(Opcodes.POP);
 
-        Type[] parameterTypes = new Type[initFunction.co_argcount - 1];
+        Type[] parameterTypes = new Type[initFunction.totalArgCount() - 1];
         List<PythonLikeType> parameterTypeAnnotations = initFunction.getParameterTypes();
         for (int i = 1; i < parameterTypeAnnotations.size(); i++) {
             parameterTypes[i - 1] = Type.getType('L' + parameterTypeAnnotations.get(i).getJavaTypeInternalName() + ';');
@@ -634,9 +637,13 @@ public class PythonClassTranslator {
             @SuppressWarnings("unchecked")
             Class<? extends PythonLikeFunction> generatedClass =
                     (Class<? extends PythonLikeFunction>) BuiltinTypes.asmClassLoader.loadClass(constructorClassName);
+            Object method = typeGeneratedClass.getField(getJavaMethodName("__init__")).get(null);
+            GenericArgumentSpec spec =
+                    (GenericArgumentSpec) method.getClass().getField(ARGUMENT_SPEC_INSTANCE_FIELD_NAME).get(method);
+            generatedClass.getField(ARGUMENT_SPEC_INSTANCE_FIELD_NAME).set(null, spec);
             return generatedClass.getConstructor().newInstance();
         } catch (ClassNotFoundException | RuntimeException | InstantiationException | NoSuchMethodException
-                | IllegalAccessException | InvocationTargetException e) {
+                | IllegalAccessException | InvocationTargetException | NoSuchFieldException e) {
             throw new IllegalStateException("Impossible State: Unable to load generated class (" +
                     constructorClassName + ") despite it being just generated.", e);
         }
@@ -653,9 +660,9 @@ public class PythonClassTranslator {
         Type returnType = getVirtualFunctionReturnType(function);
 
         List<PythonLikeType> parameterPythonTypeList = function.getParameterTypes();
-        Type[] javaParameterTypes = new Type[Math.max(0, function.co_argcount - 1)];
+        Type[] javaParameterTypes = new Type[Math.max(0, function.totalArgCount() - 1)];
 
-        for (int i = 1; i < function.co_argcount; i++) {
+        for (int i = 1; i < function.totalArgCount(); i++) {
             javaParameterTypes[i - 1] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
         }
         String javaMethodDescriptor = Type.getMethodDescriptor(returnType, javaParameterTypes);
@@ -669,7 +676,8 @@ public class PythonClassTranslator {
                 new PythonFunctionSignature(new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.VIRTUAL,
                         javaMethodName, javaMethodDescriptor),
                         function.getReturnType().orElse(BuiltinTypes.BASE_TYPE),
-                        function.co_argcount > 0 ? function.getParameterTypes().subList(1, function.getParameterTypes().size())
+                        function.totalArgCount() > 0
+                                ? function.getParameterTypes().subList(1, function.getParameterTypes().size())
                                 : List.of()));
     }
 
@@ -685,9 +693,9 @@ public class PythonClassTranslator {
                 function.getAsmMethodDescriptorString(), null, null);
 
         List<PythonLikeType> parameterPythonTypeList = function.getParameterTypes();
-        Type[] javaParameterTypes = new Type[function.co_argcount];
+        Type[] javaParameterTypes = new Type[function.totalArgCount()];
 
-        for (int i = 0; i < function.co_argcount; i++) {
+        for (int i = 0; i < function.totalArgCount(); i++) {
             javaParameterTypes[i] = Type.getType('L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';');
         }
         createMethodBody(internalClassName, javaMethodName, javaParameterTypes, interfaceDeclaration.methodDescriptor, function,
@@ -720,7 +728,7 @@ public class PythonClassTranslator {
 
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, internalClassName, javaMethodName, interfaceDescriptor);
 
-        for (int i = 0; i < function.co_argcount; i++) {
+        for (int i = 0; i < function.totalArgCount(); i++) {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, i);
         }
 
@@ -753,7 +761,7 @@ public class PythonClassTranslator {
         methodVisitor.visitCode();
 
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, internalClassName, javaMethodName, interfaceDescriptor);
-        for (int i = 0; i < function.co_argcount; i++) {
+        for (int i = 0; i < function.totalArgCount(); i++) {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, i);
         }
 
@@ -1011,7 +1019,7 @@ public class PythonClassTranslator {
     }
 
     public static InterfaceDeclaration getInterfaceForPythonFunction(PythonCompiledFunction pythonCompiledFunction) {
-        String[] parameterTypes = new String[pythonCompiledFunction.co_argcount];
+        String[] parameterTypes = new String[pythonCompiledFunction.totalArgCount()];
         List<PythonLikeType> parameterTypeAnnotations = pythonCompiledFunction.getParameterTypes();
         for (int i = 0; i < parameterTypeAnnotations.size(); i++) {
             parameterTypes[i] = 'L' + parameterTypeAnnotations.get(i).getJavaTypeInternalName() + ';';
@@ -1027,7 +1035,7 @@ public class PythonClassTranslator {
 
     public static InterfaceDeclaration
             getInterfaceForPythonFunctionIgnoringReturn(PythonCompiledFunction pythonCompiledFunction) {
-        String[] parameterTypes = new String[pythonCompiledFunction.co_argcount];
+        String[] parameterTypes = new String[pythonCompiledFunction.totalArgCount()];
         List<PythonLikeType> parameterTypeAnnotations = pythonCompiledFunction.getParameterTypes();
 
         for (int i = 0; i < parameterTypeAnnotations.size(); i++) {
@@ -1045,13 +1053,13 @@ public class PythonClassTranslator {
     public static InterfaceDeclaration getInterfaceForInstancePythonFunction(String instanceInternalClassName,
             PythonCompiledFunction pythonCompiledFunction) {
         List<PythonLikeType> parameterPythonTypeList = pythonCompiledFunction.getParameterTypes();
-        String[] pythonParameterTypes = new String[pythonCompiledFunction.co_argcount];
+        String[] pythonParameterTypes = new String[pythonCompiledFunction.totalArgCount()];
 
         if (pythonParameterTypes.length > 0) {
             pythonParameterTypes[0] = 'L' + instanceInternalClassName + ';';
         }
 
-        for (int i = 1; i < pythonCompiledFunction.co_argcount; i++) {
+        for (int i = 1; i < pythonCompiledFunction.totalArgCount(); i++) {
             pythonParameterTypes[i] = 'L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';';
         }
         String returnType = 'L' + pythonCompiledFunction.getReturnType().map(PythonLikeType::getJavaTypeInternalName)
@@ -1063,13 +1071,13 @@ public class PythonClassTranslator {
 
     public static InterfaceDeclaration getInterfaceForClassPythonFunction(PythonCompiledFunction pythonCompiledFunction) {
         List<PythonLikeType> parameterPythonTypeList = pythonCompiledFunction.getParameterTypes();
-        String[] pythonParameterTypes = new String[pythonCompiledFunction.co_argcount];
+        String[] pythonParameterTypes = new String[pythonCompiledFunction.totalArgCount()];
 
         if (pythonParameterTypes.length > 0) {
             pythonParameterTypes[0] = Type.getDescriptor(PythonLikeType.class);
         }
 
-        for (int i = 1; i < pythonCompiledFunction.co_argcount; i++) {
+        for (int i = 1; i < pythonCompiledFunction.totalArgCount(); i++) {
             pythonParameterTypes[i] = 'L' + parameterPythonTypeList.get(i).getJavaTypeInternalName() + ';';
         }
         String returnType = 'L' + pythonCompiledFunction.getReturnType().map(PythonLikeType::getJavaTypeInternalName)

@@ -18,7 +18,6 @@ import org.optaplanner.jpyinterpreter.FieldDescriptor;
 import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
 import org.optaplanner.jpyinterpreter.PythonClassTranslator;
 import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
-import org.optaplanner.jpyinterpreter.PythonGenericFunctionSignature;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonOverloadImplementor;
 import org.optaplanner.jpyinterpreter.PythonTernaryOperators;
@@ -260,33 +259,6 @@ public class PythonLikeType implements PythonLikeObject,
 
     public void addTernaryMethod(PythonTernaryOperators operator, PythonFunctionSignature method) {
         addMethod(operator.getDunderMethod(), method);
-    }
-
-    public void addGenericMethod(String methodName, Method method) {
-        addMethod(methodName, PythonGenericFunctionSignature.forGenericMethod(method));
-    }
-
-    public void addGenericUnaryMethod(PythonUnaryOperator operator, Method method) {
-        addMethod(operator.getDunderMethod(), PythonGenericFunctionSignature.forGenericMethod(method));
-    }
-
-    public void addGenericBinaryMethod(PythonBinaryOperators operator, Method method) {
-        addMethod(operator.getDunderMethod(), method);
-        if (operator.hasRightDunderMethod() && !operator.isComparisonMethod()) {
-            addMethod(operator.getRightDunderMethod(), method);
-        }
-    }
-
-    public void addGenericLeftBinaryMethod(PythonBinaryOperators operator, Method method) {
-        addMethod(operator.getDunderMethod(), method);
-    }
-
-    public void addGenericRightBinaryMethod(PythonBinaryOperators operator, Method method) {
-        addMethod(operator.getRightDunderMethod(), method);
-    }
-
-    public void addGenericTernaryMethod(PythonTernaryOperators operator, Method method) {
-        addMethod(operator.getDunderMethod(), PythonGenericFunctionSignature.forGenericMethod(method));
     }
 
     public void addMethod(String methodName, PythonFunctionSignature method) {

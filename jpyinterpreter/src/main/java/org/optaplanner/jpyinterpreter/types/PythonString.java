@@ -36,6 +36,7 @@ import org.optaplanner.jpyinterpreter.types.numeric.PythonBoolean;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 import org.optaplanner.jpyinterpreter.util.DefaultFormatSpec;
 import org.optaplanner.jpyinterpreter.util.StringFormatter;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
 
 public class PythonString extends AbstractPythonLikeObject implements PythonLikeComparable<PythonString> {
     public final String value;
@@ -133,7 +134,11 @@ public class PythonString extends AbstractPythonLikeObject implements PythonLike
         BuiltinTypes.STRING_TYPE.addMethod("find", PythonString.class.getMethod("findSubstringIndex", PythonString.class,
                 PythonInteger.class, PythonInteger.class));
 
-        BuiltinTypes.STRING_TYPE.addGenericMethod("format", PythonString.class.getMethod("format", List.class, Map.class));
+        BuiltinTypes.STRING_TYPE.addMethod("format", ArgumentSpec.forFunctionReturning("format", PythonString.class)
+                .addExtraPositionalVarArgument("vargs")
+                .addExtraKeywordVarArgument("kwargs")
+                .asPythonFunctionSignature(PythonString.class.getMethod("format", List.class, Map.class)));
+
         BuiltinTypes.STRING_TYPE.addMethod("format_map", PythonString.class.getMethod("formatMap", PythonLikeDict.class));
 
         BuiltinTypes.STRING_TYPE.addMethod("index",

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,6 +37,7 @@ import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
 import org.optaplanner.jpyinterpreter.types.wrappers.PythonObjectWrapper;
 import org.optaplanner.jpyinterpreter.util.JavaPythonClassWriter;
 import org.optaplanner.jpyinterpreter.util.MethodVisitorAdapters;
+import org.optaplanner.jpyinterpreter.util.arguments.GenericArgumentSpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +57,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
     public static final String CLASS_CELL_STATIC_FIELD_NAME = "__class_cell__";
 
+    public static final String ARGUMENT_SPEC_GETTER_STATIC_FIELD_NAME = "__spec_getter__";
+
     public static final String PYTHON_WRAPPER_CODE_STATIC_FIELD_NAME = "__code__";
 
     public static final String DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME = "__defaults__";
@@ -65,6 +69,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static final String CELLS_INSTANCE_FIELD_NAME = "__closure__";
 
     public static final String QUALIFIED_NAME_INSTANCE_FIELD_NAME = "__qualname__";
+
+    public static final String ARGUMENT_SPEC_INSTANCE_FIELD_NAME = "__spec__";
 
     public static final String INTERPRETER_INSTANCE_FIELD_NAME = "__interpreter__";
 
@@ -127,8 +133,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     public static <T> T translatePythonBytecode(PythonCompiledFunction pythonCompiledFunction,
             Class<T> javaFunctionalInterfaceType) {
         Class<T> compiledClass = translatePythonBytecodeToClass(pythonCompiledFunction, javaFunctionalInterfaceType);
-        return FunctionImplementor.createInstance(new PythonLikeTuple(), new PythonLikeDict(),
-                new PythonLikeTuple(), pythonCompiledFunction.closure,
+        PythonLikeTuple annotationTuple = pythonCompiledFunction.typeAnnotations.entrySet()
+                .stream()
+                .map(entry -> PythonLikeTuple.fromList(List.of(PythonString.valueOf(entry.getKey()), entry.getValue())))
+                .collect(Collectors.toCollection(PythonLikeTuple::new));
+        return FunctionImplementor.createInstance(pythonCompiledFunction.defaultPositionalArguments,
+                pythonCompiledFunction.defaultKeywordArguments,
+                annotationTuple, pythonCompiledFunction.closure,
                 PythonString.valueOf(compiledClass.getName()),
                 compiledClass, PythonInterpreter.DEFAULT);
     }
@@ -137,8 +148,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             Class<T> javaFunctionalInterfaceType, List<Class<?>> genericTypeArgumentList) {
         Class<T> compiledClass =
                 translatePythonBytecodeToClass(pythonCompiledFunction, javaFunctionalInterfaceType, genericTypeArgumentList);
-        return FunctionImplementor.createInstance(new PythonLikeTuple(), new PythonLikeDict(),
-                new PythonLikeTuple(), pythonCompiledFunction.closure,
+        PythonLikeTuple annotationTuple = pythonCompiledFunction.typeAnnotations.entrySet()
+                .stream()
+                .map(entry -> PythonLikeTuple.fromList(List.of(PythonString.valueOf(entry.getKey()), entry.getValue())))
+                .collect(Collectors.toCollection(PythonLikeTuple::new));
+        return FunctionImplementor.createInstance(pythonCompiledFunction.defaultPositionalArguments,
+                pythonCompiledFunction.defaultKeywordArguments,
+                annotationTuple, pythonCompiledFunction.closure,
                 PythonString.valueOf(compiledClass.getName()),
                 compiledClass, PythonInterpreter.DEFAULT);
     }
@@ -187,8 +203,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             MethodDescriptor methodDescriptor,
             boolean isVirtual) {
         Class<T> compiledClass = translatePythonBytecodeToClass(pythonCompiledFunction, methodDescriptor, isVirtual);
-        return FunctionImplementor.createInstance(new PythonLikeTuple(), new PythonLikeDict(),
-                new PythonLikeTuple(), pythonCompiledFunction.closure,
+        PythonLikeTuple annotationTuple = pythonCompiledFunction.typeAnnotations.entrySet()
+                .stream()
+                .map(entry -> PythonLikeTuple.fromList(List.of(PythonString.valueOf(entry.getKey()), entry.getValue())))
+                .collect(Collectors.toCollection(PythonLikeTuple::new));
+        return FunctionImplementor.createInstance(pythonCompiledFunction.defaultPositionalArguments,
+                pythonCompiledFunction.defaultKeywordArguments,
+                annotationTuple, pythonCompiledFunction.closure,
                 PythonString.valueOf(compiledClass.getName()),
                 compiledClass, PythonInterpreter.DEFAULT);
     }
@@ -495,6 +516,27 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonString.class));
 
+        // Spec
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, ARGUMENT_SPEC_GETTER_STATIC_FIELD_NAME,
+                Type.getDescriptor(BiFunction.class));
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeDict.class));
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(BiFunction.class), "apply",
+                Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
+                true);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(GenericArgumentSpec.class));
+
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(GenericArgumentSpec.class));
+
         // Interpreter
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonInterpreter.class), "DEFAULT",
                 Type.getDescriptor(PythonInterpreter.class));
@@ -550,6 +592,27 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 5);
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonString.class));
+
+        // Spec
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, ARGUMENT_SPEC_GETTER_STATIC_FIELD_NAME,
+                Type.getDescriptor(BiFunction.class));
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeDict.class));
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(BiFunction.class), "apply",
+                Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
+                true);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(GenericArgumentSpec.class));
+
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(GenericArgumentSpec.class));
 
         // Interpreter
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
@@ -606,6 +669,27 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonString.class));
 
+        // Spec
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, ARGUMENT_SPEC_GETTER_STATIC_FIELD_NAME,
+                Type.getDescriptor(BiFunction.class));
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeDict.class));
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(BiFunction.class), "apply",
+                Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
+                true);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(GenericArgumentSpec.class));
+
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(GenericArgumentSpec.class));
+
         // Interpreter
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonInterpreter.class), "DEFAULT",
@@ -694,6 +778,27 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, QUALIFIED_NAME_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonString.class));
 
+        // Spec
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, className, ARGUMENT_SPEC_GETTER_STATIC_FIELD_NAME,
+                Type.getDescriptor(BiFunction.class));
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeTuple.class));
+
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, className, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(PythonLikeDict.class));
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(BiFunction.class), "apply",
+                Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class), Type.getType(Object.class)),
+                true);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(GenericArgumentSpec.class));
+
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, className, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(GenericArgumentSpec.class));
+
         // Interpreter
         methodVisitor.visitInsn(Opcodes.DUP);
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 6);
@@ -747,6 +852,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 GLOBALS_MAP_STATIC_FIELD_NAME, Type.getDescriptor(Map.class), null, null);
         classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
                 CLASS_CELL_STATIC_FIELD_NAME, Type.getDescriptor(PythonLikeType.class), null, null);
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC,
+                ARGUMENT_SPEC_GETTER_STATIC_FIELD_NAME, Type.getDescriptor(BiFunction.class), null, null);
 
         // Instance fields
         classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
@@ -761,12 +868,16 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 QUALIFIED_NAME_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonString.class), null, null);
         classWriter.visitField(Modifier.PRIVATE | Modifier.FINAL,
                 CELLS_INSTANCE_FIELD_NAME, Type.getDescriptor(PythonLikeTuple.class), null, null);
+        classWriter.visitField(Modifier.PUBLIC | Modifier.FINAL,
+                ARGUMENT_SPEC_INSTANCE_FIELD_NAME, Type.getDescriptor(GenericArgumentSpec.class), null, null);
     }
 
     static void setStaticFields(Class<?> compiledClass, PythonCompiledFunction pythonCompiledFunction) {
         try {
             compiledClass.getField(CONSTANTS_STATIC_FIELD_NAME).set(null, pythonCompiledFunction.co_constants);
             compiledClass.getField(GLOBALS_MAP_STATIC_FIELD_NAME).set(null, pythonCompiledFunction.globalsMap);
+            compiledClass.getField(ARGUMENT_SPEC_GETTER_STATIC_FIELD_NAME).set(null,
+                    pythonCompiledFunction.getArgumentSpecMapper());
 
             // Need to convert co_names to python strings (used in __getattribute__)
             List<PythonString> pythonNameList = new ArrayList<>(pythonCompiledFunction.co_names.size());
@@ -1043,7 +1154,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, INTERPRETER_INSTANCE_FIELD_NAME,
                 Type.getDescriptor(PythonInterpreter.class));
 
-        for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
+        for (int i = 0; i < pythonCompiledFunction.totalArgCount(); i++) {
             localVariableHelper.readLocal(methodVisitor, i);
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, javaParameterTypes[i + 6].getInternalName());
         }
@@ -1061,29 +1172,20 @@ public class PythonBytecodeToJavaBytecodeTranslator {
             String internalClassName,
             PythonCompiledFunction pythonCompiledFunction,
             LocalVariableHelper localVariableHelper) {
-        // Call {@link FunctionImplementor#extractArguments} to extract argument into a list
-        methodVisitor.visitLdcInsn(pythonCompiledFunction.co_argcount);
-        methodVisitor.visitLdcInsn(pythonCompiledFunction.co_kwonlyargcount);
-        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, internalClassName, VARIABLE_NAMES_STATIC_FIELD_NAME,
-                Type.getDescriptor(List.class));
+        // Call {@link ArgumentSpec#extractArgumentList} to extract argument into a list
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, DEFAULT_POSITIONAL_ARGS_INSTANCE_FIELD_NAME,
-                Type.getDescriptor(PythonLikeTuple.class));
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, DEFAULT_KEYWORD_ARGS_INSTANCE_FIELD_NAME,
-                Type.getDescriptor(PythonLikeDict.class));
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, internalClassName, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
+                Type.getDescriptor(GenericArgumentSpec.class));
+
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
-        methodVisitor.visitInsn(pythonCompiledFunction.supportExtraKeywordsArgs ? Opcodes.ICONST_1 : Opcodes.ICONST_0);
 
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(FunctionImplementor.class), "extractArguments",
-                Type.getMethodDescriptor(Type.getType(List.class), Type.INT_TYPE, Type.INT_TYPE,
-                        Type.getType(List.class), Type.getType(List.class),
-                        Type.getType(Map.class), Type.getType(List.class),
-                        Type.getType(Map.class), Type.BOOLEAN_TYPE),
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(GenericArgumentSpec.class),
+                "extractArgumentList",
+                Type.getMethodDescriptor(Type.getType(List.class), Type.getType(List.class), Type.getType(Map.class)),
                 false);
 
-        for (int i = 0; i < pythonCompiledFunction.co_argcount; i++) {
+        for (int i = 0; i < pythonCompiledFunction.totalArgCount(); i++) {
             methodVisitor.visitInsn(Opcodes.DUP);
             methodVisitor.visitLdcInsn(i);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",

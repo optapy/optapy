@@ -3,7 +3,6 @@ package org.optaplanner.jpyinterpreter.types.datetime;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalUnit;
-import java.util.List;
 import java.util.Map;
 
 import org.optaplanner.jpyinterpreter.MethodDescriptor;
@@ -17,10 +16,12 @@ import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeComparable;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonString;
+import org.optaplanner.jpyinterpreter.types.errors.ValueError;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonBoolean;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonFloat;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonNumber;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
 
 /**
  * Python docs: <a href="https://docs.python.org/3/library/datetime.html#timedelta-objects">timedelta-objects</a>
@@ -125,18 +126,16 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
 
     private static void registerMethods() throws NoSuchMethodException {
         // Constructor
-        TIME_DELTA_TYPE.addConstructor(new PythonFunctionSignature(
-                new MethodDescriptor(PythonTimeDelta.class.getMethod("of", PythonNumber.class, PythonNumber.class,
-                        PythonNumber.class, PythonNumber.class, PythonNumber.class,
-                        PythonNumber.class, PythonNumber.class)),
-                List.of(PythonInteger.ZERO, PythonInteger.ZERO, PythonInteger.ZERO, PythonInteger.ZERO, PythonInteger.ZERO,
-                        PythonInteger.ZERO, PythonInteger.ZERO),
-                Map.of("days", 0, "seconds", 1, "microseconds", 2,
-                        "milliseconds", 3, "minutes", 4, "hours", 5,
-                        "weeks", 6),
-                TIME_DELTA_TYPE, PythonNumber.NUMBER_TYPE, PythonNumber.NUMBER_TYPE, PythonNumber.NUMBER_TYPE,
-                PythonNumber.NUMBER_TYPE, PythonNumber.NUMBER_TYPE,
-                PythonNumber.NUMBER_TYPE, PythonNumber.NUMBER_TYPE));
+        TIME_DELTA_TYPE.addConstructor(ArgumentSpec.forFunctionReturning("timedelta", PythonTimeDelta.class)
+                .addArgument("days", PythonNumber.class, PythonInteger.ZERO)
+                .addArgument("seconds", PythonNumber.class, PythonInteger.ZERO)
+                .addArgument("microseconds", PythonNumber.class, PythonInteger.ZERO)
+                .addArgument("milliseconds", PythonNumber.class, PythonInteger.ZERO)
+                .addArgument("minutes", PythonNumber.class, PythonInteger.ZERO)
+                .addArgument("hours", PythonNumber.class, PythonInteger.ZERO)
+                .addArgument("weeks", PythonNumber.class, PythonInteger.ZERO)
+                .asPythonFunctionSignature(PythonTimeDelta.class.getMethod("of", PythonNumber.class, PythonNumber.class,
+                        PythonNumber.class, PythonNumber.class, PythonNumber.class, PythonNumber.class, PythonNumber.class)));
 
         // Unary
         TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.POSITIVE,
@@ -259,7 +258,7 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
         } else if (weeks instanceof PythonFloat) {
             out = out.plusNanos(Math.round(Duration.ofDays(7L).toNanos() * weeks.getValue().doubleValue()));
         } else {
-            throw new IllegalArgumentException("Amount for weeks is not a float or integer.");
+            throw new ValueError("Amount for weeks is not a float or integer.");
         }
         return new PythonTimeDelta(out);
     }

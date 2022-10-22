@@ -19,6 +19,7 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.jpyinterpreter.types.BoundPythonLikeFunction;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonKnownFunctionType;
 import org.optaplanner.jpyinterpreter.types.PythonLikeFunction;
@@ -185,11 +186,13 @@ public class PythonOverloadImplementor {
         List<PythonFunctionSignature> overloadList = knownFunctionType.getOverloadFunctionSignatureList();
 
         Map<Integer, List<PythonFunctionSignature>> pythonFunctionSignatureByArgumentLength = overloadList.stream()
-                .filter(sig -> !(sig instanceof PythonGenericFunctionSignature))
+                .filter(sig -> sig.extraPositionalArgumentsVariableIndex.isEmpty()
+                        && sig.extraKeywordArgumentsVariableIndex.isEmpty())
                 .collect(Collectors.groupingBy(sig -> sig.getParameterTypes().length));
 
         Optional<PythonFunctionSignature> maybeGenericFunctionSignature = overloadList.stream()
-                .filter(sig -> sig instanceof PythonGenericFunctionSignature)
+                .filter(sig -> sig.extraPositionalArgumentsVariableIndex.isPresent()
+                        || sig.extraKeywordArgumentsVariableIndex.isPresent())
                 .findAny();
 
         if (pythonFunctionSignatureByArgumentLength.isEmpty()) { // only generic overload
@@ -424,13 +427,23 @@ public class PythonOverloadImplementor {
             if (functionSignature.methodDescriptor.methodType != MethodDescriptor.MethodType.STATIC) {
                 // It a virtual method, so need to load instance from argument list
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
-                methodVisitor.visitInsn(Opcodes.DUP);
                 methodVisitor.visitLdcInsn(0);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
                         "get", Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
                         true);
                 methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type.getJavaTypeInternalName());
-                methodVisitor.visitInsn(Opcodes.SWAP);
+                methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(BoundPythonLikeFunction.class));
+                methodVisitor.visitInsn(Opcodes.DUP_X2);
+                methodVisitor.visitInsn(Opcodes.DUP_X2);
+                methodVisitor.visitInsn(Opcodes.POP);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(BoundPythonLikeFunction.class),
+                        "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class),
+                                Type.getType(PythonLikeFunction.class)),
+                        false);
+
+                // Load the sublist without the self argument
+                methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
                 methodVisitor.visitInsn(Opcodes.DUP);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
                         "size", Type.getMethodDescriptor(Type.INT_TYPE), true);
@@ -443,7 +456,7 @@ public class PythonOverloadImplementor {
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
             }
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
-            functionSignature.methodDescriptor.callMethod(methodVisitor);
+            functionSignature.callUnpackListAndMap(methodVisitor);
             methodVisitor.visitInsn(Opcodes.ARETURN);
         }
     }

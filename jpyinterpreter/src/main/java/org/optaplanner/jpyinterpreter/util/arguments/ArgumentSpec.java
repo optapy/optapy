@@ -1,10 +1,15 @@
 package org.optaplanner.jpyinterpreter.util.arguments;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import org.optaplanner.jpyinterpreter.MethodDescriptor;
+import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.implementors.JavaPythonTypeConversionImplementor;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
@@ -104,11 +109,15 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
         return new ZeroArgumentSpec<>(functionName);
     }
 
+    public static <T extends PythonLikeObject> GenericArgumentSpec<T> typelessSpec(String functionName, Class<?> outClass) {
+        return new GenericArgumentSpec<>(functionName);
+    }
+
     protected final int getArgCount() {
         return argumentNameList.size();
     }
 
-    protected final List<PythonLikeObject> extractArgumentList(List<PythonLikeObject> positionalArguments,
+    public final List<PythonLikeObject> extractArgumentList(List<PythonLikeObject> positionalArguments,
             Map<PythonString, PythonLikeObject> keywordArguments) {
         List<PythonLikeObject> out = new ArrayList<>(argumentNameList.size());
 
@@ -127,21 +136,29 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
                     " required positional " + argumentString + ": '" + String.join("', ", missingArgumentNames) + "'");
         }
 
-        out.addAll(positionalArguments.subList(0, Math.min(numberOfPositionalArguments, positionalArguments.size())));
-        for (int i = positionalArguments.size(); i < argumentNameList.size(); i++) {
+        int numberOfSetArguments = Math.min(numberOfPositionalArguments, positionalArguments.size());
+        out.addAll(positionalArguments.subList(0, numberOfSetArguments));
+        for (int i = numberOfSetArguments; i < argumentNameList.size(); i++) {
             out.add(null);
         }
 
-        int remaining = argumentNameList.size() - positionalArguments.size();
+        int remaining = argumentNameList.size() - numberOfSetArguments;
 
+        PythonLikeDict extraKeywordArguments = null;
         if (extraPositionalsArgumentIndex.isPresent()) {
             remaining--;
             out.set(extraPositionalsArgumentIndex.get(),
                     PythonLikeTuple
-                            .fromList(positionalArguments.subList(numberOfPositionalArguments, positionalArguments.size())));
+                            .fromList(positionalArguments.subList(numberOfSetArguments, positionalArguments.size())));
         }
 
-        PythonLikeDict extraKeywordArguments = new PythonLikeDict();
+        if (extraKeywordsArgumentIndex.isPresent()) {
+            remaining--;
+            extraKeywordArguments = new PythonLikeDict();
+            out.set(extraKeywordsArgumentIndex.get(),
+                    extraKeywordArguments);
+        }
+
         for (Map.Entry<PythonString, PythonLikeObject> keywordArgument : keywordArguments.entrySet()) {
             PythonString argumentName = keywordArgument.getKey();
 
@@ -166,12 +183,6 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
 
             remaining--;
             out.set(position, keywordArgument.getValue());
-        }
-
-        if (extraKeywordsArgumentIndex.isPresent()) {
-            remaining--;
-            out.set(extraKeywordsArgumentIndex.get(),
-                    extraKeywordArguments);
         }
 
         if (remaining > 0) {
@@ -285,5 +296,36 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
     public final PythonLikeFunction asVirtualPythonLikeFunction(final Extractor_ extractor) {
         return (positionalArguments, namedArguments,
                 callerInstance) -> (PythonLikeObject) apply(positionalArguments, namedArguments, extractor);
+    }
+
+    @SuppressWarnings("unchecked")
+    public final PythonFunctionSignature asPythonFunctionSignature(Method method) {
+        MethodDescriptor methodDescriptor = new MethodDescriptor(method);
+        int firstDefault = argumentDefaultList.lastIndexOf(null);
+        List<PythonLikeObject> defaultParameterValueList;
+
+        if (firstDefault != argumentDefaultList.size() - 1) {
+            defaultParameterValueList = (List<PythonLikeObject>) (List<?>) argumentDefaultList.subList(firstDefault + 1,
+                    argumentDefaultList.size());
+        } else {
+            defaultParameterValueList = List.of();
+        }
+
+        List<PythonLikeType> parameterTypeList = argumentTypeList.stream()
+                .map(JavaPythonTypeConversionImplementor::getPythonLikeType)
+                .collect(Collectors.toList());
+
+        PythonLikeType returnType = JavaPythonTypeConversionImplementor.getPythonLikeType(method.getReturnType());
+        Map<String, Integer> keywordArgumentToIndexMap = new HashMap<>();
+
+        for (int i = 0; i < argumentNameList.size(); i++) {
+            if (argumentKindList.get(i).allowKeyword) {
+                keywordArgumentToIndexMap.put(argumentNameList.get(i), i);
+            }
+        }
+
+        return new PythonFunctionSignature(methodDescriptor, defaultParameterValueList,
+                keywordArgumentToIndexMap, returnType,
+                parameterTypeList, extraPositionalsArgumentIndex, extraKeywordsArgumentIndex);
     }
 }
