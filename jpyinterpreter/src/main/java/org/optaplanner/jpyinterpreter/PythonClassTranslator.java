@@ -48,7 +48,7 @@ import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
-import org.optaplanner.jpyinterpreter.util.arguments.GenericArgumentSpec;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
 
 public class PythonClassTranslator {
     static Map<FunctionSignature, InterfaceDeclaration> functionSignatureToInterfaceName = new HashMap<>();
@@ -558,7 +558,7 @@ public class PythonClassTranslator {
                 });
 
         classWriter.visitField(Modifier.STATIC | Modifier.PUBLIC, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
-                Type.getDescriptor(GenericArgumentSpec.class),
+                Type.getDescriptor(ArgumentSpec.class),
                 null, null);
 
         MethodVisitor methodVisitor =
@@ -588,11 +588,11 @@ public class PythonClassTranslator {
         methodVisitor.visitInsn(Opcodes.DUP);
 
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, constructorInternalClassName, ARGUMENT_SPEC_INSTANCE_FIELD_NAME,
-                Type.getDescriptor(GenericArgumentSpec.class));
+                Type.getDescriptor(ArgumentSpec.class));
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
 
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(GenericArgumentSpec.class),
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(ArgumentSpec.class),
                 "extractArgumentList",
                 Type.getMethodDescriptor(Type.getType(List.class), Type.getType(List.class), Type.getType(Map.class)),
                 false);
@@ -638,8 +638,8 @@ public class PythonClassTranslator {
             Class<? extends PythonLikeFunction> generatedClass =
                     (Class<? extends PythonLikeFunction>) BuiltinTypes.asmClassLoader.loadClass(constructorClassName);
             Object method = typeGeneratedClass.getField(getJavaMethodName("__init__")).get(null);
-            GenericArgumentSpec spec =
-                    (GenericArgumentSpec) method.getClass().getField(ARGUMENT_SPEC_INSTANCE_FIELD_NAME).get(method);
+            ArgumentSpec spec =
+                    (ArgumentSpec) method.getClass().getField(ARGUMENT_SPEC_INSTANCE_FIELD_NAME).get(method);
             generatedClass.getField(ARGUMENT_SPEC_INSTANCE_FIELD_NAME).set(null, spec);
             return generatedClass.getConstructor().newInstance();
         } catch (ClassNotFoundException | RuntimeException | InstantiationException | NoSuchMethodException

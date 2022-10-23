@@ -60,13 +60,12 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
 
     private static void registerMethods() throws NoSuchMethodException {
         // Constructor
-        DATE_TYPE.setConstructor(ArgumentSpec.forFunctionReturning("date", PythonDate.class)
+        DATE_TYPE.addConstructor(ArgumentSpec.forFunctionReturning("date", PythonDate.class)
                 .addArgument("year", PythonInteger.class)
                 .addArgument("month", PythonInteger.class)
                 .addArgument("day", PythonInteger.class)
-                .asStaticPythonLikeFunction((year, month, day) -> of(year.value.intValueExact(),
-                        month.value.intValueExact(),
-                        day.value.intValueExact())));
+                .asStaticPythonFunctionSignature(PythonDate.class.getMethod("of", PythonInteger.class,
+                        PythonInteger.class, PythonInteger.class)));
         // Unary Operators
         DATE_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING,
                 PythonDate.class.getMethod("toPythonString"));
@@ -106,86 +105,42 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
                 PythonDate.class.getMethod("ctime"));
 
         // Class methods
-        DATE_TYPE.__setAttribute("today",
+        DATE_TYPE.addMethod("today",
                 ArgumentSpec.forFunctionReturning("today", PythonDate.class)
                         .addArgument("date_type", PythonLikeType.class)
-                        .asClassPythonLikeFunction((dateType) -> {
-                            if (dateType == DATE_TYPE) {
-                                return today();
-                            } else if (dateType == DATE_TIME_TYPE) {
-                                return PythonDateTime.today();
-                            } else {
-                                throw new TypeError("Unrecognized date subclass: " + dateType);
-                            }
-                        }));
+                        .asClassPythonFunctionSignature(PythonDate.class.getMethod("today",
+                                PythonLikeType.class)));
 
-        DATE_TYPE.__setAttribute("fromtimestamp",
+        DATE_TYPE.addMethod("fromtimestamp",
                 ArgumentSpec.forFunctionReturning("fromtimestamp", PythonDate.class)
                         .addArgument("date_type", PythonLikeType.class)
                         .addArgument("timestamp", PythonNumber.class)
-                        .asClassPythonLikeFunction((dateType, timestamp) -> {
-                            if (timestamp instanceof PythonInteger) {
-                                if (dateType == DATE_TYPE) {
-                                    return from_timestamp((PythonInteger) timestamp);
-                                } else if (dateType == DATE_TIME_TYPE) {
-                                    return PythonDateTime.from_timestamp((PythonInteger) timestamp);
-                                } else {
-                                    throw new TypeError("Unrecognized date subclass: " + dateType);
-                                }
-                            } else {
-                                if (dateType == DATE_TYPE) {
-                                    return from_timestamp((PythonFloat) timestamp);
-                                } else if (dateType == DATE_TIME_TYPE) {
-                                    return PythonDateTime.from_timestamp((PythonFloat) timestamp);
-                                } else {
-                                    throw new TypeError("Unrecognized date subclass: " + dateType);
-                                }
-                            }
-                        }));
+                        .asClassPythonFunctionSignature(PythonDate.class.getMethod("from_timestamp",
+                                PythonLikeType.class,
+                                PythonNumber.class)));
 
-        DATE_TYPE.__setAttribute("fromordinal",
+        DATE_TYPE.addMethod("fromordinal",
                 ArgumentSpec.forFunctionReturning("fromordinal", PythonDate.class)
                         .addArgument("date_type", PythonLikeType.class)
                         .addArgument("ordinal", PythonInteger.class)
-                        .asClassPythonLikeFunction((dateType, ordinal) -> {
-                            if (dateType == DATE_TYPE) {
-                                return from_ordinal(ordinal);
-                            } else if (dateType == DATE_TIME_TYPE) {
-                                return PythonDateTime.from_ordinal(ordinal);
-                            } else {
-                                throw new TypeError("Unrecognized date subclass: " + dateType);
-                            }
-                        }));
+                        .asClassPythonFunctionSignature(PythonDate.class.getMethod("from_ordinal",
+                                PythonLikeType.class, PythonInteger.class)));
 
-        DATE_TYPE.__setAttribute("fromisoformat",
+        DATE_TYPE.addMethod("fromisoformat",
                 ArgumentSpec.forFunctionReturning("fromisoformat", PythonDate.class)
                         .addArgument("date_type", PythonLikeType.class)
                         .addArgument("date_string", PythonString.class)
-                        .asClassPythonLikeFunction((dateType, date_string) -> {
-                            if (dateType == DATE_TYPE) {
-                                return from_iso_format(date_string);
-                            } else if (dateType == DATE_TIME_TYPE) {
-                                return PythonDateTime.from_iso_format(date_string);
-                            } else {
-                                throw new TypeError("Unrecognized date subclass: " + dateType);
-                            }
-                        }));
+                        .asClassPythonFunctionSignature(PythonDate.class.getMethod("from_iso_format",
+                                PythonLikeType.class, PythonString.class)));
 
-        DATE_TYPE.__setAttribute("fromisocalendar",
+        DATE_TYPE.addMethod("fromisocalendar",
                 ArgumentSpec.forFunctionReturning("fromisocalendar", PythonDate.class)
                         .addArgument("date_type", PythonLikeType.class)
                         .addArgument("year", PythonInteger.class)
                         .addArgument("month", PythonInteger.class)
                         .addArgument("day", PythonInteger.class)
-                        .asClassPythonLikeFunction((dateType, year, month, day) -> {
-                            if (dateType == DATE_TYPE) {
-                                return from_iso_calendar(year, month, day);
-                            } else if (dateType == DATE_TIME_TYPE) {
-                                return PythonDateTime.from_iso_calendar(year, month, day);
-                            } else {
-                                throw new TypeError("Unrecognized date subclass: " + dateType);
-                            }
-                        }));
+                        .asClassPythonFunctionSignature(PythonDate.class.getMethod("from_iso_calendar", PythonLikeType.class,
+                                PythonInteger.class, PythonInteger.class, PythonInteger.class)));
     }
 
     final LocalDate localDate;
@@ -205,6 +160,10 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
         this.year = PythonInteger.valueOf(localDate.getYear());
         this.month = PythonInteger.valueOf(localDate.getMonthValue());
         this.day = PythonInteger.valueOf(localDate.getDayOfMonth());
+    }
+
+    public static PythonDate of(PythonInteger year, PythonInteger month, PythonInteger day) {
+        return of(year.value.intValueExact(), month.value.intValueExact(), day.value.intValueExact());
     }
 
     public static PythonDate of(int year, int month, int day) {
@@ -235,6 +194,34 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
         return new PythonDate(LocalDate.now());
     }
 
+    public static PythonDate today(PythonLikeType dateType) {
+        if (dateType == DATE_TYPE) {
+            return today();
+        } else if (dateType == DATE_TIME_TYPE) {
+            return PythonDateTime.today();
+        } else {
+            throw new TypeError("Unknown date type: " + dateType);
+        }
+    }
+
+    public static PythonDate from_timestamp(PythonLikeType dateType, PythonNumber timestamp) {
+        if (dateType == DATE_TYPE) {
+            if (timestamp instanceof PythonInteger) {
+                return from_timestamp((PythonInteger) timestamp);
+            } else {
+                return from_timestamp((PythonFloat) timestamp);
+            }
+        } else if (dateType == DATE_TIME_TYPE) {
+            if (timestamp instanceof PythonInteger) {
+                return PythonDateTime.from_timestamp((PythonInteger) timestamp);
+            } else {
+                return PythonDateTime.from_timestamp((PythonFloat) timestamp);
+            }
+        } else {
+            throw new TypeError("Unknown date type: " + dateType);
+        }
+    }
+
     // Python timestamp is in the current System timezone
     public static PythonDate from_timestamp(PythonInteger timestamp) {
         return new PythonDate(LocalDate.ofInstant(Instant.ofEpochSecond(timestamp.getValue().longValue()),
@@ -247,12 +234,43 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
                 ZoneId.systemDefault()));
     }
 
+    public static PythonDate from_ordinal(PythonLikeType dateType, PythonInteger ordinal) {
+        if (dateType == DATE_TYPE) {
+            return from_ordinal(ordinal);
+        } else if (dateType == DATE_TIME_TYPE) {
+            return PythonDateTime.from_ordinal(ordinal);
+        } else {
+            throw new TypeError("Unknown date type: " + dateType);
+        }
+    }
+
     public static PythonDate from_ordinal(PythonInteger ordinal) {
         return new PythonDate(LocalDate.ofEpochDay(ordinal.getValue().longValue() - EPOCH_ORDINAL_OFFSET));
     }
 
+    public static PythonDate from_iso_format(PythonLikeType dateType, PythonString dateString) {
+        if (dateType == DATE_TYPE) {
+            return from_iso_format(dateString);
+        } else if (dateType == DATE_TIME_TYPE) {
+            return PythonDateTime.from_iso_format(dateString);
+        } else {
+            throw new TypeError("Unknown date type: " + dateType);
+        }
+    }
+
     public static PythonDate from_iso_format(PythonString dateString) {
         return new PythonDate(LocalDate.parse(dateString.getValue()));
+    }
+
+    public static PythonDate from_iso_calendar(PythonLikeType dateType, PythonInteger year, PythonInteger week,
+            PythonInteger day) {
+        if (dateType == DATE_TYPE) {
+            return from_iso_calendar(year, week, day);
+        } else if (dateType == DATE_TIME_TYPE) {
+            return PythonDateTime.from_iso_calendar(year, week, day);
+        } else {
+            throw new TypeError("Unknown date type: " + dateType);
+        }
     }
 
     public static PythonDate from_iso_calendar(PythonInteger year, PythonInteger week, PythonInteger day) {

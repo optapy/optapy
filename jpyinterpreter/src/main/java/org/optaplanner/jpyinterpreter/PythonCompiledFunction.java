@@ -15,7 +15,6 @@ import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.util.JavaIdentifierUtils;
 import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
-import org.optaplanner.jpyinterpreter.util.arguments.GenericArgumentSpec;
 
 public class PythonCompiledFunction {
     /**
@@ -183,9 +182,9 @@ public class PythonCompiledFunction {
                 .sanitizeClassName((qualifiedName != null) ? module + "." + qualifiedName : module + "." + "PythonFunction");
     }
 
-    public BiFunction<PythonLikeTuple, PythonLikeDict, GenericArgumentSpec<PythonLikeObject>> getArgumentSpecMapper() {
+    public BiFunction<PythonLikeTuple, PythonLikeDict, ArgumentSpec<PythonLikeObject>> getArgumentSpecMapper() {
         return (defaultPositionalArguments, defaultKeywordArguments) -> {
-            GenericArgumentSpec<PythonLikeObject> out = ArgumentSpec.typelessSpec(qualifiedName, PythonLikeObject.class);
+            ArgumentSpec<PythonLikeObject> out = ArgumentSpec.forFunctionReturning(qualifiedName, PythonLikeObject.class);
 
             int variableIndex = 0;
             int defaultPositionalStartIndex = co_argcount - defaultPositionalArguments.size();

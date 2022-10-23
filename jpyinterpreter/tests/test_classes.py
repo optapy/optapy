@@ -69,7 +69,7 @@ def test_static_method():
 def test_class_method():
     class A:
         @classmethod
-        def my_method(cls, parameter):
+        def my_method(cls: type, parameter: str):
             return cls.__name__ + parameter
 
     class B(A):

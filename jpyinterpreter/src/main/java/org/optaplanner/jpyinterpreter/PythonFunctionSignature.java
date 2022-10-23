@@ -541,13 +541,18 @@ public class PythonFunctionSignature {
 
         // Unwrap the bound method
         if (methodDescriptor.methodType == MethodDescriptor.MethodType.VIRTUAL ||
-                methodDescriptor.methodType == MethodDescriptor.MethodType.INTERFACE) {
+                methodDescriptor.methodType == MethodDescriptor.MethodType.INTERFACE ||
+                methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
             methodVisitor.visitInsn(Opcodes.SWAP);
             methodVisitor.visitInsn(Opcodes.DUP_X1);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(BoundPythonLikeFunction.class),
                     "getInstance", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class)),
                     false);
-            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
+            if (methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeType.class));
+            } else {
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
+            }
             methodVisitor.visitInsn(Opcodes.SWAP);
         }
 

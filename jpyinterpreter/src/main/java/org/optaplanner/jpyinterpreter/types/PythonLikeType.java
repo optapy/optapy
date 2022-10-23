@@ -318,9 +318,28 @@ public class PythonLikeType implements PythonLikeObject,
                 return Optional.of(PythonClassTranslator.PythonMethodKind.CLASS_METHOD);
             }
             return Optional.empty();
-        } else {
-            return Optional.empty();
         }
+
+        Optional<PythonKnownFunctionType> maybeKnownFunctionType = getMethodType(methodName);
+        if (maybeKnownFunctionType.isPresent()) {
+            PythonKnownFunctionType knownFunctionType = maybeKnownFunctionType.get();
+            switch (knownFunctionType.getOverloadFunctionSignatureList().get(0).getMethodDescriptor().getMethodType()) {
+                case VIRTUAL:
+                case INTERFACE:
+                case CONSTRUCTOR:
+                case STATIC_AS_VIRTUAL:
+                    return Optional.of(PythonClassTranslator.PythonMethodKind.VIRTUAL_METHOD);
+                case STATIC:
+                    return Optional.of(PythonClassTranslator.PythonMethodKind.STATIC_METHOD);
+                case CLASS:
+                    return Optional.of(PythonClassTranslator.PythonMethodKind.CLASS_METHOD);
+                default:
+                    throw new IllegalStateException("Unhandled case " + knownFunctionType.getOverloadFunctionSignatureList()
+                            .get(0).getMethodDescriptor().getMethodType());
+            }
+        }
+
+        return Optional.empty();
     }
 
     public Optional<PythonKnownFunctionType> getConstructorType() {

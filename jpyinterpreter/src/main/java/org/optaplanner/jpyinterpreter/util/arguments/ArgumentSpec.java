@@ -2,6 +2,7 @@ package org.optaplanner.jpyinterpreter.util.arguments;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,27 +13,28 @@ import org.optaplanner.jpyinterpreter.MethodDescriptor;
 import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.implementors.JavaPythonTypeConversionImplementor;
-import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
-import org.optaplanner.jpyinterpreter.types.PythonLikeFunction;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.TypeError;
 
-public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>, Extractor_> {
+public final class ArgumentSpec<Out_> {
+    private final Class<Out_> functionReturnType;
     private final String functionName;
     private final List<String> argumentNameList;
     private final List<Class<?>> argumentTypeList;
     private final List<ArgumentKind> argumentKindList;
     private final List<Object> argumentDefaultList;
+    private final BitSet nullableArgumentSet;
     private final Optional<Integer> extraPositionalsArgumentIndex;
     private final Optional<Integer> extraKeywordsArgumentIndex;
 
     private final int numberOfPositionalArguments;
     private final int requiredPositionalArguments;
 
-    protected ArgumentSpec(String functionName) {
+    private ArgumentSpec(String functionName, Class<Out_> functionReturnType) {
+        this.functionReturnType = functionReturnType;
         this.functionName = functionName + "()";
         requiredPositionalArguments = 0;
         numberOfPositionalArguments = 0;
@@ -42,12 +44,14 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
         argumentDefaultList = List.of();
         extraPositionalsArgumentIndex = Optional.empty();
         extraKeywordsArgumentIndex = Optional.empty();
+        nullableArgumentSet = new BitSet();
     }
 
-    protected ArgumentSpec(String argumentName, Class<?> argumentType, ArgumentKind argumentKind, Object defaultValue,
+    private ArgumentSpec(String argumentName, Class<?> argumentType, ArgumentKind argumentKind, Object defaultValue,
             Optional<Integer> extraPositionalsArgumentIndex, Optional<Integer> extraKeywordsArgumentIndex,
-            ArgumentSpec<?, ?, ?> previousSpec) {
+            boolean allowNull, ArgumentSpec<Out_> previousSpec) {
         functionName = previousSpec.functionName;
+        functionReturnType = previousSpec.functionReturnType;
 
         if (previousSpec.numberOfPositionalArguments < previousSpec.getArgCount()) {
             numberOfPositionalArguments = previousSpec.numberOfPositionalArguments;
@@ -102,22 +106,22 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
 
         this.extraPositionalsArgumentIndex = extraPositionalsArgumentIndex;
         this.extraKeywordsArgumentIndex = extraKeywordsArgumentIndex;
+        this.nullableArgumentSet = (BitSet) previousSpec.nullableArgumentSet.clone();
+        if (allowNull) {
+            nullableArgumentSet.set(argumentNameList.size() - 1);
+        }
     }
 
-    public static <T extends PythonLikeObject> ZeroArgumentSpec<T> forFunctionReturning(String functionName,
+    public static <T extends PythonLikeObject> ArgumentSpec<T> forFunctionReturning(String functionName,
             Class<T> outClass) {
-        return new ZeroArgumentSpec<>(functionName);
+        return new ArgumentSpec<>(functionName, outClass);
     }
 
-    public static <T extends PythonLikeObject> GenericArgumentSpec<T> typelessSpec(String functionName, Class<?> outClass) {
-        return new GenericArgumentSpec<>(functionName);
-    }
-
-    protected final int getArgCount() {
+    private int getArgCount() {
         return argumentNameList.size();
     }
 
-    public final List<PythonLikeObject> extractArgumentList(List<PythonLikeObject> positionalArguments,
+    public List<PythonLikeObject> extractArgumentList(List<PythonLikeObject> positionalArguments,
             Map<PythonString, PythonLikeObject> keywordArguments) {
         List<PythonLikeObject> out = new ArrayList<>(argumentNameList.size());
 
@@ -189,7 +193,7 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
             List<Integer> missing = new ArrayList<>(remaining);
             for (int i = 0; i < out.size(); i++) {
                 if (out.get(i) == null) {
-                    if (argumentDefaultList.get(i) != null) {
+                    if (argumentDefaultList.get(i) != null || nullableArgumentSet.get(i)) {
                         out.set(i, (PythonLikeObject) argumentDefaultList.get(i));
                         remaining--;
                     } else {
@@ -233,79 +237,129 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
         return out;
     }
 
-    protected abstract <ArgumentType_ extends PythonLikeObject> NextSpec_ addArgument(String argumentName,
+    private <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addArgument(String argumentName,
             Class<ArgumentType_> argumentType, ArgumentKind argumentKind, ArgumentType_ defaultValue,
-            Optional<Integer> extraPositionalsArgumentIndex, Optional<Integer> extraKeywordsArgumentIndex);
-
-    public abstract <ArgumentType_ extends PythonLikeObject> NextSpec_ addArgument(String argumentName,
-            Class<ArgumentType_> argumentType);
-
-    public abstract <ArgumentType_ extends PythonLikeObject> NextSpec_ addPositionalOnlyArgument(String argumentName,
-            Class<ArgumentType_> argumentType);
-
-    public abstract <ArgumentType_ extends PythonLikeObject> NextSpec_ addKeywordOnlyArgument(String argumentName,
-            Class<ArgumentType_> argumentType);
-
-    public abstract NextSpec_ addExtraPositionalVarArgument(String argumentName);
-
-    public abstract NextSpec_ addExtraKeywordVarArgument(String argumentName);
-
-    public abstract <ArgumentType_ extends PythonLikeObject> NextSpec_ addArgument(String argumentName,
-            Class<ArgumentType_> argumentType, ArgumentType_ defaultValue);
-
-    public abstract <ArgumentType_ extends PythonLikeObject> NextSpec_ addPositionalOnlyArgument(String argumentName,
-            Class<ArgumentType_> argumentType, ArgumentType_ defaultValue);
-
-    public abstract <ArgumentType_ extends PythonLikeObject> NextSpec_ addKeywordOnlyArgument(String argumentName,
-            Class<ArgumentType_> argumentType, ArgumentType_ defaultValue);
-
-    public abstract Out_ apply(List<PythonLikeObject> positionalArgumentList,
-            Map<PythonString, PythonLikeObject> keywordArgumentMap,
-            Extractor_ extractor);
-
-    public final PythonLikeFunction asStaticPythonLikeFunction(final Extractor_ extractor) {
-        return new PythonLikeFunction() {
-            @Override
-            public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
-                    Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
-                return (PythonLikeObject) apply(positionalArguments, namedArguments, extractor);
-            }
-
-            @Override
-            public PythonLikeType __getType() {
-                return BuiltinTypes.STATIC_FUNCTION_TYPE;
-            }
-        };
+            Optional<Integer> extraPositionalsArgumentIndex, Optional<Integer> extraKeywordsArgumentIndex, boolean allowNull) {
+        return new ArgumentSpec<>(argumentName, argumentType, argumentKind, defaultValue,
+                extraPositionalsArgumentIndex, extraKeywordsArgumentIndex, allowNull, this);
     }
 
-    public final PythonLikeFunction asClassPythonLikeFunction(final Extractor_ extractor) {
-        return new PythonLikeFunction() {
-            @Override
-            public PythonLikeObject $call(List<PythonLikeObject> positionalArguments,
-                    Map<PythonString, PythonLikeObject> namedArguments, PythonLikeObject callerInstance) {
-                return (PythonLikeObject) apply(positionalArguments, namedArguments, extractor);
-            }
-
-            @Override
-            public PythonLikeType __getType() {
-                return BuiltinTypes.CLASS_FUNCTION_TYPE;
-            }
-        };
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addArgument(String argumentName,
+            Class<ArgumentType_> argumentType) {
+        return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_AND_KEYWORD, null,
+                Optional.empty(), Optional.empty(), false);
     }
 
-    public final PythonLikeFunction asVirtualPythonLikeFunction(final Extractor_ extractor) {
-        return (positionalArguments, namedArguments,
-                callerInstance) -> (PythonLikeObject) apply(positionalArguments, namedArguments, extractor);
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_>
+            addPositionalOnlyArgument(String argumentName, Class<ArgumentType_> argumentType) {
+        return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_ONLY, null,
+                Optional.empty(), Optional.empty(), false);
+    }
+
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_>
+            addKeywordOnlyArgument(String argumentName, Class<ArgumentType_> argumentType) {
+        return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, null,
+                Optional.empty(), Optional.empty(), false);
+    }
+
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addArgument(String argumentName,
+            Class<ArgumentType_> argumentType, ArgumentType_ defaultValue) {
+        return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_AND_KEYWORD, defaultValue,
+                Optional.empty(), Optional.empty(), false);
+    }
+
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_>
+            addPositionalOnlyArgument(String argumentName, Class<ArgumentType_> argumentType, ArgumentType_ defaultValue) {
+        return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_ONLY, defaultValue,
+                Optional.empty(), Optional.empty(), false);
+    }
+
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_>
+            addKeywordOnlyArgument(String argumentName, Class<ArgumentType_> argumentType, ArgumentType_ defaultValue) {
+        return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, defaultValue,
+                Optional.empty(), Optional.empty(), false);
+    }
+
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addNullableArgument(String argumentName,
+            Class<ArgumentType_> argumentType) {
+        return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, null,
+                Optional.empty(), Optional.empty(), true);
+    }
+
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addNullablePositionalOnlyArgument(String argumentName,
+            Class<ArgumentType_> argumentType) {
+        return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, null,
+                Optional.empty(), Optional.empty(), true);
+    }
+
+    public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addNullableKeywordOnlyArgument(String argumentName,
+            Class<ArgumentType_> argumentType) {
+        return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, null,
+                Optional.empty(), Optional.empty(), true);
+    }
+
+    public ArgumentSpec<Out_> addExtraPositionalVarArgument(String argumentName) {
+        return addArgument(argumentName, PythonLikeTuple.class, ArgumentKind.VARARGS, null,
+                Optional.of(getArgCount()), Optional.empty(), false);
+    }
+
+    public ArgumentSpec<Out_> addExtraKeywordVarArgument(String argumentName) {
+        return addArgument(argumentName, PythonLikeDict.class, ArgumentKind.VARARGS, null,
+                Optional.empty(), Optional.of(getArgCount()), false);
+    }
+
+    public PythonFunctionSignature asPythonFunctionSignature(Method method) {
+        verifyMethodMatchesSpec(method);
+        return getPythonFunctionSignatureForMethodDescriptor(new MethodDescriptor(method),
+                method.getReturnType());
+    }
+
+    public PythonFunctionSignature asStaticPythonFunctionSignature(Method method) {
+        verifyMethodMatchesSpec(method);
+        return getPythonFunctionSignatureForMethodDescriptor(new MethodDescriptor(method, MethodDescriptor.MethodType.STATIC),
+                method.getReturnType());
+    }
+
+    public PythonFunctionSignature asClassPythonFunctionSignature(Method method) {
+        verifyMethodMatchesSpec(method);
+        return getPythonFunctionSignatureForMethodDescriptor(new MethodDescriptor(method, MethodDescriptor.MethodType.CLASS),
+                method.getReturnType());
+    }
+
+    private void verifyMethodMatchesSpec(Method method) {
+        if (!functionReturnType.isAssignableFrom(method.getReturnType())) {
+            throw new IllegalArgumentException("Method (" + method + ") does not match the given spec (" + this +
+                    "): its return type (" + method.getReturnType() + ") is not " +
+                    "assignable to the spec return type (" + functionReturnType + ").");
+        }
+
+        if (method.getParameterCount() != argumentNameList.size()) {
+            throw new IllegalArgumentException("Method (" + method + ") does not match the given spec (" + this +
+                    "): they have different parameter counts.");
+        }
+
+        for (int i = 0; i < method.getParameterCount(); i++) {
+            if (!method.getParameterTypes()[i].isAssignableFrom(argumentTypeList.get(i))) {
+                throw new IllegalArgumentException("Method (" + method + ") does not match the given spec (" + this +
+                        "): its " + i + " parameter (" + method.getParameters()[i].toString() + ") cannot " +
+                        " be assigned from the spec " + i + " parameter (" + argumentTypeList.get(i) + " "
+                        + argumentNameList.get(i) + ").");
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
-    public final PythonFunctionSignature asPythonFunctionSignature(Method method) {
-        MethodDescriptor methodDescriptor = new MethodDescriptor(method);
-        int firstDefault = argumentDefaultList.lastIndexOf(null);
+    private PythonFunctionSignature getPythonFunctionSignatureForMethodDescriptor(MethodDescriptor methodDescriptor,
+            Class<?> javaReturnType) {
+        int firstDefault = 0;
+
+        while (firstDefault < argumentDefaultList.size() && argumentDefaultList.get(firstDefault) == null) {
+            firstDefault++;
+        }
         List<PythonLikeObject> defaultParameterValueList;
 
-        if (firstDefault != argumentDefaultList.size() - 1) {
-            defaultParameterValueList = (List<PythonLikeObject>) (List<?>) argumentDefaultList.subList(firstDefault + 1,
+        if (firstDefault != argumentDefaultList.size()) {
+            defaultParameterValueList = (List<PythonLikeObject>) (List<?>) argumentDefaultList.subList(firstDefault,
                     argumentDefaultList.size());
         } else {
             defaultParameterValueList = List.of();
@@ -315,7 +369,7 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
                 .map(JavaPythonTypeConversionImplementor::getPythonLikeType)
                 .collect(Collectors.toList());
 
-        PythonLikeType returnType = JavaPythonTypeConversionImplementor.getPythonLikeType(method.getReturnType());
+        PythonLikeType returnType = JavaPythonTypeConversionImplementor.getPythonLikeType(javaReturnType);
         Map<String, Integer> keywordArgumentToIndexMap = new HashMap<>();
 
         for (int i = 0; i < argumentNameList.size(); i++) {
@@ -327,5 +381,47 @@ public abstract class ArgumentSpec<Out_, NextSpec_ extends ArgumentSpec<?, ?, ?>
         return new PythonFunctionSignature(methodDescriptor, defaultParameterValueList,
                 keywordArgumentToIndexMap, returnType,
                 parameterTypeList, extraPositionalsArgumentIndex, extraKeywordsArgumentIndex);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder out = new StringBuilder("ArgumentSpec(");
+        out.append("name=").append(functionName)
+                .append(", returnType=").append(functionReturnType)
+                .append(", arguments=[");
+
+        for (int i = 0; i < argumentNameList.size(); i++) {
+            out.append(argumentTypeList.get(i));
+            out.append(" ");
+            out.append(argumentNameList.get(i));
+
+            if (nullableArgumentSet.get(i)) {
+                out.append(" (nullable)");
+            }
+
+            if (argumentDefaultList.get(i) != null) {
+                out.append(" (default: ");
+                out.append(argumentDefaultList.get(i));
+                out.append(")");
+            }
+
+            if (argumentKindList.get(i) != ArgumentKind.POSITIONAL_AND_KEYWORD) {
+                if (extraPositionalsArgumentIndex.isPresent() && extraPositionalsArgumentIndex.get() == i) {
+                    out.append(" (vargs)");
+                } else if (extraKeywordsArgumentIndex.isPresent() && extraKeywordsArgumentIndex.get() == i) {
+                    out.append(" (kwargs)");
+                } else {
+                    out.append(" (");
+                    out.append(argumentKindList.get(i));
+                    out.append(")");
+                }
+            }
+            if (i != argumentNameList.size() - 1) {
+                out.append(", ");
+            }
+        }
+        out.append("])");
+
+        return out.toString();
     }
 }

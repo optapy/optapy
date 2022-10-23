@@ -202,6 +202,10 @@ public class JavaPythonTypeConversionImplementor {
             return BuiltinTypes.DICT_TYPE;
         }
 
+        if (PythonLikeType.class.equals(javaClass)) {
+            return BuiltinTypes.TYPE_TYPE;
+        }
+
         try {
             Field typeField = javaClass.getField(PythonClassTranslator.TYPE_FIELD_NAME);
             Object maybeType = typeField.get(null);

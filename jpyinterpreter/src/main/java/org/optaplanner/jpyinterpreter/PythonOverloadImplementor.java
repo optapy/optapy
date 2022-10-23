@@ -361,6 +361,7 @@ public class PythonOverloadImplementor {
                 methodVisitor.visitLdcInsn(0);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
                         Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE), true);
+
                 methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
                         matchingSignature.getMethodDescriptor().getDeclaringClassInternalName());
                 methodVisitor.visitInsn(Opcodes.SWAP);
@@ -425,13 +426,13 @@ public class PythonOverloadImplementor {
         } else {
             PythonFunctionSignature functionSignature = maybeGenericDispatch.get();
             if (functionSignature.methodDescriptor.methodType != MethodDescriptor.MethodType.STATIC) {
-                // It a virtual method, so need to load instance from argument list
+                // It a class/virtual method, so need to load instance/type from argument list
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
                 methodVisitor.visitLdcInsn(0);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
                         "get", Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
                         true);
-                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type.getJavaTypeInternalName());
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeObject.class));
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
                 methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(BoundPythonLikeFunction.class));
                 methodVisitor.visitInsn(Opcodes.DUP_X2);
@@ -442,7 +443,7 @@ public class PythonOverloadImplementor {
                                 Type.getType(PythonLikeFunction.class)),
                         false);
 
-                // Load the sublist without the self argument
+                // Load the sublist without the self/type argument
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
                 methodVisitor.visitInsn(Opcodes.DUP);
                 methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),

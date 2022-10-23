@@ -100,6 +100,13 @@ public class MethodDescriptor {
         }
     }
 
+    public MethodDescriptor(Method method, MethodType type) {
+        this.declaringClassInternalName = Type.getInternalName(method.getDeclaringClass());
+        this.methodName = method.getName();
+        this.methodDescriptor = Type.getMethodDescriptor(method);
+        this.methodType = type;
+    }
+
     public MethodDescriptor(Constructor<?> constructor) {
         this.declaringClassInternalName = Type.getInternalName(constructor.getDeclaringClass());
         this.methodName = constructor.getName();
