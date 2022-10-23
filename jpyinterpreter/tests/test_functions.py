@@ -16,8 +16,8 @@ def test_keyword_arguments():
 
 
 def test_default_arguments():
-    def helper(a: int, b: int = 1) -> int:
-        return a - b
+    def helper(a: int, b: int = 1, c: str = '') -> int:
+        return a - b - len(c)
 
     def my_function(a: int) -> int:
         return helper(a)

@@ -282,7 +282,7 @@ public class PythonFunctionSignature {
             int defaultIndex = defaultArgumentList.size() - i;
             methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(defaultArgumentHolderClass),
                     PythonDefaultArgumentImplementor.getConstantName(defaultIndex),
-                    Type.getDescriptor(defaultArgumentList.get(defaultIndex).getClass()));
+                    parameterTypes[defaultIndex].getJavaTypeDescriptor());
         }
 
         methodDescriptor.callMethod(methodVisitor);

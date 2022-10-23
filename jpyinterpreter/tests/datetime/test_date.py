@@ -194,7 +194,43 @@ def test_fromisocalendar():
     verifier.verify(1999, 2, 3, expected_result=date(1999, 1, 13))
 
 
-# TODO: replace
+def test_replace():
+    def replace_year(x: date, year: int) -> date:
+        return x.replace(year=year)
+
+    def replace_month(x: date, month: int) -> date:
+        return x.replace(month=month)
+
+    def replace_day(x: date, day: int) -> date:
+        return x.replace(day=day)
+
+    def replace_year_month(x: date, year: int, month: int) -> date:
+        return x.replace(year=year, month=month)
+
+    def replace_month_day(x: date, month: int, day: int) -> date:
+        return x.replace(month=month, day=day)
+
+    def replace_year_day(x: date, year: int, day: int) -> date:
+        return x.replace(year=year, day=day)
+
+    def replace_all(x: date, year: int, month: int, day: int) -> date:
+        return x.replace(year=year, month=month, day=day)
+
+    replace_year_verifier = verifier_for(replace_year)
+    replace_month_verifier = verifier_for(replace_month)
+    replace_day_verifier = verifier_for(replace_day)
+    replace_year_month_verifier = verifier_for(replace_year_month)
+    replace_month_day_verifier = verifier_for(replace_month_day)
+    replace_year_day_verifier = verifier_for(replace_year_day)
+    replace_all_verifier = verifier_for(replace_all)
+
+    replace_year_verifier.verify(date(2002, 12, 4), 3000, expected_result=date(3000, 12, 4))
+    replace_month_verifier.verify(date(2002, 12, 4), 3, expected_result=date(2002, 3, 4))
+    replace_day_verifier.verify(date(2002, 12, 4), 10, expected_result=date(2002, 12, 10))
+    replace_year_month_verifier.verify(date(2002, 12, 4), 3000, 3, expected_result=date(3000, 3, 4))
+    replace_month_day_verifier.verify(date(2002, 12, 4), 3, 10, expected_result=date(2002, 3, 10))
+    replace_year_day_verifier.verify(date(2002, 12, 4), 3000, 10, expected_result=date(3000, 12, 10))
+    replace_all_verifier.verify(date(2002, 12, 4), 3000, 3, 10, expected_result=date(3000, 3, 10))
 
 
 def test_timetuple():

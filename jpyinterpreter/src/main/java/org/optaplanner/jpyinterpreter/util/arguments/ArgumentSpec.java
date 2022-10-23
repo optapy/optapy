@@ -353,7 +353,8 @@ public final class ArgumentSpec<Out_> {
             Class<?> javaReturnType) {
         int firstDefault = 0;
 
-        while (firstDefault < argumentDefaultList.size() && argumentDefaultList.get(firstDefault) == null) {
+        while (firstDefault < argumentDefaultList.size() && argumentDefaultList.get(firstDefault) == null &&
+                !nullableArgumentSet.get(firstDefault)) {
             firstDefault++;
         }
         List<PythonLikeObject> defaultParameterValueList;

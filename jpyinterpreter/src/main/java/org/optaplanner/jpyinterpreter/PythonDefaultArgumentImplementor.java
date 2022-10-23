@@ -65,11 +65,13 @@ public class PythonDefaultArgumentImplementor {
                 });
 
         // static constants
+        final int defaultStart = methodDescriptor.getParameterTypes().length - defaultArgumentList.size();
         for (int i = 0; i < defaultArgumentList.size(); i++) {
+
             PythonLikeObject value = defaultArgumentList.get(i);
             String fieldName = getConstantName(i);
             classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, fieldName,
-                    Type.getDescriptor(value.getClass()),
+                    methodDescriptor.getParameterTypes()[defaultStart + i].getDescriptor(),
                     null,
                     null);
         }
@@ -129,7 +131,8 @@ public class PythonDefaultArgumentImplementor {
             int argumentIndex = i + (methodDescriptor.getParameterTypes().length - defaultArgumentList.size());
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
             methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, internalClassName,
-                    getConstantName(i), Type.getDescriptor(defaultArgumentList.get(i).getClass()));
+                    getConstantName(i),
+                    methodDescriptor.getParameterTypes()[defaultStart + i].getDescriptor());
             methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, internalClassName,
                     getArgumentName(argumentIndex),
                     methodDescriptor.getParameterTypes()[argumentIndex].getDescriptor());

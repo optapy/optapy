@@ -80,7 +80,12 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
 
         // Methods
         DATE_TYPE.addMethod("replace",
-                PythonDate.class.getMethod("replace", PythonInteger.class, PythonInteger.class, PythonInteger.class));
+                ArgumentSpec.forFunctionReturning("replace", PythonDate.class)
+                        .addNullableArgument("year", PythonInteger.class)
+                        .addNullableArgument("month", PythonInteger.class)
+                        .addNullableArgument("day", PythonInteger.class)
+                        .asPythonFunctionSignature(PythonDate.class.getMethod("replace", PythonInteger.class,
+                                PythonInteger.class, PythonInteger.class)));
         DATE_TYPE.addMethod("timetuple",
                 PythonDate.class.getMethod("timetuple")); // TODO: use time.struct_time type
 

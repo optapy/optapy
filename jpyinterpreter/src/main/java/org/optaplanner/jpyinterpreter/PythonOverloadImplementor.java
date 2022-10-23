@@ -192,7 +192,8 @@ public class PythonOverloadImplementor {
 
         Optional<PythonFunctionSignature> maybeGenericFunctionSignature = overloadList.stream()
                 .filter(sig -> sig.extraPositionalArgumentsVariableIndex.isPresent()
-                        || sig.extraKeywordArgumentsVariableIndex.isPresent())
+                        || sig.extraKeywordArgumentsVariableIndex.isPresent()
+                        || !sig.defaultArgumentList.isEmpty())
                 .findAny();
 
         if (pythonFunctionSignatureByArgumentLength.isEmpty()) { // only generic overload
