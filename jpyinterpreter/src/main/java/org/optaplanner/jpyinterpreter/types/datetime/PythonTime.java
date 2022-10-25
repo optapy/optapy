@@ -1,36 +1,37 @@
 package org.optaplanner.jpyinterpreter.types.datetime;
 
+import java.math.BigInteger;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.TextStyle;
+import java.time.temporal.ChronoField;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.optaplanner.jpyinterpreter.MethodDescriptor;
-import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonOverloadImplementor;
 import org.optaplanner.jpyinterpreter.types.AbstractPythonLikeObject;
-import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonNone;
 import org.optaplanner.jpyinterpreter.types.PythonString;
+import org.optaplanner.jpyinterpreter.types.errors.ValueError;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
 
 public class PythonTime extends AbstractPythonLikeObject {
     // Taken from https://docs.python.org/3/library/datetime.html#datetime.time.fromisoformat
-    private static final Pattern ISO_FORMAT_PATTERN = Pattern.compile("^(:(?<hour>\\d\\d)" +
-            "(::(?<minute>\\d\\d)" +
-            "(::(?<second>\\d\\d)" +
-            "(:\\.(?<microHigh>\\d\\d\\d)" +
+    private static final Pattern ISO_FORMAT_PATTERN = Pattern.compile("^(?<hour>\\d\\d)" +
+            "(:(?<minute>\\d\\d)" +
+            "(:(?<second>\\d\\d)" +
+            "(\\.(?<microHigh>\\d\\d\\d)" +
             "(?<microLow>\\d\\d\\d)?" +
-            ")?)?)?)?" +
-            "(:(?<timezoneHour>\\d\\d):(?<timezoneMinute>\\d\\d)" +
-            "(::(?<timezoneSecond>\\d\\d)" +
+            ")?)?)?" +
+            "(\\+(?<timezoneHour>\\d\\d):(?<timezoneMinute>\\d\\d)" +
+            "(:(?<timezoneSecond>\\d\\d)" +
             "(:\\.(?<timezoneMicro>\\d\\d\\d\\d\\d\\d)" +
             ")?)?)?$");
     public static PythonLikeType TIME_TYPE = new PythonLikeType("time",
@@ -53,27 +54,49 @@ public class PythonTime extends AbstractPythonLikeObject {
     }
 
     private static void registerMethods() throws NoSuchMethodException {
+        TIME_TYPE.addConstructor(ArgumentSpec.forFunctionReturning("datetime.time", PythonTime.class)
+                .addArgument("hour", PythonInteger.class, PythonInteger.ZERO)
+                .addArgument("minute", PythonInteger.class, PythonInteger.ZERO)
+                .addArgument("second", PythonInteger.class, PythonInteger.ZERO)
+                .addArgument("microsecond", PythonInteger.class, PythonInteger.ZERO)
+                .addArgument("tzinfo", PythonLikeObject.class, PythonNone.INSTANCE)
+                .addKeywordOnlyArgument("fold", PythonInteger.class, PythonInteger.ZERO)
+                .asPythonFunctionSignature(
+                        PythonTime.class.getMethod("of", PythonInteger.class, PythonInteger.class,
+                                PythonInteger.class, PythonInteger.class, PythonLikeObject.class,
+                                PythonInteger.class)));
+
+        TIME_TYPE.addMethod("fromisoformat",
+                ArgumentSpec.forFunctionReturning("fromisoformat", PythonTime.class)
+                        .addArgument("time_string", PythonString.class)
+                        .asStaticPythonFunctionSignature(PythonTime.class.getMethod("from_iso_format", PythonString.class)));
+
         TIME_TYPE.addMethod("replace",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonTime.class.getMethod("replace", PythonInteger.class, PythonInteger.class, PythonInteger.class,
-                                PythonInteger.class, PythonTzinfo.class, PythonInteger.class)),
-                        TIME_TYPE, BuiltinTypes.INT_TYPE, BuiltinTypes.INT_TYPE, BuiltinTypes.INT_TYPE, BuiltinTypes.INT_TYPE,
-                        PythonTzinfo.TZ_INFO_TYPE, BuiltinTypes.INT_TYPE));
+                ArgumentSpec.forFunctionReturning("replace", PythonTime.class)
+                        .addNullableArgument("hour", PythonInteger.class)
+                        .addNullableArgument("minute", PythonInteger.class)
+                        .addNullableArgument("second", PythonInteger.class)
+                        .addNullableArgument("microsecond", PythonInteger.class)
+                        .addNullableArgument("tzinfo", PythonLikeObject.class)
+                        .addNullableKeywordOnlyArgument("fold", PythonInteger.class)
+                        .asPythonFunctionSignature(PythonTime.class.getMethod("replace", PythonInteger.class,
+                                PythonInteger.class, PythonInteger.class,
+                                PythonInteger.class, PythonLikeObject.class,
+                                PythonInteger.class)));
+
+        TIME_TYPE.addMethod("isoformat",
+                ArgumentSpec.forFunctionReturning("isoformat", PythonString.class)
+                        .addArgument("timespec", PythonString.class, PythonString.valueOf("auto"))
+                        .asPythonFunctionSignature(PythonTime.class.getMethod("isoformat", PythonString.class)));
 
         TIME_TYPE.addMethod("tzname",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonTime.class.getMethod("tzname")),
-                        OBJECT_TYPE));
+                PythonTime.class.getMethod("tzname"));
 
         TIME_TYPE.addMethod("utcoffset",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonTime.class.getMethod("utcoffset")),
-                        OBJECT_TYPE));
+                PythonTime.class.getMethod("utcoffset"));
 
         TIME_TYPE.addMethod("dst",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonTime.class.getMethod("dst")),
-                        OBJECT_TYPE));
+                PythonTime.class.getMethod("dst"));
 
     }
 
@@ -118,6 +141,8 @@ public class PythonTime extends AbstractPythonLikeObject {
                 return second;
             case "microsecond":
                 return microsecond;
+            case "tzinfo":
+                return zoneId == null ? PythonNone.INSTANCE : new PythonTzinfo(zoneId);
             case "fold":
                 return fold;
             default:
@@ -125,15 +150,37 @@ public class PythonTime extends AbstractPythonLikeObject {
         }
     }
 
-    public static PythonTime of(int hour, int minute, int second, int microsecond, String tzname, int fold) {
+    public static PythonTime of(PythonInteger hour, PythonInteger minute, PythonInteger second, PythonInteger microsecond,
+            PythonLikeObject tzinfo, PythonInteger fold) {
+        return of(hour.value.intValueExact(), minute.value.intValueExact(), second.value.intValueExact(),
+                microsecond.value.intValueExact(), (tzinfo == PythonNone.INSTANCE) ? null : ((PythonTzinfo) tzinfo).zoneId,
+                fold.value.intValueExact());
+    }
+
+    public static PythonTime of(int hour, int minute, int second, int microsecond, ZoneId zoneId, int fold) {
+        if (hour < 0 || hour >= 24) {
+            throw new ValueError("hour must be in range 0 <= hour < 24");
+        }
+        if (minute < 0 || minute >= 60) {
+            throw new ValueError("minute must be in range 0 <= hour < 60");
+        }
+        if (second < 0 || second >= 60) {
+            throw new ValueError("second must be in range 0 <= second < 60");
+        }
+        if (microsecond < 0 || microsecond >= 1000000) {
+            throw new ValueError("microsecond must be in range 0 <= microsecond < 1000000");
+        }
+        if (fold != 0 && fold != 1) {
+            throw new ValueError("fold must be in [0, 1]");
+        }
         return new PythonTime(LocalTime.of(hour, minute, second, microsecond * 1000),
-                (tzname != null) ? ZoneId.of(tzname) : null, fold);
+                zoneId, fold);
     }
 
     public static PythonTime from_iso_format(PythonString dateString) {
         Matcher matcher = ISO_FORMAT_PATTERN.matcher(dateString.getValue());
         if (!matcher.find()) {
-            throw new IllegalArgumentException("String \"" + dateString.getValue() + "\" is not an isoformat string");
+            throw new ValueError("String \"" + dateString.getValue() + "\" is not an isoformat string");
         }
 
         String hour = matcher.group("hour");
@@ -152,17 +199,17 @@ public class PythonTime extends AbstractPythonLikeObject {
         int secondPart = 0;
         int microPart = 0;
 
-        if (hour != null) {
+        if (hour != null && !hour.isEmpty()) {
             hoursPart = Integer.parseInt(hour);
         }
-        if (minute != null) {
+        if (minute != null && !minute.isEmpty()) {
             minutePart = Integer.parseInt(minute);
         }
-        if (second != null) {
+        if (second != null && !second.isEmpty()) {
             secondPart = Integer.parseInt(second);
         }
-        if (microHigh != null) {
-            if (microLow != null) {
+        if (microHigh != null && !microHigh.isEmpty()) {
+            if (microLow != null && !microLow.isEmpty()) {
                 microPart = Integer.parseInt(microHigh + microLow);
             } else {
                 microPart = 1000 * Integer.parseInt(microHigh);
@@ -171,7 +218,7 @@ public class PythonTime extends AbstractPythonLikeObject {
 
         LocalTime time = LocalTime.of(hoursPart, minutePart, secondPart, microPart * 1000);
 
-        if (timezoneHour == null) {
+        if (timezoneHour == null || timezoneHour.isEmpty()) {
             return new PythonTime(time);
         }
 
@@ -194,7 +241,7 @@ public class PythonTime extends AbstractPythonLikeObject {
     }
 
     public PythonTime replace(PythonInteger hour, PythonInteger minute, PythonInteger second,
-            PythonInteger microsecond, PythonTzinfo tzinfo, PythonInteger fold) {
+            PythonInteger microsecond, PythonLikeObject tzinfo, PythonInteger fold) {
         if (hour == null) {
             hour = this.hour;
         }
@@ -212,19 +259,14 @@ public class PythonTime extends AbstractPythonLikeObject {
         }
 
         if (tzinfo == null) {
-            tzinfo = new PythonTzinfo(this.zoneId);
+            tzinfo = (zoneId != null) ? new PythonTzinfo(zoneId) : PythonNone.INSTANCE;
         }
 
         if (fold == null) {
             fold = this.fold;
         }
 
-        return new PythonTime(LocalTime.of(hour.getValue().intValue(),
-                minute.getValue().intValue(),
-                second.getValue().intValue(),
-                microsecond.getValue().intValue() * 1000),
-                tzinfo.zoneId,
-                fold.getValue().intValue());
+        return of(hour, minute, second, microsecond, tzinfo, fold);
     }
 
     public PythonLikeObject utcoffset() {
@@ -248,8 +290,39 @@ public class PythonTime extends AbstractPythonLikeObject {
         return PythonString.valueOf(zoneId.getDisplayName(TextStyle.FULL_STANDALONE, Locale.getDefault()));
     }
 
-    public PythonString isoformat() {
-        return PythonString.valueOf(localTime.toString());
+    public PythonString isoformat(PythonString formatSpec) {
+        final String result;
+        switch (formatSpec.value) {
+            case "auto":
+                if (microsecond.value.equals(BigInteger.ZERO)) {
+                    result = String.format("%02d:%02d:%02d", localTime.getHour(), localTime.getMinute(), localTime.getSecond());
+                } else {
+                    result = String.format("%02d:%02d:%02d.%06d", localTime.getHour(), localTime.getMinute(),
+                            localTime.getSecond(),
+                            localTime.get(ChronoField.MICRO_OF_SECOND));
+                }
+                break;
+            case "hours":
+                result = String.format("%02d", localTime.getHour());
+                break;
+            case "minutes":
+                result = String.format("%02d:%02d", localTime.getHour(), localTime.getMinute());
+                break;
+            case "seconds":
+                result = String.format("%02d:%02d:%02d", localTime.getHour(), localTime.getMinute(), localTime.getSecond());
+                break;
+            case "milliseconds":
+                result = String.format("%02d:%02d:%02d.%03d", localTime.getHour(), localTime.getMinute(), localTime.getSecond(),
+                        localTime.get(ChronoField.MILLI_OF_SECOND));
+                break;
+            case "microseconds":
+                result = String.format("%02d:%02d:%02d.%06d", localTime.getHour(), localTime.getMinute(), localTime.getSecond(),
+                        localTime.get(ChronoField.MICRO_OF_SECOND));
+                break;
+            default:
+                throw new ValueError("Invalid timespec: " + formatSpec.repr());
+        }
+        return PythonString.valueOf(result);
     }
 
     public PythonString toPythonString() {

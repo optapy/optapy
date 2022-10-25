@@ -392,6 +392,11 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
     }
 
     @Override
+    public PythonString $method$__repr__() {
+        return toPythonRepr();
+    }
+
+    @Override
     public PythonInteger $method$__hash__() {
         return PythonInteger.valueOf(hashCode());
     }

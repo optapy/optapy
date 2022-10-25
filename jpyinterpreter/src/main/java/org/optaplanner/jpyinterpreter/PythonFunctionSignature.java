@@ -148,7 +148,7 @@ public class PythonFunctionSignature {
             return false;
         }
 
-        for (int i = startIndex; i < parameterTypes.length; i++) {
+        for (int i = startIndex; i < Math.min(parameterTypes.length, callParameters.length); i++) {
             if (extraPositionalArgumentsVariableIndex.isPresent() && i == extraPositionalArgumentsVariableIndex.get()) {
                 continue;
             }
@@ -255,10 +255,11 @@ public class PythonFunctionSignature {
             methodVisitor.visitInsn(Opcodes.POP);
         }
 
-        for (int i = 0; i < parameterTypes.length; i++) {
+        int readArguments = Math.min(argumentCount, parameterTypes.length);
+        for (int i = 0; i < readArguments; i++) {
             if ((extraPositionalArgumentsVariableIndex.isPresent() && extraPositionalArgumentsVariableIndex.get() == i) ||
                     (extraKeywordArgumentsVariableIndex.isPresent() && extraKeywordArgumentsVariableIndex.get() == i)) {
-                continue; // These parameters are set in the previous section
+                continue; // These parameters are set last
             }
             argumentLocals[parameterTypes.length - i - 1] = localVariableHelper.newLocal();
             localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class),
@@ -269,20 +270,40 @@ public class PythonFunctionSignature {
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
         }
 
-        for (int i = 0; i < parameterTypes.length; i++) {
+        for (int i = 0; i < readArguments; i++) {
+            if ((extraPositionalArgumentsVariableIndex.isPresent() && extraPositionalArgumentsVariableIndex.get() == i) ||
+                    (extraKeywordArgumentsVariableIndex.isPresent() && extraKeywordArgumentsVariableIndex.get() == i)) {
+                continue; // These parameters are set in the previous section
+            }
+
             localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), argumentLocals[i]);
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, parameterTypes[i].getJavaTypeInternalName());
         }
 
-        for (int i = 0; i < parameterTypes.length; i++) {
-            localVariableHelper.freeLocal();
-        }
-
-        for (int i = parameterTypes.length - 1; i >= argumentCount; i--) {
+        for (int i = parameterTypes.length - argumentCount; i > parameterTypes.length - defaultArgumentList.size(); i--) {
             int defaultIndex = defaultArgumentList.size() - i;
+
             methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(defaultArgumentHolderClass),
                     PythonDefaultArgumentImplementor.getConstantName(defaultIndex),
                     parameterTypes[defaultIndex].getJavaTypeDescriptor());
+        }
+
+        if (extraPositionalArgumentsVariableIndex.isPresent()) {
+            localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeTuple.class),
+                    argumentLocals[extraPositionalArgumentsVariableIndex.get()]);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                    parameterTypes[extraPositionalArgumentsVariableIndex.get()].getJavaTypeInternalName());
+        }
+
+        if (extraKeywordArgumentsVariableIndex.isPresent()) {
+            localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeDict.class),
+                    argumentLocals[extraKeywordArgumentsVariableIndex.get()]);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                    parameterTypes[extraKeywordArgumentsVariableIndex.get()].getJavaTypeInternalName());
+        }
+
+        for (int i = 0; i < parameterTypes.length; i++) {
+            localVariableHelper.freeLocal();
         }
 
         methodDescriptor.callMethod(methodVisitor);

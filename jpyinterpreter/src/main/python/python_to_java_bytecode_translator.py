@@ -599,7 +599,8 @@ def unwrap_python_like_builtin_module_object(python_like_object):
                                  unwrap_python_like_object(python_like_object.minute),
                                  unwrap_python_like_object(python_like_object.second),
                                  unwrap_python_like_object(python_like_object.microsecond),
-                                 unwrap_python_like_object(python_like_object.fold))
+                                 tzinfo=None,  # TODO: Support timezones
+                                 fold=unwrap_python_like_object(python_like_object.fold))
 
     if isinstance(python_like_object, PythonDate):
         return datetime.date(unwrap_python_like_object(python_like_object.year),
@@ -611,7 +612,8 @@ def unwrap_python_like_builtin_module_object(python_like_object):
                              unwrap_python_like_object(python_like_object.minute),
                              unwrap_python_like_object(python_like_object.second),
                              unwrap_python_like_object(python_like_object.microsecond),
-                             unwrap_python_like_object(python_like_object.fold))
+                             tzinfo=None,  # TODO: Support timezones
+                             fold=unwrap_python_like_object(python_like_object.fold))
 
     if isinstance(python_like_object, PythonTimeDelta):
         return datetime.timedelta(unwrap_python_like_object(python_like_object.days),
