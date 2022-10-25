@@ -1,22 +1,20 @@
 package org.optaplanner.jpyinterpreter.types.datetime;
 
+import java.math.BigInteger;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalUnit;
-import java.util.Map;
 
-import org.optaplanner.jpyinterpreter.MethodDescriptor;
 import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
-import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonOverloadImplementor;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
 import org.optaplanner.jpyinterpreter.types.AbstractPythonLikeObject;
-import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeComparable;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.errors.ValueError;
+import org.optaplanner.jpyinterpreter.types.errors.arithmetic.ZeroDivisionError;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonBoolean;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonFloat;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
@@ -45,79 +43,6 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
                     .minusNanos(1000)));
             TIME_DELTA_TYPE.__setAttribute("resolution", new PythonTimeDelta(Duration.ofNanos(1000)));
 
-            TIME_DELTA_TYPE.setConstructor(((positionalArguments, namedArguments, callerInstance) -> {
-                // days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0
-                namedArguments = (namedArguments != null) ? namedArguments : Map.of();
-                PythonNumber days = PythonInteger.ZERO, seconds = PythonInteger.ZERO, microseconds = PythonInteger.ZERO,
-                        milliseconds = PythonInteger.ZERO, minutes = PythonInteger.ZERO, hours = PythonInteger.ZERO,
-                        weeks = PythonInteger.ZERO;
-
-                if (positionalArguments.size() >= 1) {
-                    days = (PythonNumber) positionalArguments.get(0);
-                }
-
-                if (positionalArguments.size() >= 2) {
-                    seconds = (PythonNumber) positionalArguments.get(1);
-                }
-
-                if (positionalArguments.size() >= 3) {
-                    microseconds = (PythonNumber) positionalArguments.get(2);
-                }
-
-                if (positionalArguments.size() >= 4) {
-                    milliseconds = (PythonNumber) positionalArguments.get(3);
-                }
-
-                if (positionalArguments.size() >= 5) {
-                    minutes = (PythonNumber) positionalArguments.get(4);
-                }
-
-                if (positionalArguments.size() >= 6) {
-                    hours = (PythonNumber) positionalArguments.get(5);
-                }
-
-                if (positionalArguments.size() >= 7) {
-                    weeks = (PythonNumber) positionalArguments.get(6);
-                }
-
-                PythonString daysKey = PythonString.valueOf("days");
-                if (namedArguments.containsKey(daysKey)) {
-                    days = ((PythonNumber) namedArguments.get(daysKey));
-                }
-
-                PythonString secondsKey = PythonString.valueOf("seconds");
-                if (namedArguments.containsKey(secondsKey)) {
-                    seconds = ((PythonNumber) namedArguments.get(secondsKey));
-                }
-
-                PythonString microsecondsKey = PythonString.valueOf("microseconds");
-                if (namedArguments.containsKey(microsecondsKey)) {
-                    microseconds = ((PythonNumber) namedArguments.get(microsecondsKey));
-                }
-
-                PythonString millisecondsKey = PythonString.valueOf("milliseconds");
-                if (namedArguments.containsKey(millisecondsKey)) {
-                    milliseconds = ((PythonNumber) namedArguments.get(millisecondsKey));
-                }
-
-                PythonString minutesKey = PythonString.valueOf("minutes");
-                if (namedArguments.containsKey(minutesKey)) {
-                    minutes = ((PythonNumber) namedArguments.get(minutesKey));
-                }
-
-                PythonString hoursKey = PythonString.valueOf("hours");
-                if (namedArguments.containsKey(hoursKey)) {
-                    hours = ((PythonNumber) namedArguments.get(hoursKey));
-                }
-
-                PythonString weeksKey = PythonString.valueOf("weeks");
-                if (namedArguments.containsKey(weeksKey)) {
-                    weeks = ((PythonNumber) namedArguments.get(weeksKey));
-                }
-
-                return of(days, seconds, microseconds, milliseconds, minutes, hours, weeks);
-            }));
-
             PythonOverloadImplementor.createDispatchesFor(TIME_DELTA_TYPE);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
@@ -139,74 +64,46 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
 
         // Unary
         TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.POSITIVE,
-                new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("pos")),
-                        TIME_DELTA_TYPE));
+                PythonTimeDelta.class.getMethod("pos"));
         TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.NEGATIVE,
-                new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("negate")),
-                        TIME_DELTA_TYPE));
+                PythonTimeDelta.class.getMethod("negate"));
         TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.ABS,
-                new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("abs")),
-                        TIME_DELTA_TYPE));
+                PythonTimeDelta.class.getMethod("abs"));
         TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.AS_BOOLEAN,
-                new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("isZero")),
-                        BuiltinTypes.BOOLEAN_TYPE));
+                PythonTimeDelta.class.getMethod("isZero"));
         TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING,
-                new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("toPythonString")),
-                        BuiltinTypes.STRING_TYPE));
+                PythonTimeDelta.class.getMethod("toPythonString"));
         TIME_DELTA_TYPE.addUnaryMethod(PythonUnaryOperator.REPRESENTATION,
-                new PythonFunctionSignature(new MethodDescriptor(PythonTimeDelta.class.getMethod("toPythonRepr")),
-                        BuiltinTypes.STRING_TYPE));
+                PythonTimeDelta.class.getMethod("toPythonRepr"));
 
         // Binary
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.ADD,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("add_time_delta", PythonTimeDelta.class)),
-                        TIME_DELTA_TYPE, TIME_DELTA_TYPE));
+                PythonTimeDelta.class.getMethod("add_time_delta", PythonTimeDelta.class));
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("subtract_time_delta", PythonTimeDelta.class)),
-                        TIME_DELTA_TYPE, TIME_DELTA_TYPE));
+                PythonTimeDelta.class.getMethod("subtract_time_delta", PythonTimeDelta.class));
 
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("get_integer_multiple", PythonInteger.class)),
-                        TIME_DELTA_TYPE, BuiltinTypes.INT_TYPE));
+                PythonTimeDelta.class.getMethod("get_integer_multiple", PythonInteger.class));
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.MULTIPLY,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("get_float_multiple", PythonFloat.class)),
-                        TIME_DELTA_TYPE, BuiltinTypes.FLOAT_TYPE));
+                PythonTimeDelta.class.getMethod("get_float_multiple", PythonFloat.class));
 
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("divide_time_delta", PythonTimeDelta.class)),
-                        BuiltinTypes.FLOAT_TYPE, TIME_DELTA_TYPE));
+                PythonTimeDelta.class.getMethod("divide_time_delta", PythonTimeDelta.class));
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("divide_integer", PythonInteger.class)),
-                        TIME_DELTA_TYPE, BuiltinTypes.INT_TYPE));
+                PythonTimeDelta.class.getMethod("divide_integer", PythonInteger.class));
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.TRUE_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("divide_float", PythonFloat.class)),
-                        TIME_DELTA_TYPE, BuiltinTypes.FLOAT_TYPE));
+                PythonTimeDelta.class.getMethod("divide_float", PythonFloat.class));
 
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("floor_divide_time_delta", PythonTimeDelta.class)),
-                        BuiltinTypes.INT_TYPE, TIME_DELTA_TYPE));
+                PythonTimeDelta.class.getMethod("floor_divide_time_delta", PythonTimeDelta.class));
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.FLOOR_DIVIDE,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("floor_divide_integer", PythonInteger.class)),
-                        TIME_DELTA_TYPE, BuiltinTypes.INT_TYPE));
+                PythonTimeDelta.class.getMethod("floor_divide_integer", PythonInteger.class));
 
         TIME_DELTA_TYPE.addBinaryMethod(PythonBinaryOperators.MODULO,
-                new PythonFunctionSignature(
-                        new MethodDescriptor(PythonTimeDelta.class.getMethod("remainder_time_delta", PythonTimeDelta.class)),
-                        TIME_DELTA_TYPE, TIME_DELTA_TYPE));
+                PythonTimeDelta.class.getMethod("remainder_time_delta", PythonTimeDelta.class));
 
         // Methods
-        TIME_DELTA_TYPE.addMethod("total_seconds", new PythonFunctionSignature(
-                new MethodDescriptor(PythonTimeDelta.class.getMethod("total_seconds")),
-                BuiltinTypes.FLOAT_TYPE));
+        TIME_DELTA_TYPE.addMethod("total_seconds", PythonTimeDelta.class.getMethod("total_seconds"));
     }
 
     final Duration duration;
@@ -219,8 +116,19 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
         super(TIME_DELTA_TYPE);
         this.duration = duration;
 
-        days = PythonInteger.valueOf(duration.toDays());
-        seconds = PythonInteger.valueOf(Math.abs(duration.toSeconds() % SECONDS_IN_DAY));
+        if (duration.isNegative()) {
+            if (duration.getSeconds() % SECONDS_IN_DAY != 0 ||
+                    duration.getNano() != 0) {
+                days = PythonInteger.valueOf(duration.toDays() - 1);
+                seconds = PythonInteger.valueOf((SECONDS_IN_DAY + (duration.toSeconds() % SECONDS_IN_DAY) % SECONDS_IN_DAY));
+            } else {
+                days = PythonInteger.valueOf(duration.toDays());
+                seconds = PythonInteger.valueOf(Math.abs(duration.toSeconds() % SECONDS_IN_DAY));
+            }
+        } else {
+            days = PythonInteger.valueOf(duration.toDays());
+            seconds = PythonInteger.valueOf(Math.abs(duration.toSeconds() % SECONDS_IN_DAY));
+        }
         microseconds = PythonInteger.valueOf(duration.toNanosPart() / 1000);
     }
 
@@ -302,29 +210,85 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
     }
 
     public PythonFloat divide_time_delta(PythonTimeDelta divisor) {
+        if (divisor.duration.equals(Duration.ZERO)) {
+            throw new ZeroDivisionError("timedelta division or modulo by zero");
+        }
         return PythonFloat.valueOf((double) duration.toNanos() / divisor.duration.toNanos());
     }
 
     public PythonTimeDelta divide_integer(PythonInteger divisor) {
+        if (divisor.value.equals(BigInteger.ZERO)) {
+            throw new ZeroDivisionError("timedelta division or modulo by zero");
+        }
         return new PythonTimeDelta(duration.dividedBy(divisor.getValue().longValue()));
     }
 
     public PythonTimeDelta divide_float(PythonFloat divisor) {
+        if (divisor.value == 0.0) {
+            throw new ZeroDivisionError("timedelta division or modulo by zero");
+        }
         double fractionalNanos = duration.toNanos() / divisor.getValue().doubleValue();
         return new PythonTimeDelta(Duration.ofNanos(Math.round(fractionalNanos / 1000) * 1000));
     }
 
     public PythonInteger floor_divide_time_delta(PythonTimeDelta divisor) {
-        return PythonInteger.valueOf(duration.dividedBy(divisor.duration));
+        if (divisor.duration.equals(Duration.ZERO)) {
+            throw new ZeroDivisionError("timedelta division or modulo by zero");
+        }
+
+        long amount = duration.dividedBy(divisor.duration);
+        if (divisor.duration.multipliedBy(amount).equals(duration)) {
+            // division exact
+            return PythonInteger.valueOf(amount);
+        }
+
+        // division not exact
+        // Java use round to zero; Python use floor
+        // If both operands have the same sign, result is positive, and round to zero = floor
+        // If operands have different signs, the result is negative, and round to zero = floor + 1
+        if (duration.isNegative() == divisor.duration.isNegative()) {
+            // same sign
+            return PythonInteger.valueOf(amount);
+        } else {
+            // different sign
+            return PythonInteger.valueOf(amount - 1);
+        }
     }
 
     public PythonTimeDelta floor_divide_integer(PythonInteger divisor) {
+        if (divisor.value.equals(BigInteger.ZERO)) {
+            throw new ZeroDivisionError("timedelta division or modulo by zero");
+        }
         return new PythonTimeDelta(duration.dividedBy(divisor.getValue().longValue()));
     }
 
     public PythonTimeDelta remainder_time_delta(PythonTimeDelta divisor) {
-        return new PythonTimeDelta(duration.minus(divisor.duration.multipliedBy(
-                duration.dividedBy(divisor.duration))));
+        boolean leftIsNegative = duration.isNegative();
+        int rightHandSign = divisor.duration.compareTo(Duration.ZERO);
+
+        if (rightHandSign == 0) {
+            throw new ZeroDivisionError("timedelta division or modulo by zero");
+        }
+
+        long floorDivisionResult = duration.abs().dividedBy(divisor.abs().duration);
+        Duration remainder;
+
+        if (rightHandSign > 0) {
+            // Need a positive result
+            if (leftIsNegative) {
+                remainder = divisor.duration.plus(duration.plus(divisor.duration.multipliedBy(floorDivisionResult)));
+            } else {
+                remainder = duration.minus(divisor.duration.multipliedBy(floorDivisionResult));
+            }
+        } else {
+            // Need a negative result
+            if (leftIsNegative) {
+                remainder = duration.minus(divisor.duration.multipliedBy(floorDivisionResult));
+            } else {
+                remainder = divisor.duration.plus(duration.plus(divisor.duration.multipliedBy(floorDivisionResult)));
+            }
+        }
+        return new PythonTimeDelta(remainder);
     }
 
     public PythonTimeDelta pos() {
@@ -344,8 +308,29 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
     }
 
     public PythonString toPythonRepr() {
-        return PythonString.valueOf(
-                "datetime.timedelta(days=" + days + ", seconds=" + seconds + ", " + "microseconds=" + microseconds + ")");
+        StringBuilder out = new StringBuilder("datetime.timedelta(");
+        if (!days.value.equals(BigInteger.ZERO)) {
+            out.append("days=").append(days);
+        }
+        if (!seconds.value.equals(BigInteger.ZERO)) {
+            if (out.charAt(out.length() - 1) != '(') {
+                out.append(", ");
+            }
+            out.append("seconds=").append(seconds);
+        }
+        if (!microseconds.value.equals(BigInteger.ZERO)) {
+            if (out.charAt(out.length() - 1) != '(') {
+                out.append(", ");
+            }
+            out.append("microseconds=").append(microseconds);
+        }
+
+        if (out.charAt(out.length() - 1) == '(') {
+            // No content; do a attribute-less zero
+            out.append("0");
+        }
+        out.append(")");
+        return PythonString.valueOf(out.toString());
     }
 
     public PythonBoolean isZero() {
@@ -356,6 +341,11 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
     public String toString() {
         StringBuilder out = new StringBuilder();
         long daysPart = duration.toDaysPart();
+        Duration durationAfterDay = duration.minusDays(daysPart);
+        if (duration.isNegative() && !Duration.ofDays(1).multipliedBy(daysPart).equals(duration)) {
+            daysPart = daysPart - 1;
+            durationAfterDay = durationAfterDay.plus(Duration.ofDays(1));
+        }
 
         if (daysPart != 0) {
             out.append(daysPart);
@@ -365,18 +355,18 @@ public class PythonTimeDelta extends AbstractPythonLikeObject implements PythonL
             }
             out.append(", ");
         }
-        int hours = Math.abs(duration.toHoursPart());
+        int hours = durationAfterDay.toHoursPart();
         out.append(hours);
         out.append(':');
 
-        int minutes = Math.abs(duration.toMinutesPart());
+        int minutes = durationAfterDay.toMinutesPart();
         out.append(String.format("%02d", minutes));
         out.append(':');
 
-        int seconds = Math.abs(duration.toSecondsPart());
+        int seconds = durationAfterDay.toSecondsPart();
         out.append(String.format("%02d", seconds));
 
-        int micros = duration.toNanosPart() / 1000;
+        int micros = durationAfterDay.toNanosPart() / 1000;
         if (micros != 0) {
             out.append(String.format(".%06d", micros));
         }

@@ -126,6 +126,18 @@ public class PythonTimeDeltaTest {
         PythonTimeDelta a = new PythonTimeDelta(Duration.ofDays(1L));
         PythonTimeDelta b = new PythonTimeDelta(Duration.ofHours(16L));
         assertThat(a.remainder_time_delta(b)).isEqualTo(new PythonTimeDelta(Duration.ofHours(8L)));
+
+        a = new PythonTimeDelta(Duration.ofHours(-15L));
+        b = new PythonTimeDelta(Duration.ofHours(10L));
+        assertThat(a.remainder_time_delta(b)).isEqualTo(new PythonTimeDelta(Duration.ofHours(5L)));
+
+        a = new PythonTimeDelta(Duration.ofHours(15L));
+        b = new PythonTimeDelta(Duration.ofHours(-10L));
+        assertThat(a.remainder_time_delta(b)).isEqualTo(new PythonTimeDelta(Duration.ofHours(-5L)));
+
+        a = new PythonTimeDelta(Duration.ofHours(-15L));
+        b = new PythonTimeDelta(Duration.ofHours(-10L));
+        assertThat(a.remainder_time_delta(b)).isEqualTo(new PythonTimeDelta(Duration.ofHours(-5L)));
     }
 
     @Test

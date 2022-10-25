@@ -74,6 +74,14 @@ public class PythonOverloadImplementor {
                                     .orElse(PythonClassTranslator.PythonMethodKind.VIRTUAL_METHOD));
             pythonLikeType.__setAttribute(methodName, overloadDispatch);
         }
+
+        if (pythonLikeType.getConstructorType().isPresent()) {
+            PythonLikeFunction overloadDispatch =
+                    createDispatchForMethod(pythonLikeType, "__init__", pythonLikeType.getConstructorType().orElseThrow(),
+                            PythonClassTranslator.PythonMethodKind.VIRTUAL_METHOD);
+            pythonLikeType.setConstructor(overloadDispatch);
+            pythonLikeType.__setAttribute("__init__", overloadDispatch);
+        }
     }
 
     private static PythonLikeFunction createDispatchForMethod(PythonLikeType pythonLikeType,
