@@ -574,7 +574,19 @@ public class PythonFunctionSignature {
             } else {
                 methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
             }
-            methodVisitor.visitInsn(Opcodes.SWAP);
+
+            if (methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
+                // need to set type of defaults
+                methodVisitor.visitInsn(Opcodes.DUP2);
+                methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(defaultArgumentHolderClass),
+                        PythonDefaultArgumentImplementor.getArgumentName(0),
+                        parameterTypes[0].getJavaTypeDescriptor());
+
+                methodVisitor.visitInsn(Opcodes.POP);
+            } else {
+                // self is not in defaults; leave it at the bottom of the stack
+                methodVisitor.visitInsn(Opcodes.SWAP);
+            }
         }
 
         // Stack is method, boundedInstance?, default

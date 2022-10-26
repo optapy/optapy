@@ -242,7 +242,8 @@ public class JavaPythonTypeConversionImplementor {
             JavaObjectWrapper wrappedObject = (JavaObjectWrapper) object;
             Object javaObject = wrappedObject.getWrappedObject();
             if (!type.isAssignableFrom(javaObject.getClass())) {
-                throw new TypeError("Cannot convert from (" + javaObject.getClass() + ") to (" + type + ").");
+                throw new TypeError("Cannot convert from (" + getPythonLikeType(javaObject.getClass()) + ") to ("
+                        + getPythonLikeType(type) + ").");
             }
             return (T) javaObject;
         }
@@ -250,7 +251,8 @@ public class JavaPythonTypeConversionImplementor {
         if (type.equals(byte.class) || type.equals(short.class) || type.equals(int.class) || type.equals(long.class) ||
                 type.equals(float.class) || type.equals(double.class) || Number.class.isAssignableFrom(type)) {
             if (!(object instanceof PythonNumber)) {
-                throw new TypeError("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+                throw new TypeError("Cannot convert from (" + getPythonLikeType(object.getClass()) + ") to ("
+                        + getPythonLikeType(type) + ").");
             }
             PythonNumber pythonNumber = (PythonNumber) object;
             Number value = pythonNumber.getValue();
@@ -286,7 +288,8 @@ public class JavaPythonTypeConversionImplementor {
 
         if (type.equals(boolean.class) || type.equals(Boolean.class)) {
             if (!(object instanceof PythonBoolean)) {
-                throw new TypeError("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+                throw new TypeError("Cannot convert from (" + getPythonLikeType(object.getClass()) + ") to ("
+                        + getPythonLikeType(type) + ").");
             }
             PythonBoolean pythonBoolean = (PythonBoolean) object;
             return (T) (Boolean) pythonBoolean.getBooleanValue();
@@ -299,7 +302,8 @@ public class JavaPythonTypeConversionImplementor {
 
         // TODO: List, Map, Set
 
-        throw new TypeError("Cannot convert from (" + object.getClass() + ") to (" + type + ").");
+        throw new TypeError(
+                "Cannot convert from (" + getPythonLikeType(object.getClass()) + ") to (" + getPythonLikeType(type) + ").");
     }
 
     /**

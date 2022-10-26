@@ -1,12 +1,12 @@
 package org.optaplanner.jpyinterpreter.types.datetime;
 
-import static org.optaplanner.jpyinterpreter.types.datetime.PythonTime.TIME_TYPE;
-import static org.optaplanner.jpyinterpreter.types.datetime.PythonTimeDelta.TIME_DELTA_TYPE;
-
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -17,20 +17,21 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.optaplanner.jpyinterpreter.MethodDescriptor;
 import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
-import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonOverloadImplementor;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
-import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeComparable;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonNone;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
+import org.optaplanner.jpyinterpreter.types.errors.TypeError;
+import org.optaplanner.jpyinterpreter.types.errors.ValueError;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonFloat;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
+import org.optaplanner.jpyinterpreter.types.numeric.PythonNumber;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
 
 /**
  * Python docs: <a href="https://docs.python.org/3/library/datetime.html#datetime.datetime">datetime objects</a>
@@ -38,18 +39,18 @@ import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 public class PythonDateTime extends PythonDate<PythonDateTime> {
     // Taken from https://docs.python.org/3/library/datetime.html#datetime.datetime.fromisoformat
     private static final Pattern ISO_FORMAT_PATTERN = Pattern.compile("^(?<year>\\d\\d\\d\\d)-(?<month>\\d\\d)-(?<day>\\d\\d)" +
-            "(:.(?<hour>\\d\\d)" +
-            "(::(?<minute>\\d\\d)" +
-            "(::(?<second>\\d\\d)" +
-            "(:\\.(?<microHigh>\\d\\d\\d)" +
+            "(.(?<hour>\\d\\d)" +
+            "(:(?<minute>\\d\\d)" +
+            "(:(?<second>\\d\\d)" +
+            "(\\.(?<microHigh>\\d\\d\\d)" +
             "(?<microLow>\\d\\d\\d)?" +
             ")?)?)?)?" +
-            "(:(?<timezoneHour>\\d\\d):(?<timezoneMinute>\\d\\d)" +
-            "(::(?<timezoneSecond>\\d\\d)" +
-            "(:\\.(?<timezoneMicro>\\d\\d\\d\\d\\d\\d)" +
+            "(\\+(?<timezoneHour>\\d\\d):(?<timezoneMinute>\\d\\d)" +
+            "(:(?<timezoneSecond>\\d\\d)" +
+            "(\\.(?<timezoneMicro>\\d\\d\\d\\d\\d\\d)" +
             ")?)?)?$");
 
-    private static int NANOS_PER_SECOND = 1_000_000_000;
+    private static final int NANOS_PER_SECOND = 1_000_000_000;
     public static PythonLikeType DATE_TIME_TYPE = new PythonLikeType("datetime",
             PythonDateTime.class,
             List.of(DATE_TYPE));
@@ -74,121 +75,138 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
     }
 
     private static void registerMethods() throws NoSuchMethodException {
-        // Static methods
+        // Constructor
+        DATE_TIME_TYPE.addConstructor(ArgumentSpec.forFunctionReturning("datetime", PythonDateTime.class)
+                .addArgument("year", PythonInteger.class)
+                .addArgument("month", PythonInteger.class)
+                .addArgument("day", PythonInteger.class)
+                .addArgument("hour", PythonInteger.class, PythonInteger.ZERO)
+                .addArgument("minute", PythonInteger.class, PythonInteger.ZERO)
+                .addArgument("second", PythonInteger.class, PythonInteger.ZERO)
+                .addArgument("microsecond", PythonInteger.class, PythonInteger.ZERO)
+                .addArgument("tzinfo", PythonLikeObject.class, PythonNone.INSTANCE)
+                .addKeywordOnlyArgument("fold", PythonInteger.class, PythonInteger.ZERO)
+                .asPythonFunctionSignature(
+                        PythonDateTime.class.getMethod("of", PythonInteger.class, PythonInteger.class, PythonInteger.class,
+                                PythonInteger.class, PythonInteger.class, PythonInteger.class, PythonInteger.class,
+                                PythonLikeObject.class, PythonInteger.class)));
+
+        // Class methods
+        // Date handles today,
+        DATE_TIME_TYPE.addMethod("now",
+                ArgumentSpec.forFunctionReturning("now", PythonDateTime.class)
+                        .addArgument("datetime_type", PythonLikeType.class)
+                        .addArgument("tzinfo", PythonLikeObject.class, PythonNone.INSTANCE)
+                        .asClassPythonFunctionSignature(
+                                PythonDateTime.class.getMethod("now",
+                                        PythonLikeType.class,
+                                        PythonLikeObject.class)));
+
+        DATE_TIME_TYPE.addMethod("utcnow",
+                ArgumentSpec.forFunctionReturning("now", PythonDateTime.class)
+                        .addArgument("datetime_type", PythonLikeType.class)
+                        .asClassPythonFunctionSignature(
+                                PythonDateTime.class.getMethod("utc_now",
+                                        PythonLikeType.class)));
+
+        DATE_TIME_TYPE.addMethod("fromtimestamp",
+                ArgumentSpec.forFunctionReturning("fromtimestamp", PythonDate.class)
+                        .addArgument("date_type", PythonLikeType.class)
+                        .addArgument("timestamp", PythonNumber.class)
+                        .addArgument("tzinfo", PythonLikeObject.class, PythonNone.INSTANCE)
+                        .asClassPythonFunctionSignature(PythonDateTime.class.getMethod("from_timestamp",
+                                PythonLikeType.class,
+                                PythonNumber.class,
+                                PythonLikeObject.class)));
+
+        DATE_TIME_TYPE.addMethod("utcfromtimestamp",
+                ArgumentSpec.forFunctionReturning("utcfromtimestamp", PythonDate.class)
+                        .addArgument("date_type", PythonLikeType.class)
+                        .addArgument("timestamp", PythonNumber.class)
+                        .asClassPythonFunctionSignature(PythonDateTime.class.getMethod("utc_from_timestamp",
+                                PythonLikeType.class,
+                                PythonNumber.class)));
+
         DATE_TIME_TYPE.addMethod("combine",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("combine", PythonDate.class, PythonTime.class)), DATE_TIME_TYPE,
-                        DATE_TYPE, TIME_TYPE));
+                ArgumentSpec.forFunctionReturning("combine", PythonDateTime.class)
+                        .addArgument("datetime_type", PythonLikeType.class)
+                        .addArgument("date", PythonDate.class)
+                        .addArgument("time", PythonTime.class)
+                        .addNullableArgument("tzinfo", PythonLikeObject.class)
+                        .asClassPythonFunctionSignature(
+                                PythonDateTime.class.getMethod("combine",
+                                        PythonLikeType.class, PythonDate.class,
+                                        PythonTime.class, PythonLikeObject.class)));
 
         // Unary Operators
         DATE_TIME_TYPE.addUnaryMethod(PythonUnaryOperator.AS_STRING,
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("toPythonString")),
-                        BuiltinTypes.STRING_TYPE));
+                PythonDateTime.class.getMethod("toPythonString"));
 
         // Binary Operators
         DATE_TIME_TYPE.addBinaryMethod(PythonBinaryOperators.ADD,
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("add_time_delta", PythonTimeDelta.class)),
-                        DATE_TIME_TYPE, TIME_DELTA_TYPE));
+                PythonDateTime.class.getMethod("add_time_delta", PythonTimeDelta.class));
         DATE_TIME_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("subtract_time_delta", PythonTimeDelta.class)),
-                        DATE_TIME_TYPE, TIME_DELTA_TYPE));
+                PythonDateTime.class.getMethod("subtract_time_delta", PythonTimeDelta.class));
         DATE_TIME_TYPE.addBinaryMethod(PythonBinaryOperators.SUBTRACT,
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("subtract_date_time", PythonDateTime.class)),
-                        TIME_DELTA_TYPE, DATE_TIME_TYPE));
+                PythonDateTime.class.getMethod("subtract_date_time", PythonDateTime.class));
 
         // Instance methods
         DATE_TIME_TYPE.addMethod("replace",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("replace", PythonInteger.class, PythonInteger.class,
+                ArgumentSpec.forFunctionReturning("replace", PythonDate.class)
+                        .addNullableArgument("year", PythonInteger.class)
+                        .addNullableArgument("month", PythonInteger.class)
+                        .addNullableArgument("day", PythonInteger.class)
+                        .addNullableArgument("hour", PythonInteger.class)
+                        .addNullableArgument("minute", PythonInteger.class)
+                        .addNullableArgument("second", PythonInteger.class)
+                        .addNullableArgument("microsecond", PythonInteger.class)
+                        .addNullableArgument("tzinfo", PythonLikeObject.class)
+                        .addNullableKeywordOnlyArgument("fold", PythonInteger.class)
+                        .asPythonFunctionSignature(PythonDateTime.class.getMethod("replace", PythonInteger.class,
+                                PythonInteger.class, PythonInteger.class,
                                 PythonInteger.class, PythonInteger.class, PythonInteger.class,
-                                PythonInteger.class, PythonInteger.class, PythonTzinfo.class,
-                                PythonInteger.class)),
-                        DATE_TIME_TYPE, BuiltinTypes.INT_TYPE, BuiltinTypes.INT_TYPE, BuiltinTypes.INT_TYPE,
-                        BuiltinTypes.INT_TYPE, BuiltinTypes.INT_TYPE, BuiltinTypes.INT_TYPE, BuiltinTypes.INT_TYPE,
-                        PythonTzinfo.TZ_INFO_TYPE, BuiltinTypes.INT_TYPE));
+                                PythonInteger.class, PythonLikeObject.class, PythonInteger.class)));
         DATE_TIME_TYPE.addMethod("timetuple",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("timetuple")),
-                        BuiltinTypes.TUPLE_TYPE)); // TODO: use time.struct_time type
+                PythonDateTime.class.getMethod("timetuple")); // TODO: use time.struct_time type
 
         DATE_TIME_TYPE.addMethod("utctimetuple",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("utctimetuple")),
-                        BuiltinTypes.TUPLE_TYPE)); // TODO: use time.struct_time type
+                PythonDateTime.class.getMethod("utctimetuple")); // TODO: use time.struct_time type
 
         DATE_TIME_TYPE.addMethod("date",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("date")),
-                        DATE_TYPE));
+                PythonDateTime.class.getMethod("date"));
         DATE_TIME_TYPE.addMethod("time",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("time")),
-                        TIME_TYPE));
+                PythonDateTime.class.getMethod("time"));
 
         DATE_TIME_TYPE.addMethod("timetz",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("timetz")),
-                        TIME_TYPE));
+                PythonDateTime.class.getMethod("timetz"));
 
         DATE_TIME_TYPE.addMethod("astimezone",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("astimezone", PythonTzinfo.class)),
-                        DATE_TIME_TYPE, PythonTzinfo.TZ_INFO_TYPE));
+                PythonDateTime.class.getMethod("astimezone", PythonTzinfo.class));
 
         DATE_TIME_TYPE.addMethod("timestamp",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("timestamp")),
-                        BuiltinTypes.FLOAT_TYPE));
+                PythonDateTime.class.getMethod("timestamp"));
 
         DATE_TIME_TYPE.addMethod("tzname",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("tzname")),
-                        OBJECT_TYPE));
+                PythonDateTime.class.getMethod("tzname"));
 
         DATE_TIME_TYPE.addMethod("utcoffset",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("utcoffset")),
-                        OBJECT_TYPE));
+                PythonDateTime.class.getMethod("utcoffset"));
 
         DATE_TIME_TYPE.addMethod("dst",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("dst")),
-                        OBJECT_TYPE));
+                PythonDateTime.class.getMethod("dst"));
 
-        DATE_TIME_TYPE.addMethod("toordinal",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("to_ordinal")),
-                        BuiltinTypes.INT_TYPE));
-        DATE_TIME_TYPE.addMethod("weekday",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("weekday")),
-                        BuiltinTypes.INT_TYPE));
-
-        DATE_TIME_TYPE.addMethod("isoweekday",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("iso_weekday")),
-                        BuiltinTypes.INT_TYPE));
-
-        DATE_TIME_TYPE.addMethod("isoweekday",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("iso_weekday")),
-                        BuiltinTypes.INT_TYPE));
-
-        // TODO: isocalendar
         DATE_TIME_TYPE.addMethod("isoformat",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("iso_format")),
-                        BuiltinTypes.STRING_TYPE));
+                ArgumentSpec.forFunctionReturning("isoformat", PythonString.class)
+                        .addArgument("sep", PythonString.class, PythonString.valueOf("T"))
+                        .addArgument("timespec", PythonString.class, PythonString.valueOf("auto"))
+                        .asPythonFunctionSignature(
+                                PythonDateTime.class.getMethod("iso_format", PythonString.class, PythonString.class)));
 
         DATE_TIME_TYPE.addMethod("ctime",
-                new PythonFunctionSignature(new MethodDescriptor(
-                        PythonDateTime.class.getMethod("ctime")),
-                        BuiltinTypes.STRING_TYPE));
+                PythonDateTime.class.getMethod("ctime"));
 
+        // The following virtual methods are inherited from date:
+        // toordinal, weekday, isoweekday, isocalendar
     }
 
     final Temporal dateTime;
@@ -199,6 +217,7 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
     public final PythonInteger second;
     public final PythonInteger microsecond;
     public final PythonInteger fold;
+    public final PythonLikeObject tzinfo;
 
     public PythonDateTime(ZonedDateTime zonedDateTime) {
         this(zonedDateTime.toLocalDate(), zonedDateTime.toLocalTime(), zonedDateTime.getZone(),
@@ -206,15 +225,21 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
     }
 
     public PythonDateTime(LocalDateTime localDateTime) {
-        this(localDateTime.toLocalDate(), localDateTime.toLocalTime(), null, 0);
+        this(localDateTime.toLocalDate(), localDateTime.toLocalTime(), (ZoneId) null, 0);
     }
 
     public PythonDateTime(LocalDate localDate, LocalTime localTime) {
-        this(localDate, localTime, null, 0);
+        this(localDate, localTime, (ZoneId) null, 0);
     }
 
     public PythonDateTime(LocalDate localDate, LocalTime localTime, ZoneId zoneId) {
         this(localDate, localTime, zoneId, 0);
+    }
+
+    public PythonDateTime(LocalDate localDate, LocalTime localTime, PythonLikeObject tzinfo, int fold) {
+        this(localDate, localTime,
+                (tzinfo instanceof PythonTzinfo) ? ((PythonTzinfo) tzinfo).zoneId : null,
+                fold);
     }
 
     public PythonDateTime(LocalDate localDate, LocalTime localTime, ZoneId zoneId, int fold) {
@@ -231,7 +256,41 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
         minute = PythonInteger.valueOf(localTime.getMinute());
         second = PythonInteger.valueOf(localTime.getSecond());
         microsecond = PythonInteger.valueOf(localTime.getNano() / 1000); // Micro = Nano // 1000
+        tzinfo = zoneId == null ? PythonNone.INSTANCE : new PythonTzinfo(zoneId);
         this.fold = PythonInteger.valueOf(fold);
+    }
+
+    public static PythonDateTime of(PythonInteger year, PythonInteger month, PythonInteger day, PythonInteger hour,
+            PythonInteger minute, PythonInteger second,
+            PythonInteger microsecond, PythonLikeObject tzinfo, PythonInteger fold) {
+        if (month.value.intValueExact() < 1 || month.value.intValueExact() > 12) {
+            throw new ValueError("month must be between 1 and 12");
+        }
+        if (!YearMonth.of(year.value.intValueExact(), month.value.intValueExact()).isValidDay(day.value.intValueExact())) {
+            throw new ValueError("day must be between 1 and "
+                    + YearMonth.of(year.value.intValueExact(), month.value.intValueExact()).lengthOfMonth());
+        }
+        if (hour.value.intValueExact() < 0 || hour.value.intValueExact() >= 24) {
+            throw new ValueError("hour must be in range 0 <= hour < 24");
+        }
+        if (minute.value.intValueExact() < 0 || minute.value.intValueExact() >= 60) {
+            throw new ValueError("minute must be in range 0 <= minute < 60");
+        }
+        if (second.value.intValueExact() < 0 || second.value.intValueExact() >= 60) {
+            throw new ValueError("second must be in range 0 <= second < 60");
+        }
+        if (microsecond.value.intValueExact() < 0 || microsecond.value.intValueExact() >= 1000000) {
+            throw new ValueError("microsecond must be in range 0 <= microsecond < 1000000");
+        }
+        if (fold.value.intValueExact() != 0 && fold.value.intValueExact() != 1) {
+            throw new ValueError("fold must be in [0, 1]");
+        }
+
+        return new PythonDateTime(
+                LocalDate.of(year.value.intValueExact(), month.value.intValueExact(), day.value.intValueExact()),
+                LocalTime.of(hour.value.intValueExact(), minute.value.intValueExact(), second.value.intValueExact(),
+                        microsecond.value.intValueExact() * 1000),
+                (tzinfo != PythonNone.INSTANCE) ? ((PythonTzinfo) tzinfo).zoneId : null, fold.value.intValueExact());
     }
 
     public static PythonDateTime of(int year, int month, int day, int hour, int minute, int second,
@@ -247,36 +306,90 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
                 return hour;
             case "minute":
                 return minute;
+            case "second":
+                return second;
             case "microsecond":
                 return microsecond;
             case "fold":
                 return fold;
             case "tzinfo":
-                return (zoneId != null) ? new PythonTzinfo(zoneId) : PythonNone.INSTANCE;
+                return tzinfo;
             default:
                 return super.__getAttributeOrNull(name);
         }
     }
 
-    public static PythonDateTime now() {
-        return new PythonDateTime(LocalDateTime.now());
+    public static PythonDateTime now(PythonLikeType type, PythonLikeObject tzinfo) {
+        if (type != DATE_TIME_TYPE) {
+            throw new TypeError("Unknown datetime type: " + type);
+        }
+        LocalDateTime result = LocalDateTime.now();
+        return new PythonDateTime(result.toLocalDate(), result.toLocalTime(),
+                tzinfo == PythonNone.INSTANCE ? null : ((PythonTzinfo) tzinfo).zoneId);
     }
 
-    public static PythonDateTime utc_now() {
-        return new PythonDateTime(LocalDateTime.now(ZoneOffset.UTC));
+    public static PythonDateTime utc_now(PythonLikeType type) {
+        if (type != DATE_TIME_TYPE) {
+            throw new TypeError("Unknown datetime type: " + type);
+        }
+        LocalDateTime result = LocalDateTime.now(Clock.systemUTC());
+        return new PythonDateTime(result.toLocalDate(), result.toLocalTime(),
+                null);
     }
 
-    public static PythonDateTime from_timestamp(PythonInteger timestamp) {
-        return new PythonDateTime(LocalDateTime.ofEpochSecond(timestamp.getValue().longValue(), 0,
-                ZoneOffset.UTC));
+    public static PythonDateTime from_ordinal(PythonInteger ordinal) {
+        return new PythonDateTime(LocalDate.ofEpochDay(ordinal.getValue().longValue() - EPOCH_ORDINAL_OFFSET),
+                LocalTime.MIDNIGHT, null);
     }
 
-    public static PythonDateTime from_timestamp(PythonFloat timestamp) {
+    public static PythonDateTime from_timestamp(PythonLikeType type, PythonNumber timestamp, PythonLikeObject tzinfo) {
+        if (type != DATE_TIME_TYPE) {
+            throw new TypeError("Unknown datetime type: " + type);
+        }
+        if (timestamp instanceof PythonInteger) {
+            return from_timestamp((PythonInteger) timestamp, tzinfo);
+        } else {
+            return from_timestamp((PythonFloat) timestamp, tzinfo);
+        }
+    }
+
+    public static PythonDateTime from_timestamp(PythonInteger timestamp, PythonLikeObject tzinfo) {
+        Instant instant = Instant.ofEpochSecond(timestamp.getValue().longValue());
+        if (tzinfo == PythonNone.INSTANCE) {
+            LocalDateTime result = instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
+            return new PythonDateTime(result);
+        } else {
+            ZoneId zoneId = ((PythonTzinfo) tzinfo).zoneId;
+            LocalDateTime result = instant.atZone(zoneId).toLocalDateTime();
+            return new PythonDateTime(result.toLocalDate(), result.toLocalTime(), zoneId);
+        }
+    }
+
+    public static PythonDateTime from_timestamp(PythonFloat timestamp, PythonLikeObject tzinfo) {
         long epochSeconds = (long) Math.floor(timestamp.getValue().doubleValue());
         double remainder = timestamp.getValue().doubleValue() - epochSeconds;
         int nanos = (int) Math.round(remainder * NANOS_PER_SECOND);
-        return new PythonDateTime(LocalDateTime.ofEpochSecond(timestamp.getValue().longValue(), nanos,
-                ZoneOffset.UTC));
+        Instant instant = Instant.ofEpochSecond(timestamp.getValue().longValue(), nanos);
+
+        if (tzinfo == PythonNone.INSTANCE) {
+            LocalDateTime result = instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
+            return new PythonDateTime(result);
+        } else {
+            ZoneId zoneId = ((PythonTzinfo) tzinfo).zoneId;
+            LocalDateTime result = instant.atZone(zoneId).toLocalDateTime();
+            return new PythonDateTime(result.toLocalDate(), result.toLocalTime(), zoneId);
+        }
+    }
+
+    public static PythonDateTime utc_from_timestamp(PythonLikeType type, PythonNumber timestamp) {
+        if (type != DATE_TIME_TYPE) {
+            throw new TypeError("Unknown datetime type: " + type);
+        }
+        if (timestamp instanceof PythonInteger) {
+            return utc_from_timestamp((PythonInteger) timestamp);
+        } else {
+            return utc_from_timestamp((PythonFloat) timestamp);
+        }
     }
 
     public static PythonDateTime utc_from_timestamp(PythonInteger timestamp) {
@@ -292,13 +405,16 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
                 ZoneOffset.UTC));
     }
 
-    public static PythonDateTime from_ordinal(PythonInteger ordinal) {
-        return new PythonDateTime(LocalDate.ofEpochDay(ordinal.getValue().longValue() + EPOCH_ORDINAL_OFFSET),
-                LocalTime.MIN);
-    }
-
-    public static PythonDateTime combine(PythonDate pythonDate, PythonTime pythonTime) {
-        return new PythonDateTime(pythonDate.localDate, pythonTime.localTime, pythonTime.zoneId,
+    public static PythonDateTime combine(PythonLikeType type,
+            PythonDate pythonDate, PythonTime pythonTime,
+            PythonLikeObject tzinfo) {
+        if (type != DATE_TIME_TYPE) {
+            throw new TypeError("Unknown datetime type " + type.getTypeName());
+        }
+        if (tzinfo == null) {
+            tzinfo = pythonTime.tzinfo;
+        }
+        return new PythonDateTime(pythonDate.localDate, pythonTime.localTime, tzinfo,
                 pythonTime.fold.getValue().intValue());
     }
 
@@ -445,7 +561,7 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
 
     public PythonDateTime replace(PythonInteger year, PythonInteger month, PythonInteger day,
             PythonInteger hour, PythonInteger minute, PythonInteger second,
-            PythonInteger microsecond, PythonTzinfo tzinfo, PythonInteger fold) {
+            PythonInteger microsecond, PythonLikeObject tzinfo, PythonInteger fold) {
         if (year == null) {
             year = this.year;
         }
@@ -475,7 +591,7 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
         }
 
         if (tzinfo == null) {
-            tzinfo = new PythonTzinfo(this.zoneId);
+            tzinfo = this.tzinfo;
         }
 
         if (fold == null) {
@@ -489,7 +605,7 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
                         minute.getValue().intValue(),
                         second.getValue().intValue(),
                         microsecond.getValue().intValue() * 1000),
-                tzinfo.zoneId,
+                tzinfo,
                 fold.getValue().intValue());
     }
 
@@ -537,8 +653,13 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
                 weekday(), yday, dst));
     }
 
-    public Object utctimetuple() {
-        throw new UnsupportedOperationException();
+    public PythonLikeTuple utctimetuple() {
+        if (zoneId == null) {
+            return timetuple();
+        } else {
+            ZonedDateTime utcDateTime = ((ZonedDateTime) dateTime).withZoneSameInstant(ZoneOffset.UTC);
+            return new PythonDateTime(utcDateTime.toLocalDateTime()).timetuple();
+        }
     }
 
     public PythonFloat timestamp() {
@@ -554,12 +675,16 @@ public class PythonDateTime extends PythonDate<PythonDateTime> {
     }
 
     public PythonString iso_format() {
-        return new PythonString(dateTime.toString());
+        return iso_format(PythonString.valueOf("T"), PythonString.valueOf("auto"));
+    }
+
+    public PythonString iso_format(PythonString sep, PythonString timespec) {
+        return new PythonString(localDate.toString() + sep.value + time().isoformat(timespec).value);
     }
 
     @Override
     public PythonString toPythonString() {
-        return new PythonString(dateTime.toString());
+        return iso_format(PythonString.valueOf(" "), PythonString.valueOf("auto"));
     }
 
     @Override

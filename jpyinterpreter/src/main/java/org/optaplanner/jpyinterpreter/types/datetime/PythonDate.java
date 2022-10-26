@@ -20,6 +20,7 @@ import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
 import org.optaplanner.jpyinterpreter.types.AbstractPythonLikeObject;
 import org.optaplanner.jpyinterpreter.types.PythonLikeComparable;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
+import org.optaplanner.jpyinterpreter.types.PythonNone;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.TypeError;
@@ -217,11 +218,7 @@ public class PythonDate<T extends PythonDate<?>> extends AbstractPythonLikeObjec
                 return from_timestamp((PythonFloat) timestamp);
             }
         } else if (dateType == DATE_TIME_TYPE) {
-            if (timestamp instanceof PythonInteger) {
-                return PythonDateTime.from_timestamp((PythonInteger) timestamp);
-            } else {
-                return PythonDateTime.from_timestamp((PythonFloat) timestamp);
-            }
+            return PythonDateTime.from_timestamp(dateType, timestamp, PythonNone.INSTANCE);
         } else {
             throw new TypeError("Unknown date type: " + dateType);
         }

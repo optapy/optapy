@@ -108,6 +108,7 @@ public class PythonTime extends AbstractPythonLikeObject {
     public final PythonInteger second;
     public final PythonInteger microsecond;
     public final PythonInteger fold;
+    public final PythonLikeObject tzinfo;
 
     public PythonTime(LocalTime localTime) {
         this(localTime, null, 0);
@@ -127,6 +128,7 @@ public class PythonTime extends AbstractPythonLikeObject {
         minute = PythonInteger.valueOf(localTime.getMinute());
         second = PythonInteger.valueOf(localTime.getSecond());
         microsecond = PythonInteger.valueOf(localTime.getNano() / 1000); // Micro = Nano // 1000
+        tzinfo = zoneId == null ? PythonNone.INSTANCE : new PythonTzinfo(zoneId);
         this.fold = PythonInteger.valueOf(fold);
     }
 
@@ -142,7 +144,7 @@ public class PythonTime extends AbstractPythonLikeObject {
             case "microsecond":
                 return microsecond;
             case "tzinfo":
-                return zoneId == null ? PythonNone.INSTANCE : new PythonTzinfo(zoneId);
+                return tzinfo;
             case "fold":
                 return fold;
             default:
@@ -162,7 +164,7 @@ public class PythonTime extends AbstractPythonLikeObject {
             throw new ValueError("hour must be in range 0 <= hour < 24");
         }
         if (minute < 0 || minute >= 60) {
-            throw new ValueError("minute must be in range 0 <= hour < 60");
+            throw new ValueError("minute must be in range 0 <= minute < 60");
         }
         if (second < 0 || second >= 60) {
             throw new ValueError("second must be in range 0 <= second < 60");
