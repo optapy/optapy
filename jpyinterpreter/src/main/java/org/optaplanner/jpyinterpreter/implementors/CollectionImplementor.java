@@ -504,13 +504,13 @@ public class CollectionImplementor {
     }
 
     /**
-     * Calls collection.add(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to implement list/set comprehensions.
+     * Calls collection.add(TOS[i], TOS). TOS[i] remains on stack; TOS is popped. Used to implement list/set comprehensions.
      */
     public static void collectionAdd(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
             PythonBytecodeInstruction instruction) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
 
-        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        // instruction.arg is distance from TOS
         StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
@@ -521,13 +521,13 @@ public class CollectionImplementor {
     }
 
     /**
-     * Calls collection.addAll(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to build lists/maps.
+     * Calls collection.addAll(TOS[i], TOS). TOS[i] remains on stack; TOS is popped. Used to build lists/maps.
      */
     public static void collectionAddAll(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
             PythonBytecodeInstruction instruction) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
 
-        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        // instruction.arg is distance from TOS
         StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
@@ -546,7 +546,8 @@ public class CollectionImplementor {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
 
         // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
-        StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
+        StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg + 1);
+
         StackManipulationImplementor.rotateThree(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
                 "put",
@@ -556,12 +557,12 @@ public class CollectionImplementor {
     }
 
     /**
-     * Calls map.putAll(TOS1[i], TOS). TOS1[i] remains on stack; TOS is popped. Used to build maps
+     * Calls map.putAll(TOS[i], TOS). TOS[i] remains on stack; TOS is popped. Used to build maps
      */
     public static void mapPutAll(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
             PythonBytecodeInstruction instruction) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
-        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        // instruction.arg is distance from TOS
         StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
@@ -579,7 +580,7 @@ public class CollectionImplementor {
             PythonBytecodeInstruction instruction) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
 
-        // instruction.arg is distance from TOS1, so add 1 to get distance from TOS
+        // instruction.arg is distance from TOS
         StackManipulationImplementor.duplicateToTOS(functionMetadata, stackMetadata, instruction.arg);
         StackManipulationImplementor.swap(methodVisitor);
 

@@ -267,9 +267,9 @@ public class CollectionImplementorTest {
                 .loadConstant(4)
                 .loadConstant(3)
                 .loadConstant(6)
-                .op(OpcodeIdentifier.MAP_ADD, 6)
-                .op(OpcodeIdentifier.MAP_ADD, 4)
-                .op(OpcodeIdentifier.MAP_ADD, 2)
+                .op(OpcodeIdentifier.MAP_ADD, 5)
+                .op(OpcodeIdentifier.MAP_ADD, 3)
+                .op(OpcodeIdentifier.MAP_ADD, 1)
                 .op(OpcodeIdentifier.RETURN_VALUE)
                 .build();
 
