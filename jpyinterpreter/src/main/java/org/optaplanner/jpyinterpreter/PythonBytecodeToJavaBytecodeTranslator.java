@@ -135,7 +135,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         Class<T> compiledClass = translatePythonBytecodeToClass(pythonCompiledFunction, javaFunctionalInterfaceType);
         PythonLikeTuple annotationTuple = pythonCompiledFunction.typeAnnotations.entrySet()
                 .stream()
-                .map(entry -> PythonLikeTuple.fromList(List.of(PythonString.valueOf(entry.getKey()), entry.getValue())))
+                .map(entry -> PythonLikeTuple.fromList(List.of(PythonString.valueOf(entry.getKey()),
+                        entry.getValue() != null ? entry.getValue() : BuiltinTypes.BASE_TYPE)))
                 .collect(Collectors.toCollection(PythonLikeTuple::new));
         return FunctionImplementor.createInstance(pythonCompiledFunction.defaultPositionalArguments,
                 pythonCompiledFunction.defaultKeywordArguments,

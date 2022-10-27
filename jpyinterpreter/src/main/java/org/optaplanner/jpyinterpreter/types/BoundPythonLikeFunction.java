@@ -15,6 +15,14 @@ public class BoundPythonLikeFunction implements PythonLikeFunction {
         this.function = function;
     }
 
+    public static BoundPythonLikeFunction boundToTypeOfObject(PythonLikeObject instance, PythonLikeFunction function) {
+        if (instance instanceof PythonLikeType) {
+            return new BoundPythonLikeFunction(instance, function);
+        } else {
+            return new BoundPythonLikeFunction(instance.__getType(), function);
+        }
+    }
+
     public PythonLikeObject getInstance() {
         return instance;
     }

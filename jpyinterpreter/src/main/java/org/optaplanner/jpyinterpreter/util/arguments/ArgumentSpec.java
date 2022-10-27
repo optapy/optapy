@@ -13,6 +13,7 @@ import org.optaplanner.jpyinterpreter.MethodDescriptor;
 import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
@@ -226,14 +227,17 @@ public final class ArgumentSpec<Out_> {
         }
 
         for (int i = 0; i < argumentNameList.size(); i++) {
-            if (!argumentTypeList.get(i).isInstance(out.get(i))) {
+            if ((out.get(i) == null && !nullableArgumentSet.get(i))
+                    || (out.get(i) != null && !argumentTypeList.get(i).isInstance(out.get(i)))) {
                 throw new TypeError(functionName + "'s argument '" + argumentNameList.get(i) + "' has incorrect type: " +
                         "'" + argumentNameList.get(i) + "' must be a " +
                         JavaPythonTypeConversionImplementor.getPythonLikeType(argumentTypeList.get(i)) +
-                        " (got " + JavaPythonTypeConversionImplementor.getPythonLikeType(out.get(i).getClass()) + " instead)");
+                        " (got "
+                        + ((out.get(i) != null) ? JavaPythonTypeConversionImplementor.getPythonLikeType(out.get(i).getClass())
+                                : "NULL")
+                        + " instead)");
             }
         }
-
         return out;
     }
 
@@ -326,6 +330,45 @@ public final class ArgumentSpec<Out_> {
                 method.getReturnType());
     }
 
+    public PythonFunctionSignature asPythonFunctionSignature(String internalClassName, String methodName,
+            String methodDescriptor) {
+        MethodDescriptor method = new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.VIRTUAL,
+                methodName, methodDescriptor);
+        try {
+            return getPythonFunctionSignatureForMethodDescriptor(method,
+                    BuiltinTypes.asmClassLoader.loadClass(
+                            method.getReturnType().getClassName().replace('/', '.')));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public PythonFunctionSignature asStaticPythonFunctionSignature(String internalClassName, String methodName,
+            String methodDescriptor) {
+        MethodDescriptor method = new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.STATIC,
+                methodName, methodDescriptor);
+        try {
+            return getPythonFunctionSignatureForMethodDescriptor(method,
+                    BuiltinTypes.asmClassLoader.loadClass(
+                            method.getReturnType().getClassName().replace('/', '.')));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public PythonFunctionSignature asClassPythonFunctionSignature(String internalClassName, String methodName,
+            String methodDescriptor) {
+        MethodDescriptor method = new MethodDescriptor(internalClassName, MethodDescriptor.MethodType.CLASS,
+                methodName, methodDescriptor);
+        try {
+            return getPythonFunctionSignatureForMethodDescriptor(method,
+                    BuiltinTypes.asmClassLoader.loadClass(
+                            method.getReturnType().getClassName().replace('/', '.')));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private void verifyMethodMatchesSpec(Method method) {
         if (!functionReturnType.isAssignableFrom(method.getReturnType())) {
             throw new IllegalArgumentException("Method (" + method + ") does not match the given spec (" + this +
@@ -381,7 +424,8 @@ public final class ArgumentSpec<Out_> {
 
         return new PythonFunctionSignature(methodDescriptor, defaultParameterValueList,
                 keywordArgumentToIndexMap, returnType,
-                parameterTypeList, extraPositionalsArgumentIndex, extraKeywordsArgumentIndex);
+                parameterTypeList, extraPositionalsArgumentIndex, extraKeywordsArgumentIndex,
+                this);
     }
 
     @Override

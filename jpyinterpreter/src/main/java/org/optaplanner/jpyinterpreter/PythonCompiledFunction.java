@@ -189,7 +189,7 @@ public class PythonCompiledFunction {
             int variableIndex = 0;
             int defaultPositionalStartIndex = co_argcount - defaultPositionalArguments.size();
 
-            if (methodKind != PythonClassTranslator.PythonMethodKind.STATIC_METHOD) {
+            if (methodKind == PythonClassTranslator.PythonMethodKind.VIRTUAL_METHOD) {
                 variableIndex = 1;
             }
 

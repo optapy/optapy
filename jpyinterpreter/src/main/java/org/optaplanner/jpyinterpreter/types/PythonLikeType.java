@@ -261,6 +261,12 @@ public class PythonLikeType implements PythonLikeObject,
         addMethod(operator.getDunderMethod(), method);
     }
 
+    public void clearMethod(String methodName) {
+        PythonKnownFunctionType knownFunctionType = functionNameToKnownFunctionType.computeIfAbsent(methodName,
+                key -> new PythonKnownFunctionType(methodName, new ArrayList<>()));
+        knownFunctionType.getOverloadFunctionSignatureList().clear();
+    }
+
     public void addMethod(String methodName, PythonFunctionSignature method) {
         PythonKnownFunctionType knownFunctionType = functionNameToKnownFunctionType.computeIfAbsent(methodName,
                 key -> new PythonKnownFunctionType(methodName, new ArrayList<>()));

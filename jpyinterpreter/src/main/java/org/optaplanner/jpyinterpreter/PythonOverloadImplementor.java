@@ -199,12 +199,10 @@ public class PythonOverloadImplementor {
                 .collect(Collectors.groupingBy(sig -> sig.getParameterTypes().length));
 
         Optional<PythonFunctionSignature> maybeGenericFunctionSignature = overloadList.stream()
-                .filter(sig -> sig.extraPositionalArgumentsVariableIndex.isPresent()
-                        || sig.extraKeywordArgumentsVariableIndex.isPresent()
-                        || !sig.defaultArgumentList.isEmpty())
                 .findAny();
 
-        if (pythonFunctionSignatureByArgumentLength.isEmpty()) { // only generic overload
+        if (overloadList.get(0).isFromArgumentSpec()
+                || pythonFunctionSignatureByArgumentLength.isEmpty()) { // only generic overload
             // No error message since we MUST have a generic overload
             createGenericDispatch(methodVisitor, type, maybeGenericFunctionSignature, "");
         } else {
@@ -443,14 +441,23 @@ public class PythonOverloadImplementor {
                         true);
                 methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeObject.class));
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-                methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(BoundPythonLikeFunction.class));
-                methodVisitor.visitInsn(Opcodes.DUP_X2);
-                methodVisitor.visitInsn(Opcodes.DUP_X2);
-                methodVisitor.visitInsn(Opcodes.POP);
-                methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(BoundPythonLikeFunction.class),
-                        "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class),
-                                Type.getType(PythonLikeFunction.class)),
-                        false);
+                if (functionSignature.methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
+                    methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(BoundPythonLikeFunction.class),
+                            "boundToTypeOfObject",
+                            Type.getMethodDescriptor(Type.getType(BoundPythonLikeFunction.class),
+                                    Type.getType(PythonLikeObject.class),
+                                    Type.getType(PythonLikeFunction.class)),
+                            false);
+                } else {
+                    methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(BoundPythonLikeFunction.class));
+                    methodVisitor.visitInsn(Opcodes.DUP_X2);
+                    methodVisitor.visitInsn(Opcodes.DUP_X2);
+                    methodVisitor.visitInsn(Opcodes.POP);
+                    methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(BoundPythonLikeFunction.class),
+                            "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class),
+                                    Type.getType(PythonLikeFunction.class)),
+                            false);
+                }
 
                 // Load the sublist without the self/type argument
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);

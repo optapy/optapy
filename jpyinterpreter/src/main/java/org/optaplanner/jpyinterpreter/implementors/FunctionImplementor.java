@@ -131,28 +131,24 @@ public class FunctionImplementor {
                                 true);
                         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
                     } else if (isTosType && knownFunctionType.isClassMethod()) {
+                        methodVisitor.visitInsn(Opcodes.DUP);
                         methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
-                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class), "valueOf",
-                                Type.getMethodDescriptor(Type.getType(PythonString.class), Type.getType(String.class)),
-                                false);
                         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
-                                "$method$__getattribute__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
-                                        Type.getType(PythonString.class)),
+                                "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(String.class)),
                                 true);
-                        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                        methodVisitor.visitInsn(Opcodes.SWAP);
                     } else if (!isTosType && knownFunctionType.isClassMethod()) {
+                        methodVisitor.visitInsn(Opcodes.DUP);
                         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                                 "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
                                 true);
                         methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
-                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class), "valueOf",
-                                Type.getMethodDescriptor(Type.getType(PythonString.class), Type.getType(String.class)),
-                                false);
                         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
-                                "$method$__getattribute__", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
-                                        Type.getType(PythonString.class)),
+                                "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                        Type.getType(String.class)),
                                 true);
-                        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                        methodVisitor.visitInsn(Opcodes.SWAP);
                     } else if (isTosType) {
                         methodVisitor.visitInsn(Opcodes.DUP);
                         methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));

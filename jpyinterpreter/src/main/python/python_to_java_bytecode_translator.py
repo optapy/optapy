@@ -4,6 +4,7 @@ import dis
 import inspect
 import sys
 import abc
+from typing import Union
 
 from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, JArray
 
@@ -648,7 +649,16 @@ def get_java_type_for_python_type(the_type):
     return PythonLikeType.getBaseType()
 
 
-def copy_type_annotations(annotations_dict):
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+
+def copy_type_annotations(annotations_dict, default_args, vargs_name, kwargs_name):
     from java.util import HashMap
     from java.lang import Class as JavaClass
     from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference, JavaObjectWrapper, CPythonType # noqa
@@ -662,6 +672,14 @@ def copy_type_annotations(annotations_dict):
     for name, value in annotations_dict.items():
         if not isinstance(name, str):
             continue
+        if name == vargs_name:
+            out.put(name, type_to_compiled_java_class[tuple])
+            continue
+        if name == kwargs_name:
+            out.put(name, type_to_compiled_java_class[dict])
+            continue
+        if name in default_args:
+            value = Union[value, type(default_args[name])]
         if value in type_to_compiled_java_class:
             out.put(name, type_to_compiled_java_class[value])
         elif isinstance(value, (JClass, JavaClass)):
@@ -770,7 +788,10 @@ def get_function_bytecode_object(python_function):
     python_compiled_function.co_kwonlyargcount = python_function.__code__.co_kwonlyargcount
     python_compiled_function.closure = copy_closure(python_function.__closure__)
     python_compiled_function.globalsMap = copy_globals(python_function.__globals__, python_function.__code__.co_names)
-    python_compiled_function.typeAnnotations = copy_type_annotations(python_function.__annotations__)
+    python_compiled_function.typeAnnotations = copy_type_annotations(python_function.__annotations__,
+                                                                     get_default_args(python_function),
+                                                                     inspect.getfullargspec(python_function).varargs,
+                                                                     inspect.getfullargspec(python_function).varkw)
     python_compiled_function.defaultPositionalArguments = convert_to_java_python_like_object(
         python_function.__defaults__ if python_function.__defaults__ else tuple())
     python_compiled_function.defaultKeywordArguments = convert_to_java_python_like_object(
@@ -1126,9 +1147,15 @@ def translate_python_class_to_java_class(python_class):
     python_compiled_class.qualifiedName = python_class.__qualname__
     python_compiled_class.className = python_class.__name__
     if hasattr(python_class, '__annotations__'):
-        python_compiled_class.typeAnnotations = copy_type_annotations(python_class.__annotations__)
+        python_compiled_class.typeAnnotations = copy_type_annotations(python_class.__annotations__,
+                                                                      dict(),
+                                                                      None,
+                                                                      None)
     else:
-        python_compiled_class.typeAnnotations = copy_type_annotations(None)
+        python_compiled_class.typeAnnotations = copy_type_annotations(None,
+                                                                      dict(),
+                                                                      None,
+                                                                      None)
 
     python_compiled_class.superclassList = superclass_list
     python_compiled_class.instanceFunctionNameToPythonBytecode = instance_method_map

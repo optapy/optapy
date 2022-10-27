@@ -2,17 +2,13 @@ package org.optaplanner.jpyinterpreter;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -21,10 +17,9 @@ import org.optaplanner.jpyinterpreter.implementors.JavaPythonTypeConversionImple
 import org.optaplanner.jpyinterpreter.implementors.StackManipulationImplementor;
 import org.optaplanner.jpyinterpreter.types.BoundPythonLikeFunction;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
-import org.optaplanner.jpyinterpreter.types.PythonString;
-import org.optaplanner.jpyinterpreter.types.collections.PythonIterator;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
 
 public class PythonFunctionSignature {
     final PythonLikeType returnType;
@@ -39,6 +34,7 @@ public class PythonFunctionSignature {
     final Optional<Integer> extraKeywordArgumentsVariableIndex;
 
     final Class<?> defaultArgumentHolderClass;
+    final boolean isFromArgumentSpec;
 
     private static Map<String, Integer> extractKeywordArgument(MethodDescriptor methodDescriptor) {
         Map<String, Integer> out = new HashMap<>();
@@ -81,9 +77,10 @@ public class PythonFunctionSignature {
         this.keywordToArgumentIndexMap = keywordToArgumentIndexMap;
         this.extraPositionalArgumentsVariableIndex = Optional.empty();
         this.extraKeywordArgumentsVariableIndex = Optional.empty();
+        isFromArgumentSpec = false;
         defaultArgumentHolderClass = PythonDefaultArgumentImplementor.createDefaultArgumentFor(methodDescriptor,
                 defaultArgumentList, keywordToArgumentIndexMap, extraPositionalArgumentsVariableIndex,
-                extraKeywordArgumentsVariableIndex);
+                extraKeywordArgumentsVariableIndex, getArgumentSpec());
 
     }
 
@@ -98,9 +95,10 @@ public class PythonFunctionSignature {
         this.keywordToArgumentIndexMap = keywordToArgumentIndexMap;
         this.extraPositionalArgumentsVariableIndex = Optional.empty();
         this.extraKeywordArgumentsVariableIndex = Optional.empty();
+        isFromArgumentSpec = false;
         defaultArgumentHolderClass = PythonDefaultArgumentImplementor.createDefaultArgumentFor(methodDescriptor,
                 defaultArgumentList, keywordToArgumentIndexMap, extraPositionalArgumentsVariableIndex,
-                extraKeywordArgumentsVariableIndex);
+                extraKeywordArgumentsVariableIndex, getArgumentSpec());
     }
 
     public PythonFunctionSignature(MethodDescriptor methodDescriptor,
@@ -116,9 +114,100 @@ public class PythonFunctionSignature {
         this.keywordToArgumentIndexMap = keywordToArgumentIndexMap;
         this.extraPositionalArgumentsVariableIndex = extraPositionalArgumentsVariableIndex;
         this.extraKeywordArgumentsVariableIndex = extraKeywordArgumentsVariableIndex;
+        isFromArgumentSpec = false;
         defaultArgumentHolderClass = PythonDefaultArgumentImplementor.createDefaultArgumentFor(methodDescriptor,
                 defaultArgumentList, keywordToArgumentIndexMap, extraPositionalArgumentsVariableIndex,
-                extraKeywordArgumentsVariableIndex);
+                extraKeywordArgumentsVariableIndex, getArgumentSpec());
+    }
+
+    public PythonFunctionSignature(MethodDescriptor methodDescriptor,
+            List<PythonLikeObject> defaultArgumentList,
+            Map<String, Integer> keywordToArgumentIndexMap,
+            PythonLikeType returnType, List<PythonLikeType> parameterTypesList,
+            Optional<Integer> extraPositionalArgumentsVariableIndex,
+            Optional<Integer> extraKeywordArgumentsVariableIndex,
+            ArgumentSpec<?> argumentSpec) {
+        this.returnType = returnType;
+        this.parameterTypes = parameterTypesList.toArray(new PythonLikeType[0]);
+        this.methodDescriptor = methodDescriptor;
+        this.defaultArgumentList = defaultArgumentList;
+        this.keywordToArgumentIndexMap = keywordToArgumentIndexMap;
+        this.extraPositionalArgumentsVariableIndex = extraPositionalArgumentsVariableIndex;
+        this.extraKeywordArgumentsVariableIndex = extraKeywordArgumentsVariableIndex;
+        isFromArgumentSpec = true;
+        defaultArgumentHolderClass = PythonDefaultArgumentImplementor.createDefaultArgumentFor(methodDescriptor,
+                defaultArgumentList, keywordToArgumentIndexMap, extraPositionalArgumentsVariableIndex,
+                extraKeywordArgumentsVariableIndex, argumentSpec);
+    }
+
+    private ArgumentSpec<?> getArgumentSpec() {
+        try {
+            ArgumentSpec<?> argumentSpec = ArgumentSpec.forFunctionReturning(methodDescriptor.getMethodName(),
+                    (Class<? extends PythonLikeObject>) returnType.getJavaClass());
+            for (int i = 0; i < parameterTypes.length - defaultArgumentList.size(); i++) {
+                if (extraPositionalArgumentsVariableIndex.isPresent() && extraPositionalArgumentsVariableIndex.get() == i) {
+                    continue;
+                }
+
+                if (extraKeywordArgumentsVariableIndex.isPresent() && extraKeywordArgumentsVariableIndex.get() == i) {
+                    continue;
+                }
+
+                final int argIndex = i;
+                Optional<String> argumentName = keywordToArgumentIndexMap.entrySet()
+                        .stream().filter(e -> e.getValue().equals(argIndex))
+                        .map(Map.Entry::getKey)
+                        .findAny();
+
+                if (argumentName.isEmpty()) {
+                    argumentSpec = argumentSpec.addArgument("$arg" + i,
+                            (Class<? extends PythonLikeObject>) parameterTypes[i].getJavaClass());
+                } else {
+                    argumentSpec = argumentSpec.addArgument(argumentName.get(),
+                            (Class<? extends PythonLikeObject>) parameterTypes[i].getJavaClass());
+                }
+            }
+
+            for (int i = parameterTypes.length - defaultArgumentList.size(); i < parameterTypes.length; i++) {
+                if (extraPositionalArgumentsVariableIndex.isPresent() && extraPositionalArgumentsVariableIndex.get() == i) {
+                    continue;
+                }
+
+                if (extraKeywordArgumentsVariableIndex.isPresent() && extraKeywordArgumentsVariableIndex.get() == i) {
+                    continue;
+                }
+
+                PythonLikeObject defaultValue =
+                        defaultArgumentList.get(defaultArgumentList.size() - (parameterTypes.length - i));
+
+                final int argIndex = i;
+                Optional<String> argumentName = keywordToArgumentIndexMap.entrySet()
+                        .stream().filter(e -> e.getValue().equals(argIndex))
+                        .map(Map.Entry::getKey)
+                        .findAny();
+
+                if (argumentName.isEmpty()) {
+                    argumentSpec = argumentSpec.addArgument("$arg" + i,
+                            (Class<PythonLikeObject>) parameterTypes[i].getJavaClass(),
+                            defaultValue);
+                } else {
+                    argumentSpec = argumentSpec.addArgument(argumentName.get(),
+                            (Class<PythonLikeObject>) parameterTypes[i].getJavaClass(),
+                            defaultValue);
+                }
+            }
+
+            if (extraPositionalArgumentsVariableIndex.isPresent()) {
+                argumentSpec = argumentSpec.addExtraPositionalVarArgument("*vargs");
+            }
+
+            if (extraKeywordArgumentsVariableIndex.isPresent()) {
+                argumentSpec = argumentSpec.addExtraKeywordVarArgument("**kwargs");
+            }
+            return argumentSpec;
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public PythonLikeType getReturnType() {
@@ -131,6 +220,10 @@ public class PythonFunctionSignature {
 
     public MethodDescriptor getMethodDescriptor() {
         return methodDescriptor;
+    }
+
+    public boolean isFromArgumentSpec() {
+        return isFromArgumentSpec;
     }
 
     public boolean matchesParameters(PythonLikeType... callParameters) {
@@ -213,18 +306,20 @@ public class PythonFunctionSignature {
     }
 
     public void callMethod(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper, int argumentCount) {
-        if (argumentCount < parameterTypes.length && defaultArgumentHolderClass == null) {
+        Type[] descriptorParameterTypes = methodDescriptor.getParameterTypes();
+        if (argumentCount < descriptorParameterTypes.length && defaultArgumentHolderClass == null) {
             throw new IllegalStateException("Cannot call " + this + " because there are not enough arguments");
         }
 
-        if (argumentCount > parameterTypes.length && extraPositionalArgumentsVariableIndex.isEmpty()) {
+        if (argumentCount > descriptorParameterTypes.length && extraPositionalArgumentsVariableIndex.isEmpty()) {
             throw new IllegalStateException("Cannot call " + this + " because there are too many arguments");
         }
 
-        int[] argumentLocals = new int[parameterTypes.length];
+        int[] argumentLocals = new int[descriptorParameterTypes.length];
 
         boolean isVirtual = methodDescriptor.getMethodType() != MethodDescriptor.MethodType.STATIC
                 || methodDescriptor.getMethodType() != MethodDescriptor.MethodType.STATIC_AS_VIRTUAL;
+        final int offset = (methodDescriptor.getMethodType() == MethodDescriptor.MethodType.CLASS) ? 1 : 0;
 
         if (extraPositionalArgumentsVariableIndex.isPresent()) {
             argumentLocals[extraPositionalArgumentsVariableIndex.get()] = localVariableHelper.newLocal();
@@ -240,10 +335,10 @@ public class PythonFunctionSignature {
                     argumentLocals[extraKeywordArgumentsVariableIndex.get()]);
         }
 
-        if (argumentCount > parameterTypes.length) {
+        if (argumentCount > descriptorParameterTypes.length) {
             localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeTuple.class),
                     argumentLocals[extraPositionalArgumentsVariableIndex.get()]);
-            for (int i = argumentCount; i >= parameterTypes.length; i--) {
+            for (int i = argumentCount; i >= descriptorParameterTypes.length; i--) {
                 methodVisitor.visitInsn(Opcodes.DUP_X1);
                 methodVisitor.visitInsn(Opcodes.SWAP);
                 methodVisitor.visitInsn(Opcodes.ICONST_0);
@@ -255,19 +350,27 @@ public class PythonFunctionSignature {
             methodVisitor.visitInsn(Opcodes.POP);
         }
 
-        int readArguments = Math.min(argumentCount, parameterTypes.length);
+        int readArguments = Math.min(argumentCount, descriptorParameterTypes.length - offset);
+
         for (int i = 0; i < readArguments; i++) {
-            if ((extraPositionalArgumentsVariableIndex.isPresent() && extraPositionalArgumentsVariableIndex.get() == i) ||
-                    (extraKeywordArgumentsVariableIndex.isPresent() && extraKeywordArgumentsVariableIndex.get() == i)) {
+            if ((extraPositionalArgumentsVariableIndex.isPresent() && extraPositionalArgumentsVariableIndex.get() == i + offset)
+                    ||
+                    (extraKeywordArgumentsVariableIndex.isPresent()
+                            && extraKeywordArgumentsVariableIndex.get() == i + offset)) {
                 continue; // These parameters are set last
             }
-            argumentLocals[parameterTypes.length - i - 1] = localVariableHelper.newLocal();
+            argumentLocals[descriptorParameterTypes.length - i - 1] = localVariableHelper.newLocal();
             localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class),
-                    argumentLocals[parameterTypes.length - i - 1]);
+                    argumentLocals[descriptorParameterTypes.length - i - 1]);
         }
-
         if (isVirtual) {
-            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
+            if (methodDescriptor.getMethodType() == MethodDescriptor.MethodType.CLASS) {
+                methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                        "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                        true);
+            } else {
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
+            }
         }
 
         for (int i = 0; i < readArguments; i++) {
@@ -276,33 +379,33 @@ public class PythonFunctionSignature {
                 continue; // These parameters are set in the previous section
             }
 
-            localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), argumentLocals[i]);
-            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, parameterTypes[i].getJavaTypeInternalName());
+            localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), argumentLocals[i + offset]);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, descriptorParameterTypes[i + offset].getInternalName());
         }
 
-        for (int i = parameterTypes.length - argumentCount; i > parameterTypes.length - defaultArgumentList.size(); i--) {
-            int defaultIndex = defaultArgumentList.size() - i;
+        for (int i = readArguments; i < descriptorParameterTypes.length - offset; i++) {
+            int defaultIndex = i - readArguments;
 
             methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(defaultArgumentHolderClass),
                     PythonDefaultArgumentImplementor.getConstantName(defaultIndex),
-                    parameterTypes[defaultIndex].getJavaTypeDescriptor());
+                    descriptorParameterTypes[i + offset].getDescriptor());
         }
 
         if (extraPositionalArgumentsVariableIndex.isPresent()) {
             localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeTuple.class),
                     argumentLocals[extraPositionalArgumentsVariableIndex.get()]);
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
-                    parameterTypes[extraPositionalArgumentsVariableIndex.get()].getJavaTypeInternalName());
+                    descriptorParameterTypes[extraPositionalArgumentsVariableIndex.get()].getInternalName());
         }
 
         if (extraKeywordArgumentsVariableIndex.isPresent()) {
             localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeDict.class),
                     argumentLocals[extraKeywordArgumentsVariableIndex.get()]);
             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
-                    parameterTypes[extraKeywordArgumentsVariableIndex.get()].getJavaTypeInternalName());
+                    descriptorParameterTypes[extraKeywordArgumentsVariableIndex.get()].getInternalName());
         }
 
-        for (int i = 0; i < parameterTypes.length; i++) {
+        for (int i = 0; i < descriptorParameterTypes.length; i++) {
             localVariableHelper.freeLocal();
         }
 
@@ -319,12 +422,13 @@ public class PythonFunctionSignature {
     public void callWithKeywords(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
             int argumentCount) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        Type[] descriptorParameterTypes = methodDescriptor.getParameterTypes();
 
-        if (argumentCount < parameterTypes.length && defaultArgumentHolderClass == null) {
+        if (argumentCount < descriptorParameterTypes.length && defaultArgumentHolderClass == null) {
             throw new IllegalStateException("Cannot call " + this + " because there are not enough arguments");
         }
 
-        if (argumentCount > parameterTypes.length && extraPositionalArgumentsVariableIndex.isEmpty()
+        if (argumentCount > descriptorParameterTypes.length && extraPositionalArgumentsVariableIndex.isEmpty()
                 && extraKeywordArgumentsVariableIndex.isEmpty()) {
             throw new IllegalStateException("Cannot call " + this + " because there are too many arguments");
         }
@@ -361,11 +465,11 @@ public class PythonFunctionSignature {
                     false);
         }
 
-        for (int i = 0; i < parameterTypes.length; i++) {
+        for (int i = 0; i < descriptorParameterTypes.length; i++) {
             methodVisitor.visitInsn(Opcodes.DUP);
             methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(defaultArgumentHolderClass),
                     PythonDefaultArgumentImplementor.getArgumentName(i),
-                    "L" + parameterTypes[i].getJavaTypeInternalName() + ";");
+                    descriptorParameterTypes[i].getDescriptor());
             methodVisitor.visitInsn(Opcodes.SWAP);
         }
         methodVisitor.visitInsn(Opcodes.POP);
@@ -374,229 +478,77 @@ public class PythonFunctionSignature {
     }
 
     public void callUnpackListAndMap(MethodVisitor methodVisitor) {
+        Type[] descriptorParameterTypes = methodDescriptor.getParameterTypes();
+
         // TOS2 is the function to call, TOS1 is positional arguments, TOS is keyword arguments
-        // Create key tuple from TOS key set
-        methodVisitor.visitInsn(Opcodes.DUP);
-        CollectionImplementor.buildCollection(PythonLikeTuple.class, methodVisitor, 0);
-        methodVisitor.visitInsn(Opcodes.DUP_X1);
-        methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
-                "keySet", Type.getMethodDescriptor(Type.getType(Set.class)),
-                true);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Iterable.class),
-                "iterator", Type.getMethodDescriptor(Type.getType(Iterator.class)),
-                true);
+        if (methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
+            // stack is bound-method, pos, keywords
+            StackManipulationImplementor.rotateThree(methodVisitor);
+            // stack is keywords, bound-method, pos
+            StackManipulationImplementor.swap(methodVisitor);
 
-        Label noMoreKeys = new Label();
-        Label keyLoopStart = new Label();
+            // stack is keywords, pos, bound-method
+            methodVisitor.visitInsn(Opcodes.DUP_X2);
 
-        methodVisitor.visitLabel(keyLoopStart);
-        methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Iterator.class),
-                "hasNext", Type.getMethodDescriptor(Type.BOOLEAN_TYPE), true);
-        methodVisitor.visitJumpInsn(Opcodes.IFEQ, noMoreKeys);
+            // stack is bound-method, keywords, pos, bound-method
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(BoundPythonLikeFunction.class),
+                    "getInstance", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class)),
+                    false);
 
-        // Get the key
-        methodVisitor.visitInsn(Opcodes.DUP2); // Stack is ..., keyTuple, iterator, so dup 2 to dupe the keyTuple
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Iterator.class),
-                "next", Type.getMethodDescriptor(Type.getType(Object.class)), true);
-        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonString.class));
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeTuple.class),
-                "add", Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(PythonLikeObject.class)),
-                false);
-        methodVisitor.visitInsn(Opcodes.POP); // Pop return value
-        methodVisitor.visitJumpInsn(Opcodes.GOTO, keyLoopStart);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeType.class));
+            // stack is bound-method, keywords, pos, type
 
-        methodVisitor.visitLabel(noMoreKeys);
-        methodVisitor.visitInsn(Opcodes.POP2); // Pop off the now empty iterator
+            methodVisitor.visitInsn(Opcodes.DUP2);
 
-        // Stack is method, positionalArgumentList, keywordArguments, keyTuple
-        methodVisitor.visitInsn(Opcodes.DUP2_X1);
-        methodVisitor.visitInsn(Opcodes.POP2);
+            // stack is bound-method, keywords, pos, type, pos, type
+            methodVisitor.visitInsn(Opcodes.ICONST_0);
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "add",
+                    Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE, Type.getType(Object.class)),
+                    true);
+            // stack is bound-method, keywords, pos, type
+            methodVisitor.visitInsn(Opcodes.POP);
+            methodVisitor.visitInsn(Opcodes.SWAP);
 
-        // Stack is now method, keywordArguments, keyTuple, positionalArgumentList
-        methodVisitor.visitInsn(Opcodes.DUP_X2);
+            // stack is bound-method, pos, keywords
+        }
 
-        // Stack is now method, positionalArgumentList, keywordArguments, keyTuple, positionalArgumentList
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class),
-                "size", Type.getMethodDescriptor(Type.INT_TYPE),
-                true);
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(defaultArgumentHolderClass),
+                PythonDefaultArgumentImplementor.ARGUMENT_SPEC_STATIC_FIELD_NAME,
+                Type.getDescriptor(ArgumentSpec.class));
 
-        // Stack is now method, positionalArgumentList, keywordArguments, keyTuple, numberOfPositionalArguments
-        // Duplicate key tuple so we can correctly iterate keyword arguments
-        methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitInsn(Opcodes.DUP_X1);
-        methodVisitor.visitInsn(Opcodes.SWAP);
-
-        // Stack is now method, positionalArgumentList, keywordArguments, keyTuple, keyTuple, numberOfPositionalArguments
-
-        // Create the default argument holder from the key tuple and number of positional arguments
-        methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(defaultArgumentHolderClass));
-        methodVisitor.visitInsn(Opcodes.DUP_X2);
-        methodVisitor.visitInsn(Opcodes.DUP_X2);
-        methodVisitor.visitInsn(Opcodes.POP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(defaultArgumentHolderClass),
-                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeTuple.class), Type.INT_TYPE),
-                false);
-
-        // Stack is now method, positionalArgumentList, keywordArguments, keyTuple, defaults
         methodVisitor.visitInsn(Opcodes.DUP_X2);
         methodVisitor.visitInsn(Opcodes.POP);
 
-        // Stack is now method, positionalArgumentList, defaults, keywordArguments, keyTuple
-        // need to iterate tuple in reverse
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeTuple.class),
-                "getReversedIterator", Type.getMethodDescriptor(Type.getType(PythonIterator.class)),
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(ArgumentSpec.class),
+                "extractArgumentList", Type.getMethodDescriptor(Type.getType(List.class),
+                        Type.getType(List.class), Type.getType(Map.class)),
                 false);
 
-        // Stack is now method, positionalArgumentList, defaults, keywordArguments, iterator
-        Label noMoreKeywordArguments = new Label();
-        Label keywordArgumentsLoopStart = new Label();
-
-        methodVisitor.visitLabel(keywordArgumentsLoopStart);
-        methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonIterator.class),
-                "hasNext", Type.getMethodDescriptor(Type.BOOLEAN_TYPE),
-                false);
-        methodVisitor.visitJumpInsn(Opcodes.IFEQ, noMoreKeywordArguments);
-
-        // Stack is now method, positionalArgumentList, defaults, keywordArguments, iterator
-        methodVisitor.visitInsn(Opcodes.DUP_X2);
-
-        // Stack is now method, positionalArgumentList, iterator, defaults, keywordArguments, iterator
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonIterator.class),
-                "nextPythonItem", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class)),
-                false);
-
-        // Stack is now method, positionalArgumentList, iterator, defaults, keywordArguments, key
-        methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitInsn(Opcodes.DUP_X1);
-        methodVisitor.visitInsn(Opcodes.SWAP);
-
-        // Stack is now method, positionalArgumentList, iterator, defaults, keywordArguments, keywordArguments, key
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Map.class),
-                "get", Type.getMethodDescriptor(Type.getType(Object.class), Type.getType(Object.class)),
-                true);
-
-        // Stack is now method, positionalArgumentList, iterator, defaults, keywordArguments, value
-        methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitInsn(Opcodes.DUP_X2);
-        methodVisitor.visitInsn(Opcodes.POP);
-
-        // Stack is now method, positionalArgumentList, iterator, keywordArguments, defaults, value
-        methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitInsn(Opcodes.DUP_X1);
-        methodVisitor.visitInsn(Opcodes.SWAP);
-
-        // Stack is now method, positionalArgumentList, iterator, keywordArguments, defaults, defaults, value
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(defaultArgumentHolderClass),
-                "addArgument", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
-                false);
-
-        // Stack is now method, positionalArgumentList, iterator, keywordArguments, defaults
-        StackManipulationImplementor.rotateThree(methodVisitor);
-
-        // Stack is now method, positionalArgumentList, defaults, iterator, keywordArguments
-        methodVisitor.visitInsn(Opcodes.SWAP);
-
-        // Stack is now method, positionalArgumentList, defaults, keywordArguments, iterator
-        methodVisitor.visitJumpInsn(Opcodes.GOTO, keywordArgumentsLoopStart);
-
-        methodVisitor.visitLabel(noMoreKeywordArguments);
-
-        methodVisitor.visitInsn(Opcodes.POP2); // Pop off the empty iterator and used keyword arguments
-
-        // Stack is now method, positionalArgumentList, defaults
-        methodVisitor.visitInsn(Opcodes.SWAP);
-
-        // Stack is now method, defaults, positionalArgumentList
-
-        // Get the number of positional arguments
-        methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class), "size",
-                Type.getMethodDescriptor(Type.INT_TYPE), true);
-
-        // Stack is now method, defaults, positionalArgumentList, size
-        Label noMorePositionalArguments = new Label();
-        Label positionalArgumentsLoopStart = new Label();
-
-        // We are iterating the list in reverse, since defaults expect the arguments in reverse
-        methodVisitor.visitLabel(positionalArgumentsLoopStart);
-        methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitJumpInsn(Opcodes.IFEQ, noMorePositionalArguments); // if the current index is == 0, then end the loop
-
-        // Subtract 1 from last index to get current index
-        methodVisitor.visitInsn(Opcodes.ICONST_1);
-        methodVisitor.visitInsn(Opcodes.ISUB);
-
-        // Stack is now method, defaults, positionalArgumentList, index
-        methodVisitor.visitInsn(Opcodes.DUP2_X1);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
-                Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
-                true);
-        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeObject.class));
-
-        // Stack is now method, positionalArgumentList, index, default, item
-        methodVisitor.visitInsn(Opcodes.SWAP);
-        methodVisitor.visitInsn(Opcodes.DUP_X1);
-        methodVisitor.visitInsn(Opcodes.SWAP);
-
-        // Stack is now method, positionalArgumentList, index, default, default, item
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(defaultArgumentHolderClass),
-                "addArgument", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(PythonLikeObject.class)),
-                false);
-
-        // Stack is now method, positionalArgumentList, index, default
-        methodVisitor.visitInsn(Opcodes.DUP_X2);
-        methodVisitor.visitInsn(Opcodes.POP);
-
-        // Stack is now method, default, positionalArgumentList, index
-        methodVisitor.visitJumpInsn(Opcodes.GOTO, positionalArgumentsLoopStart);
-
-        methodVisitor.visitLabel(noMorePositionalArguments);
-
-        // Pop off the index and positional argument list
-        methodVisitor.visitInsn(Opcodes.POP2);
-
-        // Stack is method, default
-
+        // Stack is function to call, argument list
         // Unwrap the bound method
         if (methodDescriptor.methodType == MethodDescriptor.MethodType.VIRTUAL ||
-                methodDescriptor.methodType == MethodDescriptor.MethodType.INTERFACE ||
-                methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
+                methodDescriptor.methodType == MethodDescriptor.MethodType.INTERFACE) {
             methodVisitor.visitInsn(Opcodes.SWAP);
             methodVisitor.visitInsn(Opcodes.DUP_X1);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(BoundPythonLikeFunction.class),
                     "getInstance", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class)),
                     false);
-            if (methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
-                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeType.class));
-            } else {
-                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
-            }
 
-            if (methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
-                // need to set type of defaults
-                methodVisitor.visitInsn(Opcodes.DUP2);
-                methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(defaultArgumentHolderClass),
-                        PythonDefaultArgumentImplementor.getArgumentName(0),
-                        parameterTypes[0].getJavaTypeDescriptor());
-
-                methodVisitor.visitInsn(Opcodes.POP);
-            } else {
-                // self is not in defaults; leave it at the bottom of the stack
-                methodVisitor.visitInsn(Opcodes.SWAP);
-            }
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getDeclaringClassInternalName());
+            methodVisitor.visitInsn(Opcodes.SWAP);
         }
 
         // Stack is method, boundedInstance?, default
 
         // Read the parameters
-        for (int i = 0; i < parameterTypes.length; i++) {
+        for (int i = 0; i < descriptorParameterTypes.length; i++) {
             methodVisitor.visitInsn(Opcodes.DUP);
-            methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(defaultArgumentHolderClass),
-                    PythonDefaultArgumentImplementor.getArgumentName(i),
-                    parameterTypes[i].getJavaTypeDescriptor());
+            methodVisitor.visitLdcInsn(i);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                    "get", Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
+                    true);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, descriptorParameterTypes[i].getInternalName());
             methodVisitor.visitInsn(Opcodes.SWAP);
         }
         methodVisitor.visitInsn(Opcodes.POP);

@@ -19,6 +19,7 @@ import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.TypeError;
+import org.optaplanner.jpyinterpreter.util.arguments.ArgumentSpec;
 
 /**
  * Implement classes that hold static constants used for default arguments when calling
@@ -26,6 +27,8 @@ import org.optaplanner.jpyinterpreter.types.errors.TypeError;
 public class PythonDefaultArgumentImplementor {
     public static final String ARGUMENT_PREFIX = "argument_";
     public static final String CONSTANT_PREFIX = "DEFAULT_VALUE_";
+
+    public static final String ARGUMENT_SPEC_STATIC_FIELD_NAME = "argumentSpec";
 
     public static final String KEY_TUPLE_FIELD_NAME = "keyword_args";
 
@@ -44,7 +47,8 @@ public class PythonDefaultArgumentImplementor {
     public static Class<?> createDefaultArgumentFor(MethodDescriptor methodDescriptor,
             List<PythonLikeObject> defaultArgumentList,
             Map<String, Integer> argumentNameToIndexMap, Optional<Integer> extraPositionalArgumentsVariableIndex,
-            Optional<Integer> extraKeywordArgumentsVariableIndex) {
+            Optional<Integer> extraKeywordArgumentsVariableIndex,
+            ArgumentSpec<?> argumentSpec) {
         String maybeClassName = PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE +
                 methodDescriptor.declaringClassInternalName.replace('/', '.') +
                 "."
@@ -65,6 +69,9 @@ public class PythonDefaultArgumentImplementor {
                 });
 
         // static constants
+        classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, ARGUMENT_SPEC_STATIC_FIELD_NAME,
+                Type.getDescriptor(ArgumentSpec.class), null, null);
+
         final int defaultStart = methodDescriptor.getParameterTypes().length - defaultArgumentList.size();
         for (int i = 0; i < defaultArgumentList.size(); i++) {
 
@@ -167,6 +174,7 @@ public class PythonDefaultArgumentImplementor {
 
         try {
             Class<?> compiledClass = BuiltinTypes.asmClassLoader.loadClass(className);
+            compiledClass.getField(ARGUMENT_SPEC_STATIC_FIELD_NAME).set(null, argumentSpec);
             for (int i = 0; i < defaultArgumentList.size(); i++) {
                 PythonLikeObject value = defaultArgumentList.get(i);
                 String fieldName = getConstantName(i);
@@ -326,8 +334,35 @@ public class PythonDefaultArgumentImplementor {
                     } else {
                         methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(TypeError.class));
                         methodVisitor.visitInsn(Opcodes.DUP);
+
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, KEY_TUPLE_FIELD_NAME,
+                                Type.getDescriptor(PythonLikeTuple.class));
+
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, REMAINING_KEY_ARGUMENTS_FIELD_NAME,
+                                Type.getDescriptor(int.class));
+
+                        methodVisitor.visitInsn(Opcodes.ICONST_1);
+                        methodVisitor.visitInsn(Opcodes.ISUB);
+
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class), "get",
+                                Type.getMethodDescriptor(Type.getType(Object.class), Type.INT_TYPE),
+                                true);
+
+                        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonString.class));
+
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonString.class),
+                                "getValue",
+                                Type.getMethodDescriptor(Type.getType(String.class)),
+                                false);
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC,
+                                Type.getInternalName(PythonDefaultArgumentImplementor.class),
+                                "getUnknownKeyArgument", Type.getMethodDescriptor(Type.getType(String.class),
+                                        Type.getType(String.class)),
+                                false);
                         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(TypeError.class),
-                                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
+                                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)), false);
                         methodVisitor.visitInsn(Opcodes.ATHROW);
                     }
                 },
@@ -380,8 +415,16 @@ public class PythonDefaultArgumentImplementor {
                     } else {
                         methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(TypeError.class));
                         methodVisitor.visitInsn(Opcodes.DUP);
+                        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, POSITIONAL_INDEX,
+                                Type.getDescriptor(int.class));
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC,
+                                Type.getInternalName(PythonDefaultArgumentImplementor.class),
+                                "getTooManyPositionalArguments", Type.getMethodDescriptor(Type.getType(String.class),
+                                        Type.INT_TYPE),
+                                false);
                         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(TypeError.class),
-                                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
+                                "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String.class)), false);
                         methodVisitor.visitInsn(Opcodes.ATHROW);
                     }
                 },
@@ -398,5 +441,13 @@ public class PythonDefaultArgumentImplementor {
 
         methodVisitor.visitMaxs(-1, -1);
         methodVisitor.visitEnd();
+    }
+
+    public static String getUnknownKeyArgument(String keyArgument) {
+        return "got an unexpected keyword argument '" + keyArgument + "'";
+    }
+
+    public static String getTooManyPositionalArguments(int numOfArguments) {
+        return "Got too many positional arguments (" + numOfArguments + ")";
     }
 }
