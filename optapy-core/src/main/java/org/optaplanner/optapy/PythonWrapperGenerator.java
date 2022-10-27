@@ -57,6 +57,7 @@ import org.optaplanner.jpyinterpreter.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonNone;
 import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
+import org.optaplanner.jpyinterpreter.types.wrappers.PythonObjectWrapper;
 
 import io.quarkus.gizmo.AnnotationCreator;
 import io.quarkus.gizmo.AssignableResultHandle;
@@ -1301,7 +1302,10 @@ public class PythonWrapperGenerator {
             throw new IllegalStateException(e);
         }
         PythonLikeType parentType = null;
-        if (PythonLikeObject.class.isAssignableFrom(clazz.getSuperclass())) {
+        boolean hasParent = PythonLikeObject.class.isAssignableFrom(clazz.getSuperclass())
+                && !clazz.getSuperclass().equals(PythonObjectWrapper.class);
+
+        if (hasParent) {
             try {
                 parentType = (PythonLikeType) clazz.getSuperclass().getField(PYTHON_LIKE_TYPE_FIELD_NAME).get(null);
             } catch (IllegalAccessException | NoSuchFieldException e) {
@@ -1455,26 +1459,44 @@ public class PythonWrapperGenerator {
             FieldDescriptor referenceMapField, FieldDescriptor pythonLikeValueMapField, FieldDescriptor pythonSetterField,
             Class<?> parentClass, List<FieldDescriptor> fieldDescriptorList, List<Object> returnTypeList) {
         // Entity(PythonLikeType) constructor, for subclasses
-        MethodCreator methodCreator = classCreator
-                .getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), PythonLikeType.class));
-        methodCreator.setModifiers(Modifier.PUBLIC);
-        methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, PythonLikeType.class),
-                methodCreator.getThis(),
-                methodCreator.readStaticField(FieldDescriptor.of(classCreator.getClassName(),
-                        "$TYPE",
-                        PythonLikeType.class)));
-        methodCreator.returnValue(methodCreator.getThis());
+        if (!PythonObjectWrapper.class.isAssignableFrom(parentClass)) {
+            // Entity(PythonLikeType) constructor, for subclasses
+            MethodCreator methodCreator = classCreator
+                    .getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), PythonLikeType.class));
+            methodCreator.setModifiers(Modifier.PUBLIC);
+            methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, PythonLikeType.class),
+                    methodCreator.getThis(),
+                    methodCreator.readStaticField(FieldDescriptor.of(classCreator.getClassName(),
+                            "$TYPE",
+                            PythonLikeType.class)));
+            methodCreator.returnValue(methodCreator.getThis());
+        } else {
+            // Entity(OpaquePythonReference) constructor, for subclasses
+            MethodCreator methodCreator = classCreator
+                    .getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(), OpaquePythonReference.class));
+            methodCreator.setModifiers(Modifier.PUBLIC);
+            methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, OpaquePythonReference.class),
+                    methodCreator.getThis(),
+                    methodCreator.getMethodParam(0));
+            methodCreator.returnValue(methodCreator.getThis());
+        }
 
         // Entity(OpaquePythonReference, Number, Map, TriFunction) constructor, for cloning
-        methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(),
+        MethodCreator methodCreator = classCreator.getMethodCreator(MethodDescriptor.ofConstructor(classCreator.getClassName(),
                 OpaquePythonReference.class, Number.class, Map.class, TriFunction.class));
         methodCreator.setModifiers(Modifier.PUBLIC);
 
-        methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, PythonLikeType.class),
-                methodCreator.getThis(),
-                methodCreator.readStaticField(FieldDescriptor.of(classCreator.getClassName(),
-                        "$TYPE",
-                        PythonLikeType.class)));
+        if (PythonObjectWrapper.class.isAssignableFrom(parentClass)) {
+            methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, OpaquePythonReference.class),
+                    methodCreator.getThis(),
+                    methodCreator.getMethodParam(0));
+        } else {
+            methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, PythonLikeType.class),
+                    methodCreator.getThis(),
+                    methodCreator.readStaticField(FieldDescriptor.of(classCreator.getClassName(),
+                            "$TYPE",
+                            PythonLikeType.class)));
+        }
         try {
             Method initMethod = parentClass.getMethod("$init", void.class,
                     OpaquePythonReference.class, Number.class, Map.class,

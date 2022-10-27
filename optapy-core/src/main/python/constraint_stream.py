@@ -1,6 +1,8 @@
 import dataclasses
 import sys
 
+import jpyinterpreter
+
 from .optaplanner_java_interop import get_class
 from .jpype_type_conversions import _convert_to_java_compatible_object
 from .jpype_type_conversions import PythonFunction, PythonBiFunction, PythonTriFunction, PythonQuadFunction, \
@@ -106,11 +108,30 @@ class PythonPentaPredicate:
         return self.delegate(argument1, argument2, argument3, argument4, argument5)
 
 
+def _check_if_type_args_are_python_object_wrappers(type_args):
+    global function_bytecode_translation, all_translated_successfully
+    from org.optaplanner.jpyinterpreter.types.wrappers import PythonObjectWrapper
+
+    for cls in type_args:
+        if PythonObjectWrapper.class_.isAssignableFrom(cls):
+            all_translated_successfully = False
+            return True
+
+    return False
+
+
 def function_cast(function, *type_args):
     global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(function).parameters)
     if len(type_args) != arg_count:
         raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
+
+    if _check_if_type_args_are_python_object_wrappers(type_args):
+        if function_bytecode_translation is BytecodeTranslation.FORCE:
+            raise ValueError('Cannot force bytecode translation since some types could not be translated')
+
+        return default_function_cast(function, arg_count)
+
     if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import Function, BiFunction
         from org.optaplanner.core.api.function import TriFunction, QuadFunction, PentaFunction
@@ -158,6 +179,13 @@ def predicate_cast(predicate, *type_args):
     arg_count = len(inspect.signature(predicate).parameters)
     if len(type_args) != arg_count:
         raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
+
+    if _check_if_type_args_are_python_object_wrappers(type_args):
+        if function_bytecode_translation is BytecodeTranslation.FORCE:
+            raise ValueError('Cannot force bytecode translation since some types could not be translated')
+
+        return default_predicate_cast(predicate, arg_count)
+
     if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import Predicate, BiPredicate
         from org.optaplanner.core.api.function import TriPredicate, QuadPredicate, PentaPredicate
@@ -203,6 +231,13 @@ def to_int_function_cast(function, *type_args):
     arg_count = len(inspect.signature(function).parameters)
     if len(type_args) != arg_count:
         raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
+
+    if _check_if_type_args_are_python_object_wrappers(type_args):
+        if function_bytecode_translation is BytecodeTranslation.FORCE:
+            raise ValueError('Cannot force bytecode translation since some types could not be translated')
+
+        return default_to_int_function_cast(function, arg_count)
+
     if function_bytecode_translation is not BytecodeTranslation.NONE:
         from java.util.function import ToIntFunction, ToIntBiFunction
         from org.optaplanner.core.api.function import ToIntTriFunction, ToIntQuadFunction
