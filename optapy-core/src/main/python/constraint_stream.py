@@ -1,15 +1,20 @@
-
 import dataclasses
+import sys
+
+import jpyinterpreter
 
 from .optaplanner_java_interop import get_class
 from .jpype_type_conversions import _convert_to_java_compatible_object
 from .jpype_type_conversions import PythonFunction, PythonBiFunction, PythonTriFunction, PythonQuadFunction, \
     PythonPentaFunction, PythonToIntFunction, PythonToIntBiFunction, PythonToIntTriFunction, PythonToIntQuadFunction, \
     PythonPredicate, PythonBiPredicate, PythonTriPredicate, PythonQuadPredicate, PythonPentaPredicate
+from jpyinterpreter import translate_python_bytecode_to_java_bytecode, check_current_python_version_supported
+from enum import Enum
 import jpype.imports  # noqa
 from jpype import JImplements, JOverride, JObject, JClass, JInt
 import inspect
-from typing import TYPE_CHECKING, Type, Callable, Optional, overload, TypeVar, Generic, Any, Union
+import logging
+from typing import TYPE_CHECKING, Type, Callable, Optional, overload, TypeVar, Generic, Any, Union, List, Sequence
 
 if TYPE_CHECKING:
     from org.optaplanner.core.api.score.stream import Constraint, ConstraintFactory
@@ -20,15 +25,137 @@ if TYPE_CHECKING:
     from org.optaplanner.core.api.score.stream.penta import PentaJoiner
     from org.optaplanner.core.api.score import Score
 
-#  Class type variables
-A = TypeVar('A')
-B = TypeVar('B')
-C = TypeVar('C')
-D = TypeVar('D')
+
+class BytecodeTranslation(Enum):
+    """
+    Specifies how bytecode translation should occur
+    """
+    FORCE = 'FORCE'
+    """
+    Forces bytecode translation, raising an error if it is impossible
+    """
+    IF_POSSIBLE = 'IF_POSSIBLE'
+    """
+    Use bytecode translation if possible, resorting to original Python implementation if impossible (default)
+    """
+    NONE = 'NONE'
+    """
+    Always use original Python implementation; bytecode translation will not occur
+    """
 
 
-def function_cast(function: A) -> A:
+function_bytecode_translation: BytecodeTranslation = BytecodeTranslation.IF_POSSIBLE
+all_translated_successfully = True
+logger = logging.getLogger('optapy')
+
+def _check_if_bytecode_translation_possible():
+    try:
+        check_current_python_version_supported()
+    except NotImplementedError:
+        if all_translated_successfully:
+            logger.warning('The bytecode translator does not support the current python version %s. This will '
+                           'severely degrade performance.', sys.version, exc_info=True)
+        raise
+
+
+@JImplements('java.util.function.Predicate', deferred=True)
+class PythonPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument):
+        return self.delegate(argument)
+
+
+@JImplements('java.util.function.BiPredicate', deferred=True)
+class PythonBiPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2):
+        return self.delegate(argument1, argument2)
+
+
+@JImplements('org.optaplanner.core.api.function.TriPredicate', deferred=True)
+class PythonTriPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3):
+        return self.delegate(argument1, argument2, argument3)
+
+
+@JImplements('org.optaplanner.core.api.function.QuadPredicate', deferred=True)
+class PythonQuadPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3, argument4):
+        return self.delegate(argument1, argument2, argument3, argument4)
+
+
+@JImplements('org.optaplanner.core.api.function.PentaPredicate', deferred=True)
+class PythonPentaPredicate:
+    def __init__(self, delegate):
+        self.delegate = delegate
+
+    @JOverride
+    def test(self, argument1, argument2, argument3, argument4, argument5):
+        return self.delegate(argument1, argument2, argument3, argument4, argument5)
+
+
+def _check_if_type_args_are_python_object_wrappers(type_args):
+    global function_bytecode_translation, all_translated_successfully
+    from org.optaplanner.jpyinterpreter.types.wrappers import PythonObjectWrapper
+
+    for cls in type_args:
+        if PythonObjectWrapper.class_.isAssignableFrom(cls):
+            all_translated_successfully = False
+            return True
+
+    return False
+
+
+def function_cast(function, *type_args):
+    global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(function).parameters)
+    if len(type_args) != arg_count:
+        raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
+
+    if _check_if_type_args_are_python_object_wrappers(type_args):
+        if function_bytecode_translation is BytecodeTranslation.FORCE:
+            raise ValueError('Cannot force bytecode translation since some types could not be translated')
+
+        return default_function_cast(function, arg_count)
+
+    if function_bytecode_translation is not BytecodeTranslation.NONE:
+        from java.util.function import Function, BiFunction
+        from org.optaplanner.core.api.function import TriFunction, QuadFunction, PentaFunction
+        from org.optaplanner.jpyinterpreter import PythonLikeObject
+
+        try:
+            _check_if_bytecode_translation_possible()
+            if arg_count == 1:
+                return translate_python_bytecode_to_java_bytecode(function, Function, *type_args, PythonLikeObject)
+            elif arg_count == 2:
+                return translate_python_bytecode_to_java_bytecode(function, BiFunction, *type_args, PythonLikeObject)
+            elif arg_count == 3:
+                return translate_python_bytecode_to_java_bytecode(function, TriFunction, *type_args, PythonLikeObject)
+            elif arg_count == 4:
+                return translate_python_bytecode_to_java_bytecode(function, QuadFunction, *type_args, PythonLikeObject)
+            elif arg_count == 5:
+                return translate_python_bytecode_to_java_bytecode(function, PentaFunction, *type_args, PythonLikeObject)
+        except:  # noqa
+            if function_bytecode_translation is BytecodeTranslation.FORCE:
+                raise
+
+            all_translated_successfully = False
+            return default_function_cast(function, arg_count)
+
     return default_function_cast(function, arg_count)
 
 
@@ -47,8 +174,40 @@ def default_function_cast(function, arg_count):
         raise ValueError
 
 
-def predicate_cast(predicate: A) -> A:
+def predicate_cast(predicate, *type_args):
+    global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(predicate).parameters)
+    if len(type_args) != arg_count:
+        raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
+
+    if _check_if_type_args_are_python_object_wrappers(type_args):
+        if function_bytecode_translation is BytecodeTranslation.FORCE:
+            raise ValueError('Cannot force bytecode translation since some types could not be translated')
+
+        return default_predicate_cast(predicate, arg_count)
+
+    if function_bytecode_translation is not BytecodeTranslation.NONE:
+        from java.util.function import Predicate, BiPredicate
+        from org.optaplanner.core.api.function import TriPredicate, QuadPredicate, PentaPredicate
+        try:
+            _check_if_bytecode_translation_possible()
+            if arg_count == 1:
+                return translate_python_bytecode_to_java_bytecode(predicate, Predicate, *type_args)
+            elif arg_count == 2:
+                return translate_python_bytecode_to_java_bytecode(predicate, BiPredicate, *type_args)
+            elif arg_count == 3:
+                return translate_python_bytecode_to_java_bytecode(predicate, TriPredicate, *type_args)
+            elif arg_count == 4:
+                return translate_python_bytecode_to_java_bytecode(predicate, QuadPredicate, *type_args)
+            elif arg_count == 5:
+                return translate_python_bytecode_to_java_bytecode(predicate, PentaPredicate, *type_args)
+        except:  # noqa
+            if function_bytecode_translation is BytecodeTranslation.FORCE:
+                raise
+
+            all_translated_successfully = False
+            return default_predicate_cast(predicate, arg_count)
+
     return default_predicate_cast(predicate, arg_count)
 
 
@@ -67,22 +226,88 @@ def default_predicate_cast(predicate, arg_count):
         raise ValueError
 
 
-def to_int_function_cast(function: A) -> A:
+def to_int_function_cast(function, *type_args):
+    global function_bytecode_translation, all_translated_successfully
     arg_count = len(inspect.signature(function).parameters)
+    if len(type_args) != arg_count:
+        raise ValueError(f'Invalid function: expected {len(type_args)} arguments but got {arg_count}')
+
+    if _check_if_type_args_are_python_object_wrappers(type_args):
+        if function_bytecode_translation is BytecodeTranslation.FORCE:
+            raise ValueError('Cannot force bytecode translation since some types could not be translated')
+
+        return default_to_int_function_cast(function, arg_count)
+
+    if function_bytecode_translation is not BytecodeTranslation.NONE:
+        from java.util.function import ToIntFunction, ToIntBiFunction
+        from org.optaplanner.core.api.function import ToIntTriFunction, ToIntQuadFunction
+
+        try:
+            _check_if_bytecode_translation_possible()
+            if arg_count == 1:
+                return translate_python_bytecode_to_java_bytecode(function, ToIntFunction, *type_args)
+            elif arg_count == 2:
+                return translate_python_bytecode_to_java_bytecode(function, ToIntBiFunction, *type_args)
+            elif arg_count == 3:
+                return translate_python_bytecode_to_java_bytecode(function, ToIntTriFunction, *type_args)
+            elif arg_count == 4:
+                return translate_python_bytecode_to_java_bytecode(function, ToIntQuadFunction, *type_args)
+        except:  # noqa
+            if function_bytecode_translation is BytecodeTranslation.FORCE:
+                raise
+
+            all_translated_successfully = False
+            return default_to_int_function_cast(function, arg_count)
+
     return default_to_int_function_cast(function, arg_count)
 
 
 def default_to_int_function_cast(function, arg_count):
     if arg_count == 1:
-        return PythonToIntFunction(function)
+        return PythonToIntFunction(lambda a: _convert_to_java_compatible_object(function(a)))
     elif arg_count == 2:
-        return PythonToIntBiFunction(function)
+        return PythonToIntBiFunction(lambda a, b: _convert_to_java_compatible_object(function(a, b)))
     elif arg_count == 3:
-        return PythonToIntTriFunction(function)
+        return PythonToIntTriFunction(lambda a, b, c: _convert_to_java_compatible_object(function(a, b, c)))
     elif arg_count == 4:
-        return PythonToIntQuadFunction(function)
+        return PythonToIntQuadFunction(lambda a, b, c, d: _convert_to_java_compatible_object(function(a, b, c, d)))
     else:
         raise ValueError
+
+
+@dataclasses.dataclass
+class SamePropertyUniJoiner:
+    joiner_creator: Callable
+    join_function: Callable
+
+
+@dataclasses.dataclass
+class PropertyJoiner:
+    joiner_creator: Callable
+    left_join_function: Callable
+    right_join_function: Callable
+
+
+@dataclasses.dataclass
+class SameOverlappingPropertyUniJoiner:
+    joiner_creator: Callable
+    start_function: Callable
+    end_function: Callable
+
+
+@dataclasses.dataclass
+class OverlappingPropertyJoiner:
+    joiner_creator: Callable
+    left_start_function: Callable
+    left_end_function: Callable
+    right_start_function: Callable
+    right_end_function: Callable
+
+
+@dataclasses.dataclass
+class FilteringJoiner:
+    joiner_creator: Callable
+    filter_function: Callable
 
 
 def extract_joiners(joiner_tuple, *stream_types):
@@ -92,7 +317,7 @@ def extract_joiners(joiner_tuple, *stream_types):
     from org.optaplanner.core.api.score.stream.penta import PentaJoiner
 
     if len(joiner_tuple) == 1 and (isinstance(joiner_tuple[0], list) or isinstance(joiner_tuple[0], tuple)):
-        joiner_tuple = joiner_tuple[0]  # Joiners was passed as a list of Joiners instead of varargs
+        joiner_tuple = joiner_tuple[0] # Joiners was passed as a list of Joiners instead of varargs
     array_size = len(joiner_tuple)
     output_array = None
     array_type = None
@@ -112,9 +337,42 @@ def extract_joiners(joiner_tuple, *stream_types):
         raise ValueError
 
     for i in range(array_size):
-        output_array[i] = (array_type) @ (joiner_tuple[i])
+        joiner_info = joiner_tuple[i]
+        created_joiner = None
+        if isinstance(joiner_info, SamePropertyUniJoiner):
+            property_function = function_cast(joiner_info.join_function, stream_types[0])
+            created_joiner = joiner_info.joiner_creator(property_function)
+        elif isinstance(joiner_info, PropertyJoiner):
+            left_property_function = function_cast(joiner_info.left_join_function, *stream_types[:-1])
+            right_property_function = function_cast(joiner_info.right_join_function, stream_types[-1])
+            created_joiner = joiner_info.joiner_creator(left_property_function, right_property_function)
+        elif isinstance(joiner_info, SameOverlappingPropertyUniJoiner):
+            start_function = function_cast(joiner_info.start_function, stream_types[0])
+            end_function = function_cast(joiner_info.end_function, stream_types[0])
+            created_joiner = joiner_info.joiner_creator(start_function, end_function)
+        elif isinstance(joiner_info, OverlappingPropertyJoiner):
+            left_start_function = function_cast(joiner_info.left_start_function, *stream_types[:-1])
+            left_end_function = function_cast(joiner_info.left_end_function, *stream_types[:-1])
+            right_start_function = function_cast(joiner_info.right_start_function, stream_types[-1])
+            right_end_function = function_cast(joiner_info.right_end_function, stream_types[-1])
+            created_joiner = joiner_info.joiner_creator(left_start_function, left_end_function,
+                                                        right_start_function, right_end_function)
+        elif isinstance(joiner_info, FilteringJoiner):
+            filter_function = predicate_cast(joiner_info.filter_function, *stream_types)
+            created_joiner = joiner_info.joiner_creator(filter_function)
+        else:
+            raise ValueError(f'Invalid Joiner: {joiner_info}. Create Joiners via optapy.constraint.Joiners.')
+
+        output_array[i] = array_type @ created_joiner
 
     return output_array
+
+
+#  Class type variables
+A = TypeVar('A')
+B = TypeVar('B')
+C = TypeVar('C')
+D = TypeVar('D')
 
 
 @dataclasses.dataclass
@@ -152,29 +410,91 @@ def extract_constraint_info(default_package: str, args: tuple) -> ConstraintInfo
         return ConstraintInfo(constraint_package, constraint_name, score, args[0])
 
 
+@dataclasses.dataclass
+class NoArgsConstraintCollector:
+    collector_creator: Callable
+
+
+@dataclasses.dataclass
+class GroupMappingSingleArgConstraintCollector:
+    collector_creator: Callable
+    group_mapping: Callable
+
+
+@dataclasses.dataclass
+class KeyValueMappingConstraintCollector:
+    collector_creator: Callable
+    key_mapping: Callable
+    value_mapping: Callable
+
+
+@dataclasses.dataclass
+class GroupIntMappingSingleArgConstraintCollector:
+    collector_creator: Callable
+    group_mapping: Callable
+
+
+@dataclasses.dataclass
+class ComposeConstraintCollector:
+    collector_creator: Callable
+    subcollectors: Sequence[Any]
+    compose_function: Callable
+
+
+@dataclasses.dataclass
+class ConditionalConstraintCollector:
+    collector_creator: Callable
+    predicate: Callable
+    delegate: Any
+
+
+def extract_collector(collector_info, *type_arguments):
+    if isinstance(collector_info, NoArgsConstraintCollector):
+        return collector_info.collector_creator()
+    elif isinstance(collector_info, GroupMappingSingleArgConstraintCollector):
+        return collector_info.collector_creator(function_cast(collector_info.group_mapping, *type_arguments))
+    elif isinstance(collector_info, KeyValueMappingConstraintCollector):
+        return collector_info.collector_creator(function_cast(collector_info.key_mapping, *type_arguments),
+                                                function_cast(collector_info.value_mapping, *type_arguments))
+    elif isinstance(collector_info, GroupIntMappingSingleArgConstraintCollector):
+        return collector_info.collector_creator(to_int_function_cast(collector_info.group_mapping, *type_arguments))
+    elif isinstance(collector_info, ComposeConstraintCollector):
+        subcollectors = tuple(map(lambda subcollector_info: extract_collector(subcollector_info, *type_arguments),
+                                  collector_info.subcollectors))
+        compose_parameters = (JClass('java.lang.Object'), ) * len(subcollectors)
+        compose_function = function_cast(collector_info.compose_function, *compose_parameters)
+        return collector_info.collector_creator(*subcollectors, compose_function)
+    elif isinstance(collector_info, ConditionalConstraintCollector):
+        delegate_collector = extract_collector(collector_info.delegate, *type_arguments)
+        predicate = predicate_cast(collector_info.predicate, *type_arguments)
+        return collector_info.collector_creator(predicate, delegate_collector)
+    else:
+        raise ValueError(f'Invalid Collector: {collector_info}. '
+                         f'Create Collectors via optapy.constraint.ConstraintCollectors.')
+
+
 def perform_group_by(delegate, package, group_by_args, *type_arguments):
     actual_group_by_args = []
     for i in range(len(group_by_args)):
         if callable(group_by_args[i]):
-            actual_group_by_args.append(function_cast(group_by_args[i]))
+            actual_group_by_args.append(function_cast(group_by_args[i], *type_arguments))
         else:
-            actual_group_by_args.append(group_by_args[i])
+            collector_info = group_by_args[i]
+            created_collector = extract_collector(collector_info, *type_arguments)
+            actual_group_by_args.append(created_collector)
 
     if len(group_by_args) == 1:
-        return PythonUniConstraintStream(delegate.groupBy(*actual_group_by_args), package,
-                                             JClass('java.lang.Object'))
+        return PythonUniConstraintStream(delegate.groupBy(*actual_group_by_args), package, JClass('java.lang.Object'))
     elif len(group_by_args) == 2:
         return PythonBiConstraintStream(delegate.groupBy(*actual_group_by_args), package, JClass('java.lang.Object'),
-                                            JClass('java.lang.Object'))
+                                        JClass('java.lang.Object'))
     elif len(group_by_args) == 3:
         return PythonTriConstraintStream(delegate.groupBy(*actual_group_by_args), package, JClass('java.lang.Object'),
-                                             JClass('java.lang.Object'), JClass('java.lang.Object'))
+                                         JClass('java.lang.Object'), JClass('java.lang.Object'))
     elif len(group_by_args) == 4:
-        return PythonQuadConstraintStream(delegate.groupBy(*actual_group_by_args), package,
-                                              JClass('java.lang.Object'),
-                                              JClass('java.lang.Object'),
-                                              JClass('java.lang.Object'),
-                                              JClass('java.lang.Object'))
+        return PythonQuadConstraintStream(delegate.groupBy(*actual_group_by_args), package, JClass('java.lang.Object'),
+                                          JClass('java.lang.Object'), JClass('java.lang.Object'),
+                                          JClass('java.lang.Object'))
     else:
         raise ValueError
 
@@ -187,8 +507,11 @@ class PythonConstraintFactory:
     D_ = TypeVar('D_')
     E_ = TypeVar('E_')
 
-    def __init__(self, delegate: 'ConstraintFactory'):
+    function_bytecode_translation: BytecodeTranslation
+
+    def __init__(self, delegate: 'ConstraintFactory', function_bytecode_translation: BytecodeTranslation):
         self.delegate = delegate
+        self.function_bytecode_translation = function_bytecode_translation
 
     def get_default_constraint_package(self) -> str:
         """This is ConstraintConfiguration.constraintPackage() if available, otherwise the module of the @constraint_provider function
@@ -206,7 +529,9 @@ class PythonConstraintFactory:
 
         :return:
         """
+        global function_bytecode_translation
         source_class = get_class(source_class)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonUniConstraintStream(self.delegate.forEach(source_class), self.getDefaultConstraintPackage(),
                                              source_class)
 
@@ -220,7 +545,9 @@ class PythonConstraintFactory:
 
         :return:
         """
+        global function_bytecode_translation
         source_class = get_class(source_class)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonUniConstraintStream(self.delegate.forEachIncludingNullVars(source_class),
                                              self.getDefaultConstraintPackage(), source_class)
 
@@ -237,7 +564,9 @@ class PythonConstraintFactory:
 
         :return:
         """
+        global function_bytecode_translation
         source_class = get_class(source_class)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonBiConstraintStream(self.delegate.forEachUniquePair(source_class,
                                                                             extract_joiners(joiners, source_class, source_class)),
                                             self.getDefaultConstraintPackage(), source_class, source_class)
@@ -251,7 +580,9 @@ class PythonConstraintFactory:
 
         :return:
         """
+        global function_bytecode_translation
         source_class = get_class(source_class)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonUniConstraintStream(self.delegate.from_(source_class), self.getDefaultConstraintPackage(),
                                              source_class)
 
@@ -262,7 +593,9 @@ class PythonConstraintFactory:
 
         :return:
         """
+        global function_bytecode_translation
         source_class = get_class(source_class)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonUniConstraintStream(self.delegate.fromUnfiltered(source_class), self.getDefaultConstraintPackage(),
                                              source_class)
 
@@ -276,7 +609,9 @@ class PythonConstraintFactory:
 
         :return:
         """
+        global function_bytecode_translation
         source_class = get_class(source_class)
+        function_bytecode_translation = self.function_bytecode_translation
         return PythonBiConstraintStream(self.delegate.fromUniquePair(source_class,
                                                                      extract_joiners(joiners, source_class, source_class)),
                                         self.getDefaultConstraintPackage(), source_class, source_class)
@@ -311,7 +646,7 @@ class PythonUniConstraintStream(Generic[A]):
 
         :return:
         """
-        translated_predicate = predicate_cast(predicate)
+        translated_predicate = predicate_cast(predicate, self.a_type)
         return PythonUniConstraintStream(self.delegate.filter(translated_predicate), self.package, self.a_type)
 
     def join(self, unistream_or_type: Union['PythonUniConstraintStream[B_]', Type[B_]], *joiners: 'BiJoiner[A, B_]') ->\
@@ -347,7 +682,7 @@ class PythonUniConstraintStream(Generic[A]):
         item_type = get_class(item_type)
         return PythonUniConstraintStream(self.delegate.ifExists(item_type,
                                                                 extract_joiners(joiners, self.a_type, item_type)),
-                                             self.package, self.a_type)
+                                         self.package, self.a_type)
 
     ifExists = if_exists
 
@@ -365,8 +700,8 @@ class PythonUniConstraintStream(Generic[A]):
         return PythonUniConstraintStream(self.delegate.ifExistsIncludingNullVars(item_type,
                                                                                  extract_joiners(joiners, self.a_type,
                                                                                                  item_type)),
-                                             self.package,
-                                             self.a_type)
+                                         self.package,
+                                         self.a_type)
 
     ifExistsIncludingNullVars = if_exists_including_null_vars
 
@@ -381,8 +716,8 @@ class PythonUniConstraintStream(Generic[A]):
         """
         item_type = get_class(item_type)
         return PythonUniConstraintStream(self.delegate.ifExistsOther(item_type, extract_joiners(joiners, self.a_type,
-                                                                                                    item_type)),
-                                             self.package, self.a_type)
+                                                                                                item_type)),
+                                         self.package, self.a_type)
 
     ifExistsOther = if_exists_other
 
@@ -390,11 +725,11 @@ class PythonUniConstraintStream(Generic[A]):
             'PythonUniConstraintStream':
         item_type = get_class(item_type)
         return PythonUniConstraintStream(self.delegate.ifExistsOtherIncludingNullVars(item_type,
-                                                                                          extract_joiners(joiners,
-                                                                                                          self.a_type,
-                                                                                                           item_type)),
-                                             self.package,
-                                             self.a_type)
+                                                                                      extract_joiners(joiners,
+                                                                                                      self.a_type,
+                                                                                                      item_type)),
+                                         self.package,
+                                         self.a_type)
 
     ifExistsOtherIncludingNullVars = if_exists_other_including_null_vars
 
@@ -409,8 +744,8 @@ class PythonUniConstraintStream(Generic[A]):
         """
         item_type = get_class(item_type)
         return PythonUniConstraintStream(self.delegate.ifNotExists(item_type, extract_joiners(joiners, self.a_type,
-                                                                                                  item_type)),
-                                             self.package, self.a_type)
+                                                                                              item_type)),
+                                         self.package, self.a_type)
 
     ifNotExists = if_not_exists
 
@@ -427,11 +762,11 @@ class PythonUniConstraintStream(Generic[A]):
        """
         item_type = get_class(item_type)
         return PythonUniConstraintStream(self.delegate.ifNotExistsIncludingNullVars(item_type,
-                                                                                        extract_joiners(joiners,
-                                                                                                        self.a_type,
-                                                                                                        item_type)),
-                                             self.package,
-                                             self.a_type)
+                                                                                    extract_joiners(joiners,
+                                                                                                    self.a_type,
+                                                                                                    item_type)),
+                                         self.package,
+                                         self.a_type)
 
     ifNotExistsIncludingNullVars = if_not_exists_including_null_vars
 
@@ -448,9 +783,10 @@ class PythonUniConstraintStream(Generic[A]):
         """
         item_type = get_class(item_type)
         return PythonUniConstraintStream(self.delegate.ifNotExistsOther(item_type, extract_joiners(joiners, self.a_type,
-                                                                                                       item_type)),
-                                             self.package,
-                                             self.a_type)
+                                                                                                   item_type)),
+                                         self.package,
+                                         self.a_type)
+
 
     ifNotExistsOther = if_not_exists_other
 
@@ -467,10 +803,10 @@ class PythonUniConstraintStream(Generic[A]):
         """
         item_type = get_class(item_type)
         return PythonUniConstraintStream(self.delegate.ifNotExistsOtherIncludingNullVars(item_type,
-                                                                                             extract_joiners(joiners,
-                                                                                                             self.a_type,
-                                                                                                             item_type)),
-                                             self.package, self.a_type)
+                                                                                         extract_joiners(joiners,
+                                                                                                         self.a_type,
+                                                                                                         item_type)),
+                                         self.package, self.a_type)
 
     ifNotExistsOtherIncludingNullVars = if_not_exists_other_including_null_vars
 
@@ -606,9 +942,9 @@ class PythonUniConstraintStream(Generic[A]):
 
         :return:
         """
-        translated_function = function_cast(mapping_function)
+        translated_function = function_cast(mapping_function, self.a_type)
         return PythonUniConstraintStream(self.delegate.map(translated_function), self.package,
-                                             JClass('java.lang.Object'))
+                                         JClass('java.lang.Object'))
 
     def flatten_last(self, flattening_function: Callable[[A], A_]) -> 'PythonUniConstraintStream[A_]':
         """Takes each tuple and applies a mapping on it, which turns the tuple into an Iterable.
@@ -617,16 +953,9 @@ class PythonUniConstraintStream(Generic[A]):
 
         :return:
         """
-        def wrapped_function(last_item):
-            from java.util import ArrayList
-            items = flattening_function(last_item)
-            out = ArrayList(len(items))
-            for item in items:
-                out.add(item)
-            return out
-        translated_function = function_cast(wrapped_function)
+        translated_function = function_cast(flattening_function, self.a_type)
         return PythonUniConstraintStream(self.delegate.flattenLast(translated_function), self.package,
-                                             JClass('java.lang.Object'))
+                                         JClass('java.lang.Object'))
 
     flattenLast = flatten_last
 
@@ -684,7 +1013,8 @@ class PythonUniConstraintStream(Generic[A]):
                                           constraint_info.score)
         else:
             return self.delegate.penalize(constraint_info.constraint_package, constraint_info.constraint_name,
-                                          constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                          constraint_info.score,
+                                          to_int_function_cast(constraint_info.impact_function, self.a_type))
 
     def penalize_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -758,7 +1088,8 @@ class PythonUniConstraintStream(Generic[A]):
                                         constraint_info.score)
         else:
             return self.delegate.reward(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type))
 
     def reward_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -834,7 +1165,8 @@ class PythonUniConstraintStream(Generic[A]):
                                         constraint_info.score)
         else:
             return self.delegate.impact(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type))
 
     def impact_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -891,7 +1223,7 @@ class PythonBiConstraintStream(Generic[A, B]):
 
         :return:
         """
-        translated_predicate = predicate_cast(predicate)
+        translated_predicate = predicate_cast(predicate, self.a_type, self.b_type)
         return PythonBiConstraintStream(self.delegate.filter(translated_predicate), self.package, self.a_type,
                                         self.b_type)
 
@@ -927,8 +1259,8 @@ class PythonBiConstraintStream(Generic[A, B]):
         """
         item_type = get_class(item_type)
         return PythonBiConstraintStream(self.delegate.ifExists(item_type,
-                                                               extract_joiners(joiners, self.a_type, self.b_type,
-                                                                               item_type)),
+                                                               extract_joiners(joiners, self.a_type,
+                                                                               self.b_type, item_type)),
                                         self.package, self.a_type, self.b_type)
 
     ifExists = if_exists
@@ -944,14 +1276,12 @@ class PythonBiConstraintStream(Generic[A, B]):
         :return:
         """
         item_type = get_class(item_type)
-        return PythonBiConstraintStream(self.delegate.ifExistsIncludingNullVars(item_type,
-                                                                                    extract_joiners(joiners,
-                                                                                                    self.a_type,
-                                                                                                    self.b_type,
-                                                                                                    item_type)),
-                                            self.package,
-                                            self.a_type,
-                                            self.b_type)
+        return PythonBiConstraintStream(self.delegate.ifExistsIncludingNullVars(item_type, extract_joiners(joiners,
+                                                                                                           self.a_type,
+                                                                                                           self.b_type,
+                                                                                                           item_type)),
+                                        self.package,
+                                        self.a_type, self.b_type)
 
     ifExistsIncludingNullVars = if_exists_including_null_vars
 
@@ -968,9 +1298,8 @@ class PythonBiConstraintStream(Generic[A, B]):
        """
         item_type = get_class(item_type)
         return PythonBiConstraintStream(self.delegate.ifNotExists(item_type, extract_joiners(joiners, self.a_type,
-                                                                                                 self.b_type,
-                                                                                                 item_type)),
-                                            self.package, self.a_type, self.b_type)
+                                                                                             self.b_type, item_type)),
+                                        self.package, self.a_type, self.b_type)
 
     ifNotExists = if_not_exists
 
@@ -987,13 +1316,11 @@ class PythonBiConstraintStream(Generic[A, B]):
         """
         item_type = get_class(item_type)
         return PythonBiConstraintStream(self.delegate.ifNotExistsIncludingNullVars(item_type,
-                                                                                       extract_joiners(joiners,
-                                                                                                       self.a_type,
-                                                                                                       self.b_type,
-                                                                                                       item_type)),
-                                            self.package,
-                                            self.a_type,
-                                            self.b_type)
+                                                                                   extract_joiners(joiners,
+                                                                                                   self.a_type,
+                                                                                                   self.b_type,
+                                                                                                   item_type)),
+                                        self.package, self.a_type, self.b_type)
 
     ifNotExistsIncludingNullVars = if_not_exists_including_null_vars
 
@@ -1128,9 +1455,8 @@ class PythonBiConstraintStream(Generic[A, B]):
 
         :return:
         """
-        translated_function = function_cast(mapping_function)
-        return PythonUniConstraintStream(self.delegate.map(translated_function), self.package,
-                                             JClass('java.lang.Object'))
+        translated_function = function_cast(mapping_function, self.a_type, self.b_type)
+        return PythonUniConstraintStream(self.delegate.map(translated_function), self.package, JClass('java.lang.Object'))
 
     def flatten_last(self, flattening_function: Callable[[B], B_]) -> 'PythonBiConstraintStream[A,B_]':
         """Takes each tuple and applies a mapping on it, which turns the tuple into an Iterable.
@@ -1139,17 +1465,9 @@ class PythonBiConstraintStream(Generic[A, B]):
 
         :return:
         """
-        def wrapped_function(last_item):
-            from java.util import ArrayList
-            items = flattening_function(last_item)
-            out = ArrayList(len(items))
-            for item in items:
-                out.add(item)
-            return out
-
-        translated_function = function_cast(wrapped_function)
+        translated_function = function_cast(flattening_function, self.b_type)
         return PythonBiConstraintStream(self.delegate.flattenLast(translated_function), self.package,
-                                            JClass('java.lang.Object'), JClass('java.lang.Object'))
+                                        self.a_type, JClass('java.lang.Object'))
 
     flattenLast = flatten_last
 
@@ -1208,7 +1526,9 @@ class PythonBiConstraintStream(Generic[A, B]):
                                           constraint_info.score)
         else:
             return self.delegate.penalize(constraint_info.constraint_package, constraint_info.constraint_name,
-                                          constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                          constraint_info.score,
+                                          to_int_function_cast(constraint_info.impact_function, self.a_type,
+                                                               self.b_type))
 
     def penalize_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -1283,7 +1603,8 @@ class PythonBiConstraintStream(Generic[A, B]):
                                         constraint_info.score)
         else:
             return self.delegate.reward(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type))
 
     def reward_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -1360,7 +1681,8 @@ class PythonBiConstraintStream(Generic[A, B]):
                                         constraint_info.score)
         else:
             return self.delegate.impact(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type))
 
     def impact_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -1420,9 +1742,9 @@ class PythonTriConstraintStream(Generic[A, B, C]):
 
         :return:
         """
-        translated_predicate = predicate_cast(predicate)
+        translated_predicate = predicate_cast(predicate, self.a_type, self.b_type, self.c_type)
         return PythonTriConstraintStream(self.delegate.filter(translated_predicate), self.package, self.a_type,
-                                             self.b_type, self.c_type)
+                                         self.b_type, self.c_type)
 
     def join(self, unistream_or_type: Union[PythonUniConstraintStream[D_], Type[D_]],
              *joiners: 'QuadJoiner[A, B, C, D_]') -> 'PythonQuadConstraintStream[A,B,C,D_]':
@@ -1457,12 +1779,10 @@ class PythonTriConstraintStream(Generic[A, B, C]):
         :return:
         """
         item_type = get_class(item_type)
-        return PythonTriConstraintStream(self.delegate.ifExists(item_type,
-                                                                    extract_joiners(joiners, self.a_type,
-                                                                                    self.b_type,
-                                                                                    self.c_type,
-                                                                                    item_type)),
-                                             self.package, self.a_type, self.b_type, self.c_type)
+        return PythonTriConstraintStream(self.delegate.ifExists(item_type, extract_joiners(joiners, self.a_type,
+                                                                                           self.b_type, self.c_type,
+                                                                                           item_type)), self.package,
+                                         self.a_type, self.b_type, self.c_type)
 
     ifExists = if_exists
 
@@ -1477,16 +1797,12 @@ class PythonTriConstraintStream(Generic[A, B, C]):
         :return:
         """
         item_type = get_class(item_type)
-        return PythonTriConstraintStream(self.delegate.ifExistsIncludingNullVars(item_type,
-                                                                                     extract_joiners(joiners,
-                                                                                                     self.a_type,
-                                                                                                     self.b_type,
-                                                                                                     self.c_type,
-                                                                                                     item_type)),
-                                             self.package,
-                                             self.a_type,
-                                             self.b_type,
-                                             self.c_type)
+        return PythonTriConstraintStream(self.delegate.ifExistsIncludingNullVars(item_type, extract_joiners(joiners,
+                                                                                                            self.a_type,
+                                                                                                            self.b_type,
+                                                                                                            self.c_type,
+                                                                                                            item_type)),
+                                         self.package, self.a_type, self.b_type, self.c_type)
 
     ifExistsIncludingNullVars = if_exists_including_null_vars
 
@@ -1502,11 +1818,12 @@ class PythonTriConstraintStream(Generic[A, B, C]):
         :return:
         """
         item_type = get_class(item_type)
-        return PythonTriConstraintStream(self.delegate.ifNotExists(item_type, extract_joiners(joiners, self.a_type,
-                                                                                                  self.b_type,
-                                                                                                  self.c_type,
-                                                                                                  item_type)),
-                                             self.package, self.a_type, self.b_type, self.c_type)
+        return PythonTriConstraintStream(self.delegate.ifNotExists(item_type, extract_joiners(joiners,
+                                                                                              self.a_type,
+                                                                                              self.b_type,
+                                                                                              self.c_type,
+                                                                                              item_type)),
+                                         self.package, self.a_type, self.b_type, self.c_type)
 
     ifNotExists = if_not_exists
 
@@ -1523,15 +1840,12 @@ class PythonTriConstraintStream(Generic[A, B, C]):
         """
         item_type = get_class(item_type)
         return PythonTriConstraintStream(self.delegate.ifNotExistsIncludingNullVars(item_type,
-                                                                                        extract_joiners(joiners,
-                                                                                                        self.a_type,
-                                                                                                        self.b_type,
-                                                                                                        self.c_type,
-                                                                                                        item_type)),
-                                             self.package,
-                                             self.a_type,
-                                             self.b_type,
-                                             self.c_type)
+                                                                                    extract_joiners(joiners,
+                                                                                                    self.a_type,
+                                                                                                    self.b_type,
+                                                                                                    self.c_type,
+                                                                                                    item_type)),
+                                         self.package, self.a_type, self.b_type, self.c_type)
 
     ifNotExistsIncludingNullVars = if_not_exists_including_null_vars
 
@@ -1668,9 +1982,9 @@ class PythonTriConstraintStream(Generic[A, B, C]):
 
         :return:
         """
-        translated_function = function_cast(mapping_function)
+        translated_function = function_cast(mapping_function, self.a_type, self.b_type, self.c_type)
         return PythonUniConstraintStream(self.delegate.map(translated_function), self.package,
-                                             JClass('java.lang.Object'))
+                                         JClass('java.lang.Object'))
 
     def flatten_last(self, flattening_function: Callable[[C], C_]) -> 'PythonTriConstraintStream[A,B,C_]':
         """Takes each tuple and applies a mapping on it, which turns the tuple into an Iterable.
@@ -1679,18 +1993,9 @@ class PythonTriConstraintStream(Generic[A, B, C]):
 
         :return:
         """
-        def wrapped_function(last_item):
-            from java.util import ArrayList
-            items = flattening_function(last_item)
-            out = ArrayList(len(items))
-            for item in items:
-                out.add(item)
-            return out
-
-        translated_function = function_cast(wrapped_function)
+        translated_function = function_cast(flattening_function, self.c_type)
         return PythonTriConstraintStream(self.delegate.flattenLast(translated_function), self.package,
-                                             JClass('java.lang.Object'), JClass('java.lang.Object'),
-                                             JClass('java.lang.Object'))
+                                         self.a_type, self.b_type, JClass('java.lang.Object'))
 
     flattenLast = flatten_last
 
@@ -1699,8 +2004,8 @@ class PythonTriConstraintStream(Generic[A, B, C]):
 
         :return:
         """
-        return PythonTriConstraintStream(self.delegate.distinct(), self.package, self.a_type, self.b_type,
-                                             self.c_type)
+        return PythonTriConstraintStream(self.delegate.distinct(), self.package, self.a_type,
+                                         self.b_type, self.c_type)
 
     @overload
     def penalize(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -1750,7 +2055,10 @@ class PythonTriConstraintStream(Generic[A, B, C]):
                                           constraint_info.score)
         else:
             return self.delegate.penalize(constraint_info.constraint_package, constraint_info.constraint_name,
-                                          constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                          constraint_info.score,
+                                          to_int_function_cast(constraint_info.impact_function, self.a_type,
+                                                               self.b_type,
+                                                               self.c_type))
 
     def penalize_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -1825,7 +2133,9 @@ class PythonTriConstraintStream(Generic[A, B, C]):
                                         constraint_info.score)
         else:
             return self.delegate.reward(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type,
+                                                             self.c_type))
 
     def reward_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -1902,7 +2212,9 @@ class PythonTriConstraintStream(Generic[A, B, C]):
                                         constraint_info.score)
         else:
             return self.delegate.impact(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type,
+                                                             self.c_type))
 
     def impact_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -1964,9 +2276,9 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
 
         :return:
         """
-        translated_predicate = predicate_cast(predicate)
+        translated_predicate = predicate_cast(predicate, self.a_type, self.b_type, self.c_type, self.d_type)
         return PythonQuadConstraintStream(self.delegate.filter(translated_predicate), self.package, self.a_type,
-                                              self.b_type, self.c_type, self.d_type)
+                                          self.b_type, self.c_type, self.d_type)
 
     def if_exists(self, item_type: Type[E_], *joiners: 'PentaJoiner[A, B, C, D, E_]') ->\
             'PythonQuadConstraintStream[A,B,C,D]':
@@ -1979,13 +2291,13 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
         :return:
         """
         item_type = get_class(item_type)
-        return PythonQuadConstraintStream(self.delegate.ifExists(item_type,
-                                                                     extract_joiners(joiners, self.a_type,
-                                                                                     self.b_type,
-                                                                                     self.c_type,
-                                                                                     self.d_type,
-                                                                                     item_type)),
-                                              self.package, self.a_type, self.b_type, self.c_type, self.d_type)
+        return PythonQuadConstraintStream(self.delegate.ifExists(item_type, extract_joiners(joiners,
+                                                                                            self.a_type,
+                                                                                            self.b_type,
+                                                                                            self.c_type,
+                                                                                            self.d_type,
+                                                                                            item_type)),
+                                          self.package, self.a_type, self.b_type, self.c_type, self.d_type)
 
     ifExists = if_exists
 
@@ -2001,17 +2313,13 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
         """
         item_type = get_class(item_type)
         return PythonQuadConstraintStream(self.delegate.ifExistsIncludingNullVars(item_type,
-                                                                                      extract_joiners(joiners,
-                                                                                                      self.a_type,
-                                                                                                      self.b_type,
-                                                                                                      self.c_type,
-                                                                                                      self.d_type,
-                                                                                                      item_type)),
-                                              self.package,
-                                              self.a_type,
-                                              self.b_type,
-                                              self.c_type,
-                                              self.d_type)
+                                                                                  extract_joiners(joiners,
+                                                                                                  self.a_type,
+                                                                                                  self.b_type,
+                                                                                                  self.c_type,
+                                                                                                  self.d_type,
+                                                                                                  item_type)),
+                                          self.package, self.a_type, self.b_type, self.c_type, self.d_type)
 
     ifExistsIncludingNullVars = if_exists_including_null_vars
 
@@ -2027,12 +2335,13 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
         :return:
         """
         item_type = get_class(item_type)
-        return PythonQuadConstraintStream(self.delegate.ifNotExists(item_type, extract_joiners(joiners, self.a_type,
-                                                                                                   self.b_type,
-                                                                                                   self.c_type,
-                                                                                                   self.d_type,
-                                                                                                   item_type)),
-                                              self.package, self.a_type, self.b_type, self.c_type, self.d_type)
+        return PythonQuadConstraintStream(self.delegate.ifNotExists(item_type, extract_joiners(joiners,
+                                                                                               self.a_type,
+                                                                                               self.b_type,
+                                                                                               self.c_type,
+                                                                                               self.d_type,
+                                                                                               item_type)),
+                                          self.package, self.a_type, self.b_type, self.c_type, self.d_type)
 
     ifNotExists = if_not_exists
 
@@ -2049,17 +2358,13 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
         """
         item_type = get_class(item_type)
         return PythonQuadConstraintStream(self.delegate.ifNotExistsIncludingNullVars(item_type,
-                                                                                         extract_joiners(joiners,
-                                                                                                         self.a_type,
-                                                                                                         self.b_type,
-                                                                                                         self.c_type,
-                                                                                                         self.d_type,
-                                                                                                         item_type)),
-                                              self.package,
-                                              self.a_type,
-                                              self.b_type,
-                                              self.c_type,
-                                              self.d_type)
+                                                                                     extract_joiners(joiners,
+                                                                                                     self.a_type,
+                                                                                                     self.b_type,
+                                                                                                     self.c_type,
+                                                                                                     self.d_type,
+                                                                                                     item_type)),
+                                          self.package, self.a_type, self.b_type, self.c_type, self.d_type)
 
     ifNotExistsIncludingNullVars = if_not_exists_including_null_vars
 
@@ -2195,9 +2500,9 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
 
         :return:
         """
-        translated_function = function_cast(mapping_function)
+        translated_function = function_cast(mapping_function, self.a_type, self.b_type, self.c_type, self.d_type)
         return PythonUniConstraintStream(self.delegate.map(translated_function), self.package,
-                                             JClass('java.lang.Object'))
+                                         JClass('java.lang.Object'))
 
     def flatten_last(self, flattening_function) -> 'PythonQuadConstraintStream[A,B,C,D]':
         """Takes each tuple and applies a mapping on it, which turns the tuple into an Iterable.
@@ -2206,18 +2511,9 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
 
         :return:
         """
-        def wrapped_function(last_item):
-            from java.util import ArrayList
-            items = flattening_function(last_item)
-            out = ArrayList(len(items))
-            for item in items:
-                out.add(item)
-            return out
-
-        translated_function = function_cast(wrapped_function)
+        translated_function = function_cast(flattening_function, self.d_type)
         return PythonQuadConstraintStream(self.delegate.flattenLast(translated_function), self.package,
-                                              JClass('java.lang.Object'), JClass('java.lang.Object'),
-                                              JClass('java.lang.Object'), JClass('java.lang.Object'))
+                                          self.a_type, self.b_type, self.c_type, JClass('java.lang.Object'))
 
     flattenLast = flatten_last
 
@@ -2226,8 +2522,8 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
 
         :return:
         """
-        return PythonQuadConstraintStream(self.delegate.distinct(), self.package, self.a_type, self.b_type,
-                                              self.c_type, self.d_type)
+        return PythonQuadConstraintStream(self.delegate.distinct(), self.package, self.a_type,
+                                          self.b_type, self.c_type, self.d_type)
 
     @overload
     def penalize(self, constraint_name: str, constraint_weight: 'Score') -> \
@@ -2277,7 +2573,9 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
                                           constraint_info.score)
         else:
             return self.delegate.penalize(constraint_info.constraint_package, constraint_info.constraint_name,
-                                          constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                          constraint_info.score,
+                                          to_int_function_cast(constraint_info.impact_function, self.a_type,
+                                                               self.b_type, self.c_type, self.d_type))
 
     def penalize_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -2352,7 +2650,9 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
                                         constraint_info.score)
         else:
             return self.delegate.reward(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type,
+                                                             self.c_type, self.d_type))
 
     def reward_long(self, *args) -> 'Constraint':
         raise NotImplementedError
@@ -2429,7 +2729,9 @@ class PythonQuadConstraintStream(Generic[A, B, C, D]):
                                         constraint_info.score)
         else:
             return self.delegate.impact(constraint_info.constraint_package, constraint_info.constraint_name,
-                                        constraint_info.score, to_int_function_cast(constraint_info.impact_function))
+                                        constraint_info.score,
+                                        to_int_function_cast(constraint_info.impact_function, self.a_type, self.b_type,
+                                                             self.c_type, self.d_type))
 
     def impact_long(self, *args) -> 'Constraint':
         raise NotImplementedError

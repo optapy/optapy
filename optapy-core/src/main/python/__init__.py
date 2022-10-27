@@ -10,4 +10,5 @@ use init before decorators and any optapy.types imports.
 
 from .annotations import *
 from .optaplanner_api_wrappers import *
-from .optaplanner_java_interop import init, _planning_clone
+from .optaplanner_java_interop import init, _planning_clone, set_class_output_directory
+from .constraint_stream import BytecodeTranslation

@@ -4,6 +4,9 @@ __pycache__
 /local
 venv
 graalvenv
+/dist
+/*.egg-info
+/*-stubs
 
 # Eclipse, Netbeans and IntelliJ files
 /.*

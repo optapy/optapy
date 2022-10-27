@@ -1,0 +1,15 @@
+graft .mvn
+include mvnw mvnw.cmd pom.xml create-stubs.py
+
+include optapy-core/pom.xml
+graft optapy-core/src/main/java
+graft optapy-core/src/main/resources
+graft optapy-core/src/test/java
+
+include jpyinterpreter/pom.xml
+graft jpyinterpreter/src/main/java
+graft jpyinterpreter/src/main/resources
+graft jpyinterpreter/src/test/java
+
+include optapy-docs/pom.xml
+graft optapy-docs/src

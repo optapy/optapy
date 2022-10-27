@@ -6,6 +6,7 @@ from .optaplanner_java_interop import ensure_init, _add_shallow_copy_to_class, _
     _generate_variable_listener_class, get_class
 from jpype import JImplements, JOverride
 from typing import Union, List, Callable, Type, Any, TYPE_CHECKING, TypeVar
+from .constraint_stream import BytecodeTranslation
 
 if TYPE_CHECKING:
     from org.optaplanner.core.api.solver.change import ProblemChange as _ProblemChange
@@ -27,7 +28,7 @@ All OptaPlanner Python annotations work like this:
        - annotation parameter -> parameter value or None if unset
 4. Return the modified function/class
 
-For classes, JImplements('org.optaplanner.optapy.OpaquePythonReference')(the_class)
+For classes, JImplements(org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference')(the_class)
 is called and used (which allows __getattr__ to work w/o casting to a Java Proxy).
 """
 
@@ -455,7 +456,8 @@ def value_range_provider(range_id: str, value_range_type: type = object) -> Call
         ensure_init()
         from org.optaplanner.core.api.domain.valuerange import ValueRangeProvider as JavaValueRangeProvider,\
                                                                ValueRange as JavaValueRange
-        from org.optaplanner.optapy import PythonWrapperGenerator, OpaquePythonReference  # noqa
+        from org.optaplanner.jpyinterpreter.types.wrappers import OpaquePythonReference # noqa
+        from org.optaplanner.optapy import PythonWrapperGenerator  # noqa
         from java.util import List as JavaList
         from java.lang import Object as JavaObject
 
@@ -555,10 +557,12 @@ def planning_entity(entity_class: Type = None, /, *, pinning_filter: Callable = 
     }
 
     def planning_entity_wrapper(entity_class_argument):
-        out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(entity_class_argument)
+        from jpyinterpreter import force_update_type
+        out = JImplements('org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference')(entity_class_argument)
         out.__optapy_java_class = _generate_planning_entity_class(entity_class_argument, annotation_data)
         out.__optapy_is_planning_clone = True
         _add_shallow_copy_to_class(out)
+        force_update_type(out, out.__optapy_java_class.getField('$TYPE').get(None))
         return out
 
     if entity_class:  # Called as @planning_entity
@@ -576,8 +580,10 @@ def problem_fact(fact_class: Type) -> Type:
     they are automatically available as facts for ConstraintFactory.from(Class)
     """
     ensure_init()
-    out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(fact_class)
+    from jpyinterpreter import force_update_type
+    out = JImplements('org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference')(fact_class)
     out.__optapy_java_class = _generate_problem_fact_class(fact_class)
+    force_update_type(out, out.__optapy_java_class.getField('$TYPE').get(None))
     return out
 
 
@@ -608,11 +614,13 @@ def planning_solution(planning_solution_class: Type) -> Type:
     )
     """
     ensure_init()
-    out = JImplements('org.optaplanner.optapy.OpaquePythonReference')(planning_solution_class)
+    from jpyinterpreter import force_update_type
+    out = JImplements('org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference')(planning_solution_class)
     out.__optapy_java_class = _generate_planning_solution_class(planning_solution_class)
     out.__optapy_is_planning_solution = True
     out.__optapy_is_planning_clone = True
     _add_shallow_copy_to_class(out)
+    force_update_type(out, out.__optapy_java_class.getField('$TYPE').get(None))
     return out
 
 
@@ -636,7 +644,8 @@ def deep_planning_clone(planning_clone_object: Union[Type, Callable]):
     return planning_clone_object
 
 
-def constraint_provider(constraint_provider_function: Callable[['_ConstraintFactory'], List['_Constraint']]) -> \
+def constraint_provider(constraint_provider_function: Callable[['_ConstraintFactory'], List['_Constraint']] = None, /, *,
+                        function_bytecode_translation: BytecodeTranslation = BytecodeTranslation.IF_POSSIBLE) -> \
         Callable[['_ConstraintFactory'], List['_Constraint']]:
     """Marks a function as a ConstraintProvider.
 
@@ -644,17 +653,37 @@ def constraint_provider(constraint_provider_function: Callable[['_ConstraintFact
     must return a list of Constraints.
     To create a Constraint, start with ConstraintFactory.from(get_class(PythonClass)).
 
+    :param function_bytecode_translation: Specifies how bytecode translator should occur.
+                                          Defaults to BytecodeTranslation.IF_POSSIBLE.
     :type constraint_provider_function: Callable[[ConstraintFactory], List[Constraint]]
     :rtype: Callable[[ConstraintFactory], List[Constraint]]
     """
     ensure_init()
-    def wrapped_constraint_provider_function(constraint_factory: '_ConstraintFactory'):
-        from .constraint_stream import PythonConstraintFactory
-        return constraint_provider_function(PythonConstraintFactory(constraint_factory))
 
-    constraint_provider_function.__optapy_java_class = _generate_constraint_provider_class(constraint_provider_function,
-                                                                                           wrapped_constraint_provider_function)
-    return constraint_provider_function
+    def constraint_provider_wrapper(function):
+        def wrapped_constraint_provider(constraint_factory):
+            from . import constraint_stream
+            from org.optaplanner.optapy import PythonSolver
+            try:
+                constraint_stream.convert_to_java = function_bytecode_translation
+                out = function(constraint_stream.PythonConstraintFactory(constraint_factory,
+                                                                         function_bytecode_translation))
+                if function_bytecode_translation is not BytecodeTranslation.NONE:
+                    PythonSolver.onlyUseJavaSetters = constraint_stream.all_translated_successfully
+                else:
+                    PythonSolver.onlyUseJavaSetters = False
+                return out
+            finally:
+                constraint_stream.convert_to_java = BytecodeTranslation.IF_POSSIBLE
+                constraint_stream.all_translated_successfully = True
+        wrapped_constraint_provider.__optapy_java_class = _generate_constraint_provider_class(function,
+                                                                                              wrapped_constraint_provider)
+        return wrapped_constraint_provider
+
+    if constraint_provider_function:  # Called as @constraint_provider
+        return constraint_provider_wrapper(constraint_provider_function)
+    else:  # Called as @constraint_provider(function_bytecode_translation=True)
+        return constraint_provider_wrapper
 
 
 def easy_score_calculator(easy_score_calculator_function: Callable[[Solution_], '_Score']) -> \
@@ -810,6 +839,16 @@ def variable_listener(variable_listener_class: Type['_VariableListener'] = None,
                              f'{the_variable_listener_class}: {missing_method_list}')
         for method in methods:
             method_on_class = getattr(the_variable_listener_class, method, None)
+
+            if method.startswith('after'):
+                # Use method_on_class as a default argument to force early binding
+                # (Otherwise, it will be the same method for all wrappers)
+                def wrapper_method(self, score_director, entity, original_method=method_on_class):
+                    score_director.getWorkingSolution().forceUpdate()
+                    original_method(self, score_director, entity)
+
+                method_on_class = wrapper_method
+
             setattr(the_variable_listener_class, method, JOverride()(method_on_class))
 
         method_on_class = getattr(the_variable_listener_class, 'requiresUniqueEntityEvents', None)
@@ -881,9 +920,22 @@ def problem_change(problem_change_class: Type['_ProblemChange']) -> \
     class_doChange = getattr(problem_change_class, 'doChange', None)
     def wrapper_doChange(self, solution, problem_change_director):
         run_id = id(problem_change_director)
+        solution.forceUpdate()
+
+        reference_map = solution.get__optapy_reference_map()
+        python_setter = solution._optaplannerPythonSetter
+
         problem_change_director._set_instance_map(run_id, solution.get__optapy_reference_map())
+        problem_change_director._set_update_function(run_id, solution._optaplannerPythonSetter)
+
         class_doChange(self, solution, problem_change_director)
+
         problem_change_director._unset_instance_map(run_id)
+        problem_change_director._unset_update_function(run_id)
+
+        reference_map.clear()
+        getattr(solution, "$setFields")(solution.get__optapy_Id(), id(solution.get__optapy_Id()), reference_map,
+                                        python_setter)
 
     setattr(problem_change_class, 'doChange', JOverride()(wrapper_doChange))
     out = jpype.JImplements(ProblemChange)(problem_change_class)

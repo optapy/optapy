@@ -3,23 +3,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.optaplanner</groupId>
-    <artifactId>optaplanner-build-parent</artifactId>
+    <artifactId>optapy-parent</artifactId>
     <version>8.23.0.Final</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>optapy</artifactId>
 
   <properties>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
-    <maven.compiler.release>11</maven.compiler.release>
     <java.module.name>org.optaplanner.optapy</java.module.name>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <version.ch.qos.logback>1.2.10</version.ch.qos.logback>
     <version.io.quarkus.gizmo>1.0.11.Final</version.io.quarkus.gizmo>
-
-    <version.compiler.plugin>3.8.1</version.compiler.plugin>
-    <version.surefire.plugin>2.22.2</version.surefire.plugin>
   </properties>
 
   <dependencyManagement>
@@ -38,6 +30,10 @@
       <artifactId>optaplanner-core</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.optaplanner</groupId>
+      <artifactId>jpyinterpreter</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
     </dependency>
@@ -52,6 +48,33 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <!-- Testing -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

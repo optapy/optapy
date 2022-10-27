@@ -1,12 +1,17 @@
 package org.optaplanner.optapy;
 
 import java.util.Map;
+import java.util.Set;
+
+import org.optaplanner.core.api.function.TriFunction;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
+import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
 
 /**
  * A PythonObject holds a reference to {@link OpaquePythonReference}.
  * Its internal state and fields are mapped to the {@link OpaquePythonReference}.
  */
-public interface PythonObject {
+public interface PythonObject extends PythonLikeObject {
 
     /**
      * The {@link OpaquePythonReference} that this PythonObject
@@ -24,4 +29,12 @@ public interface PythonObject {
      * @return The map used to store references.
      */
     Map<Number, Object> get__optapy_reference_map();
+
+    void forceUpdate();
+
+    void readFromPythonObject(Set doneSet, Map<Number, Object> referenceMap);
+
+    void visitIds(Map<Number, Object> referenceMap);
+
+    void $setFields(OpaquePythonReference reference, Number id, Map referenceMap, TriFunction setter);
 }

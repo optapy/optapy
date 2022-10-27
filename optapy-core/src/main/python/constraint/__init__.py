@@ -118,6 +118,7 @@ class DefaultConstraintMatchTotal:
             raise ValueError(f'The ConstraintMatchTotal ({self}) could not remove the ConstraintMatch'
                              f'({constraint_match}) from its constraint_match_set ({self.constraint_match_set}).')
 
+
 # Below is needed so unknown Python objects can properly be proxied
 from ..constraint_stream import function_cast as _cast, predicate_cast as _filtering_cast, \
     to_int_function_cast as _int_function_cast
@@ -170,12 +171,13 @@ class Joiners:
 
     @staticmethod
     def _call_comparison_java_joiner(java_joiner, mapping_or_left_mapping, right_mapping):
+        from ..constraint_stream import SamePropertyUniJoiner, PropertyJoiner
         if mapping_or_left_mapping is None and right_mapping is None:
             raise ValueError
         elif mapping_or_left_mapping is not None and right_mapping is None:
-            return java_joiner(_cast(mapping_or_left_mapping))
+            return SamePropertyUniJoiner(java_joiner, mapping_or_left_mapping)
         elif mapping_or_left_mapping is not None and right_mapping is not None:
-            return java_joiner(_cast(mapping_or_left_mapping), _cast(right_mapping))
+            return PropertyJoiner(java_joiner, mapping_or_left_mapping, right_mapping)
         else:
             raise ValueError
 
@@ -215,8 +217,9 @@ class Joiners:
 
         :return:
         """
+        from ..constraint_stream import SamePropertyUniJoiner
         if mapping_or_left_mapping is None and right_mapping is None:
-            return JavaJoiners.equal()
+            return SamePropertyUniJoiner(JavaJoiners.equal, lambda a: a)
         return Joiners._call_comparison_java_joiner(JavaJoiners.equal, mapping_or_left_mapping, right_mapping)
 
     @overload  # noqa
@@ -247,7 +250,8 @@ class Joiners:
 
         :return:
         """
-        return JavaJoiners.filtering(_filtering_cast(predicate))
+        from ..constraint_stream import FilteringJoiner
+        return FilteringJoiner(JavaJoiners.filtering, predicate)
 
     @overload  # noqa
     @staticmethod
@@ -438,16 +442,18 @@ class Joiners:
 
         :return:
         """
+        from ..constraint_stream import SameOverlappingPropertyUniJoiner, OverlappingPropertyJoiner
         if start_mapping_or_left_start_mapping is None or end_mapping_or_left_end_mapping is None:
             raise ValueError
         if right_start_mapping is None and right_end_mapping is None:
-            return JavaJoiners.overlapping(_cast(start_mapping_or_left_start_mapping),
-                                           _cast(end_mapping_or_left_end_mapping))
+            return SameOverlappingPropertyUniJoiner(JavaJoiners.overlapping, start_mapping_or_left_start_mapping,
+                                                    end_mapping_or_left_end_mapping)
         elif right_start_mapping is not None and right_end_mapping is not None:
-            return JavaJoiners.overlapping(_cast(start_mapping_or_left_start_mapping),
-                                           _cast(end_mapping_or_left_end_mapping),
-                                           _cast(right_start_mapping),
-                                           _cast(right_end_mapping))
+            return OverlappingPropertyJoiner(JavaJoiners.overlapping,
+                                             start_mapping_or_left_start_mapping,
+                                             end_mapping_or_left_end_mapping,
+                                             right_start_mapping,
+                                             right_end_mapping)
         else:
             raise ValueError
 
@@ -495,7 +501,8 @@ class ConstraintCollectors:
 
         :return:
         """
-        return JavaConstraintCollectors.average(_int_function_cast(group_value_mapping))
+        from ..constraint_stream import GroupIntMappingSingleArgConstraintCollector
+        return GroupIntMappingSingleArgConstraintCollector(JavaConstraintCollectors.average, group_value_mapping)
 
     @overload  # noqa
     @staticmethod
@@ -599,12 +606,12 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import ComposeConstraintCollector
         if len(args) < 3:  # Need at least two collectors + 1 compose function
             raise ValueError
         collectors = args[:-1]
         compose_function = args[-1]
-        compose_args = (*collectors, _cast(compose_function))
-        return JavaConstraintCollectors.compose(*compose_args)
+        return ComposeConstraintCollector(JavaConstraintCollectors.compose, collectors, compose_function)
 
     @overload  # noqa
     @staticmethod
@@ -643,7 +650,10 @@ class ConstraintCollectors:
 
         :return:
         """
-        return JavaConstraintCollectors.conditionally(_filtering_cast(predicate), delegate)
+        from ..constraint_stream import ConditionalConstraintCollector
+        return ConditionalConstraintCollector(JavaConstraintCollectors.conditionally,
+                                              predicate,
+                                              delegate)
 
     @staticmethod
     def count() -> 'UniConstraintCollector[A, Any, int]':
@@ -651,7 +661,8 @@ class ConstraintCollectors:
 
         :return:
         """
-        return JavaConstraintCollectors.count()
+        from ..constraint_stream import NoArgsConstraintCollector
+        return NoArgsConstraintCollector(JavaConstraintCollectors.count)  # noqa
 
     @staticmethod
     def count_bi() -> 'BiConstraintCollector[A, B, Any, int]':
@@ -659,7 +670,8 @@ class ConstraintCollectors:
 
         :return:
         """
-        return JavaConstraintCollectors.countBi()
+        from ..constraint_stream import NoArgsConstraintCollector
+        return NoArgsConstraintCollector(JavaConstraintCollectors.countBi)  # noqa
 
     countBi = count_bi
 
@@ -669,7 +681,8 @@ class ConstraintCollectors:
 
         :return:
         """
-        return JavaConstraintCollectors.countTri()
+        from ..constraint_stream import NoArgsConstraintCollector
+        return NoArgsConstraintCollector(JavaConstraintCollectors.countTri)  # noqa
 
     countTri = count_tri
 
@@ -679,7 +692,8 @@ class ConstraintCollectors:
 
         :return:
         """
-        return JavaConstraintCollectors.countQuad()
+        from ..constraint_stream import NoArgsConstraintCollector
+        return NoArgsConstraintCollector(JavaConstraintCollectors.countQuad)  # noqa
 
     countQuad = count_quad
 
@@ -715,10 +729,11 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import NoArgsConstraintCollector, GroupMappingSingleArgConstraintCollector
         if function is None:
-            return JavaConstraintCollectors.countDistinct()
+            return NoArgsConstraintCollector(JavaConstraintCollectors.countDistinct)
         else:
-            return JavaConstraintCollectors.countDistinct(_cast(function)) # noqa
+            return GroupMappingSingleArgConstraintCollector(JavaConstraintCollectors.countDistinct, function)
 
     countDistinct = count_distinct
 
@@ -782,14 +797,15 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import NoArgsConstraintCollector, GroupMappingSingleArgConstraintCollector
         if function is None and comparator is None:
-            return JavaConstraintCollectors.max()
+            return NoArgsConstraintCollector(JavaConstraintCollectors.max)
         elif function is not None and comparator is None:
-            return JavaConstraintCollectors.max(_cast(function)) # noqa
+            return GroupMappingSingleArgConstraintCollector(JavaConstraintCollectors.max, function)
         elif function is None and comparator is not None:
-            return JavaConstraintCollectors.max(_PythonComparator(comparator)) # noqa
+            raise NotImplementedError  # TODO
         else:
-            return JavaConstraintCollectors.max(_cast(function), _PythonComparator(comparator)) # noqa
+            raise NotImplementedError  # TODO
 
     @overload  # noqa
     @staticmethod
@@ -851,14 +867,15 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import NoArgsConstraintCollector, GroupMappingSingleArgConstraintCollector
         if function is None and comparator is None:
-            return JavaConstraintCollectors.min()
+            return NoArgsConstraintCollector(JavaConstraintCollectors.min)
         elif function is not None and comparator is None:
-            return JavaConstraintCollectors.min(_cast(function)) # noqa
+            return GroupMappingSingleArgConstraintCollector(JavaConstraintCollectors.min, function)
         elif function is None and comparator is not None:
-            return JavaConstraintCollectors.min(_PythonComparator(comparator)) # noqa
+            raise NotImplementedError  # TODO
         else:
-            return JavaConstraintCollectors.min(_cast(function), _PythonComparator(comparator)) # noqa
+            raise NotImplementedError  # TODO
 
     @overload  # noqa
     @staticmethod
@@ -915,11 +932,11 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import GroupIntMappingSingleArgConstraintCollector
         if zero is None and adder is None and subtractor is None:
-            return JavaConstraintCollectors.sum(_int_function_cast(function))
+            return GroupIntMappingSingleArgConstraintCollector(JavaConstraintCollectors.sum, function)
         elif zero is not None and adder is not None and subtractor is not None:
-            return JavaConstraintCollectors.sum(_cast(function), zero, # noqa
-                                                _PythonBinaryOperator(adder), _PythonBinaryOperator(subtractor))
+            raise NotImplementedError  # TODO
         else:
             raise ValueError
 
@@ -959,11 +976,9 @@ class ConstraintCollectors:
         :return:
         """
         if collection_creator is None:
-            return JavaConstraintCollectors.toCollection(
-                _PythonIntFunction(group_value_mapping_or_collection_creator))  # noqa
+            raise NotImplementedError  # TODO
         else:
-            return JavaConstraintCollectors.toCollection(_cast(group_value_mapping_or_collection_creator),  # noqa
-                                                         _PythonIntFunction(collection_creator))
+            raise NotImplementedError  # TODO
 
     toCollection = to_collection
 
@@ -999,10 +1014,11 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import NoArgsConstraintCollector, GroupMappingSingleArgConstraintCollector
         if group_value_mapping is None:
-            return JavaConstraintCollectors.toList()
+            return NoArgsConstraintCollector(JavaConstraintCollectors.toList)
         else:
-            return JavaConstraintCollectors.toList(_cast(group_value_mapping)) # noqa
+            return GroupMappingSingleArgConstraintCollector(JavaConstraintCollectors.toList, group_value_mapping)
 
     toList = to_list
 
@@ -1037,10 +1053,11 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import NoArgsConstraintCollector, GroupMappingSingleArgConstraintCollector
         if group_value_mapping is None:
-            return JavaConstraintCollectors.toSet()
+            return NoArgsConstraintCollector(JavaConstraintCollectors.toSet)
         else:
-            return JavaConstraintCollectors.toSet(_cast(group_value_mapping)) # noqa
+            return GroupMappingSingleArgConstraintCollector(JavaConstraintCollectors.toSet, group_value_mapping)
 
     toSet = to_set
 
@@ -1105,10 +1122,11 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import NoArgsConstraintCollector, GroupMappingSingleArgConstraintCollector
         if group_value_mapping is None and comparator is None:
-            return JavaConstraintCollectors.toSortedSet()
+            return NoArgsConstraintCollector(JavaConstraintCollectors.toSortedSet)
         elif group_value_mapping is not None and comparator is None:
-            return JavaConstraintCollectors.toSortedSet(_cast(group_value_mapping))
+            return GroupMappingSingleArgConstraintCollector(JavaConstraintCollectors.toSortedSet, group_value_mapping)
 
     toSortedSet = to_sorted_set
 
@@ -1198,16 +1216,15 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import KeyValueMappingConstraintCollector
         if merge_function_or_set_creator is None:
-            return JavaConstraintCollectors.toMap(_cast(key_mapper), _cast(value_mapper))
+            return KeyValueMappingConstraintCollector(JavaConstraintCollectors.toMap, key_mapper, value_mapper)
 
         arg_count = len(inspect.signature(merge_function_or_set_creator).parameters)
         if arg_count == 1:  # set_creator
-            return JavaConstraintCollectors.toMap(_cast(key_mapper), _cast(value_mapper), # noqa
-                                                  _PythonIntFunction(merge_function_or_set_creator))
+            raise NotImplementedError
         elif arg_count == 2:  # merge_function
-            return JavaConstraintCollectors.toMap(_cast(key_mapper), _cast(value_mapper), # noqa
-                                                  _PythonBinaryOperator(merge_function_or_set_creator))
+            raise NotImplementedError
         else:
             raise ValueError
 
@@ -1300,16 +1317,15 @@ class ConstraintCollectors:
 
         :return:
         """
+        from ..constraint_stream import KeyValueMappingConstraintCollector
         if merge_function_or_set_creator is None:
-            return JavaConstraintCollectors.toSortedMap(_cast(key_mapper), _cast(value_mapper))
+            return KeyValueMappingConstraintCollector(JavaConstraintCollectors.toSortedMap, key_mapper, value_mapper)
 
         arg_count = len(inspect.signature(merge_function_or_set_creator).parameters)
         if arg_count == 1:  # set_creator
-            return JavaConstraintCollectors.toSortedMap(_cast(key_mapper), _cast(value_mapper), # noqa
-                                                        _PythonIntFunction(merge_function_or_set_creator))
+            raise NotImplementedError
         elif arg_count == 2:  # merge_function
-            return JavaConstraintCollectors.toSortedMap(_cast(key_mapper), _cast(value_mapper), # noqa
-                                                        _PythonBinaryOperator(merge_function_or_set_creator))
+            raise NotImplementedError
         else:
             raise ValueError
 
