@@ -90,7 +90,11 @@ def is_c_native(item):
     import importlib
     module = getattr(item, '__module__', '')
 
-    if module == 'builtins' or module == '':  # if we cannot find module, assume it is not native
+    # __main__ is a built-in module, according to Python (and this be seen as c-native). We can also compile builtins,
+    # so return False, so we can compile them
+    if module == '__main__' or \
+            module == 'builtins' \
+            or module == '':  # if we cannot find module, assume it is not native
         return False
 
     return is_native_module(importlib.import_module(module))
