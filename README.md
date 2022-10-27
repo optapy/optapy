@@ -12,8 +12,6 @@ but using OptaPy in Python is significantly slower than using OptaPlanner in Jav
 
 [Try the OptaPy Jupyter notebook.](https://mybinder.org/v2/gh/optapy/optapy-quickstarts/stable?filepath=school-timetabling/school-timetabling-quickstart.ipynb)
 
->**WARNING**: OptaPy is an experimental technology.
->It is at least 20 times slower than using OptaPlanner in Java or Kotlin.
 
 ## Requirements
 
