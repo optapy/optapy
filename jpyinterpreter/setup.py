@@ -82,7 +82,7 @@ this_directory = Path(__file__).parent
 
 setup(
     name='jpyinterpreter',
-    version='8.19.0a0',
+    version='8.28.0b0',
     license='Apache License Version 2.0',
     license_file='LICENSE',
     description='A Python bytecode to Java bytecode translator',
