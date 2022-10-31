@@ -119,7 +119,7 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent'
     ],
-    packages=['optapy', 'optapy.config', 'optapy.constraint', 'optapy.score', 'optapy.types',
+    packages=['optapy', 'optapy.config', 'optapy.constraint', 'optapy.score', 'optapy.types', 'optapy.test',
               'jpyinterpreter',
               'java-stubs', 'jpype-stubs', 'org-stubs'],
     package_dir={
