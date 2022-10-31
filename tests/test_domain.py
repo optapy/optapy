@@ -6,6 +6,95 @@ import optapy.constraint
 import dataclasses
 
 
+def test_solve_partial():
+    class Code:
+        def __init__(self, value):
+            self.value = value
+
+    @optapy.problem_fact
+    class Value:
+        def __init__(self, code):
+            self.code = Code(code)
+
+    @optapy.planning_entity
+    class Entity:
+        def __init__(self, code, value=None):
+            self.code = Code(code)
+            self.value = value
+
+        @optapy.planning_variable(Value, value_range_provider_refs=['value_range'])
+        def get_value(self):
+            return self.value
+
+        def set_value(self, value):
+            self.value = value
+
+
+    def is_value_one(constraint_factory: optapy.constraint.ConstraintFactory):
+        return (constraint_factory.for_each(Entity)
+                .filter(lambda e: e.value.code.value == 'v1')
+                .reward('Value 1', optapy.score.SimpleScore.ONE)
+                )
+
+    @optapy.constraint_provider
+    def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
+        return [
+            is_value_one(constraint_factory)
+        ]
+
+    @optapy.planning_solution
+    class Solution:
+        def __init__(self, entities, values, score=None):
+            self.entities = entities
+            self.values = values
+            self.score = score
+
+        @optapy.planning_entity_collection_property(Entity)
+        def get_entities(self):
+            return self.entities
+
+        @optapy.problem_fact_collection_property(Value)
+        @optapy.value_range_provider(range_id='value_range')
+        def get_values(self):
+            return self.values
+
+        @optapy.planning_score(optapy.score.SimpleScore)
+        def get_score(self) -> optapy.score.SimpleScore:
+            return self.score
+
+        def set_score(self, score):
+            self.score = score
+
+    solver_config = optapy.config.solver.SolverConfig()
+    termination_config = optapy.config.solver.termination.TerminationConfig()
+    termination_config.setBestScoreLimit('3')
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
+        .withTerminationConfig(termination_config)
+
+    e1 = Entity('e1')
+    e2 = Entity('e2')
+    e3 = Entity('e3')
+
+    v1 = Value('v1')
+    v2 = Value('v2')
+    v3 = Value('v3')
+
+    e1.value = v1
+    e2.value = v2
+    e3.value = v3
+
+    problem = Solution([e1, e2, e3], [v1, v2, v3])
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
+
+    assert solution.score.getScore() == 3
+    assert solution.entities[0].value == v1
+    assert solution.entities[1].value == v1
+    assert solution.entities[2].value == v1
+
+
 def test_single_property():
     @optapy.planning_entity
     class Entity:
