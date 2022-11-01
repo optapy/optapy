@@ -131,6 +131,15 @@ def verifier_for(the_function: Callable[..., Any]) -> FunctionVerifier:
     return FunctionVerifier(the_function, java_function, untyped_java_function)
 
 
+def pytest_addoption(parser):
+    """
+    Allows adding command line options to pytest
+    """
+    parser.addoption('--jacoco-agent', action='store', default='')
+    parser.addoption('--jacoco-output', action='store', default='target/jacoco.exec')
+    parser.addoption('--output-generated-classes', action='store', default='false')
+
+
 def pytest_configure(config):
     """
     Allows plugins and conftest files to perform initial configuration.
@@ -148,9 +157,19 @@ def pytest_sessionstart(session):
     import jpyinterpreter
     import pathlib
     import sys
-    class_output_path = pathlib.Path('target', 'tox-generated-classes', 'python',
-                                     f'{sys.version_info[0]}.{sys.version_info[1]}')
-    jpyinterpreter.init(class_output_path=class_output_path)
+
+    class_output_path = None
+    if session.config.getoption('--output-generated-classes') != 'false':
+        class_output_path = pathlib.Path('target', 'tox-generated-classes', 'python',
+                                         f'{sys.version_info[0]}.{sys.version_info[1]}')
+
+    jacoco_agent = session.config.getoption('--jacoco-agent')
+    if jacoco_agent != '':
+        jacoco_output = session.config.getoption('--jacoco-output')
+        jpyinterpreter.init(f'-javaagent:{jacoco_agent}=destfile={jacoco_output}',
+                            class_output_path=class_output_path)
+    else:
+        jpyinterpreter.init(class_output_path=class_output_path)
 
 
 def pytest_sessionfinish(session, exitstatus):
