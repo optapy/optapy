@@ -1,6 +1,15 @@
 import optapy
 
 
+def pytest_addoption(parser):
+    """
+    Allows adding command line options to pytest
+    """
+    parser.addoption('--jacoco-agent', action='store', default='')
+    parser.addoption('--jacoco-output', action='store', default='target/jacoco.exec')
+    parser.addoption('--output-generated-classes', action='store', default='false')
+
+
 def pytest_configure(config):
     """
     Allows plugins and conftest files to perform initial configuration.
@@ -17,8 +26,17 @@ def pytest_sessionstart(session):
     """
     import pathlib
     import sys
-    optapy.init()
-    optapy.set_class_output_directory(pathlib.Path('target', 'tox-generated-classes', 'python', f'{sys.version_info[0]}.{sys.version_info[1]}'))
+
+    jacoco_agent = session.config.getoption('--jacoco-agent')
+    if jacoco_agent != '':
+        jacoco_output = session.config.getoption('--jacoco-output')
+        optapy.init(f'-javaagent:{jacoco_agent}=destfile={jacoco_output}')
+    else:
+        optapy.init()
+
+    if session.config.getoption('--output-generated-classes') != 'false':
+        optapy.set_class_output_directory(pathlib.Path('target', 'tox-generated-classes', 'python', f'{sys.version_info[0]}.{sys.version_info[1]}'))
+
 
 
 def pytest_sessionfinish(session, exitstatus):

@@ -1,0 +1,77 @@
+# Runs the SonarCloud analysis of the optapy main branch after a PR is merged.
+name: SonarCloud Analysis
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'LICENSE*'
+      - '.gitignore'
+      - '**.md'
+      - '**.adoc'
+      - '*.txt'
+      - '.ci/**'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sonarcloud-analysis:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        java-version: [ 11 ]
+        maven-version: [ '3.8.6' ]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Java and Maven Setup
+        uses: kiegroup/kogito-pipelines/.ci/actions/maven@main
+        with:
+          java-version: ${{ matrix.java-version }}
+          maven-version: ${{ matrix.maven-version }}
+          cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version }}
+
+      # Need to install both Python 3.9 and Python 3.10 for tox (has to be in the same run)
+      # Feature Request for setup action: https://github.com/actions/setup-python/issues/98
+      - name: Python 3.9 Setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Python 3.10 Setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install tox
+        run:
+          python -m pip install --upgrade pip
+          pip install tox
+
+      - name: Build with Maven to measure code coverage
+        run: mvn -B --fail-at-end clean install -Prun-code-coverage
+
+      - name: Get JaCoCo Agent
+        run: mvn org.apache.maven.plugins:maven-dependency-plugin:2.8:get -Dartifact=org.jacoco:org.jacoco.agent:0.8.8:jar:runtime -Ddest=target/jacocoagent.jar
+
+      - name: Run tox to measure optapy code coverage from Python tests
+        run: python -m tox -- --jacoco-agent=./target/jacocoagent.jar
+
+      - name: Run tox to measure jpyinterpreter code coverage from Python tests
+        working-directory: ./jpyinterpreter
+        run: python -m tox -- --jacoco-agent=../target/jacocoagent.jar --jacoco-output=../target/jacoco.exec
+
+      - name: Run SonarCloud analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONARCLOUD_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+        run: mvn -B --fail-at-end validate -Psonarcloud-analysis -Dsonar.projectKey=org.optaplanner:optapy -Dsonar.login=${{ env.SONARCLOUD_TOKEN }}
