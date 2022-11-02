@@ -57,7 +57,7 @@ jobs:
       - name: Install tox
         run:
           python -m pip install --upgrade pip
-          pip install tox
+          pip install tox coverage pytest pytest-cov
 
       - name: Build with Maven to measure code coverage
         run: mvn -B --fail-at-end clean install -Prun-code-coverage
@@ -66,11 +66,25 @@ jobs:
         run: mvn org.apache.maven.plugins:maven-dependency-plugin:2.8:get -Dartifact=org.jacoco:org.jacoco.agent:0.8.8:jar:runtime -Ddest=target/jacocoagent.jar
 
       - name: Run tox to measure optapy code coverage from Python tests
-        run: python -m tox -- --jacoco-agent=./target/jacocoagent.jar
+        run: python -m tox -- --cov=optapy --cov-report=xml:target/coverage.xml --cov-config=tox.ini --cov-branch --cov-append --jacoco-agent=./target/jacocoagent.jar
 
       - name: Run tox to measure jpyinterpreter code coverage from Python tests
         working-directory: ./jpyinterpreter
-        run: python -m tox -- --jacoco-agent=../target/jacocoagent.jar --jacoco-output=../target/jacoco.exec
+        run: python -m tox -- --cov=jpyinterpreter --cov-report=xml:target/coverage.xml --cov-config=tox.ini --cov-branch --cov-append --jacoco-agent=../target/jacocoagent.jar --jacoco-output=../target/jacoco.exec
+
+      # Because we are using JPype, and JPype add it own import hook, we need to use --import-mode=importlib in pytest
+      # This seems to create an issue in test coverage, where it reports coverage inside the tox virtual environment,
+      # instead of coverage inside sources. For instance, for a package, it will report:
+      # package name=".tox.py39.lib.python3.9.site-packages.jpyinterpreter"
+      # and for a file it will report:
+      # class name="jvm_setup.py" filename=".tox/py39/lib/python3.9/site-packages/jpyinterpreter/jvm_setup.py"
+      # We need to convert the package and file names into their true names; i.e. for the example above:
+      # package name="jpyinterpreter"
+      # class name="jvm_setup.py" filename="jpyinterpreter/src/main/python/jvm_setup.py"
+      # fix-coverage-paths.py is a Python script that does the above transformation for us and merge the two
+      # separate coverage files into one.
+      - name: Fix Python test coverage paths
+        run: python fix-coverage-paths.py
 
       - name: Run SonarCloud analysis
         env:
