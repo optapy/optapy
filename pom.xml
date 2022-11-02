@@ -22,6 +22,10 @@
     <version.surefire.plugin>2.22.2</version.surefire.plugin>
 
     <sonar.moduleKey>${project.artifactId}</sonar.moduleKey>
+    <sonar.sources>src/main/java,src/main/python</sonar.sources>
+    <sonar.tests>src/test/java,tests</sonar.tests>
+    <sonar.python.version>3.9,3.10</sonar.python.version>
+    <sonar.python.coverage.reportPaths>target/coverage.xml</sonar.python.coverage.reportPaths>
   </properties>
 
   <dependencyManagement>

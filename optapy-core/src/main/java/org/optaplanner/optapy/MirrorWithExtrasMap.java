@@ -1,6 +1,7 @@
 package org.optaplanner.optapy;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -52,6 +53,10 @@ public class MirrorWithExtrasMap<Key_, Value_> implements Map<Key_, Value_> {
 
     @Override
     public Value_ put(Key_ key, Value_ value) {
+        if (delegateMap.containsKey(key)) {
+            throw new IllegalArgumentException("Cannot set value for key (" + key + ") because it is a mirrored from "
+                    + " map (" + delegateMap + ").");
+        }
         return extraEntriesMap.put(key, value);
     }
 
@@ -62,6 +67,10 @@ public class MirrorWithExtrasMap<Key_, Value_> implements Map<Key_, Value_> {
 
     @Override
     public void putAll(Map<? extends Key_, ? extends Value_> map) {
+        if (!Collections.disjoint(delegateMap.keySet(), map.keySet())) {
+            throw new IllegalArgumentException("Cannot put all entries for map (" + map + ") because it shares "
+                    + " some keys with the mirrored map (" + delegateMap + ").");
+        }
         extraEntriesMap.putAll(map);
     }
 
@@ -92,5 +101,19 @@ public class MirrorWithExtrasMap<Key_, Value_> implements Map<Key_, Value_> {
         out.addAll(delegateMap.entrySet());
         out.addAll(extraEntriesMap.entrySet());
         return out;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Map)) {
+            return false;
+        }
+        Map<?, ?> other = (Map) o;
+        return entrySet().equals(other.entrySet());
+    }
+
+    @Override
+    public int hashCode() {
+        return entrySet().hashCode();
     }
 }
