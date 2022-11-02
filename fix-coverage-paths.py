@@ -178,11 +178,7 @@ def merge_coverage_xml(*coverage_xmls: ET.ElementTree):
     sources_element = ET.Element('sources')
 
     source = ET.Element('source')
-    source.text = str(pathlib.Path('optapy-core/src/main/python'))
-    sources_element.append(source)
-
-    source = ET.Element('source')
-    source.text = str(pathlib.Path('jpyinterpreter/src/main/python'))
+    source.text = str(pathlib.Path('.'))
     sources_element.append(source)
 
     root_element.append(sources_element)
