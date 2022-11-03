@@ -157,9 +157,10 @@ def test_fromtimestamp():
 
     verifier = verifier_for(function)
 
-    verifier.verify(0, expected_result=date(1969, 12, 31))
-    verifier.verify(4000, expected_result=date(1969, 12, 31))
-    verifier.verify(200000, expected_result=date(1970, 1, 3))
+    # cannot use expected result; python timestamps use system timezone
+    verifier.verify(0)
+    verifier.verify(4000)
+    verifier.verify(200000)
 
 
 def test_fromordinal():
