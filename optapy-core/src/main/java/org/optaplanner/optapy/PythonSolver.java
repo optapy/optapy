@@ -69,10 +69,10 @@ public class PythonSolver {
             return out;
         } catch (Throwable t) {
             throw new OptaPyException("A problem occurred when wrapping the python fact (" +
-                    PythonWrapperGenerator.getPythonObjectString(fact) +
-                    "). Maybe an annotation was passed an incorrect type " +
+                    PythonWrapperGenerator.getPythonObjectString(fact) + ").\n" 
+                    + "Maybe an annotation was passed an incorrect type " +
                     "(for example, @problem_fact_collection_property(str) " +
-                    " on a function that return a list of int).", t);
+                    " on a function that returns a list of int).", t);
         }
     }
 
