@@ -70,9 +70,11 @@ jobs:
         run: mvn org.apache.maven.plugins:maven-dependency-plugin:2.8:get -Dartifact=org.jacoco:org.jacoco.agent:0.8.8:jar:runtime -Ddest=target/jacocoagent.jar
 
       - name: Run tox to measure optapy code coverage from Python tests
+        continue-on-error: true # Sometimes the JVM segfaults on SUCCESSFUL tests with Java 17 (and always with Java 11)
         run: python -m tox -- --cov=optapy --cov-report=xml:target/coverage.xml --cov-config=tox.ini --cov-branch --cov-append --jacoco-agent=./target/jacocoagent.jar
 
       - name: Run tox to measure jpyinterpreter code coverage from Python tests
+        continue-on-error: true # Sometimes the JVM segfaults on SUCCESSFUL tests with Java 17 (and always with Java 11)
         working-directory: ./jpyinterpreter
         run: python -m tox -- --cov=jpyinterpreter --cov-report=xml:target/coverage.xml --cov-config=tox.ini --cov-branch --cov-append --jacoco-agent=../target/jacocoagent.jar --jacoco-output=../target/jacoco.exec
 
