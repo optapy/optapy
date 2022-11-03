@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 Solution_ = TypeVar('Solution_')
 
 
-class PythonConstraintVerifier(Generic[Solution_]):
+class ConstraintVerifier(Generic[Solution_]):
     """
     Entry point for the ConstraintVerifier API, which is used to test constraints defined by
     a @constraint_provider function.
@@ -25,7 +25,7 @@ class PythonConstraintVerifier(Generic[Solution_]):
         self.bytecode_translation = BytecodeTranslation.IF_POSSIBLE
 
     def with_bytecode_translation(self, bytecode_translation: BytecodeTranslation) ->\
-            'PythonConstraintVerifier[Solution_]':
+            'ConstraintVerifier[Solution_]':
         """
         All subsequent calls to verify_that(constraint_function) will translate bytecode according to the rules
         of the given BytecodeTranslation
@@ -37,7 +37,7 @@ class PythonConstraintVerifier(Generic[Solution_]):
         return self
 
     @overload
-    def verify_that(self) -> 'PythonMultiConstraintVerification[Solution_]':
+    def verify_that(self) -> 'MultiConstraintVerification[Solution_]':
         """
         Creates a constraint verifier for all constraints of the ConstraintProvider.
         """
@@ -45,7 +45,7 @@ class PythonConstraintVerifier(Generic[Solution_]):
 
     @overload
     def verify_that(self, constraint_function: Callable[['ConstraintFactory'], 'Constraint']) -> \
-            'PythonSingleConstraintVerification[Solution_]':
+            'SingleConstraintVerification[Solution_]':
         """
         Creates a constraint verifier for a given Constraint of the ConstraintProvider.
         :param constraint_function: The constraint to verify
@@ -58,44 +58,20 @@ class PythonConstraintVerifier(Generic[Solution_]):
         :param constraint_function: Sometimes None, the constraint to verify. If not provided, all
                                     constraints will be tested
         """
-        return self.verifyThat(constraint_function)
-
-    @overload
-    def verifyThat(self) -> 'PythonMultiConstraintVerification[Solution_]':
-        """
-        Creates a constraint verifier for all constraints of the ConstraintProvider.
-        """
-        ...
-
-    @overload
-    def verifyThat(self, constraint_function: Callable[['ConstraintFactory'], 'Constraint']) -> \
-            'PythonSingleConstraintVerification[Solution_]':
-        """
-        Creates a constraint verifier for a given Constraint of the ConstraintProvider.
-        :param constraint_function: The constraint to verify
-        """
-        ...
-
-    def verifyThat(self, constraint_function: Callable[['ConstraintFactory'], 'Constraint'] = None):
-        """
-        Creates a constraint verifier for a given Constraint of the ConstraintProvider.
-        :param constraint_function: Sometimes None, the constraint to verify. If not provided, all
-                                    constraints will be tested
-        """
         if constraint_function is None:
-            return PythonMultiConstraintVerification(self.delegate.verifyThat())
+            return MultiConstraintVerification(self.delegate.verifyThat())
         else:
-            return PythonSingleConstraintVerification(self.delegate.verifyThat(
+            return SingleConstraintVerification(self.delegate.verifyThat(
                 PythonBiFunction(lambda _, constraint_factory:
                                  constraint_function(PythonConstraintFactory(constraint_factory,
                                                                              self.bytecode_translation)))))
 
 
-class PythonSingleConstraintVerification(Generic[Solution_]):
+class SingleConstraintVerification(Generic[Solution_]):
     def __init__(self, delegate):
         self.delegate = delegate
 
-    def given(self, *facts) -> 'PythonSingleConstraintAssertion':
+    def given(self, *facts) -> 'SingleConstraintAssertion':
         """
         Set the facts for this assertion
         :param facts: Never None, at least one
@@ -118,17 +94,10 @@ class PythonSingleConstraintVerification(Generic[Solution_]):
                                                                                 inst=getattr(fact, '$cpythonReference'),
                                                                                 convert=True), reference_map)
 
-        return PythonSingleConstraintAssertion(self.delegate.given(wrapped_facts))
+        return SingleConstraintAssertion(self.delegate.given(wrapped_facts))
 
 
-    def given_solution(self, solution: 'Solution_') -> 'PythonSingleConstraintAssertion':
-        """
-        Set the solution to be used for this assertion
-        :param solution: Never None
-        """
-        return self.givenSolution(solution)
-
-    def givenSolution(self, solution: 'Solution_') -> 'PythonSingleConstraintAssertion':
+    def given_solution(self, solution: 'Solution_') -> 'SingleConstraintAssertion':
         """
         Set the solution to be used for this assertion
         :param solution: Never None
@@ -136,14 +105,14 @@ class PythonSingleConstraintVerification(Generic[Solution_]):
         from org.optaplanner.optapy import PythonSolver  # noqa
         solution_class = get_class(type(solution))
         wrapped_solution = PythonSolver.wrapProblem(solution_class, solution)
-        return PythonSingleConstraintAssertion(self.delegate.givenSolution(wrapped_solution))
+        return SingleConstraintAssertion(self.delegate.givenSolution(wrapped_solution))
 
 
-class PythonMultiConstraintVerification(Generic[Solution_]):
+class MultiConstraintVerification(Generic[Solution_]):
     def __init__(self, delegate):
         self.delegate = delegate
 
-    def given(self, *facts) -> 'PythonMultiConstraintAssertion':
+    def given(self, *facts) -> 'MultiConstraintAssertion':
         """
         Set the facts for this assertion
         :param facts: Never None, at least one
@@ -166,16 +135,9 @@ class PythonMultiConstraintVerification(Generic[Solution_]):
                                                                                 inst=getattr(fact, '$cpythonReference'),
                                                                                 convert=True), reference_map)
 
-        return PythonMultiConstraintAssertion(self.delegate.given(wrapped_facts))
+        return MultiConstraintAssertion(self.delegate.given(wrapped_facts))
 
-    def given_solution(self, solution: 'Solution_') -> 'PythonMultiConstraintAssertion':
-        """
-        Set the solution to be used for this assertion
-        :param solution: Never None
-        """
-        return self.givenSolution(solution)
-
-    def givenSolution(self, solution: 'Solution_') -> 'PythonMultiConstraintAssertion':
+    def given_solution(self, solution: 'Solution_') -> 'MultiConstraintAssertion':
         """
         Set the solution to be used for this assertion
         :param solution: Never None
@@ -183,10 +145,10 @@ class PythonMultiConstraintVerification(Generic[Solution_]):
         from org.optaplanner.optapy import PythonSolver  # noqa
         solution_class = get_class(type(solution))
         wrapped_solution = PythonSolver.wrapProblem(solution_class, solution)
-        return PythonMultiConstraintAssertion(self.delegate.givenSolution(wrapped_solution))
+        return MultiConstraintAssertion(self.delegate.givenSolution(wrapped_solution))
 
 
-class PythonSingleConstraintAssertion:
+class SingleConstraintAssertion:
     def __init__(self, delegate):
         self.delegate = delegate
 
@@ -304,49 +266,6 @@ class PythonSingleConstraintAssertion:
         ...
 
     def penalizes_by(self, match_weight_total: int, message: str = None):
-        """
-        Asserts that the Constraint being tested, given a set of facts, results in a specific penalty.
-
-        Ignores the constraint weight: it only asserts the match weights.
-        For example: a match with a match weight of 10 on a constraint with a constraint weight of -2hard reduces the
-        score by -20hard. In that case, this assertion checks for 10.
-
-        :param match_weight_total: the expected penalty
-        :param message: sometimes None, description of the scenario being asserted
-        :raises AssertionError: when the expected penalty is not observed
-        """
-        return self.penalizesBy(match_weight_total, message)
-
-    @overload
-    def penalizesBy(self, match_weight_total: int) -> None:
-        """
-        Asserts that the Constraint being tested, given a set of facts, results in a specific penalty.
-
-        Ignores the constraint weight: it only asserts the match weights.
-        For example: a match with a match weight of 10 on a constraint with a constraint weight of -2hard reduces the
-        score by -20hard. In that case, this assertion checks for 10.
-
-        :param match_weight_total: the expected penalty
-        :raises AssertionError: when the expected penalty is not observed
-        """
-        ...
-
-    @overload
-    def penalizesBy(self, match_weight_total: int, message: str) -> None:
-        """
-        Asserts that the Constraint being tested, given a set of facts, results in a specific penalty.
-
-        Ignores the constraint weight: it only asserts the match weights.
-        For example: a match with a match weight of 10 on a constraint with a constraint weight of -2hard reduces the
-        score by -20hard. In that case, this assertion checks for 10.
-
-        :param match_weight_total: the expected penalty
-        :param message: sometimes None, description of the scenario being asserted
-        :raises AssertionError: when the expected penalty is not observed
-        """
-        ...
-
-    def penalizesBy(self, match_weight_total: int, message: str = None) -> None:
         """
         Asserts that the Constraint being tested, given a set of facts, results in a specific penalty.
 
@@ -479,49 +398,6 @@ class PythonSingleConstraintAssertion:
         ...
 
     def rewards_with(self, match_weight_total: int, message: str = None):
-        return self.rewardsWith(match_weight_total, message)
-
-    @overload
-    def rewardsWith(self, match_weight_total: int) -> None:
-        """
-        Asserts that the Constraint being tested, given a set of facts, results in a specific reward.
-
-        Ignores the constraint weight: it only asserts the match weights.
-        For example: a match with a match weight of 10 on a constraint with a constraint weight of -2hard reduces the
-        score by -20hard. In that case, this assertion checks for 10.
-
-        :param match_weight_total: the expected reward
-        :raises AssertionError: when the expected reward is not observed
-        """
-        ...
-
-    @overload
-    def rewardsWith(self, match_weight_total: int, message: str) -> None:
-        """
-        Asserts that the Constraint being tested, given a set of facts, results in a specific reward.
-
-        Ignores the constraint weight: it only asserts the match weights.
-        For example: a match with a match weight of 10 on a constraint with a constraint weight of -2hard reduces the
-        score by -20hard. In that case, this assertion checks for 10.
-
-        :param match_weight_total: the expected reward
-        :param message: sometimes None, description of the scenario being asserted
-        :raises AssertionError: when the expected reward is not observed
-        """
-        ...
-
-    def rewardsWith(self, match_weight_total: int, message: str = None) -> None:
-        """
-        Asserts that the Constraint being tested, given a set of facts, results in a specific reward.
-
-        Ignores the constraint weight: it only asserts the match weights.
-        For example: a match with a match weight of 10 on a constraint with a constraint weight of -2hard reduces the
-        score by -20hard. In that case, this assertion checks for 10.
-
-        :param match_weight_total: the expected reward
-        :param message: sometimes None, description of the scenario being asserted
-        :raises AssertionError: when the expected reward is not observed
-        """
         from java.lang import AssertionError as JavaAssertionError  # noqa
         try:
             if message is None:
@@ -532,7 +408,7 @@ class PythonSingleConstraintAssertion:
             raise AssertionError(e.getMessage())
 
 
-class PythonMultiConstraintAssertion:
+class MultiConstraintAssertion:
     def __init__(self, delegate):
         self.delegate = delegate
 
@@ -574,7 +450,7 @@ class PythonMultiConstraintAssertion:
 
 def constraint_verifier_build(constraint_provider: Callable[['ConstraintFactory'], List['Constraint']],
                               planning_solution_class: Type[Solution_], *entity_classes: Type) -> \
-        PythonConstraintVerifier[Solution_]:
+        ConstraintVerifier[Solution_]:
     """
     Build a constraint verifier for the given @constraint_provider function.
 
@@ -585,17 +461,17 @@ def constraint_verifier_build(constraint_provider: Callable[['ConstraintFactory'
 
     :return: A ConstraintVerifier that can be used to test constraints
     """
-    from org.optaplanner.test.api.score.stream import ConstraintVerifier  # noqa
+    from org.optaplanner.test.api.score.stream import ConstraintVerifier as JavaConstraintVerifier  # noqa
     from org.optaplanner.optapy import PythonSolver  # noqa
     constraint_provider_instance = PythonSolver.createConstraintProvider(get_class(constraint_provider))
     planning_solution_java_class = get_class(planning_solution_class)
     entity_java_classes = list(map(get_class, entity_classes))
-    return PythonConstraintVerifier(ConstraintVerifier.build(constraint_provider_instance,
-                                                             planning_solution_java_class,
-                                                             entity_java_classes))
+    return ConstraintVerifier(JavaConstraintVerifier.build(constraint_provider_instance,
+                                                           planning_solution_java_class,
+                                                           entity_java_classes))
 
 
-def constraint_verifier_create(solver_config: 'SolverConfig') -> PythonConstraintVerifier:
+def constraint_verifier_create(solver_config: 'SolverConfig') -> ConstraintVerifier:
     """
     Uses a SolverConfig to build a ConstraintVerifier. Alternative to build(ConstraintProvider, Type, Type).
 
@@ -605,5 +481,5 @@ def constraint_verifier_create(solver_config: 'SolverConfig') -> PythonConstrain
     :return: A ConstraintVerifier that can be used to test constraints configured using the solver_config's
              planning solution class, planning entity classes and constraint provider function.
     """
-    from org.optaplanner.test.api.score.stream import ConstraintVerifier  # noqa
-    return PythonConstraintVerifier(ConstraintVerifier.create(solver_config))
+    from org.optaplanner.test.api.score.stream import ConstraintVerifier as JavaConstraintVerifier  # noqa
+    return ConstraintVerifier(JavaConstraintVerifier.create(solver_config))

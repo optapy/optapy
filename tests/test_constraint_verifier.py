@@ -8,7 +8,7 @@ import optapy.constraint
 import optapy.test
 
 
-def verifier_suite(verifier: optapy.test.PythonConstraintVerifier, same_value, is_value_one,
+def verifier_suite(verifier: optapy.test.ConstraintVerifier, same_value, is_value_one,
                    solution, e1, e2, e3, v1, v2, v3):
     verifier.verify_that(same_value) \
         .given(e1, e2) \
@@ -129,6 +129,65 @@ def verifier_suite(verifier: optapy.test.PythonConstraintVerifier, same_value, i
         verifier.verify_that(is_value_one) \
             .given(e1, e2, e3) \
             .rewards(4)
+
+    verifier.verify_that() \
+        .given(e1, e2, e3) \
+        .scores(optapy.score.SimpleScore.of(0))
+
+    with pytest.raises(AssertionError):
+        verifier.verify_that() \
+            .given(e1, e2, e3) \
+            .scores(optapy.score.SimpleScore.of(1))
+
+    with pytest.raises(AssertionError):
+        verifier.verify_that() \
+            .given(e1, e2, e3) \
+            .scores(optapy.score.SimpleScore.of(-1))
+
+    verifier.verify_that() \
+        .given_solution(solution) \
+        .scores(optapy.score.SimpleScore.of(0))
+
+    with pytest.raises(AssertionError):
+        verifier.verify_that() \
+            .given_solution(solution) \
+            .scores(optapy.score.SimpleScore.of(1))
+
+    with pytest.raises(AssertionError):
+        verifier.verify_that() \
+            .given_solution(solution) \
+            .scores(optapy.score.SimpleScore.of(-1))
+
+    e1.value = v1
+    e2.value = v2
+    e3.value = v3
+    verifier.verify_that() \
+            .given(e1, e2, e3) \
+            .scores(optapy.score.SimpleScore.of(1))
+
+    with pytest.raises(AssertionError):
+        verifier.verify_that() \
+            .given(e1, e2, e3) \
+            .scores(optapy.score.SimpleScore.of(2))
+
+    with pytest.raises(AssertionError):
+        verifier.verify_that() \
+            .given(e1, e2, e3) \
+            .scores(optapy.score.SimpleScore.of(0))
+
+    verifier.verify_that() \
+        .given_solution(solution) \
+        .scores(optapy.score.SimpleScore.of(1))
+
+    with pytest.raises(AssertionError):
+        verifier.verify_that() \
+            .given_solution(solution) \
+            .scores(optapy.score.SimpleScore.of(2))
+
+    with pytest.raises(AssertionError):
+        verifier.verify_that() \
+            .given_solution(solution) \
+            .scores(optapy.score.SimpleScore.of(0))
 
 
 def test_constraint_verifier_create():
