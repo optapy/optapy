@@ -90,4 +90,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONARCLOUD_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
-        run: mvn -B --fail-at-end validate -Psonarcloud-analysis -Dsonar.projectKey=org.optaplanner:optapy -Dsonar.login=${{ env.SONARCLOUD_TOKEN }}
+        run: mvn -B --fail-at-end validate -Psonarcloud-analysis -Dsonar.projectKey=optapy_optapy -Dsonar.login=${{ env.SONARCLOUD_TOKEN }}
