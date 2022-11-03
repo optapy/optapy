@@ -64,7 +64,7 @@ jobs:
           pip install tox coverage pytest pytest-cov
 
       - name: Build with Maven to measure code coverage
-        run: mvn -B --fail-at-end clean install -Prun-code-coverage
+        run: mvn -B --fail-at-end clean install -Prun-code-coverage -Dasciidoctor.skip -Dassembly.skipAssembly
 
       - name: Get JaCoCo Agent
         run: mvn org.apache.maven.plugins:maven-dependency-plugin:2.8:get -Dartifact=org.jacoco:org.jacoco.agent:0.8.8:jar:runtime -Ddest=target/jacocoagent.jar
