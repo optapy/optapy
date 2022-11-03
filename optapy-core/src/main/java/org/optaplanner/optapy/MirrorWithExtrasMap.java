@@ -3,9 +3,12 @@ package org.optaplanner.optapy;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+
+import org.apache.commons.collections4.collection.CompositeCollection;
+import org.apache.commons.collections4.set.CompositeSet;
 
 /**
  * A Map that mirrors another Map, but allows new entries to be added without affecting
@@ -15,8 +18,8 @@ import java.util.Set;
  * @param <Value_>
  */
 public class MirrorWithExtrasMap<Key_, Value_> implements Map<Key_, Value_> {
-    final Map<Key_, Value_> delegateMap;
-    final Map<Key_, Value_> extraEntriesMap = new HashMap<>();
+    private final Map<Key_, Value_> delegateMap;
+    private final Map<Key_, Value_> extraEntriesMap = new HashMap<>();
 
     public MirrorWithExtrasMap(Map<Key_, Value_> delegateMap) {
         this.delegateMap = delegateMap;
@@ -81,26 +84,17 @@ public class MirrorWithExtrasMap<Key_, Value_> implements Map<Key_, Value_> {
 
     @Override
     public Set<Key_> keySet() {
-        Set<Key_> out = new HashSet<>();
-        out.addAll(delegateMap.keySet());
-        out.addAll(extraEntriesMap.keySet());
-        return out;
+        return new CompositeSet<>(delegateMap.keySet(), extraEntriesMap.keySet());
     }
 
     @Override
     public Collection<Value_> values() {
-        Set<Value_> out = new HashSet<>();
-        out.addAll(delegateMap.values());
-        out.addAll(extraEntriesMap.values());
-        return out;
+        return new CompositeCollection<>(delegateMap.values(), extraEntriesMap.values());
     }
 
     @Override
     public Set<Entry<Key_, Value_>> entrySet() {
-        Set<Entry<Key_, Value_>> out = new HashSet<>();
-        out.addAll(delegateMap.entrySet());
-        out.addAll(extraEntriesMap.entrySet());
-        return out;
+        return new CompositeSet<>(delegateMap.entrySet(), extraEntriesMap.entrySet());
     }
 
     @Override
@@ -114,6 +108,6 @@ public class MirrorWithExtrasMap<Key_, Value_> implements Map<Key_, Value_> {
 
     @Override
     public int hashCode() {
-        return entrySet().hashCode();
+        return Objects.hash(delegateMap, extraEntriesMap);
     }
 }
