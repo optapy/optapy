@@ -88,7 +88,8 @@ class SingleConstraintVerification(Generic[Solution_]):
             wrapped_fact = PythonSolver.wrapFact(fact_class, fact, reference_map)
             wrapped_facts.append(wrapped_fact)
 
-        for fact in reference_map.values():
+        referenced_facts = list(reference_map.values())
+        for fact in referenced_facts:
             if isinstance(fact, CPythonBackedPythonLikeObject):
                 CPythonBackedPythonInterpreter.updateJavaObjectFromPythonObject(fact, JProxy(OpaquePythonReference,
                                                                                 inst=getattr(fact, '$cpythonReference'),
@@ -129,7 +130,8 @@ class MultiConstraintVerification(Generic[Solution_]):
             wrapped_fact = PythonSolver.wrapFact(fact_class, fact, reference_map)
             wrapped_facts.append(wrapped_fact)
 
-        for fact in reference_map.values():
+        referenced_facts = list(reference_map.values())
+        for fact in referenced_facts:
             if isinstance(fact, CPythonBackedPythonLikeObject):
                 CPythonBackedPythonInterpreter.updateJavaObjectFromPythonObject(fact, JProxy(OpaquePythonReference,
                                                                                 inst=getattr(fact, '$cpythonReference'),
