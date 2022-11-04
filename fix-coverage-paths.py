@@ -121,7 +121,7 @@ def is_test_package(package_name: str) -> bool:
 def is_ignored(package_name: str, ignore_jpyinterpreter: bool = False):
     # optapy packages start with 'optapy.' (or just plain 'optapy'), not 'optapy-core'
     return is_test_package(package_name) or (ignore_jpyinterpreter and package_name.startswith('jpyinterpreter')) or \
-           package_name.startswith('optapy-core')
+           package_name.startswith('optapy-core') or package_name.endswith('.jars')
 
 
 def update_coverage_xml(coverage_xml: ET.ElementTree, *, ignore_jpyinterpreter: bool = False):
@@ -178,7 +178,7 @@ def merge_coverage_xml(*coverage_xmls: ET.ElementTree):
     sources_element = ET.Element('sources')
 
     source = ET.Element('source')
-    source.text = str(pathlib.Path('.'))
+    source.text = str(pathlib.Path('.').resolve())
     sources_element.append(source)
 
     root_element.append(sources_element)
