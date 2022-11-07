@@ -3,6 +3,11 @@
 [![PyPI](https://img.shields.io/pypi/v/optapy "PyPI")](https://pypi.org/project/optapy/)
 [![Binder](https://mybinder.org/badge_logo.svg "Launch on Binder")](https://mybinder.org/v2/gh/optapy/optapy-quickstarts/stable?filepath=school-timetabling/school-timetabling-quickstart.ipynb)
 
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=optapy_optapy&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=optapy_optapy)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=optapy_optapy&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=optapy_optapy)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=optapy_optapy&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=optapy_optapy)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=optapy_optapy&metric=coverage)](https://sonarcloud.io/summary/new_code?id=optapy_optapy)
+
 OptaPy is *an AI constraint solver for Python* to optimize
 the Vehicle Routing Problem, Employee Rostering, Maintenance Scheduling, Task Assignment, School Timetabling,
 Cloud Optimization, Conference Scheduling, Job Shop Scheduling, Bin Packing and many more planning problems.
