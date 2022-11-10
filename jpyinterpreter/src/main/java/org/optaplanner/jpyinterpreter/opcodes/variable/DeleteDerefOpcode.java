@@ -14,12 +14,13 @@ public class DeleteDerefOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.setCellVariableValueSource(instruction.arg, null);
+        return stackMetadata.setCellVariableValueSource(VariableImplementor.getCellIndex(functionMetadata, instruction.arg),
+                null);
     }
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        VariableImplementor.deleteCellVariable(functionMetadata.methodVisitor, instruction,
-                stackMetadata.localVariableHelper);
+        VariableImplementor.deleteCellVariable(functionMetadata, stackMetadata,
+                VariableImplementor.getCellIndex(functionMetadata, instruction.arg));
     }
 }

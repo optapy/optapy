@@ -23,6 +23,11 @@ public class PythonIterator<T> extends AbstractPythonLikeObject implements Itera
         return BuiltinTypes.ITERATOR_TYPE;
     }
 
+    public PythonIterator(PythonLikeType type) {
+        super(type);
+        this.delegate = this;
+    }
+
     public PythonIterator(Iterator<T> delegate) {
         super(BuiltinTypes.ITERATOR_TYPE);
         this.delegate = delegate;

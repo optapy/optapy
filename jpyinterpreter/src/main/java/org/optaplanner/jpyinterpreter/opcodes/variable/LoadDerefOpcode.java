@@ -14,12 +14,13 @@ public class LoadDerefOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.push(stackMetadata.getCellVariableValueSource(instruction.arg));
+        return stackMetadata.push(
+                stackMetadata.getCellVariableValueSource(VariableImplementor.getCellIndex(functionMetadata, instruction.arg)));
     }
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        VariableImplementor.loadCellVariable(functionMetadata.methodVisitor, instruction,
-                stackMetadata.localVariableHelper);
+        VariableImplementor.loadCellVariable(functionMetadata, stackMetadata,
+                VariableImplementor.getCellIndex(functionMetadata, instruction.arg));
     }
 }

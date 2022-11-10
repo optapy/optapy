@@ -738,7 +738,8 @@ def test_builtin_exceptions():
             exception_class = value
 
             if issubclass(exception_class, OSError) or issubclass(exception_class, SyntaxError) or \
-                    issubclass(exception_class, UnicodeError):
+                    issubclass(exception_class, UnicodeError) or exception_class.__name__.endswith('Group'):
+                # Exception groups are 3.11+, and take two arguments
                 # these errors take a different number of arguments, and thus the below code will not work
                 continue
 

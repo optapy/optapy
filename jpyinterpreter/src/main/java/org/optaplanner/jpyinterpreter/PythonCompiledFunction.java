@@ -84,6 +84,12 @@ public class PythonCompiledFunction {
     public List<PythonLikeObject> co_constants;
 
     /**
+     * The exception table; only populated in Python 3.11 and above (in Python 3.10 and below,
+     * the table will be empty, since those use explict block instructions)
+     */
+    public PythonExceptionTable co_exceptiontable;
+
+    /**
      * The number of not keyword only arguments the function takes
      */
     public int co_argcount;
@@ -130,6 +136,7 @@ public class PythonCompiledFunction {
         out.typeAnnotations = typeAnnotations;
         out.defaultPositionalArguments = defaultPositionalArguments;
         out.defaultKeywordArguments = defaultKeywordArguments;
+        out.co_exceptiontable = this.co_exceptiontable;
         out.co_names = new ArrayList<>(co_names);
         out.co_varnames = new ArrayList<>(co_varnames);
         out.co_cellvars = new ArrayList<>(co_cellvars);

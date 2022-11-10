@@ -7,13 +7,17 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.jpyinterpreter.BytecodeSwitchImplementor;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
+import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
+import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.jpyinterpreter.PythonGeneratorTranslator;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.types.PythonGenerator;
+import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.errors.StopIteration;
 
 public class GeneratorImplementor {
@@ -147,6 +151,170 @@ public class GeneratorImplementor {
 
         // Since the subiterator was empty, push None to TOS
         PythonConstantsImplementor.loadNone(methodVisitor);
+    }
+
+    public static void progressSubgenerator(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int jumpTarget) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
+        System.out.println(stackMetadata);
+        int[] stackVariables = StackManipulationImplementor.storeStack(methodVisitor, stackMetadata); // TODO: This throws
+
+        Label wasNotSentValue = new Label();
+        Label wasNotThrownValue = new Label();
+        Label iterateSubiterator = new Label();
+
+        // Stack is subgenerator, sentValue
+        // Duplicate subgenerator
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.DUP_X1);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        // Duplicate sent value
+        methodVisitor.visitInsn(Opcodes.DUP);
+
+        // Check if sent a value
+        PythonConstantsImplementor.loadNone(methodVisitor);
+
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, wasNotSentValue);
+
+        methodVisitor.visitLdcInsn(1);
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, iterateSubiterator);
+
+        methodVisitor.visitLabel(wasNotSentValue);
+
+        // Check if thrown a value
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(PythonGenerator.class), "thrownValue",
+                Type.getDescriptor(Throwable.class));
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, wasNotThrownValue);
+
+        methodVisitor.visitLdcInsn(2);
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, iterateSubiterator);
+
+        methodVisitor.visitLabel(wasNotThrownValue);
+
+        // Else, should call next so it will also works with iterables
+        methodVisitor.visitInsn(Opcodes.POP);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitLdcInsn(0);
+
+        methodVisitor.visitLabel(iterateSubiterator);
+        // Stack is subgenerator, sent/thrownValue, switchCaseLabel
+
+        Label tryStartLabel = new Label();
+        Label tryEndLabel = new Label();
+        Label catchStartLabel = new Label();
+        Label catchEndLabel = new Label();
+
+        methodVisitor.visitTryCatchBlock(tryStartLabel, tryEndLabel, catchStartLabel,
+                Type.getInternalName(StopIteration.class));
+
+        methodVisitor.visitLabel(tryStartLabel);
+        BytecodeSwitchImplementor.createIntSwitch(methodVisitor, List.of(0, 1, 2),
+                key -> {
+                    Label generatorOperationDone = new Label();
+                    switch (key) {
+                        case 0: { // next
+                            methodVisitor.visitLdcInsn("next");
+                            PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
+                            methodVisitor.visitInsn(Opcodes.POP);
+
+                            methodVisitor.visitInsn(Opcodes.POP);
+                            DunderOperatorImplementor.unaryOperator(methodVisitor, PythonUnaryOperator.NEXT);
+                            break;
+                        }
+                        case 1: { // send
+                            methodVisitor.visitLdcInsn("send");
+                            PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
+                            methodVisitor.visitInsn(Opcodes.POP);
+
+                            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                            PythonConstantsImplementor.loadNone(methodVisitor);
+                            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(PythonGenerator.class),
+                                    "sentValue",
+                                    Type.getDescriptor(PythonLikeObject.class));
+                            FunctionImplementor.callBinaryMethod(methodVisitor,
+                                    PythonBinaryOperators.SEND.dunderMethod);
+                            break;
+                        }
+                        case 2: { // throw
+                            methodVisitor.visitLdcInsn("throw");
+                            PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
+                            methodVisitor.visitInsn(Opcodes.POP);
+
+                            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Throwable.class));
+                            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(PythonGenerator.class),
+                                    "thrownValue",
+                                    Type.getDescriptor(Throwable.class));
+
+                            methodVisitor.visitInsn(Opcodes.SWAP);
+                            // Stack is now Throwable, Generator
+
+                            // Check if the subgenerator has a "throw" method
+                            methodVisitor.visitInsn(Opcodes.DUP);
+                            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+                                    Type.getInternalName(PythonLikeObject.class),
+                                    "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
+                                    true);
+                            methodVisitor.visitLdcInsn("throw");
+                            methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE,
+                                    Type.getInternalName(PythonLikeObject.class),
+                                    "__getAttributeOrNull",
+                                    Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                                            Type.getType(String.class)),
+                                    true);
+
+                            // Stack is now Throwable, Generator, maybeMethod
+                            Label ifThrowMethodPresent = new Label();
+                            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                            methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, ifThrowMethodPresent);
+
+                            // does not have a throw method
+                            // Set yieldFromIterator to null since it is finished
+                            methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+                            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                            methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, functionMetadata.className,
+                                    PythonGeneratorTranslator.YIELD_FROM_ITERATOR,
+                                    Type.getDescriptor(PythonLikeObject.class));
+
+                            methodVisitor.visitInsn(Opcodes.POP);
+                            methodVisitor.visitInsn(Opcodes.ATHROW);
+
+                            methodVisitor.visitLabel(ifThrowMethodPresent);
+
+                            // Swap so it Generator, Throwable instead of Throwable, Generator
+                            methodVisitor.visitInsn(Opcodes.SWAP);
+                            FunctionImplementor.callBinaryMethod(methodVisitor,
+                                    PythonBinaryOperators.THROW.dunderMethod);
+                            break;
+                        }
+                    }
+                    methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeObject.class));
+                }, () -> {
+                    methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(IllegalStateException.class));
+                    methodVisitor.visitInsn(Opcodes.DUP);
+                    methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL,
+                            Type.getInternalName(IllegalStateException.class),
+                            "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
+                    methodVisitor.visitInsn(Opcodes.ATHROW);
+                }, false);
+
+        methodVisitor.visitLabel(tryEndLabel);
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, catchEndLabel);
+
+        methodVisitor.visitLabel(catchStartLabel);
+
+        methodVisitor.visitInsn(Opcodes.POP); // pop the StopIteration exception
+        StackManipulationImplementor.restoreStack(methodVisitor, stackMetadata, stackVariables);
+        JumpImplementor.jumpAbsolute(functionMetadata, stackMetadata, jumpTarget);
+
+        methodVisitor.visitLabel(catchEndLabel);
     }
 
     public static void getYieldFromIter(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {

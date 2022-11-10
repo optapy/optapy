@@ -14,12 +14,13 @@ public class StoreDerefOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop().setCellVariableValueSource(instruction.arg, stackMetadata.getTOSValueSource());
+        return stackMetadata.pop().setCellVariableValueSource(
+                VariableImplementor.getCellIndex(functionMetadata, instruction.arg), stackMetadata.getTOSValueSource());
     }
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        VariableImplementor.storeInCellVariable(functionMetadata.methodVisitor, instruction,
-                stackMetadata.localVariableHelper);
+        VariableImplementor.storeInCellVariable(functionMetadata, stackMetadata,
+                VariableImplementor.getCellIndex(functionMetadata, instruction.arg));
     }
 }

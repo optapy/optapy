@@ -35,8 +35,7 @@ public class JumpAbsoluteOpcode extends AbstractControlFlowOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        JumpImplementor.jumpAbsolute(functionMetadata.methodVisitor, jumpTarget,
-                functionMetadata.bytecodeCounterToLabelMap);
+        JumpImplementor.jumpAbsolute(functionMetadata, stackMetadata, jumpTarget);
     }
 
     @Override

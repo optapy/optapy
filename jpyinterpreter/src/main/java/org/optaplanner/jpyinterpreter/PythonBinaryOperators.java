@@ -138,4 +138,69 @@ public enum PythonBinaryOperators {
     public Optional<PythonBinaryOperators> getFallbackOperation() {
         return Optional.ofNullable(fallbackOperation);
     }
+
+    public static PythonBinaryOperators lookup(int instructionArg) {
+        // As defined by https://github.com/python/cpython/blob/0faa0ba240e815614e5a2900e48007acac41b214/Python/ceval.c#L299
+
+        // Binary operations are in alphabetical order (note: CPython refer to Modulo as Remainder),
+        // and are followed by the inplace operations in the same order
+        switch (instructionArg) {
+            case 0:
+                return PythonBinaryOperators.ADD;
+            case 1:
+                return PythonBinaryOperators.AND;
+            case 2:
+                return PythonBinaryOperators.FLOOR_DIVIDE;
+            case 3:
+                return PythonBinaryOperators.LSHIFT;
+            case 4:
+                return PythonBinaryOperators.MATRIX_MULTIPLY;
+            case 5:
+                return PythonBinaryOperators.MULTIPLY;
+            case 6:
+                return PythonBinaryOperators.MODULO;
+            case 7:
+                return PythonBinaryOperators.OR;
+            case 8:
+                return PythonBinaryOperators.POWER;
+            case 9:
+                return PythonBinaryOperators.RSHIFT;
+            case 10:
+                return PythonBinaryOperators.SUBTRACT;
+            case 11:
+                return PythonBinaryOperators.TRUE_DIVIDE;
+            case 12:
+                return PythonBinaryOperators.XOR;
+
+            case 13:
+                return PythonBinaryOperators.INPLACE_ADD;
+            case 14:
+                return PythonBinaryOperators.INPLACE_AND;
+            case 15:
+                return PythonBinaryOperators.INPLACE_FLOOR_DIVIDE;
+            case 16:
+                return PythonBinaryOperators.INPLACE_LSHIFT;
+            case 17:
+                return PythonBinaryOperators.INPLACE_MATRIX_MULTIPLY;
+            case 18:
+                return PythonBinaryOperators.INPLACE_MULTIPLY;
+            case 19:
+                return PythonBinaryOperators.INPLACE_MODULO;
+            case 20:
+                return PythonBinaryOperators.INPLACE_OR;
+            case 21:
+                return PythonBinaryOperators.INPLACE_POWER;
+            case 22:
+                return PythonBinaryOperators.INPLACE_RSHIFT;
+            case 23:
+                return PythonBinaryOperators.INPLACE_SUBTRACT;
+            case 24:
+                return PythonBinaryOperators.INPLACE_TRUE_DIVIDE;
+            case 25:
+                return PythonBinaryOperators.INPLACE_XOR;
+
+            default:
+                throw new IllegalArgumentException("Unknown binary op id: " + instructionArg);
+        }
+    }
 }

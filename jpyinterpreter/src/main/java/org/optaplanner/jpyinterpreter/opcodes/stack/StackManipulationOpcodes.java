@@ -10,9 +10,6 @@ public class StackManipulationOpcodes {
     public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction,
             PythonVersion pythonVersion) {
         switch (instruction.opcode) {
-            case NOP: {
-                return Optional.of(new NopOpcode(instruction));
-            }
             case POP_TOP: {
                 return Optional.of(new PopOpcode(instruction));
             }
@@ -24,6 +21,12 @@ public class StackManipulationOpcodes {
             }
             case ROT_FOUR: {
                 return Optional.of(new RotateFourOpcode(instruction));
+            }
+            case COPY: {
+                return Optional.of(new CopyOpcode(instruction));
+            }
+            case SWAP: {
+                return Optional.of(new SwapOpcode(instruction));
             }
             case DUP_TOP: {
                 return Optional.of(new DupOpcode(instruction));

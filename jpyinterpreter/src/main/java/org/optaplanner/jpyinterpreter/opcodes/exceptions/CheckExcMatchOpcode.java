@@ -2,28 +2,27 @@ package org.optaplanner.jpyinterpreter.opcodes.exceptions;
 
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
-import org.optaplanner.jpyinterpreter.PythonVersion;
 import org.optaplanner.jpyinterpreter.StackMetadata;
+import org.optaplanner.jpyinterpreter.ValueSourceInfo;
 import org.optaplanner.jpyinterpreter.implementors.ExceptionImplementor;
 import org.optaplanner.jpyinterpreter.opcodes.AbstractOpcode;
+import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 
-public class PopExceptOpcode extends AbstractOpcode {
+public class CheckExcMatchOpcode extends AbstractOpcode {
 
-    public PopExceptOpcode(PythonBytecodeInstruction instruction) {
+    public CheckExcMatchOpcode(PythonBytecodeInstruction instruction) {
         super(instruction);
     }
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        if (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) {
-            return stackMetadata.pop(1);
-        } else {
-            return stackMetadata.pop(3);
-        }
+        return stackMetadata
+                .pop()
+                .push(ValueSourceInfo.of(this, BuiltinTypes.BOOLEAN_TYPE, stackMetadata.getValueSourcesUpToStackIndex(2)));
     }
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        ExceptionImplementor.startExceptOrFinally(functionMetadata, stackMetadata);
+        ExceptionImplementor.checkExcMatch(functionMetadata, stackMetadata);
     }
 }

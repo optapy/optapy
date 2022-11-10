@@ -2,6 +2,7 @@ package org.optaplanner.jpyinterpreter.opcodes.function;
 
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
+import org.optaplanner.jpyinterpreter.PythonVersion;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.ValueSourceInfo;
 import org.optaplanner.jpyinterpreter.implementors.FunctionImplementor;
@@ -16,9 +17,11 @@ public class MakeFunctionOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop(2 + Integer.bitCount(instruction.arg))
+        int stackElements =
+                (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) ? 1 : 2;
+        return stackMetadata.pop(stackElements + Integer.bitCount(instruction.arg))
                 .push(ValueSourceInfo.of(this, PythonLikeFunction.getFunctionType(),
-                        stackMetadata.getValueSourcesUpToStackIndex(2 + Integer.bitCount(instruction.arg))));
+                        stackMetadata.getValueSourcesUpToStackIndex(stackElements + Integer.bitCount(instruction.arg))));
     }
 
     @Override

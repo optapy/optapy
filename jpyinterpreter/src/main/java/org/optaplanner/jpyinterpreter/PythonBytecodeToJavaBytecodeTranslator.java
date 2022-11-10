@@ -7,10 +7,13 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,8 +24,10 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.dag.FlowGraph;
 import org.optaplanner.jpyinterpreter.implementors.CollectionImplementor;
+import org.optaplanner.jpyinterpreter.implementors.ExceptionImplementor;
 import org.optaplanner.jpyinterpreter.implementors.FunctionImplementor;
 import org.optaplanner.jpyinterpreter.implementors.JavaPythonTypeConversionImplementor;
+import org.optaplanner.jpyinterpreter.implementors.StackManipulationImplementor;
 import org.optaplanner.jpyinterpreter.implementors.VariableImplementor;
 import org.optaplanner.jpyinterpreter.opcodes.Opcode;
 import org.optaplanner.jpyinterpreter.opcodes.OpcodeWithoutSource;
@@ -33,6 +38,7 @@ import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.PythonString;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeDict;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
+import org.optaplanner.jpyinterpreter.types.errors.PythonBaseException;
 import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
 import org.optaplanner.jpyinterpreter.types.wrappers.PythonObjectWrapper;
 import org.optaplanner.jpyinterpreter.util.JavaPythonClassWriter;
@@ -987,6 +993,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         for (PythonBytecodeInstruction instruction : pythonCompiledFunction.instructionList) {
             switch (instruction.opcode) {
                 case GEN_START:
+                case RETURN_GENERATOR:
                 case YIELD_VALUE:
                 case YIELD_FROM:
                     return PythonFunctionType.GENERATOR;
@@ -1020,6 +1027,11 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         Map<Integer, Label> bytecodeCounterToLabelMap = new HashMap<>();
         LocalVariableHelper localVariableHelper = new LocalVariableHelper(method.getParameterTypes(), pythonCompiledFunction);
 
+        localVariableHelper.resetCallKeywords(methodVisitor);
+
+        // The bytecode checker will see an empty slot in finally blocks without this (in particular,
+        // when a try block finally handler is inside another try block).
+        localVariableHelper.setupInitialStoredExceptionStacks(methodVisitor);
         if (!isPythonLikeFunction) {
             // Need to convert Java parameters
             for (int i = 0; i < localVariableHelper.parameters.length; i++) {
@@ -1060,23 +1072,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
         FlowGraph flowGraph = FlowGraph.createFlowGraph(functionMetadata, initialStackMetadata, opcodeList);
         List<StackMetadata> stackMetadataForOpcodeIndex = flowGraph.getStackMetadataForOperations();
-
-        for (int i = 0; i < opcodeList.size(); i++) {
-            StackMetadata stackMetadata = stackMetadataForOpcodeIndex.get(i);
-            PythonBytecodeInstruction instruction = pythonCompiledFunction.instructionList.get(i);
-
-            if (instruction.isJumpTarget) {
-                Label label = bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset, offset -> new Label());
-                methodVisitor.visitLabel(label);
-            }
-
-            bytecodeIndexToArgumentorsMap.getOrDefault(instruction.offset, List.of()).forEach(Runnable::run);
-
-            if (stackMetadata.isDeadCode()) {
-                continue;
-            }
-            opcodeList.get(i).implement(functionMetadata, stackMetadata);
-        }
+        writeInstructionsForOpcodes(functionMetadata, stackMetadataForOpcodeIndex, opcodeList);
 
         methodVisitor.visitLabel(end);
 
@@ -1100,6 +1096,96 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         }
 
         methodVisitor.visitEnd();
+    }
+
+    public static void writeInstructionsForOpcodes(FunctionMetadata functionMetadata,
+            List<StackMetadata> stackMetadataForOpcodeIndex, List<Opcode> opcodeList) {
+        writeInstructionsForOpcodes(functionMetadata, stackMetadataForOpcodeIndex, opcodeList, ignored -> {
+        });
+    }
+
+    public static void writeInstructionsForOpcodes(FunctionMetadata functionMetadata,
+            List<StackMetadata> stackMetadataForOpcodeIndex, List<Opcode> opcodeList,
+            Consumer<PythonBytecodeInstruction> runAfterLabelAndBeforeArgumentors) {
+        PythonCompiledFunction pythonCompiledFunction = functionMetadata.pythonCompiledFunction;
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        Map<Integer, Label> bytecodeCounterToLabelMap = functionMetadata.bytecodeCounterToLabelMap;
+        Map<Integer, List<Runnable>> bytecodeIndexToArgumentorsMap = functionMetadata.bytecodeCounterToCodeArgumenterList;
+
+        Map<Integer, List<Runnable>> exceptionTableTryBlockMap = new HashMap<>();
+        Map<Integer, Label> exceptionTableStartLabelMap = new HashMap<>();
+        Map<Integer, Label> exceptionTableTargetLabelMap = new HashMap<>();
+        Map<Integer, AtomicReference<int[]>> tryBlockStartToStoredStackMap = new HashMap<>();
+
+        for (PythonExceptionTable.ExceptionBlock exceptionBlock : pythonCompiledFunction.co_exceptiontable.getEntries()) {
+            if (exceptionBlock.blockStartInstructionInclusive == exceptionBlock.blockEndInstructionExclusive) {
+                continue; // Empty try block range
+            }
+            AtomicReference<int[]> storedStack = tryBlockStartToStoredStackMap
+                    .computeIfAbsent(exceptionBlock.blockStartInstructionInclusive, key -> new AtomicReference<>());
+            StackMetadata stackMetadata = stackMetadataForOpcodeIndex.get(exceptionBlock.blockStartInstructionInclusive);
+
+            exceptionTableTryBlockMap.computeIfAbsent(exceptionBlock.blockStartInstructionInclusive, index -> new ArrayList<>())
+                    .add(() -> {
+                        Label startLabel =
+                                exceptionTableStartLabelMap.computeIfAbsent(exceptionBlock.blockStartInstructionInclusive,
+                                        offset -> new Label());
+                        Label endLabel = bytecodeCounterToLabelMap.computeIfAbsent(exceptionBlock.blockEndInstructionExclusive,
+                                offset -> new Label());
+                        Label targetLabel = exceptionTableTargetLabelMap.computeIfAbsent(exceptionBlock.targetInstruction,
+                                offset -> new Label());
+
+                        functionMetadata.methodVisitor.visitTryCatchBlock(startLabel, endLabel, targetLabel,
+                                Type.getInternalName(PythonBaseException.class));
+                    });
+
+            bytecodeIndexToArgumentorsMap.computeIfAbsent(exceptionBlock.targetInstruction, index -> new ArrayList<>())
+                    .add(() -> ExceptionImplementor.startExceptBlock(functionMetadata, stackMetadata, exceptionBlock));
+        }
+
+        // Do this after so the startExceptBlock code is before the code to store the stack
+        for (Integer tryBlockStart : tryBlockStartToStoredStackMap.keySet()) {
+            StackMetadata stackMetadata = stackMetadataForOpcodeIndex.get(tryBlockStart);
+            pythonCompiledFunction.co_exceptiontable.getEntries().stream()
+                    .filter(block -> block.blockStartInstructionInclusive == tryBlockStart)
+                    .forEach(exceptionBlock -> {
+                        bytecodeIndexToArgumentorsMap.computeIfAbsent(tryBlockStart, index -> new ArrayList<>())
+                                .add(() -> StackManipulationImplementor.storeExceptionTableStack(functionMetadata,
+                                        stackMetadata,
+                                        exceptionBlock));
+                    });
+        }
+
+        for (int i = 0; i < opcodeList.size(); i++) {
+            StackMetadata stackMetadata = stackMetadataForOpcodeIndex.get(i);
+            PythonBytecodeInstruction instruction = pythonCompiledFunction.instructionList.get(i);
+
+            if (exceptionTableTargetLabelMap.containsKey(instruction.offset)) {
+                Label label = exceptionTableTargetLabelMap.get(instruction.offset);
+                methodVisitor.visitLabel(label);
+            }
+            exceptionTableTryBlockMap.getOrDefault(instruction.offset, List.of()).forEach(Runnable::run);
+
+            if (instruction.isJumpTarget || bytecodeCounterToLabelMap.containsKey(instruction.offset)) {
+                Label label = bytecodeCounterToLabelMap.computeIfAbsent(instruction.offset, offset -> new Label());
+                methodVisitor.visitLabel(label);
+            }
+
+            runAfterLabelAndBeforeArgumentors.accept(instruction);
+
+            bytecodeIndexToArgumentorsMap.getOrDefault(instruction.offset, List.of()).forEach(Runnable::run);
+
+            if (exceptionTableStartLabelMap.containsKey(instruction.offset)) {
+                Label label = exceptionTableStartLabelMap.get(instruction.offset);
+                methodVisitor.visitLabel(label);
+            }
+
+            if (stackMetadata.isDeadCode()) {
+                continue;
+            }
+
+            opcodeList.get(i).implement(functionMetadata, stackMetadata);
+        }
     }
 
     private static void translateGeneratorBytecode(MethodVisitor methodVisitor, MethodDescriptor method,
@@ -1197,15 +1283,15 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     }
 
     /**
-     * Used for debugging; prints the offset of the instruction when it is executed
+     * Used for debugging; prints the instruction when it is executed
      */
     @SuppressWarnings("unused")
     private static void trace(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction) {
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(System.class),
                 "out", Type.getDescriptor(PrintStream.class));
-        methodVisitor.visitLdcInsn(instruction.offset);
+        methodVisitor.visitLdcInsn(instruction.toString());
         methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PrintStream.class),
-                "println", Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE),
+                "println", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Object.class)),
                 false);
     }
 
@@ -1221,5 +1307,57 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PrintStream.class),
                 "println", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(Object.class)),
                 false);
+    }
+
+    /**
+     * Used for debugging; prints the entire stack
+     */
+    @SuppressWarnings("unused")
+    public static void printStack(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+        int[] stackLocals = new int[stackMetadata.getStackSize()];
+
+        for (int i = stackLocals.length - 1; i >= 0; i--) {
+            stackLocals[i] = localVariableHelper.newLocal();
+            localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class), stackLocals[i]);
+        }
+        methodVisitor.visitLdcInsn(stackLocals.length);
+        methodVisitor.visitTypeInsn(Opcodes.ANEWARRAY, Type.getInternalName(PythonLikeObject.class));
+
+        for (int i = 0; i < stackLocals.length; i++) {
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitLdcInsn(i);
+            localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), stackLocals[i]);
+            methodVisitor.visitInsn(Opcodes.AASTORE);
+        }
+
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Arrays.class), "toString",
+                Type.getMethodDescriptor(Type.getType(String.class), Type.getType(Object[].class)),
+                false);
+        print(methodVisitor);
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        for (int i = 0; i < stackLocals.length; i++) {
+            localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), stackLocals[i]);
+        }
+
+        for (int i = 0; i < stackLocals.length; i++) {
+            localVariableHelper.freeLocal();
+        }
+    }
+
+    public static String getPythonBytecodeListing(PythonCompiledFunction pythonCompiledFunction) {
+        StringBuilder out = new StringBuilder();
+        out.append("qualified_name = ").append(pythonCompiledFunction.qualifiedName).append("\n");
+        out.append("co_varnames = ").append(pythonCompiledFunction.co_varnames).append("\n");
+        out.append("co_cellvars = ").append(pythonCompiledFunction.co_cellvars).append("\n");
+        out.append("co_freevars = ").append(pythonCompiledFunction.co_freevars).append("\n");
+
+        out.append(pythonCompiledFunction.instructionList.stream()
+                .map(PythonBytecodeInstruction::toString)
+                .collect(Collectors.joining("\n")));
+        out.append("\nco_exceptiontable = ").append(pythonCompiledFunction.co_exceptiontable).append("\n");
+        return out.toString();
     }
 }

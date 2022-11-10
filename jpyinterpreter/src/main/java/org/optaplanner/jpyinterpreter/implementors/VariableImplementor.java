@@ -6,6 +6,7 @@ import java.util.Map;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.LocalVariableHelper;
 import org.optaplanner.jpyinterpreter.OpcodeIdentifier;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
@@ -13,6 +14,8 @@ import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.jpyinterpreter.PythonCompiledFunction;
 import org.optaplanner.jpyinterpreter.PythonInterpreter;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
+import org.optaplanner.jpyinterpreter.PythonVersion;
+import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.types.PythonCell;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
@@ -66,10 +69,13 @@ public class VariableImplementor {
     /**
      * Loads the global variable or parameter indicated by the {@code instruction} argument onto the stack.
      */
-    public static void loadGlobalVariable(MethodVisitor methodVisitor, String className,
-            PythonCompiledFunction pythonCompiledFunction,
-            PythonBytecodeInstruction instruction, PythonLikeType globalType) {
-        String globalName = pythonCompiledFunction.co_names.get(instruction.arg);
+    public static void loadGlobalVariable(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int globalIndex,
+            PythonLikeType globalType) {
+        PythonCompiledFunction pythonCompiledFunction = functionMetadata.pythonCompiledFunction;
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        String className = functionMetadata.className;
+
+        String globalName = pythonCompiledFunction.co_names.get(globalIndex);
 
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, className);
@@ -125,6 +131,19 @@ public class VariableImplementor {
         localVariableHelper.writeLocal(methodVisitor, instruction.arg);
     }
 
+    public static int getCellIndex(FunctionMetadata functionMetadata, int instructionArg) {
+        if (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) {
+            // free variables are offset by co_varnames.size(), bound variables are not
+            if (instructionArg >= functionMetadata.pythonCompiledFunction.co_cellvars.size()) {
+                // it a free variable
+                return instructionArg - functionMetadata.pythonCompiledFunction.co_varnames.size();
+            }
+            return instructionArg; // it a bound variable
+        } else {
+            return instructionArg; // Python 3.10 and below, we don't need to do anything
+        }
+    }
+
     /**
      * Loads the cell indicated by the {@code instruction} argument onto the stack.
      * This is used by {@link OpcodeIdentifier#LOAD_CLOSURE} when creating a closure
@@ -167,18 +186,21 @@ public class VariableImplementor {
      * This is used by {@link OpcodeIdentifier#LOAD_CLOSURE} when creating a closure
      * for a dependent function.
      */
-    public static void loadCell(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
-        localVariableHelper.readCell(methodVisitor, instruction.arg);
+    public static void loadCell(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int cellIndex) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+
+        localVariableHelper.readCell(methodVisitor, cellIndex);
     }
 
     /**
      * Loads the cell variable/free variable indicated by the {@code instruction} argument onto the stack.
      * (which is an {@link PythonCell}, so it can see changes from the parent function).
      */
-    public static void loadCellVariable(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
-        loadCell(methodVisitor, instruction, localVariableHelper);
+    public static void loadCellVariable(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int cellIndex) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
+        loadCell(functionMetadata, stackMetadata, cellIndex);
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(PythonCell.class), "cellValue",
                 Type.getDescriptor(PythonLikeObject.class));
     }
@@ -187,9 +209,10 @@ public class VariableImplementor {
      * Stores TOS into the cell variable or parameter indicated by the {@code instruction} argument
      * (which is an {@link PythonCell}, so changes in the parent function affect the variable in dependent functions).
      */
-    public static void storeInCellVariable(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
-        loadCell(methodVisitor, instruction, localVariableHelper);
+    public static void storeInCellVariable(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int cellIndex) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
+        loadCell(functionMetadata, stackMetadata, cellIndex);
         methodVisitor.visitInsn(Opcodes.SWAP);
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(PythonCell.class), "cellValue",
                 Type.getDescriptor(PythonLikeObject.class));
@@ -199,10 +222,11 @@ public class VariableImplementor {
      * Deletes the cell variable or parameter indicated by the {@code instruction} argument
      * (which is an {@link PythonCell}, so changes in the parent function affect the variable in dependent functions).
      */
-    public static void deleteCellVariable(MethodVisitor methodVisitor, PythonBytecodeInstruction instruction,
-            LocalVariableHelper localVariableHelper) {
+    public static void deleteCellVariable(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int cellIndex) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
         // Deleting is implemented as setting the value to null
-        loadCell(methodVisitor, instruction, localVariableHelper);
+        loadCell(functionMetadata, stackMetadata, cellIndex);
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, Type.getInternalName(PythonCell.class), "cellValue",
                 Type.getDescriptor(PythonLikeObject.class));

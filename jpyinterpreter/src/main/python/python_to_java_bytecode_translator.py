@@ -9,7 +9,7 @@ from typing import Union
 from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, JArray
 
 MINIMUM_SUPPORTED_PYTHON_VERSION = (3, 9)
-MAXIMUM_SUPPORTED_PYTHON_VERSION = (3, 10)
+MAXIMUM_SUPPORTED_PYTHON_VERSION = (3, 11)
 
 global_dict_to_instance = dict()
 global_dict_to_key_set = dict()
@@ -754,6 +754,53 @@ def find_globals_dict_for_java_map(java_globals):
     raise ValueError(f'Could not find python globals corresponding to {str(java_globals.toString())}')
 
 
+def get_instructions(python_function):
+    try:
+        yield from dis.get_instructions(python_function, show_caches=True)  # Python 3.11 and above
+    except TypeError:  # Python 3.10 and below
+        yield from dis.get_instructions(python_function)
+
+
+# From https://github.com/python/cpython/blob/main/Objects/exception_handling_notes.txt
+def parse_varint(iterator):
+    b = next(iterator)
+    val = b & 63
+    while b&64:
+        val <<= 6
+        b = next(iterator)
+        val |= b&63
+    return val
+
+
+# From https://github.com/python/cpython/blob/main/Objects/exception_handling_notes.txt
+def parse_exception_table(code):
+    iterator = iter(code.co_exceptiontable)
+    try:
+        while True:
+            start = parse_varint(iterator)*2
+            length = parse_varint(iterator)*2
+            end = start + length - 2 # Present as inclusive, not exclusive
+            target = parse_varint(iterator)*2
+            dl = parse_varint(iterator)
+            depth = dl >> 1
+            lasti = bool(dl&1)
+            yield start, end, target, depth, lasti
+    except StopIteration:
+        return
+
+
+def get_python_exception_table(python_code):
+    from org.optaplanner.jpyinterpreter import PythonExceptionTable, PythonVersion
+    out = PythonExceptionTable()
+
+    if hasattr(python_code, 'co_exceptiontable'):
+        python_version = PythonVersion(sys.hexversion)
+        for start, end, target, depth, lasti in parse_exception_table(python_code):
+            out.addEntry(python_version, start, end, target, depth, lasti)
+
+    return out
+
+
 def get_function_bytecode_object(python_function):
     from java.util import ArrayList
     from org.optaplanner.jpyinterpreter import PythonBytecodeInstruction, PythonCompiledFunction, PythonVersion, OpcodeIdentifier # noqa
@@ -762,7 +809,7 @@ def get_function_bytecode_object(python_function):
 
     python_compiled_function = PythonCompiledFunction()
     instruction_list = ArrayList()
-    for instruction in dis.get_instructions(python_function):
+    for instruction in get_instructions(python_function):
         java_instruction = PythonBytecodeInstruction()
         java_instruction.opcode = OpcodeIdentifier.valueOf(instruction.opname)
         java_instruction.opname = instruction.opname
@@ -783,6 +830,7 @@ def get_function_bytecode_object(python_function):
     python_compiled_function.module = python_function.__module__
     python_compiled_function.qualifiedName = python_function.__qualname__
     python_compiled_function.instructionList = instruction_list
+    python_compiled_function.co_exceptiontable = get_python_exception_table(python_function.__code__)
     python_compiled_function.co_names = copy_iterable(python_function.__code__.co_names)
     python_compiled_function.co_varnames = copy_variable_names(python_function.__code__.co_varnames)
     python_compiled_function.co_cellvars = copy_variable_names(python_function.__code__.co_cellvars)
@@ -818,7 +866,7 @@ def get_code_bytecode_object(python_code):
 
     python_compiled_function = PythonCompiledFunction()
     instruction_list = ArrayList()
-    for instruction in dis.get_instructions(python_code):
+    for instruction in get_instructions(python_code):
         java_instruction = PythonBytecodeInstruction()
         java_instruction.opcode = OpcodeIdentifier.valueOf(instruction.opname)
         java_instruction.opname = instruction.opname
@@ -839,6 +887,7 @@ def get_code_bytecode_object(python_code):
     python_compiled_function.module = '__code__'
     python_compiled_function.qualifiedName = '__code__'
     python_compiled_function.instructionList = instruction_list
+    python_compiled_function.co_exceptiontable = get_python_exception_table(python_code)
     python_compiled_function.co_names = copy_iterable(python_code.co_names)
     python_compiled_function.co_varnames = copy_variable_names(python_code.co_varnames)
     python_compiled_function.co_cellvars = copy_variable_names(python_code.co_cellvars)

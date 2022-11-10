@@ -7,6 +7,7 @@ public final class PythonVersion implements Comparable<PythonVersion> {
 
     public static final PythonVersion PYTHON_3_9 = new PythonVersion(3, 9);
     public static final PythonVersion PYTHON_3_10 = new PythonVersion(3, 10);
+    public static final PythonVersion PYTHON_3_11 = new PythonVersion(3, 11);
 
     public PythonVersion(int hexversion) {
         this.hexversion = hexversion;
@@ -53,6 +54,10 @@ public final class PythonVersion implements Comparable<PythonVersion> {
 
     public boolean isAfter(PythonVersion release) {
         return compareTo(release) > 0;
+    }
+
+    public boolean isAtLeast(PythonVersion release) {
+        return compareTo(release) >= 0;
     }
 
     public boolean isBetween(PythonVersion afterInclusive, PythonVersion beforeInclusive) {

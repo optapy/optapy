@@ -205,7 +205,13 @@ def test_read_cell_variable():
     def my_function(x: int) -> int:
         def inner_function(y: int) -> int:
             nonlocal x
-            return x * y
+            z = y
+
+            def get_const():
+                nonlocal z
+                return z
+
+            return x * get_const()
 
         a = inner_function(2)
         x += 1

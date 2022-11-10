@@ -7,6 +7,7 @@ import java.util.Map;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 
 public class LocalVariableHelper {
 
@@ -22,6 +23,9 @@ public class LocalVariableHelper {
     public final Map<Integer, Integer> boundCellIndexToVariableIndex;
 
     public final int currentExceptionVariableSlot;
+    public final int callKeywordsSlot;
+    public final Map<Integer, Integer> exceptionTableTargetToSavedStackMap;
+
     int usedLocals;
 
     public LocalVariableHelper(Type[] parameters, PythonCompiledFunction compiledFunction) {
@@ -42,7 +46,12 @@ public class LocalVariableHelper {
         pythonCellVariablesStart = parameterSlotsEnd + compiledFunction.co_varnames.size();
         pythonFreeVariablesStart = pythonCellVariablesStart + pythonBoundVariables;
         currentExceptionVariableSlot = pythonFreeVariablesStart + pythonFreeVariables;
-        pythonLocalVariablesSlotEnd = currentExceptionVariableSlot + 1;
+        callKeywordsSlot = currentExceptionVariableSlot + 1;
+        exceptionTableTargetToSavedStackMap = new HashMap<>();
+        for (int target : compiledFunction.co_exceptiontable.getJumpTargetSet()) {
+            exceptionTableTargetToSavedStackMap.put(target, callKeywordsSlot + 1 + exceptionTableTargetToSavedStackMap.size());
+        }
+        pythonLocalVariablesSlotEnd = callKeywordsSlot + 1 + exceptionTableTargetToSavedStackMap.size();
         boundCellIndexToVariableIndex = new HashMap<>();
         for (int i = 0; i < compiledFunction.co_cellvars.size(); i++) {
             for (int j = 0; j < compiledFunction.co_varnames.size(); j++) {
@@ -60,7 +69,7 @@ public class LocalVariableHelper {
     LocalVariableHelper(Type[] parameters, int argcount, int parameterSlotsEnd, int pythonCellVariablesStart,
             int pythonFreeVariablesStart, int pythonLocalVariablesSlotEnd,
             int pythonBoundVariables, int pythonFreeVariables, Map<Integer, Integer> boundCellIndexToVariableIndex,
-            int currentExceptionVariableSlot) {
+            int currentExceptionVariableSlot, int callKeywordsSlot, Map<Integer, Integer> exceptionTableTargetToSavedStackMap) {
         this.argcount = argcount;
         this.parameters = parameters;
         this.parameterSlotsEnd = parameterSlotsEnd;
@@ -71,12 +80,15 @@ public class LocalVariableHelper {
         this.pythonFreeVariables = pythonFreeVariables;
         this.boundCellIndexToVariableIndex = boundCellIndexToVariableIndex;
         this.currentExceptionVariableSlot = currentExceptionVariableSlot;
+        this.callKeywordsSlot = callKeywordsSlot;
+        this.exceptionTableTargetToSavedStackMap = exceptionTableTargetToSavedStackMap;
     }
 
     public LocalVariableHelper copy() {
         LocalVariableHelper out = new LocalVariableHelper(parameters, argcount, parameterSlotsEnd, pythonCellVariablesStart,
                 pythonFreeVariablesStart, pythonLocalVariablesSlotEnd,
-                pythonBoundVariables, pythonFreeVariables, boundCellIndexToVariableIndex, currentExceptionVariableSlot);
+                pythonBoundVariables, pythonFreeVariables, boundCellIndexToVariableIndex, currentExceptionVariableSlot,
+                callKeywordsSlot, exceptionTableTargetToSavedStackMap);
         out.usedLocals = usedLocals;
         return out;
     }
@@ -108,6 +120,10 @@ public class LocalVariableHelper {
 
     public int getCurrentExceptionVariableSlot() {
         return currentExceptionVariableSlot;
+    }
+
+    public int getCallKeywordsSlot() {
+        return callKeywordsSlot;
     }
 
     public int getNumberOfFreeCells() {
@@ -180,6 +196,39 @@ public class LocalVariableHelper {
 
     public void writeCurrentException(MethodVisitor methodVisitor) {
         methodVisitor.visitVarInsn(Opcodes.ASTORE, getCurrentExceptionVariableSlot());
+    }
+
+    public int getExceptionTableTargetStackSlot(int target) {
+        return exceptionTableTargetToSavedStackMap.get(target);
+    }
+
+    public void readExceptionTableTargetStack(MethodVisitor methodVisitor, int target) {
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, getExceptionTableTargetStackSlot(target));
+    }
+
+    public void writeExceptionTableTargetStack(MethodVisitor methodVisitor, int target) {
+        methodVisitor.visitVarInsn(Opcodes.ASTORE, getExceptionTableTargetStackSlot(target));
+    }
+
+    public void setupInitialStoredExceptionStacks(MethodVisitor methodVisitor) {
+        for (Integer target : exceptionTableTargetToSavedStackMap.keySet()) {
+            methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+            writeExceptionTableTargetStack(methodVisitor, target);
+        }
+    }
+
+    public void readCallKeywords(MethodVisitor methodVisitor) {
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, getCallKeywordsSlot());
+    }
+
+    public void writeCallKeywords(MethodVisitor methodVisitor) {
+        methodVisitor.visitVarInsn(Opcodes.ASTORE, getCallKeywordsSlot());
+    }
+
+    public void resetCallKeywords(MethodVisitor methodVisitor) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonLikeTuple.class), "EMPTY",
+                Type.getDescriptor(PythonLikeTuple.class));
+        methodVisitor.visitVarInsn(Opcodes.ASTORE, getCallKeywordsSlot());
     }
 
     public void readTemp(MethodVisitor methodVisitor, Type type, int temp) {
