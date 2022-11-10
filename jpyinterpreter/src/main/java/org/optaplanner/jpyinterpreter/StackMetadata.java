@@ -196,6 +196,12 @@ public class StackMetadata {
         return out;
     }
 
+    public StackMetadata set(int index, ValueSourceInfo type) {
+        StackMetadata out = copy();
+        out.stackValueSources.set(stackValueSources.size() - index - 1, type);
+        return out;
+    }
+
     public StackMetadata pushTemp(PythonLikeType type) {
         return push(ValueSourceInfo.of(new OpcodeWithoutSource(), type));
     }

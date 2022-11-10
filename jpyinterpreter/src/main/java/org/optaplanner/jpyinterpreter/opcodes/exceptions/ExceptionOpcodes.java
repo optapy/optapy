@@ -23,6 +23,12 @@ public class ExceptionOpcodes {
             case RERAISE: {
                 return Optional.of(new ReraiseOpcode(instruction));
             }
+            case CHECK_EXC_MATCH: {
+                return Optional.of(new CheckExcMatchOpcode(instruction));
+            }
+            case PUSH_EXC_INFO: {
+                return Optional.of(new PushExcInfoOpcode(instruction));
+            }
             case SETUP_FINALLY: {
                 return Optional
                         .of(new SetupFinallyOpcode(instruction, JumpUtils.getRelativeTarget(instruction, pythonVersion)));

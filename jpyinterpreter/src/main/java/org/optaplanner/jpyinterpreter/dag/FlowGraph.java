@@ -10,8 +10,12 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
+import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
+import org.optaplanner.jpyinterpreter.PythonExceptionTable;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.opcodes.Opcode;
+import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
+import org.optaplanner.jpyinterpreter.types.errors.PythonBaseException;
 
 public class FlowGraph {
     BasicBlock initialBlock;
@@ -60,7 +64,8 @@ public class FlowGraph {
         List<Integer> leaderIndexList = new ArrayList<>();
         boolean wasPreviousInstructionGoto = true; // True so first instruction get added as a leader
         for (int i = 0; i < opcodeList.size(); i++) {
-            if (wasPreviousInstructionGoto || opcodeList.get(i).isJumpTarget()) {
+            if (wasPreviousInstructionGoto || opcodeList.get(i).isJumpTarget() ||
+                    functionMetadata.pythonCompiledFunction.co_exceptiontable.containsJumpTarget(i)) {
                 leaderIndexList.add(i);
             }
             wasPreviousInstructionGoto = opcodeList.get(i).isForcedJump();
@@ -111,6 +116,35 @@ public class FlowGraph {
         return out;
     }
 
+    private static StackMetadata getExceptionStackMetadata(PythonExceptionTable.ExceptionBlock exceptionBlock,
+            FunctionMetadata functionMetadata, StackMetadata initialStackMetadata,
+            StackMetadata previousStackMetadata) {
+        if (previousStackMetadata == StackMetadata.DEAD_CODE) {
+            previousStackMetadata = initialStackMetadata;
+        }
+
+        while (previousStackMetadata.getStackSize() < exceptionBlock.getStackDepth()) {
+            previousStackMetadata = previousStackMetadata.pushTemp(BuiltinTypes.NONE_TYPE);
+        }
+
+        while (previousStackMetadata.getStackSize() > exceptionBlock.getStackDepth()) {
+            previousStackMetadata = previousStackMetadata.pop();
+        }
+
+        if (exceptionBlock.isPushLastIndex()) {
+            return previousStackMetadata.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE)
+                    //.pushTemp(BuiltinTypes.INT_TYPE)
+                    //.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE)
+                    //.pushTemp(BuiltinTypes.INT_TYPE)
+                    .pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE);
+        } else {
+            return previousStackMetadata.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE);
+            //.pushTemp(BuiltinTypes.INT_TYPE)
+            //.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE)
+            //.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE);
+        }
+    }
+
     private void computeStackMetadataForOperations(FunctionMetadata functionMetadata,
             StackMetadata initialStackMetadata) {
         Map<Integer, StackMetadata> opcodeIndexToStackMetadata = new HashMap<>();
@@ -122,9 +156,17 @@ public class FlowGraph {
                         opcodeIndexToStackMetadata.computeIfAbsent(opcode.getBytecodeIndex(), k -> StackMetadata.DEAD_CODE);
 
                 List<Integer> branchList = opcode.getPossibleNextBytecodeIndexList();
-                List<StackMetadata> nextStackMetadataList = currentStackMetadata.isDeadCode()
-                        ? branchList.stream().map(i -> StackMetadata.DEAD_CODE).collect(Collectors.toList())
-                        : opcode.getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);
+                List<StackMetadata> nextStackMetadataList;
+
+                try {
+                    nextStackMetadataList = currentStackMetadata.isDeadCode()
+                            ? branchList.stream().map(i -> StackMetadata.DEAD_CODE).collect(Collectors.toList())
+                            : opcode.getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);
+                } catch (Throwable t) {
+                    throw new IllegalStateException("Failed to calculate successor stack metadata for opcode (" + opcode
+                            + ") with prior stack metadata ("
+                            + currentStackMetadata + ").", t);
+                }
 
                 for (int i = 0; i < branchList.size(); i++) {
                     IndexBranchPair indexBranchPair = new IndexBranchPair(opcode.getBytecodeIndex(), i);
@@ -138,13 +180,30 @@ public class FlowGraph {
                     } catch (IllegalArgumentException e) {
                         throw new IllegalStateException(
                                 "Cannot unify block starting at " + nextBytecodeIndex + ": different stack sizes;\n"
-                                        + basicBlockList.stream().flatMap(b -> b.getBlockOpcodeList().stream())
-                                                .map(Object::toString)
-                                                .collect(Collectors.joining("\n")),
+                                        + PythonBytecodeToJavaBytecodeTranslator
+                                                .getPythonBytecodeListing(functionMetadata.pythonCompiledFunction),
                                 e);
                     }
 
                 }
+            }
+        }
+        for (PythonExceptionTable.ExceptionBlock exceptionBlock : functionMetadata.pythonCompiledFunction.co_exceptiontable
+                .getEntries()) {
+            try {
+                opcodeIndexToStackMetadata.merge(exceptionBlock.getTargetInstruction(),
+                        getExceptionStackMetadata(exceptionBlock,
+                                functionMetadata,
+                                initialStackMetadata,
+                                opcodeIndexToStackMetadata.getOrDefault(exceptionBlock.getBlockStartInstructionInclusive(),
+                                        StackMetadata.DEAD_CODE)),
+                        StackMetadata::unifyWith);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalStateException(
+                        "Cannot unify block starting at " + exceptionBlock.getTargetInstruction() + ": different stack sizes;\n"
+                                + PythonBytecodeToJavaBytecodeTranslator
+                                        .getPythonBytecodeListing(functionMetadata.pythonCompiledFunction),
+                        e);
             }
         }
 
@@ -162,9 +221,17 @@ public class FlowGraph {
                 for (Opcode opcode : basicBlock.getBlockOpcodeList()) {
                     StackMetadata currentStackMetadata = opcodeIndexToStackMetadata.get(opcode.getBytecodeIndex());
                     List<Integer> branchList = opcode.getPossibleNextBytecodeIndexList();
-                    List<StackMetadata> nextStackMetadataList = currentStackMetadata.isDeadCode()
-                            ? branchList.stream().map(i -> StackMetadata.DEAD_CODE).collect(Collectors.toList())
-                            : opcode.getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);
+                    List<StackMetadata> nextStackMetadataList;
+
+                    try {
+                        nextStackMetadataList = currentStackMetadata.isDeadCode()
+                                ? branchList.stream().map(i -> StackMetadata.DEAD_CODE).collect(Collectors.toList())
+                                : opcode.getStackMetadataAfterInstructionForBranches(functionMetadata, currentStackMetadata);
+                    } catch (Throwable t) {
+                        throw new IllegalStateException("Failed to calculate successor stack metadata for opcode (" + opcode
+                                + ") with prior stack metadata ("
+                                + currentStackMetadata + ").", t);
+                    }
                     for (int i = 0; i < branchList.size(); i++) {
                         IndexBranchPair indexBranchPair = new IndexBranchPair(opcode.getBytecodeIndex(), i);
                         int nextBytecodeIndex = branchList.get(i);
@@ -172,11 +239,46 @@ public class FlowGraph {
                         if (opcodeIndexToJumpSourceMap.containsKey(indexBranchPair)) {
                             opcodeIndexToJumpSourceMap.get(indexBranchPair).setStackMetadata(nextStackMetadata);
                         }
-                        StackMetadata originalOpcodeMetadata = opcodeIndexToStackMetadata.get(nextBytecodeIndex);
-                        StackMetadata newOpcodeMetadata = opcodeIndexToStackMetadata.merge(nextBytecodeIndex, nextStackMetadata,
-                                StackMetadata::unifyWith);
-                        hasChanged |= !newOpcodeMetadata.equals(originalOpcodeMetadata);
+                        try {
+                            StackMetadata originalOpcodeMetadata = opcodeIndexToStackMetadata.get(nextBytecodeIndex);
+                            StackMetadata newOpcodeMetadata =
+                                    opcodeIndexToStackMetadata.merge(nextBytecodeIndex, nextStackMetadata,
+                                            StackMetadata::unifyWith);
+                            hasChanged |= !newOpcodeMetadata.equals(originalOpcodeMetadata);
+                        } catch (IllegalArgumentException e) {
+                            throw new IllegalStateException(
+                                    "Cannot unify branch (" + indexBranchPair.branch + ": to index " + indexBranchPair.index
+                                            + ") stack metadata (" +
+                                            nextStackMetadata + ") for source opcode (" + opcode + ") with" +
+                                            "prior stack metadata (" + opcodeIndexToStackMetadata.get(nextBytecodeIndex)
+                                            + "): different stack sizes;\n"
+                                            + PythonBytecodeToJavaBytecodeTranslator
+                                                    .getPythonBytecodeListing(functionMetadata.pythonCompiledFunction),
+                                    e);
+                        }
                     }
+                }
+            }
+            for (PythonExceptionTable.ExceptionBlock exceptionBlock : functionMetadata.pythonCompiledFunction.co_exceptiontable
+                    .getEntries()) {
+                try {
+                    StackMetadata originalOpcodeMetadata =
+                            opcodeIndexToStackMetadata.get(exceptionBlock.getTargetInstruction());
+                    StackMetadata newOpcodeMetadata = opcodeIndexToStackMetadata.merge(exceptionBlock.getTargetInstruction(),
+                            getExceptionStackMetadata(exceptionBlock,
+                                    functionMetadata,
+                                    initialStackMetadata,
+                                    opcodeIndexToStackMetadata.getOrDefault(exceptionBlock.getBlockStartInstructionInclusive(),
+                                            StackMetadata.DEAD_CODE)),
+                            StackMetadata::unifyWith);
+                    hasChanged |= !newOpcodeMetadata.equals(originalOpcodeMetadata);
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalStateException(
+                            "Cannot unify block starting at " + exceptionBlock.getTargetInstruction()
+                                    + ": different stack sizes;\n"
+                                    + PythonBytecodeToJavaBytecodeTranslator
+                                            .getPythonBytecodeListing(functionMetadata.pythonCompiledFunction),
+                            e);
                 }
             }
         } while (hasChanged);

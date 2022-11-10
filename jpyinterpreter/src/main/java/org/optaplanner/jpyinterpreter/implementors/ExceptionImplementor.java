@@ -16,9 +16,11 @@ import org.optaplanner.jpyinterpreter.LocalVariableHelper;
 import org.optaplanner.jpyinterpreter.OpcodeIdentifier;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
 import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
+import org.optaplanner.jpyinterpreter.PythonExceptionTable;
 import org.optaplanner.jpyinterpreter.PythonInterpreter;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
+import org.optaplanner.jpyinterpreter.PythonVersion;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.ValueSourceInfo;
 import org.optaplanner.jpyinterpreter.opcodes.OpcodeWithoutSource;
@@ -29,6 +31,7 @@ import org.optaplanner.jpyinterpreter.types.collections.PythonLikeTuple;
 import org.optaplanner.jpyinterpreter.types.errors.PythonAssertionError;
 import org.optaplanner.jpyinterpreter.types.errors.PythonBaseException;
 import org.optaplanner.jpyinterpreter.types.errors.PythonTraceback;
+import org.optaplanner.jpyinterpreter.types.numeric.PythonBoolean;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 
 /**
@@ -224,15 +227,22 @@ public class ExceptionImplementor {
         });
     }
 
-    public static void startExceptOrFinally(MethodVisitor methodVisitor, LocalVariableHelper localVariableHelper) {
+    public static void startExceptOrFinally(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+
         // Clear the exception since it was handled
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
         localVariableHelper.writeCurrentException(methodVisitor);
 
-        // Pop off the block (three items that we don't use)
-        methodVisitor.visitInsn(Opcodes.POP);
-        methodVisitor.visitInsn(Opcodes.POP);
-        methodVisitor.visitInsn(Opcodes.POP);
+        // Pop off the block
+        if (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) {
+            methodVisitor.visitInsn(Opcodes.POP);
+        } else {
+            methodVisitor.visitInsn(Opcodes.POP);
+            methodVisitor.visitInsn(Opcodes.POP);
+            methodVisitor.visitInsn(Opcodes.POP);
+        }
     }
 
     public static void startWith(int jumpTarget, FunctionMetadata functionMetadata,
@@ -291,6 +301,75 @@ public class ExceptionImplementor {
         // Push enter result back to the stack
         stackMetadata.localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeObject.class), enterResult);
         // cannot free, since try block store stack in locals => freeing enterResult messes up indexing of locals
+    }
+
+    public static void startExceptBlock(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonExceptionTable.ExceptionBlock exceptionBlock) {
+        // In Python 3.11 and above, the stack here is
+        // [(stack-before-try), exception]
+
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
+        // Stack is exception
+        // Duplicate exception to the current exception variable slot so we can reraise it if needed
+        //PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
+        stackMetadata.localVariableHelper.writeCurrentException(methodVisitor);
+        StackManipulationImplementor.restoreExceptionTableStack(functionMetadata, stackMetadata, exceptionBlock);
+
+        // Stack is (stack-before-try)
+
+        /*
+         * // Instruction
+         * stackMetadata.localVariableHelper.readCurrentException(methodVisitor); // We don't use it; use current exception for
+         * finally handler
+         * 
+         * // Stack is (stack-before-try), instruction
+         * 
+         * // Stack Size
+         * methodVisitor.visitLdcInsn(stackMetadata.getStackSize());
+         * methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonInteger.class),
+         * "valueOf", Type.getMethodDescriptor(Type.getType(PythonInteger.class), Type.INT_TYPE),
+         * false);
+         * 
+         * // Stack is (stack-before-try), instruction, stack-size, exception
+         * 
+         * // Label
+         * stackMetadata.localVariableHelper.readCurrentException(methodVisitor); // We don't use it; use current exception for
+         * finally handler
+         */
+
+        // Stack is (stack-before-try), instruction, stack-size, label
+        if (exceptionBlock.isPushLastIndex()) {
+            // code expect instruction offset; we don't use it, so load another copy of exception
+            stackMetadata.localVariableHelper.readCurrentException(methodVisitor);
+        }
+
+        // Load exception
+        stackMetadata.localVariableHelper.readCurrentException(methodVisitor);
+    }
+
+    public static void pushExcInfo(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+
+        localVariableHelper.readCurrentException(methodVisitor);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+    }
+
+    public static void checkExcMatch(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+
+        methodVisitor.visitInsn(Opcodes.DUP2);
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeType.class));
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(PythonLikeType.class), "isInstance",
+                Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Type.getType(PythonLikeObject.class)),
+                false);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonBoolean.class), "valueOf",
+                Type.getMethodDescriptor(Type.getType(PythonBoolean.class), Type.BOOLEAN_TYPE),
+                false);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.POP);
     }
 
     public static void handleExceptionInWith(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {

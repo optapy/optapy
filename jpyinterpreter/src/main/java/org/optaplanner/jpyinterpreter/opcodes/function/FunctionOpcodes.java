@@ -10,6 +10,15 @@ public class FunctionOpcodes {
     public static Optional<Opcode> lookupOpcodeForInstruction(PythonBytecodeInstruction instruction,
             PythonVersion pythonVersion) {
         switch (instruction.opcode) {
+            case PUSH_NULL: {
+                return Optional.of(new PushNullOpcode(instruction));
+            }
+            case KW_NAMES: {
+                return Optional.of(new SetCallKeywordNameTupleOpcode(instruction));
+            }
+            case CALL: {
+                return Optional.of(new CallOpcode(instruction));
+            }
             case CALL_FUNCTION: {
                 return Optional.of(new CallFunctionOpcode(instruction));
             }

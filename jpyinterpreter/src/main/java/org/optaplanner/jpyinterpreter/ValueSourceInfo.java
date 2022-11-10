@@ -82,7 +82,7 @@ public class ValueSourceInfo {
         return "ValueSourceInfo{" +
                 "valueType=" + valueType +
                 ", possibleSourceOpcodeList=" + possibleSourceOpcodeSet +
-                ", valueDependencyList=" + valueDependencySet +
+                //", valueDependencyList=" + valueDependencySet +
                 '}';
     }
 

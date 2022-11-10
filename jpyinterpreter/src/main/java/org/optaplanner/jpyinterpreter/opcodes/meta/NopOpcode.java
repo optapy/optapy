@@ -1,4 +1,4 @@
-package org.optaplanner.jpyinterpreter.opcodes.stack;
+package org.optaplanner.jpyinterpreter.opcodes.meta;
 
 import org.objectweb.asm.Opcodes;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;

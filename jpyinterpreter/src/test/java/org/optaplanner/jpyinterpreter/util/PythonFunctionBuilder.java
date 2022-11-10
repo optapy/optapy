@@ -12,6 +12,7 @@ import org.optaplanner.jpyinterpreter.OpcodeIdentifier;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
 import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.jpyinterpreter.PythonCompiledFunction;
+import org.optaplanner.jpyinterpreter.PythonExceptionTable;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonVersion;
 import org.optaplanner.jpyinterpreter.implementors.JavaPythonTypeConversionImplementor;
@@ -88,6 +89,8 @@ public class PythonFunctionBuilder {
         out.instructionList = instructionList;
         out.typeAnnotations = typeAnnotations;
         out.globalsMap = globalsMap;
+        out.co_exceptiontable = new PythonExceptionTable(); // we use an empty exception table since it for Python 3.10
+                                                            // (i.e. use block try...except instead of co_exceptiontable)
         out.co_constants = co_consts;
         out.co_varnames = co_varnames;
         out.co_names = co_names;

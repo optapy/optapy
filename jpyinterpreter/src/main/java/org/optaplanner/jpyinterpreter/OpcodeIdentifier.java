@@ -10,6 +10,16 @@ public enum OpcodeIdentifier {
     NOP,
 
     /**
+     * Another do nothing code. Performs internal tracing, debugging and optimization checks in CPython
+     */
+    RESUME,
+
+    /**
+     * A no-op code used by CPython to hold arbitrary data for JIT.
+     */
+    CACHE,
+
+    /**
      * Removes the top-of-stack (TOS) item.
      */
     POP_TOP,
@@ -38,6 +48,17 @@ public enum OpcodeIdentifier {
      * Duplicates the two references on top of the stack, leaving them in the same order.
      */
     DUP_TOP_TWO,
+
+    /**
+     * Push the i-th item to the top of the stack. The item is not removed from its original location.
+     * Uses 1-based indexing (TOS is 1, TOS1 is 2, ...) instead of 0-based indexing.
+     */
+    COPY,
+
+    /**
+     * Swap TOS with the item at position i. Uses 1-based indexing (TOS is 1, TOS1 is 2, ...) instead of 0-based indexing.
+     */
+    SWAP,
 
     // *****************************
     // Unary operations
@@ -80,6 +101,13 @@ public enum OpcodeIdentifier {
     // Binary operations remove the top of the stack (TOS) and the second top-most stack item (TOS1) from the stack.
     // They perform the operation, and put the result back on the stack.
     // *****************************
+
+    /**
+     * Implements any binary op. Its argument represent the arg to implement, which
+     * may or may not be inplace.
+     */
+    BINARY_OP,
+
     /**
      * Implements TOS = TOS1 ** TOS.
      */
@@ -311,10 +339,25 @@ public enum OpcodeIdentifier {
     RETURN_VALUE,
 
     /**
+     * Create a generator, coroutine, or async generator from the current frame.
+     * Clear the current frame and return the newly created generator. A no-op for us, since we detect if
+     * the code represent a generator (and if so, generate a wrapper function for it that act like
+     * RETURN_GENERATOR) before interpreting it
+     */
+    RETURN_GENERATOR,
+
+    /**
      * Pops TOS. The kind operand corresponds to the type of generator or coroutine.
      * The legal kinds are 0 for generator, 1 for coroutine, and 2 for async generator.
      */
     GEN_START,
+
+    /**
+     * TOS1 is a subgenerator, TOS is a value. Calls TOS1.send(TOS) is self.thrownValue is not null,
+     * otherwise, set self.thrownValue to null and call TOS1.throwValue(TOS) instead. TOS is replaced by the subgenerator
+     * yielded value; TOS1 remains. When the subgenerator is exhausted, jump forward by its argument.
+     */
+    SEND,
 
     /**
      * Pops TOS and yields it from a generator.
@@ -351,6 +394,18 @@ public enum OpcodeIdentifier {
      * popped values are used to restore the exception state.
      */
     POP_EXCEPT,
+
+    /**
+     * Pops a value from the stack. Pushes the current exception to the top of the stack.
+     * Pushes the value originally popped back to the stack. Used in exception handlers.
+     */
+    PUSH_EXC_INFO,
+
+    /**
+     * Performs exception matching for except. Tests whether the TOS1 is an exception matching TOS.
+     * Pops TOS and pushes the boolean result of the test.
+     */
+    CHECK_EXC_MATCH,
 
     /**
      * Re-raises the exception currently on top of the stack.
@@ -537,14 +592,64 @@ public enum OpcodeIdentifier {
     JUMP_FORWARD,
 
     /**
+     * Decrements bytecode counter by delta.
+     */
+    JUMP_BACKWARD,
+
+    /**
+     * Decrements bytecode counter by delta. Does not check for interrupts.
+     */
+    JUMP_BACKWARD_NO_INTERRUPT,
+
+    /**
      * If TOS is true, sets the bytecode counter to target. TOS is popped.
      */
     POP_JUMP_IF_TRUE,
 
     /**
+     * Same as {@link OpcodeIdentifier#POP_JUMP_IF_TRUE}, but argument is relative
+     */
+    POP_JUMP_FORWARD_IF_TRUE,
+
+    /**
+     * Same as {@link OpcodeIdentifier#POP_JUMP_IF_TRUE}, but argument is relative
+     */
+    POP_JUMP_BACKWARD_IF_TRUE,
+
+    /**
      * If TOS is false, sets the bytecode counter to target. TOS is popped.
      */
     POP_JUMP_IF_FALSE,
+
+    /**
+     * Same as {@link OpcodeIdentifier#POP_JUMP_IF_FALSE}, but argument is relative
+     */
+    POP_JUMP_FORWARD_IF_FALSE,
+
+    /**
+     * Same as {@link OpcodeIdentifier#POP_JUMP_IF_FALSE}, but argument is relative
+     */
+    POP_JUMP_BACKWARD_IF_FALSE,
+
+    /**
+     * If TOS is not None, increments the bytecode counter by delta. TOS is popped.
+     */
+    POP_JUMP_FORWARD_IF_NOT_NONE,
+
+    /**
+     * If TOS is not None, decrements the bytecode counter by delta. TOS is popped.
+     */
+    POP_JUMP_BACKWARD_IF_NOT_NONE,
+
+    /**
+     * If TOS is None, increments the bytecode counter by delta. TOS is popped.
+     */
+    POP_JUMP_FORWARD_IF_NONE,
+
+    /**
+     * If TOS is None, decrements the bytecode counter by delta. TOS is popped.
+     */
+    POP_JUMP_BACKWARD_IF_NONE,
 
     /**
      * Tests whether the second value on the stack is an exception matching TOS, and jumps if it is not.
@@ -603,6 +708,17 @@ public enum OpcodeIdentifier {
     DELETE_FAST,
 
     /**
+     * Creates a new cell in slot i. If that slot is empty then that value is stored into the new cell.
+     */
+    MAKE_CELL,
+
+    /**
+     * Copies the n free variables from the closure into the frame. Removes the need for special code on the caller’s
+     * side when calling closures.
+     */
+    COPY_FREE_VARS,
+
+    /**
      * Pushes a reference to the cell contained in slot i of the cell and free variable storage.
      * The name of the variable is co_cellvars[i] if i is less than the length of co_cellvars.
      * Otherwise it is co_freevars[i - len(co_cellvars)].
@@ -639,6 +755,41 @@ public enum OpcodeIdentifier {
      * 2: raise TOS1 from TOS (raise exception instance or type at TOS1 with __cause__ set to TOS)
      */
     RAISE_VARARGS,
+
+    /**
+     * Prefixes PRECALL. Stores a reference to co_consts[consti] into an internal variable for use by CALL.
+     * co_consts[consti] must be a tuple of strings.
+     */
+    KW_NAMES,
+
+    /**
+     * Prefixes CALL. Logically this is a no op.
+     * It exists to enable effective specialization of calls. argc is the number of arguments as described in CALL.
+     */
+    PRECALL,
+
+    /**
+     * Pushes a NULL to the stack. Used in the call sequence to match the NULL pushed by LOAD_METHOD for non-method calls.
+     */
+    PUSH_NULL,
+
+    /**
+     * Calls a callable object with the number of arguments specified by argc, including the named arguments specified by
+     * the preceding KW_NAMES, if any. On the stack are (in ascending order), either:
+     * NULL
+     * The callable
+     * The positional arguments
+     * The named arguments
+     * or:
+     * The callable
+     * self
+     * The remaining positional arguments
+     * The named arguments
+     * argc is the total of the positional and named arguments, excluding self when a NULL is not present.
+     * CALL pops all arguments and the callable object off the stack, calls the callable object with those arguments,
+     * and pushes the return value returned by the callable object.
+     */
+    CALL,
 
     /**
      * Calls a callable object with positional arguments. argc indicates the number of positional arguments.

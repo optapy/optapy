@@ -29,6 +29,9 @@ public class DunderOpcodes {
                 return Optional.of(new UniDunerOpcode(instruction, PythonUnaryOperator.INVERT));
             }
 
+            case BINARY_OP: {
+                return Optional.of(new BinaryDunderOpcode(instruction, PythonBinaryOperators.lookup(instruction.arg)));
+            }
             case BINARY_POWER: {
                 return Optional.of(new BinaryDunderOpcode(instruction, PythonBinaryOperators.POWER));
             }

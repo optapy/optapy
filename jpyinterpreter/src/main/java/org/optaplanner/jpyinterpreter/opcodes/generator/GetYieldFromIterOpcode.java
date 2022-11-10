@@ -16,7 +16,7 @@ public class GetYieldFromIterOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
-        return stackMetadata.pop().push(ValueSourceInfo.of(this, BuiltinTypes.ITERATOR_TYPE));
+        return stackMetadata.pop().push(ValueSourceInfo.of(this, BuiltinTypes.BASE_TYPE));
     }
 
     @Override

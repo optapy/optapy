@@ -69,14 +69,14 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
     GeneratorLocalVariableHelper(Type[] parameters, int argcount, int parameterSlotsEnd, int pythonCellVariablesStart,
             int pythonFreeVariablesStart, int pythonLocalVariablesSlotEnd,
             int pythonBoundVariables, int pythonFreeVariables, Map<Integer, Integer> boundCellIndexToVariableIndex,
-            int currentExceptionVariableSlot,
+            int currentExceptionVariableSlot, int callKeywordsSlot, Map<Integer, Integer> exceptionTableTargetToSavedStackMap,
             ClassWriter classWriter, String classInternalName, int maxTemps,
             int cellStart, int freeStart, Map<Integer, String> slotToLocalName,
             Map<Integer, String> slotToLocalTypeDescriptor) {
         super(parameters, argcount, parameterSlotsEnd, pythonCellVariablesStart,
                 pythonFreeVariablesStart, pythonLocalVariablesSlotEnd,
                 pythonBoundVariables, pythonFreeVariables, boundCellIndexToVariableIndex,
-                currentExceptionVariableSlot);
+                currentExceptionVariableSlot, callKeywordsSlot, exceptionTableTargetToSavedStackMap);
         this.classWriter = classWriter;
         this.classInternalName = classInternalName;
         this.maxTemps = maxTemps;
@@ -89,8 +89,9 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
     public GeneratorLocalVariableHelper copy() {
         GeneratorLocalVariableHelper out = new GeneratorLocalVariableHelper(parameters, argcount, parameterSlotsEnd,
                 pythonCellVariablesStart,
-                pythonFreeVariablesStart, pythonLocalVariablesSlotEnd,
-                pythonBoundVariables, pythonFreeVariables, boundCellIndexToVariableIndex, currentExceptionVariableSlot,
+                pythonFreeVariablesStart, pythonLocalVariablesSlotEnd, pythonBoundVariables, pythonFreeVariables,
+                boundCellIndexToVariableIndex, currentExceptionVariableSlot, callKeywordsSlot,
+                exceptionTableTargetToSavedStackMap,
                 classWriter, classInternalName, maxTemps, cellStart, freeStart, slotToLocalName, slotToLocalTypeDescriptor);
         out.usedLocals = usedLocals;
         return out;
@@ -172,6 +173,23 @@ public class GeneratorLocalVariableHelper extends LocalVariableHelper {
         methodVisitor.visitInsn(Opcodes.SWAP);
         methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName, PythonGeneratorTranslator.CURRENT_EXCEPTION,
                 Type.getDescriptor(Throwable.class));
+    }
+
+    @Override
+    public void readExceptionTableTargetStack(MethodVisitor methodVisitor, int target) {
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName,
+                PythonGeneratorTranslator.exceptionHandlerTargetStackLocal(target),
+                Type.getDescriptor(PythonLikeObject[].class));
+    }
+
+    @Override
+    public void writeExceptionTableTargetStack(MethodVisitor methodVisitor, int target) {
+        methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitFieldInsn(Opcodes.PUTFIELD, classInternalName,
+                PythonGeneratorTranslator.exceptionHandlerTargetStackLocal(target),
+                Type.getDescriptor(PythonLikeObject[].class));
     }
 
     @Override

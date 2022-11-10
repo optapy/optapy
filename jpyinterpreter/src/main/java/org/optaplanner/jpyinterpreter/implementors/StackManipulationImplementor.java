@@ -1,6 +1,7 @@
 package org.optaplanner.jpyinterpreter.implementors;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.objectweb.asm.MethodVisitor;
@@ -8,6 +9,9 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.LocalVariableHelper;
+import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
+import org.optaplanner.jpyinterpreter.PythonExceptionTable;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.ValueSourceInfo;
 
@@ -175,6 +179,54 @@ public class StackManipulationImplementor {
         return out;
     }
 
+    /**
+     * Swaps TOS with TOS[posFromTOS]
+     *
+     * (i.e. ..., TOS[posFromTOS], ..., TOS2, TOS1, TOS -> ..., TOS, ..., TOS2, TOS1, TOS[posFromTOS])
+     */
+    public static StackMetadata swapTOSWithIndex(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            int posFromTOS) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+        List<Integer> localList = new ArrayList<>(posFromTOS + 1);
+
+        if (posFromTOS == 0) {
+            // A rotation of 0 is a no-op
+            return stackMetadata;
+        }
+
+        // Store TOS...TOS[posFromTOS - 1] into local variables
+        for (int i = 0; i < posFromTOS + 1; i++) {
+            int local = localVariableHelper.newLocal();
+            localList.add(local);
+            localVariableHelper.writeTemp(methodVisitor,
+                    Type.getType(stackMetadata.getTypeAtStackIndex(i).getJavaTypeDescriptor()), local);
+        }
+
+        // Copy TOS to this position
+        localVariableHelper.readTemp(methodVisitor, Type.getType(stackMetadata.getTypeAtStackIndex(0).getJavaTypeDescriptor()),
+                localList.get(0));
+
+        // Restore TOS[1]...TOS[posFromTOS - 1] from local variables
+        for (int i = posFromTOS - 1; i > 0; i--) {
+            int local = localList.get(i);
+            localVariableHelper.readTemp(methodVisitor,
+                    Type.getType(stackMetadata.getTypeAtStackIndex(i).getJavaTypeDescriptor()), local);
+        }
+        int local = localList.get(posFromTOS);
+        localVariableHelper.readTemp(methodVisitor,
+                Type.getType(stackMetadata.getTypeAtStackIndex(posFromTOS).getJavaTypeDescriptor()), local);
+
+        // Free locals
+        for (int i = posFromTOS; i > 0; i--) {
+            localVariableHelper.freeLocal();
+        }
+
+        return stackMetadata
+                .set(posFromTOS, stackMetadata.getTOSValueSource())
+                .set(0, stackMetadata.getValueSourceForStackIndex(posFromTOS));
+    }
+
     public static int[] storeStack(MethodVisitor methodVisitor, StackMetadata stackMetadata) {
         int[] stackLocalVariables = new int[stackMetadata.getStackSize()];
 
@@ -200,5 +252,72 @@ public class StackManipulationImplementor {
                     Type.getType(stackMetadata.getTypeAtStackIndex(i).getJavaTypeDescriptor()),
                     stackLocalVariables[i]);
         }
+    }
+
+    public static void storeExceptionTableStack(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonExceptionTable.ExceptionBlock exceptionBlock) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+        int[] stackLocalVariables = new int[stackMetadata.getStackSize()];
+
+        PythonBytecodeToJavaBytecodeTranslator.printStack(functionMetadata, stackMetadata);
+        for (int i = stackLocalVariables.length - 1; i >= 0; i--) {
+            stackLocalVariables[i] = localVariableHelper.newLocal();
+            localVariableHelper.writeTemp(methodVisitor,
+                    Type.getType(stackMetadata.getTypeAtStackIndex(i).getJavaTypeDescriptor()),
+                    stackLocalVariables[i]);
+        }
+
+        methodVisitor.visitLdcInsn(exceptionBlock.getStackDepth());
+        methodVisitor.visitTypeInsn(Opcodes.ANEWARRAY, Type.getInternalName(PythonLikeObject.class));
+
+        for (int i = 0; i < exceptionBlock.getStackDepth(); i++) {
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitLdcInsn(i);
+            localVariableHelper.readTemp(methodVisitor,
+                    Type.getType(stackMetadata.getTypeAtStackIndex(i).getJavaTypeDescriptor()),
+                    stackLocalVariables[i]);
+            methodVisitor.visitInsn(Opcodes.AASTORE);
+        }
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Arrays.class),
+                "toString", Type.getMethodDescriptor(Type.getType(String.class), Type.getType(Object[].class)),
+                false);
+        PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
+        methodVisitor.visitInsn(Opcodes.POP);
+        localVariableHelper.writeExceptionTableTargetStack(methodVisitor, exceptionBlock.getTargetInstruction());
+
+        for (int i = 0; i < stackLocalVariables.length; i++) {
+            localVariableHelper.readTemp(methodVisitor,
+                    Type.getType(stackMetadata.getTypeAtStackIndex(i).getJavaTypeDescriptor()),
+                    stackLocalVariables[i]);
+        }
+
+        for (int i = 0; i < stackLocalVariables.length; i++) {
+            localVariableHelper.freeLocal();
+        }
+    }
+
+    public static void restoreExceptionTableStack(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            PythonExceptionTable.ExceptionBlock exceptionBlock) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+
+        localVariableHelper.readExceptionTableTargetStack(methodVisitor, exceptionBlock.getTargetInstruction());
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Arrays.class),
+                "toString", Type.getMethodDescriptor(Type.getType(String.class), Type.getType(Object[].class)),
+                false);
+        PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
+        methodVisitor.visitInsn(Opcodes.POP);
+        for (int i = 0; i < exceptionBlock.getStackDepth(); i++) {
+            methodVisitor.visitInsn(Opcodes.DUP);
+            methodVisitor.visitLdcInsn(i);
+            methodVisitor.visitInsn(Opcodes.AALOAD);
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST,
+                    stackMetadata.getTypeAtStackIndex(exceptionBlock.getStackDepth() - i - 1).getJavaTypeInternalName());
+            methodVisitor.visitInsn(Opcodes.SWAP);
+        }
+        methodVisitor.visitInsn(Opcodes.POP);
     }
 }

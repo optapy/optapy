@@ -24,6 +24,8 @@ import org.optaplanner.jpyinterpreter.types.numeric.PythonBoolean;
 import org.optaplanner.jpyinterpreter.types.numeric.PythonInteger;
 
 public class PythonLikeTuple extends AbstractPythonLikeObject implements List<PythonLikeObject>, RandomAccess {
+    public static PythonLikeTuple EMPTY = PythonLikeTuple.fromList(List.of());
+
     final List<PythonLikeObject> delegate;
     private int remainderToAdd;
 

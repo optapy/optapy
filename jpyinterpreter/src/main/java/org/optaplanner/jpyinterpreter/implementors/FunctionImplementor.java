@@ -119,7 +119,13 @@ public class FunctionImplementor {
                                 "__getAttributeOrNull", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
                                         Type.getType(String.class)),
                                 true);
+
                         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                        if (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) {
+                            // Need to move NULL behind method
+                            methodVisitor.visitInsn(Opcodes.DUP_X1);
+                            methodVisitor.visitInsn(Opcodes.POP);
+                        }
                     } else if (!isTosType && knownFunctionType.isStaticMethod()) {
                         methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
                                 "__getType", Type.getMethodDescriptor(Type.getType(PythonLikeType.class)),
@@ -130,6 +136,11 @@ public class FunctionImplementor {
                                         Type.getType(String.class)),
                                 true);
                         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+                        if (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) {
+                            // Need to move NULL behind method
+                            methodVisitor.visitInsn(Opcodes.DUP_X1);
+                            methodVisitor.visitInsn(Opcodes.POP);
+                        }
                     } else if (isTosType && knownFunctionType.isClassMethod()) {
                         methodVisitor.visitInsn(Opcodes.DUP);
                         methodVisitor.visitLdcInsn(function.co_names.get(instruction.arg));
@@ -206,18 +217,125 @@ public class FunctionImplementor {
 
         // Stack is method
         methodVisitor.visitInsn(Opcodes.ACONST_NULL);
-        methodVisitor.visitInsn(Opcodes.SWAP);
+        if (functionMetadata.pythonCompiledFunction.pythonVersion.isBefore(PythonVersion.PYTHON_3_11)) {
+            // Python 3.11+ swap these
+            methodVisitor.visitInsn(Opcodes.SWAP);
+        }
 
         methodVisitor.visitLabel(blockEnd);
 
         // Stack is either:
         // object, method if it was in type
-        // null, method if it was not in type
+        // null, method if it was not in type (Or method, null if Python 3.11+)
         methodVisitor.visitInsn(Opcodes.SWAP);
 
         // Stack is now:
         // method, object if it was in type
-        // method, null if it was not in type
+        // method, null if it was not in type (and prior to Python 3.11+)
+        // null, method if it was not in type (if Python 3.11+)
+    }
+
+    public static void setCallKeywordNameTuple(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
+            int constantIndex) {
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+        PythonConstantsImplementor.loadConstant(functionMetadata.methodVisitor, functionMetadata.className, constantIndex);
+        localVariableHelper.writeCallKeywords(functionMetadata.methodVisitor);
+    }
+
+    /**
+     * Calls a function. argc is the number of positional arguments. Keyword arguments are stored in a local variable.
+     * Keyword arguments (if any) are at the top of the stack, followed by, positional arguments.
+     * Below them either self and an unbound method object or NULL and an arbitrary callable).
+     * All of them are popped and the return value is pushed.
+     */
+    public static void call(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int argumentCount) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        // TODO: Specialized methods
+        callGeneric(functionMetadata, stackMetadata, argumentCount);
+    }
+
+    private static void callGeneric(FunctionMetadata functionMetadata,
+            StackMetadata stackMetadata,
+            int argumentCount) {
+        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
+        LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
+
+        int keywordArgs = localVariableHelper.newLocal();
+        int positionalArgs = localVariableHelper.newLocal();
+
+        localVariableHelper.readCallKeywords(methodVisitor);
+        CollectionImplementor.buildCollection(TupleMapPair.class, methodVisitor, argumentCount + 1);
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(TupleMapPair.class), "tuple",
+                Type.getDescriptor(PythonLikeTuple.class));
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeTuple.class), positionalArgs);
+
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(TupleMapPair.class), "map",
+                Type.getDescriptor(PythonLikeDict.class));
+        localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeDict.class), keywordArgs);
+
+        // Stack is (null or method), (obj or method)
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        // Stack is (obj or method) (null or method)
+        Label ifNullStart = new Label();
+        Label blockEnd = new Label();
+
+        methodVisitor.visitInsn(Opcodes.DUP);
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+        methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, ifNullStart);
+
+        // Stack is obj, method
+        StackManipulationImplementor.swap(methodVisitor);
+
+        // Stack is method, obj
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeTuple.class), positionalArgs);
+        methodVisitor.visitInsn(Opcodes.SWAP);
+        methodVisitor.visitInsn(Opcodes.ICONST_0);
+
+        // Stack is method, argList, obj, index
+        methodVisitor.visitInsn(Opcodes.SWAP);
+
+        // Stack is method, argList, argList, index, obj
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(List.class),
+                "add",
+                Type.getMethodDescriptor(Type.VOID_TYPE, Type.INT_TYPE, Type.getType(Object.class)),
+                true);
+
+        // Stack is method
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeTuple.class), positionalArgs);
+
+        // Stack is method, positionalArgs
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, blockEnd);
+
+        methodVisitor.visitLabel(ifNullStart);
+        // Stack is method, null
+        methodVisitor.visitInsn(Opcodes.POP);
+
+        // Stack is method
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeTuple.class), positionalArgs);
+
+        // Stack is method, positionalArgs
+        methodVisitor.visitLabel(blockEnd);
+
+        localVariableHelper.readTemp(methodVisitor, Type.getType(PythonLikeDict.class), keywordArgs);
+
+        // Stack is method, positionalArgs, keywordArgs
+        getCallerInstance(functionMetadata, stackMetadata);
+
+        // Stack is callable, positionalArgs, keywordArgs, null
+        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeFunction.class),
+                "$call", Type.getMethodDescriptor(Type.getType(PythonLikeObject.class),
+                        Type.getType(List.class),
+                        Type.getType(Map.class),
+                        Type.getType(PythonLikeObject.class)),
+                true);
+
+        localVariableHelper.resetCallKeywords(methodVisitor);
+        localVariableHelper.freeLocal();
+        localVariableHelper.freeLocal();
     }
 
     /**
@@ -468,6 +586,10 @@ public class FunctionImplementor {
                         Type.getType(Map.class),
                         Type.getType(PythonLikeObject.class)),
                 true);
+        if (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) {
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitInsn(Opcodes.POP);
+        }
     }
 
     public static void callFunctionUnpackIterable(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
@@ -482,6 +604,10 @@ public class FunctionImplementor {
                         Type.getType(Map.class),
                         Type.getType(PythonLikeObject.class)),
                 true);
+        if (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) {
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitInsn(Opcodes.POP);
+        }
     }
 
     private static void getCallerInstance(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
@@ -524,6 +650,20 @@ public class FunctionImplementor {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
         String className = functionMetadata.className;
 
+        if (functionMetadata.pythonCompiledFunction.pythonVersion.isAtLeast(PythonVersion.PYTHON_3_11)) {
+            // Python 3.11 and above removed qualified name, so we need to get it from the code object's class
+            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonCode.class));
+            methodVisitor.visitInsn(Opcodes.DUP);
+            // TODO: maybe create qualifiedName field in PythonCode?
+            methodVisitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(PythonCode.class), "functionClass",
+                    Type.getDescriptor(Class.class));
+            // TODO: get qualified name from static field?
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(Class.class), "getName",
+                    Type.getMethodDescriptor(Type.getType(String.class)), false);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonString.class), "valueOf",
+                    Type.getMethodDescriptor(Type.getType(PythonString.class), Type.getType(String.class)), false);
+            stackMetadata = stackMetadata.pushTemp(BuiltinTypes.STRING_TYPE);
+        }
         int providedOptionalArgs = Integer.bitCount(instruction.arg);
 
         // If the argument present, decrement providedOptionalArgs to keep argument shifting logic the same
