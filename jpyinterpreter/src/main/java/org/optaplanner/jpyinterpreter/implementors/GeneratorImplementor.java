@@ -11,7 +11,6 @@ import org.optaplanner.jpyinterpreter.BytecodeSwitchImplementor;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
-import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.jpyinterpreter.PythonGeneratorTranslator;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
@@ -156,8 +155,7 @@ public class GeneratorImplementor {
     public static void progressSubgenerator(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int jumpTarget) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
 
-        System.out.println(stackMetadata);
-        int[] stackVariables = StackManipulationImplementor.storeStack(methodVisitor, stackMetadata); // TODO: This throws
+        int[] stackVariables = StackManipulationImplementor.storeStack(methodVisitor, stackMetadata);
 
         Label wasNotSentValue = new Label();
         Label wasNotThrownValue = new Label();
@@ -220,7 +218,6 @@ public class GeneratorImplementor {
                     switch (key) {
                         case 0: { // next
                             methodVisitor.visitLdcInsn("next");
-                            PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
                             methodVisitor.visitInsn(Opcodes.POP);
 
                             methodVisitor.visitInsn(Opcodes.POP);
@@ -229,7 +226,6 @@ public class GeneratorImplementor {
                         }
                         case 1: { // send
                             methodVisitor.visitLdcInsn("send");
-                            PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
                             methodVisitor.visitInsn(Opcodes.POP);
 
                             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -243,7 +239,6 @@ public class GeneratorImplementor {
                         }
                         case 2: { // throw
                             methodVisitor.visitLdcInsn("throw");
-                            PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
                             methodVisitor.visitInsn(Opcodes.POP);
 
                             methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(Throwable.class));

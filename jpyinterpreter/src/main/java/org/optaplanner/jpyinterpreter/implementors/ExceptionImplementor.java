@@ -312,40 +312,19 @@ public class ExceptionImplementor {
 
         // Stack is exception
         // Duplicate exception to the current exception variable slot so we can reraise it if needed
-        //PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
         stackMetadata.localVariableHelper.writeCurrentException(methodVisitor);
         StackManipulationImplementor.restoreExceptionTableStack(functionMetadata, stackMetadata, exceptionBlock);
 
         // Stack is (stack-before-try)
-
-        /*
-         * // Instruction
-         * stackMetadata.localVariableHelper.readCurrentException(methodVisitor); // We don't use it; use current exception for
-         * finally handler
-         * 
-         * // Stack is (stack-before-try), instruction
-         * 
-         * // Stack Size
-         * methodVisitor.visitLdcInsn(stackMetadata.getStackSize());
-         * methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(PythonInteger.class),
-         * "valueOf", Type.getMethodDescriptor(Type.getType(PythonInteger.class), Type.INT_TYPE),
-         * false);
-         * 
-         * // Stack is (stack-before-try), instruction, stack-size, exception
-         * 
-         * // Label
-         * stackMetadata.localVariableHelper.readCurrentException(methodVisitor); // We don't use it; use current exception for
-         * finally handler
-         */
-
-        // Stack is (stack-before-try), instruction, stack-size, label
         if (exceptionBlock.isPushLastIndex()) {
-            // code expect instruction offset; we don't use it, so load another copy of exception
-            stackMetadata.localVariableHelper.readCurrentException(methodVisitor);
+            // Load 0 for last index since we don't use it
+            methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(PythonInteger.class), "ZERO",
+                    Type.getDescriptor(PythonInteger.class));
         }
 
         // Load exception
         stackMetadata.localVariableHelper.readCurrentException(methodVisitor);
+        // Stack is (stack-before-try), index?, exception
     }
 
     public static void pushExcInfo(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {

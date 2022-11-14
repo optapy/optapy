@@ -1,7 +1,6 @@
 package org.optaplanner.jpyinterpreter.implementors;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.objectweb.asm.MethodVisitor;
@@ -9,7 +8,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.LocalVariableHelper;
-import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
 import org.optaplanner.jpyinterpreter.PythonExceptionTable;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.StackMetadata;
@@ -260,7 +258,6 @@ public class StackManipulationImplementor {
         LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
         int[] stackLocalVariables = new int[stackMetadata.getStackSize()];
 
-        PythonBytecodeToJavaBytecodeTranslator.printStack(functionMetadata, stackMetadata);
         for (int i = stackLocalVariables.length - 1; i >= 0; i--) {
             stackLocalVariables[i] = localVariableHelper.newLocal();
             localVariableHelper.writeTemp(methodVisitor,
@@ -279,12 +276,6 @@ public class StackManipulationImplementor {
                     stackLocalVariables[i]);
             methodVisitor.visitInsn(Opcodes.AASTORE);
         }
-        methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Arrays.class),
-                "toString", Type.getMethodDescriptor(Type.getType(String.class), Type.getType(Object[].class)),
-                false);
-        PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
-        methodVisitor.visitInsn(Opcodes.POP);
         localVariableHelper.writeExceptionTableTargetStack(methodVisitor, exceptionBlock.getTargetInstruction());
 
         for (int i = 0; i < stackLocalVariables.length; i++) {
@@ -304,12 +295,6 @@ public class StackManipulationImplementor {
         LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
 
         localVariableHelper.readExceptionTableTargetStack(methodVisitor, exceptionBlock.getTargetInstruction());
-        methodVisitor.visitInsn(Opcodes.DUP);
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(Arrays.class),
-                "toString", Type.getMethodDescriptor(Type.getType(String.class), Type.getType(Object[].class)),
-                false);
-        PythonBytecodeToJavaBytecodeTranslator.print(methodVisitor);
-        methodVisitor.visitInsn(Opcodes.POP);
         for (int i = 0; i < exceptionBlock.getStackDepth(); i++) {
             methodVisitor.visitInsn(Opcodes.DUP);
             methodVisitor.visitLdcInsn(i);
