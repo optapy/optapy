@@ -132,16 +132,10 @@ public class FlowGraph {
         }
 
         if (exceptionBlock.isPushLastIndex()) {
-            return previousStackMetadata.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE)
-                    //.pushTemp(BuiltinTypes.INT_TYPE)
-                    //.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE)
-                    //.pushTemp(BuiltinTypes.INT_TYPE)
+            return previousStackMetadata.pushTemp(BuiltinTypes.INT_TYPE)
                     .pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE);
         } else {
             return previousStackMetadata.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE);
-            //.pushTemp(BuiltinTypes.INT_TYPE)
-            //.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE)
-            //.pushTemp(PythonBaseException.BASE_EXCEPTION_TYPE);
         }
     }
 

@@ -353,8 +353,8 @@ public enum OpcodeIdentifier {
     GEN_START,
 
     /**
-     * TOS1 is a subgenerator, TOS is a value. Calls TOS1.send(TOS) is self.thrownValue is not null,
-     * otherwise, set self.thrownValue to null and call TOS1.throwValue(TOS) instead. TOS is replaced by the subgenerator
+     * TOS1 is a subgenerator, TOS is a value. Calls TOS1.send(TOS) if self.thrownValue is null.
+     * Otherwise, set self.thrownValue to null and call TOS1.throwValue(TOS) instead. TOS is replaced by the subgenerator
      * yielded value; TOS1 remains. When the subgenerator is exhausted, jump forward by its argument.
      */
     SEND,
