@@ -7,10 +7,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
+import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.CompareOp;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
+import org.optaplanner.jpyinterpreter.LocalVariableHelper;
 import org.optaplanner.jpyinterpreter.OpcodeIdentifier;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
 import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
@@ -52,21 +55,12 @@ public class FlowGraphTest {
         return out;
     }
 
-    static StackMetadata getInitialStackMetadata(int locals, int cells) {
-        StackMetadata initialStackMetadata = new StackMetadata();
-        initialStackMetadata.stackValueSources = new ArrayList<>();
-        initialStackMetadata.localVariableValueSources = new ArrayList<>(locals);
-        initialStackMetadata.cellVariableValueSources = new ArrayList<>(cells);
-
-        for (int i = 0; i < locals; i++) {
-            initialStackMetadata.localVariableValueSources.add(null);
-        }
-
-        for (int i = 0; i < cells; i++) {
-            initialStackMetadata.cellVariableValueSources.add(null);
-        }
-
-        return initialStackMetadata;
+    static StackMetadata getInitialStackMetadata(PythonCompiledFunction pythonCompiledFunction) {
+        return new StackMetadata(new LocalVariableHelper(pythonCompiledFunction.getParameterTypes()
+                .stream()
+                .map(type -> Type.getType(type.getJavaTypeDescriptor()))
+                .toArray(Type[]::new),
+                pythonCompiledFunction));
     }
 
     static List<FrameData> getFrameData(FlowGraph flowGraph) {
@@ -91,7 +85,7 @@ public class FlowGraphTest {
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
-        StackMetadata metadata = getInitialStackMetadata(0, 0);
+        StackMetadata metadata = getInitialStackMetadata(pythonCompiledFunction);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
         List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
@@ -117,7 +111,7 @@ public class FlowGraphTest {
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
-        StackMetadata metadata = getInitialStackMetadata(2, 0);
+        StackMetadata metadata = getInitialStackMetadata(pythonCompiledFunction);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
         List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
@@ -153,7 +147,7 @@ public class FlowGraphTest {
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
-        StackMetadata metadata = getInitialStackMetadata(1, 0);
+        StackMetadata metadata = getInitialStackMetadata(pythonCompiledFunction);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
         List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
@@ -199,7 +193,7 @@ public class FlowGraphTest {
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
-        StackMetadata metadata = getInitialStackMetadata(0, 0);
+        StackMetadata metadata = getInitialStackMetadata(pythonCompiledFunction);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
         List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
@@ -277,7 +271,7 @@ public class FlowGraphTest {
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
-        StackMetadata metadata = getInitialStackMetadata(0, 0);
+        StackMetadata metadata = getInitialStackMetadata(pythonCompiledFunction);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
         List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
@@ -364,7 +358,7 @@ public class FlowGraphTest {
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
-        StackMetadata metadata = getInitialStackMetadata(1, 0);
+        StackMetadata metadata = getInitialStackMetadata(pythonCompiledFunction);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
         List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
@@ -402,7 +396,7 @@ public class FlowGraphTest {
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
-        StackMetadata metadata = getInitialStackMetadata(1, 0);
+        StackMetadata metadata = getInitialStackMetadata(pythonCompiledFunction);
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
         List<FrameData> stackMetadataList = getFrameData(flowGraph);
 
@@ -472,7 +466,7 @@ public class FlowGraphTest {
                 .build();
 
         FunctionMetadata functionMetadata = getFunctionMetadata(pythonCompiledFunction);
-        StackMetadata metadata = getInitialStackMetadata(5, 0)
+        StackMetadata metadata = getInitialStackMetadata(pythonCompiledFunction)
                 .setLocalVariableValueSource(0, ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.BASE_TYPE))
                 .setLocalVariableValueSource(1, ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.BASE_TYPE));
         FlowGraph flowGraph = getFlowGraph(functionMetadata, metadata, pythonCompiledFunction);
@@ -502,21 +496,23 @@ public class FlowGraphTest {
                 out.isDead = true;
                 return out;
             }
-            stackMetadata.stackValueSources.forEach(valueSourceInfo -> {
+            stackMetadata.getValueSourcesUpToStackIndex(stackMetadata.getStackSize()).forEach(valueSourceInfo -> {
                 if (valueSourceInfo != null) {
                     out.stackTypes.add(valueSourceInfo.getValueType());
                 } else {
                     out.stackTypes.add(null);
                 }
             });
-            stackMetadata.localVariableValueSources.forEach(valueSourceInfo -> {
+            IntStream.range(0, stackMetadata.localVariableHelper.getNumberOfLocalVariables()).forEach(i -> {
+                ValueSourceInfo valueSourceInfo = stackMetadata.getLocalVariableValueSource(i);
                 if (valueSourceInfo != null) {
                     out.localVariableTypes.add(valueSourceInfo.getValueType());
                 } else {
                     out.localVariableTypes.add(null);
                 }
             });
-            stackMetadata.cellVariableValueSources.forEach(valueSourceInfo -> {
+            IntStream.range(0, stackMetadata.localVariableHelper.getNumberOfCells()).forEach(i -> {
+                ValueSourceInfo valueSourceInfo = stackMetadata.getCellVariableValueSource(i);
                 if (valueSourceInfo != null) {
                     out.cellTypes.add(valueSourceInfo.getValueType());
                 } else {

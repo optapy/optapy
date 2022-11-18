@@ -5,6 +5,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -166,7 +168,7 @@ public class PythonDefaultArgumentImplementor {
         methodVisitor.visitEnd();
 
         createAddArgumentMethod(classWriter, internalClassName, methodDescriptor, argumentNameToIndexMap,
-                extraPositionalArgumentsVariableIndex, extraKeywordArgumentsVariableIndex);
+                extraPositionalArgumentsVariableIndex, extraKeywordArgumentsVariableIndex, argumentSpec);
 
         classWriter.visitEnd();
         PythonBytecodeToJavaBytecodeTranslator.writeClassOutput(BuiltinTypes.classNameToBytecode, className,
@@ -248,7 +250,8 @@ public class PythonDefaultArgumentImplementor {
     private static void createAddArgumentMethod(ClassVisitor classVisitor, String classInternalName,
             MethodDescriptor methodDescriptor,
             Map<String, Integer> argumentNameToIndexMap, Optional<Integer> extraPositionalArgumentsVariableIndex,
-            Optional<Integer> extraKeywordArgumentsVariableIndex) {
+            Optional<Integer> extraKeywordArgumentsVariableIndex,
+            ArgumentSpec<?> argumentSpec) {
         MethodVisitor methodVisitor = classVisitor.visitMethod(Modifier.PUBLIC, "addArgument",
                 Type.getMethodDescriptor(Type.VOID_TYPE,
                         Type.getType(PythonLikeObject.class)),
@@ -384,7 +387,9 @@ public class PythonDefaultArgumentImplementor {
         methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, classInternalName, POSITIONAL_INDEX, Type.getDescriptor(int.class));
 
-        BytecodeSwitchImplementor.createIntSwitch(methodVisitor, argumentNameToIndexMap.values(),
+        BytecodeSwitchImplementor.createIntSwitch(methodVisitor,
+                IntStream.range(0, argumentSpec.getAllowPositionalArgumentCount())
+                        .boxed().collect(Collectors.toList()),
                 index -> {
                     Type parameterType = methodDescriptor.getParameterTypes()[index];
                     methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);

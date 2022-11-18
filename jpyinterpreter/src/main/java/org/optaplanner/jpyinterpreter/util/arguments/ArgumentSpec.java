@@ -3,11 +3,15 @@ package org.optaplanner.jpyinterpreter.util.arguments;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.optaplanner.jpyinterpreter.MethodDescriptor;
 import org.optaplanner.jpyinterpreter.PythonFunctionSignature;
@@ -54,21 +58,21 @@ public final class ArgumentSpec<Out_> {
         functionName = previousSpec.functionName;
         functionReturnType = previousSpec.functionReturnType;
 
-        if (previousSpec.numberOfPositionalArguments < previousSpec.getArgCount()) {
+        if (previousSpec.numberOfPositionalArguments < previousSpec.getTotalArgumentCount()) {
             numberOfPositionalArguments = previousSpec.numberOfPositionalArguments;
         } else {
             if (argumentKind.allowPositional) {
-                numberOfPositionalArguments = previousSpec.getArgCount() + 1;
+                numberOfPositionalArguments = previousSpec.getTotalArgumentCount() + 1;
             } else {
-                numberOfPositionalArguments = previousSpec.getArgCount();
+                numberOfPositionalArguments = previousSpec.getTotalArgumentCount();
             }
         }
 
         if (argumentKind == ArgumentKind.POSITIONAL_ONLY) {
-            if (previousSpec.requiredPositionalArguments != previousSpec.getArgCount()) {
+            if (previousSpec.requiredPositionalArguments != previousSpec.getTotalArgumentCount()) {
                 throw new IllegalArgumentException("All required positional arguments must come before all other arguments");
             } else {
-                requiredPositionalArguments = previousSpec.getArgCount() + 1;
+                requiredPositionalArguments = previousSpec.getTotalArgumentCount() + 1;
             }
         } else {
             requiredPositionalArguments = previousSpec.requiredPositionalArguments;
@@ -118,8 +122,65 @@ public final class ArgumentSpec<Out_> {
         return new ArgumentSpec<>(functionName, outClass);
     }
 
-    private int getArgCount() {
+    public int getTotalArgumentCount() {
         return argumentNameList.size();
+    }
+
+    public int getAllowPositionalArgumentCount() {
+        return numberOfPositionalArguments;
+    }
+
+    public boolean hasExtraPositionalArgumentsCapture() {
+        return extraPositionalsArgumentIndex.isPresent();
+    }
+
+    public boolean hasExtraKeywordArgumentsCapture() {
+        return extraKeywordsArgumentIndex.isPresent();
+    }
+
+    public Class<?> getArgumentType(int argumentIndex) {
+        return argumentTypeList.get(argumentIndex);
+    }
+
+    public ArgumentKind getArgumentKind(int argumentIndex) {
+        return argumentKindList.get(argumentIndex);
+    }
+
+    /**
+     * Returns the index of an argument with the given name. Returns -1 if no argument has the given name.
+     * 
+     * @param argumentName The name of the argument.
+     * @return the index of an argument with the given name, or -1 if no argument has that name
+     */
+    public int getArgumentIndex(String argumentName) {
+        return argumentNameList.indexOf(argumentName);
+    }
+
+    public boolean isArgumentNullable(int argumentIndex) {
+        return nullableArgumentSet.get(argumentIndex);
+    }
+
+    public Optional<Integer> getExtraPositionalsArgumentIndex() {
+        return extraPositionalsArgumentIndex;
+    }
+
+    public Optional<Integer> getExtraKeywordsArgumentIndex() {
+        return extraKeywordsArgumentIndex;
+    }
+
+    public Collection<Integer> getUnspecifiedArgumentSet(int positionalArguments, List<String> keywordArgumentNameList) {
+        int specArgumentCount = getTotalArgumentCount();
+        if (hasExtraPositionalArgumentsCapture()) {
+            specArgumentCount--;
+        }
+        if (hasExtraKeywordArgumentsCapture()) {
+            specArgumentCount--;
+        }
+
+        return IntStream.range(positionalArguments, specArgumentCount)
+                .filter(index -> !keywordArgumentNameList.contains(argumentNameList.get(index)))
+                .boxed()
+                .collect(Collectors.toList());
     }
 
     public List<PythonLikeObject> extractArgumentList(List<PythonLikeObject> positionalArguments,
@@ -241,6 +302,75 @@ public final class ArgumentSpec<Out_> {
         return out;
     }
 
+    public boolean verifyMatchesCallSignature(int positionalArgumentCount, List<String> keywordArgumentNameList,
+            List<PythonLikeType> callStackTypeList) {
+        Set<Integer> missingValue = getRequiredArgumentIndexSet();
+        for (int keywordIndex = 0; keywordIndex < keywordArgumentNameList.size(); keywordIndex++) {
+            String keyword = keywordArgumentNameList.get(keywordIndex);
+            PythonLikeType stackType = callStackTypeList.get(positionalArgumentCount + keywordIndex);
+            int index = argumentNameList.indexOf(keyword);
+            if (index == -1 && extraKeywordsArgumentIndex.isEmpty()) {
+                return false;
+            }
+            if (index != -1 && index < positionalArgumentCount) {
+                return false;
+            } else {
+                try {
+                    if (!argumentTypeList.get(index).isAssignableFrom(stackType.getJavaClass())) {
+                        return false;
+                    }
+                } catch (ClassNotFoundException e) {
+                    // Assume if the type is not found, it assignable
+                }
+                missingValue.remove(index);
+            }
+        }
+
+        if (positionalArgumentCount < requiredPositionalArguments || positionalArgumentCount > getTotalArgumentCount()) {
+            return false;
+        }
+
+        for (int i = 0; i < positionalArgumentCount; i++) {
+            missingValue.remove(i);
+            try {
+                if (!argumentTypeList.get(i).isAssignableFrom(callStackTypeList.get(i).getJavaClass())) {
+                    return false;
+                }
+            } catch (ClassNotFoundException e) {
+                // Assume if the type is not found, it assignable
+            }
+        }
+
+        if (!missingValue.isEmpty()) {
+            return false;
+        }
+
+        if (extraPositionalsArgumentIndex.isEmpty() && extraKeywordsArgumentIndex.isEmpty()) { // no *vargs or **kwargs
+            return positionalArgumentCount <= numberOfPositionalArguments &&
+                    positionalArgumentCount + keywordArgumentNameList.size() <= argumentNameList.size();
+        } else if (extraPositionalsArgumentIndex.isPresent() && extraKeywordsArgumentIndex.isEmpty()) { // *vargs only
+            return true;
+        } else if (extraPositionalsArgumentIndex.isEmpty()) { // **kwargs only
+            return positionalArgumentCount < numberOfPositionalArguments;
+        } else { // *vargs and **kwargs
+            return true;
+        }
+    }
+
+    private Set<Integer> getRequiredArgumentIndexSet() {
+        Set<Integer> out = new HashSet<>();
+        for (int i = 0; i < argumentNameList.size(); i++) {
+            if (argumentKindList.get(i) == ArgumentKind.VARARGS) {
+                continue;
+            }
+            if (argumentDefaultList.get(i) != null || nullableArgumentSet.get(i)) {
+                continue;
+            }
+            out.add(i);
+        }
+        return out;
+    }
+
     private <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addArgument(String argumentName,
             Class<ArgumentType_> argumentType, ArgumentKind argumentKind, ArgumentType_ defaultValue,
             Optional<Integer> extraPositionalsArgumentIndex, Optional<Integer> extraKeywordsArgumentIndex, boolean allowNull) {
@@ -286,13 +416,13 @@ public final class ArgumentSpec<Out_> {
 
     public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addNullableArgument(String argumentName,
             Class<ArgumentType_> argumentType) {
-        return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, null,
+        return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_AND_KEYWORD, null,
                 Optional.empty(), Optional.empty(), true);
     }
 
     public <ArgumentType_ extends PythonLikeObject> ArgumentSpec<Out_> addNullablePositionalOnlyArgument(String argumentName,
             Class<ArgumentType_> argumentType) {
-        return addArgument(argumentName, argumentType, ArgumentKind.KEYWORD_ONLY, null,
+        return addArgument(argumentName, argumentType, ArgumentKind.POSITIONAL_ONLY, null,
                 Optional.empty(), Optional.empty(), true);
     }
 
@@ -304,12 +434,12 @@ public final class ArgumentSpec<Out_> {
 
     public ArgumentSpec<Out_> addExtraPositionalVarArgument(String argumentName) {
         return addArgument(argumentName, PythonLikeTuple.class, ArgumentKind.VARARGS, null,
-                Optional.of(getArgCount()), Optional.empty(), false);
+                Optional.of(getTotalArgumentCount()), Optional.empty(), false);
     }
 
     public ArgumentSpec<Out_> addExtraKeywordVarArgument(String argumentName) {
         return addArgument(argumentName, PythonLikeDict.class, ArgumentKind.VARARGS, null,
-                Optional.empty(), Optional.of(getArgCount()), false);
+                Optional.empty(), Optional.of(getTotalArgumentCount()), false);
     }
 
     public PythonFunctionSignature asPythonFunctionSignature(Method method) {

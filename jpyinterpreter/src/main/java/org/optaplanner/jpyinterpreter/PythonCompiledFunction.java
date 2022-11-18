@@ -189,9 +189,12 @@ public class PythonCompiledFunction {
                 .sanitizeClassName((qualifiedName != null) ? module + "." + qualifiedName : module + "." + "PythonFunction");
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public BiFunction<PythonLikeTuple, PythonLikeDict, ArgumentSpec<PythonLikeObject>> getArgumentSpecMapper() {
         return (defaultPositionalArguments, defaultKeywordArguments) -> {
-            ArgumentSpec<PythonLikeObject> out = ArgumentSpec.forFunctionReturning(qualifiedName, PythonLikeObject.class);
+            ArgumentSpec<PythonLikeObject> out = ArgumentSpec.forFunctionReturning(qualifiedName, getReturnType()
+                    .map(type -> (Class) type.getJavaClassOrDefault(PythonLikeObject.class))
+                    .orElse(PythonLikeObject.class));
 
             int variableIndex = 0;
             int defaultPositionalStartIndex = co_argcount - defaultPositionalArguments.size();
@@ -200,21 +203,28 @@ public class PythonCompiledFunction {
                 variableIndex = 1;
             }
 
+            List<PythonLikeType> parameterTypeList = getParameterTypes();
             for (; variableIndex < co_posonlyargcount; variableIndex++) {
                 if (variableIndex >= defaultPositionalStartIndex) {
-                    out = out.addPositionalOnlyArgument(co_varnames.get(variableIndex), PythonLikeObject.class,
+                    out = out.addPositionalOnlyArgument(co_varnames.get(variableIndex),
+                            (Class) parameterTypeList.get(variableIndex)
+                                    .getJavaClassOrDefault(PythonLikeObject.class),
                             defaultPositionalArguments.get(variableIndex - defaultPositionalStartIndex));
                 } else {
-                    out = out.addPositionalOnlyArgument(co_varnames.get(variableIndex), PythonLikeObject.class);
+                    out = out.addPositionalOnlyArgument(co_varnames.get(variableIndex),
+                            (Class) parameterTypeList.get(variableIndex)
+                                    .getJavaClassOrDefault(PythonLikeObject.class));
                 }
             }
 
             for (; variableIndex < co_argcount; variableIndex++) {
                 if (variableIndex >= defaultPositionalStartIndex) {
-                    out = out.addArgument(co_varnames.get(variableIndex), PythonLikeObject.class,
+                    out = out.addArgument(co_varnames.get(variableIndex), (Class) parameterTypeList.get(variableIndex)
+                            .getJavaClassOrDefault(PythonLikeObject.class),
                             defaultPositionalArguments.get(variableIndex - defaultPositionalStartIndex));
                 } else {
-                    out = out.addArgument(co_varnames.get(variableIndex), PythonLikeObject.class);
+                    out = out.addArgument(co_varnames.get(variableIndex), (Class) parameterTypeList.get(variableIndex)
+                            .getJavaClassOrDefault(PythonLikeObject.class));
                 }
             }
 
@@ -222,10 +232,14 @@ public class PythonCompiledFunction {
                 PythonLikeObject maybeDefault =
                         defaultKeywordArguments.get(PythonString.valueOf(co_varnames.get(variableIndex)));
                 if (maybeDefault != null) {
-                    out = out.addKeywordOnlyArgument(co_varnames.get(variableIndex), PythonLikeObject.class,
+                    out = out.addKeywordOnlyArgument(co_varnames.get(variableIndex),
+                            (Class) parameterTypeList.get(variableIndex)
+                                    .getJavaClassOrDefault(PythonLikeObject.class),
                             maybeDefault);
                 } else {
-                    out = out.addKeywordOnlyArgument(co_varnames.get(variableIndex), PythonLikeObject.class);
+                    out = out.addKeywordOnlyArgument(co_varnames.get(variableIndex),
+                            (Class) parameterTypeList.get(variableIndex)
+                                    .getJavaClassOrDefault(PythonLikeObject.class));
                 }
                 variableIndex++;
             }

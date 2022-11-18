@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -19,6 +20,7 @@ import org.optaplanner.jpyinterpreter.PythonInterpreter;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonVersion;
 import org.optaplanner.jpyinterpreter.StackMetadata;
+import org.optaplanner.jpyinterpreter.ValueSourceInfo;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonCode;
 import org.optaplanner.jpyinterpreter.types.PythonKnownFunctionType;
@@ -250,8 +252,43 @@ public class FunctionImplementor {
      */
     public static void call(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int argumentCount) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
-        // TODO: Specialized methods
-        callGeneric(functionMetadata, stackMetadata, argumentCount);
+        PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(argumentCount + 1);
+        if (functionType instanceof PythonKnownFunctionType) {
+            PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
+            List<String> keywordArgumentNameList = stackMetadata.getCallKeywordNameList();
+            List<PythonLikeType> callStackParameterTypes = stackMetadata.getValueSourcesUpToStackIndex(argumentCount)
+                    .stream().map(ValueSourceInfo::getValueType).collect(Collectors.toList());
+
+            knownFunctionType
+                    .getFunctionForParameters(argumentCount - keywordArgumentNameList.size(), keywordArgumentNameList,
+                            callStackParameterTypes)
+                    .ifPresentOrElse(functionSignature -> {
+                        functionSignature.callPython311andAbove(functionMetadata, stackMetadata, argumentCount,
+                                stackMetadata.getCallKeywordNameList());
+                        methodVisitor.visitInsn(Opcodes.SWAP);
+                        methodVisitor.visitInsn(Opcodes.POP);
+                    }, () -> callGeneric(functionMetadata, stackMetadata, argumentCount));
+        } else {
+            functionType = stackMetadata.getTypeAtStackIndex(argumentCount);
+            if (functionType instanceof PythonKnownFunctionType) {
+                PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
+                List<String> keywordArgumentNameList = stackMetadata.getCallKeywordNameList();
+                List<PythonLikeType> callStackParameterTypes = stackMetadata.getValueSourcesUpToStackIndex(argumentCount)
+                        .stream().map(ValueSourceInfo::getValueType).collect(Collectors.toList());
+
+                knownFunctionType
+                        .getFunctionForParameters(argumentCount - keywordArgumentNameList.size(), keywordArgumentNameList,
+                                callStackParameterTypes)
+                        .ifPresentOrElse(functionSignature -> {
+                            functionSignature.callPython311andAbove(functionMetadata, stackMetadata, argumentCount,
+                                    stackMetadata.getCallKeywordNameList());
+                            methodVisitor.visitInsn(Opcodes.SWAP);
+                            methodVisitor.visitInsn(Opcodes.POP);
+                        }, () -> callGeneric(functionMetadata, stackMetadata, argumentCount));
+            } else {
+                callGeneric(functionMetadata, stackMetadata, argumentCount);
+            }
+        }
     }
 
     private static void callGeneric(FunctionMetadata functionMetadata,
@@ -515,7 +552,7 @@ public class FunctionImplementor {
             PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
             knownFunctionType.getDefaultFunctionSignature()
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.callWithKeywords(functionMetadata, stackMetadata,
+                        functionSignature.callWithKeywordsAndUnwrapSelf(functionMetadata, stackMetadata,
                                 instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
