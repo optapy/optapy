@@ -66,6 +66,18 @@ public interface PythonLikeObject {
      */
     PythonLikeType __getType();
 
+    /**
+     * Return a generic version of {@link PythonLikeObject#__getType()}. This is used in bytecode
+     * generation and not at runtime. For example, for a list of integers, this return
+     * list[int], while getType returns list. Both methods are needed so type([1,2,3]) is type(['a', 'b', 'c'])
+     * return True.
+     *
+     * @return the generic version of this object's type. Must not be used in identity checks.
+     */
+    default PythonLikeType __getGenericType() {
+        return __getType();
+    }
+
     default PythonLikeObject $method$__getattribute__(PythonString pythonName) {
         String name = pythonName.value;
         PythonLikeObject objectResult = __getAttributeOrNull(name);

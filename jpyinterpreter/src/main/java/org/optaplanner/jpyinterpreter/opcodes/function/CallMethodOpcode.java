@@ -22,7 +22,7 @@ public class CallMethodOpcode extends AbstractOpcode {
         if (functionType instanceof PythonKnownFunctionType) {
             PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
             PythonLikeType[] parameterTypes =
-                    new PythonLikeType[knownFunctionType.isStaticMethod() ? instruction.arg : instruction.arg + 1];
+                    new PythonLikeType[instruction.arg];
             for (int i = 0; i < parameterTypes.length; i++) {
                 parameterTypes[parameterTypes.length - i - 1] = stackMetadata.getTypeAtStackIndex(i);
             }

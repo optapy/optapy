@@ -48,4 +48,24 @@ public class PythonKnownFunctionType extends PythonLikeType {
         }
         return Optional.of(best);
     }
+
+    public Optional<PythonFunctionSignature> getFunctionForParameters(int positionalItemCount,
+            List<String> keywordNames,
+            List<PythonLikeType> callStackTypeList) {
+        List<PythonFunctionSignature> matchingOverloads = overloadFunctionSignatureList.stream()
+                .filter(signature -> signature.matchesParameters(positionalItemCount, keywordNames, callStackTypeList))
+                .collect(Collectors.toList());
+
+        if (matchingOverloads.isEmpty()) {
+            return Optional.empty();
+        }
+
+        PythonFunctionSignature best = matchingOverloads.get(0);
+        for (PythonFunctionSignature signature : matchingOverloads) {
+            if (signature.moreSpecificThan(best)) {
+                best = signature;
+            }
+        }
+        return Optional.of(best);
+    }
 }

@@ -7,17 +7,52 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.optaplanner.jpyinterpreter.opcodes.OpcodeWithoutSource;
+import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 
 public class StackMetadata {
     public static final StackMetadata DEAD_CODE = new StackMetadata();
 
-    public LocalVariableHelper localVariableHelper;
-    public List<ValueSourceInfo> stackValueSources;
+    public final LocalVariableHelper localVariableHelper;
 
-    public List<ValueSourceInfo> localVariableValueSources;
+    private final List<ValueSourceInfo> stackValueSources;
+    private final List<ValueSourceInfo> localVariableValueSources;
+    private final List<ValueSourceInfo> cellVariableValueSources;
 
-    public List<ValueSourceInfo> cellVariableValueSources;
+    private List<String> callKeywordNameList;
+
+    private StackMetadata() {
+        this.localVariableHelper = null;
+        this.stackValueSources = null;
+        this.localVariableValueSources = null;
+        this.cellVariableValueSources = null;
+        this.callKeywordNameList = null;
+    }
+
+    public StackMetadata(LocalVariableHelper localVariableHelper) {
+        this.localVariableHelper = localVariableHelper;
+        this.stackValueSources = new ArrayList<>();
+        this.localVariableValueSources = new ArrayList<>(localVariableHelper.getNumberOfLocalVariables());
+        this.cellVariableValueSources = new ArrayList<>(localVariableHelper.getNumberOfCells());
+        for (int i = 0; i < localVariableHelper.getNumberOfLocalVariables(); i++) {
+            localVariableValueSources.add(null);
+        }
+        for (int i = 0; i < localVariableHelper.getNumberOfCells(); i++) {
+            cellVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
+                    BuiltinTypes.BASE_TYPE));
+        }
+        this.callKeywordNameList = List.of();
+    }
+
+    private StackMetadata(LocalVariableHelper localVariableHelper, List<ValueSourceInfo> stackValueSources,
+            List<ValueSourceInfo> localVariableValueSources, List<ValueSourceInfo> cellVariableValueSources,
+            List<String> callKeywordNameList) {
+        this.localVariableHelper = localVariableHelper;
+        this.stackValueSources = stackValueSources;
+        this.localVariableValueSources = localVariableValueSources;
+        this.cellVariableValueSources = cellVariableValueSources;
+        this.callKeywordNameList = callKeywordNameList;
+    }
 
     public boolean isDeadCode() {
         return this == DEAD_CODE;
@@ -133,11 +168,10 @@ public class StackMetadata {
     }
 
     public StackMetadata copy() {
-        StackMetadata out = new StackMetadata();
-        out.localVariableHelper = localVariableHelper;
-        out.stackValueSources = new ArrayList<>(stackValueSources);
-        out.localVariableValueSources = new ArrayList<>(localVariableValueSources);
-        out.cellVariableValueSources = new ArrayList<>(cellVariableValueSources);
+        StackMetadata out = new StackMetadata(localVariableHelper, new ArrayList<>(stackValueSources),
+                new ArrayList<>(localVariableValueSources),
+                new ArrayList<>(cellVariableValueSources),
+                callKeywordNameList);
         return out;
     }
 
@@ -310,6 +344,16 @@ public class StackMetadata {
     public StackMetadata setCellVariableValueSource(int index, ValueSourceInfo type) {
         StackMetadata out = copy();
         out.cellVariableValueSources.set(index, type);
+        return out;
+    }
+
+    public List<String> getCallKeywordNameList() {
+        return callKeywordNameList;
+    }
+
+    public StackMetadata setCallKeywordNameList(List<String> callKeywordNameList) {
+        StackMetadata out = copy();
+        out.callKeywordNameList = callKeywordNameList;
         return out;
     }
 

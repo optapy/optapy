@@ -196,7 +196,6 @@ def test_get():
 
 def test_items():
     def items(my_dict: dict) -> list:
-        print(my_dict)
         return list(my_dict.items())
 
     def items_with_modification(my_dict: dict) -> list:

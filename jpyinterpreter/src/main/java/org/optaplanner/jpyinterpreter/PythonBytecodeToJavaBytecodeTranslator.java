@@ -916,53 +916,36 @@ public class PythonBytecodeToJavaBytecodeTranslator {
 
     public static StackMetadata getInitialStackMetadata(LocalVariableHelper localVariableHelper, MethodDescriptor method,
             boolean isVirtual) {
-        StackMetadata initialStackMetadata = new StackMetadata();
-        initialStackMetadata.stackValueSources = new ArrayList<>();
-        initialStackMetadata.localVariableHelper = localVariableHelper;
-        initialStackMetadata.localVariableValueSources = new ArrayList<>(localVariableHelper.getNumberOfLocalVariables());
-        initialStackMetadata.cellVariableValueSources = new ArrayList<>(localVariableHelper.getNumberOfCells());
+        StackMetadata initialStackMetadata = new StackMetadata(localVariableHelper);
 
         if (Type.getInternalName(PythonLikeFunction.class).equals(method.getDeclaringClassInternalName())) {
             return getPythonLikeFunctionInitialStackMetadata(localVariableHelper, initialStackMetadata);
         }
 
-        for (Type type : method.getParameterTypes()) {
+        for (int i = 0; i < method.getParameterTypes().length; i++) {
+            Type type = method.getParameterTypes()[i];
             try {
                 Class<?> typeClass = Class.forName(type.getClassName(), false, BuiltinTypes.asmClassLoader);
-                initialStackMetadata.localVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
-                        JavaPythonTypeConversionImplementor.getPythonLikeType(typeClass)));
+                initialStackMetadata =
+                        initialStackMetadata.setLocalVariableValueSource(i, ValueSourceInfo.of(new OpcodeWithoutSource(),
+                                JavaPythonTypeConversionImplementor.getPythonLikeType(typeClass)));
             } catch (ClassNotFoundException e) {
-                initialStackMetadata.localVariableValueSources
-                        .add(ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.BASE_TYPE));
+                initialStackMetadata = initialStackMetadata.setLocalVariableValueSource(i,
+                        ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.BASE_TYPE));
             }
-        }
-
-        for (int i = method.getParameterTypes().length; i < localVariableHelper.getNumberOfLocalVariables(); i++) {
-            initialStackMetadata.localVariableValueSources.add(null);
         }
 
         if (isVirtual && method.getParameterTypes().length > 0) {
             try {
                 Class<?> typeClass =
                         Class.forName(method.getParameterTypes()[0].getClassName(), false, BuiltinTypes.asmClassLoader);
-                initialStackMetadata.localVariableValueSources.set(0, ValueSourceInfo.of(new SelfOpcodeWithoutSource(),
-                        JavaPythonTypeConversionImplementor.getPythonLikeType(typeClass)));
+                initialStackMetadata =
+                        initialStackMetadata.setLocalVariableValueSource(0, ValueSourceInfo.of(new SelfOpcodeWithoutSource(),
+                                JavaPythonTypeConversionImplementor.getPythonLikeType(typeClass)));
             } catch (ClassNotFoundException e) {
-                initialStackMetadata.localVariableValueSources.set(0,
+                initialStackMetadata = initialStackMetadata.setLocalVariableValueSource(0,
                         ValueSourceInfo.of(new SelfOpcodeWithoutSource(), BuiltinTypes.BASE_TYPE));
             }
-        }
-
-        for (int i = 0; i < localVariableHelper.getNumberOfBoundCells(); i++) {
-            // Bound variables are assumed initialized
-            initialStackMetadata.cellVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
-                    BuiltinTypes.BASE_TYPE));
-        }
-
-        for (int i = 0; i < localVariableHelper.getNumberOfFreeCells(); i++) {
-            // Free variables are assumed initialized
-            initialStackMetadata.cellVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
-                    BuiltinTypes.BASE_TYPE));
         }
 
         return initialStackMetadata;
@@ -971,20 +954,14 @@ public class PythonBytecodeToJavaBytecodeTranslator {
     private static StackMetadata getPythonLikeFunctionInitialStackMetadata(LocalVariableHelper localVariableHelper,
             StackMetadata initialStackMetadata) {
         for (int i = 0; i < localVariableHelper.getNumberOfLocalVariables(); i++) {
-            initialStackMetadata.localVariableValueSources
-                    .add(ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.BASE_TYPE));
+            initialStackMetadata = initialStackMetadata.setLocalVariableValueSource(i,
+                    ValueSourceInfo.of(new OpcodeWithoutSource(), BuiltinTypes.BASE_TYPE));
         }
 
-        for (int i = 0; i < localVariableHelper.getNumberOfBoundCells(); i++) {
-            // Bound variables are assumed initialized
-            initialStackMetadata.cellVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
-                    BuiltinTypes.BASE_TYPE));
-        }
-
-        for (int i = 0; i < localVariableHelper.getNumberOfFreeCells(); i++) {
-            // Free variables are assumed initialized
-            initialStackMetadata.cellVariableValueSources.add(ValueSourceInfo.of(new OpcodeWithoutSource(),
-                    BuiltinTypes.BASE_TYPE));
+        for (int i = 0; i < localVariableHelper.getNumberOfCells(); i++) {
+            initialStackMetadata =
+                    initialStackMetadata.setCellVariableValueSource(i, ValueSourceInfo.of(new OpcodeWithoutSource(),
+                            BuiltinTypes.BASE_TYPE));
         }
 
         return initialStackMetadata;

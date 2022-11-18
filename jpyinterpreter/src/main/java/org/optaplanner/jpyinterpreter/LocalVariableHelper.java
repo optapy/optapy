@@ -219,6 +219,7 @@ public class LocalVariableHelper {
 
     public void readCallKeywords(MethodVisitor methodVisitor) {
         methodVisitor.visitVarInsn(Opcodes.ALOAD, getCallKeywordsSlot());
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeTuple.class));
     }
 
     public void writeCallKeywords(MethodVisitor methodVisitor) {

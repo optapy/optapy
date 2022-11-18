@@ -534,6 +534,19 @@ public class PythonLikeType implements PythonLikeObject,
                 BuiltinTypes.asmClassLoader);
     }
 
+    /**
+     * Return the Java class corresponding to this type, if it exists. Returns {@code defaultValue} otherwise.
+     *
+     * @param defaultValue the value to return
+     */
+    public Class<?> getJavaClassOrDefault(Class<?> defaultValue) {
+        try {
+            return getJavaClass();
+        } catch (ClassNotFoundException e) {
+            return defaultValue;
+        }
+    }
+
     public List<PythonLikeType> getParentList() {
         return PARENT_TYPES;
     }
