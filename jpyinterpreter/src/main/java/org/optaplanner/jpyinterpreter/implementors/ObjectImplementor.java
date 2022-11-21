@@ -4,15 +4,18 @@ import java.util.Optional;
 
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.optaplanner.jpyinterpreter.FieldDescriptor;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.LocalVariableHelper;
 import org.optaplanner.jpyinterpreter.PythonBinaryOperators;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
+import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonTernaryOperators;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
+import org.optaplanner.jpyinterpreter.types.PythonString;
 
 /**
  * Implementations of opcodes related to objects
@@ -31,10 +34,23 @@ public class ObjectImplementor {
 
         if (maybeFieldDescriptor.isPresent()) {
             FieldDescriptor fieldDescriptor = maybeFieldDescriptor.get();
-            methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldDescriptor.getDeclaringClassInternalName());
-            methodVisitor.visitFieldInsn(Opcodes.GETFIELD, fieldDescriptor.getDeclaringClassInternalName(),
-                    fieldDescriptor.getJavaFieldName(),
-                    fieldDescriptor.getJavaFieldTypeDescriptor());
+            if (fieldDescriptor.isTrueFieldDescriptor()) {
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, fieldDescriptor.getDeclaringClassInternalName());
+                methodVisitor.visitFieldInsn(Opcodes.GETFIELD, fieldDescriptor.getDeclaringClassInternalName(),
+                        fieldDescriptor.getJavaFieldName(),
+                        fieldDescriptor.getJavaFieldTypeDescriptor());
+            } else {
+                // It a false field descriptor, which means TOS is a type and this is a field for a method
+                // We can call $method$__getattribute__ directly (since type do not override it),
+                // which is more efficient then going through the full logic of __getattribute__ dunder method impl.
+                PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
+                methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonString.class));
+                methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(PythonLikeObject.class),
+                        "$method$__getattribute__", Type.getMethodDescriptor(
+                                Type.getType(PythonLikeObject.class),
+                                Type.getType(PythonString.class)),
+                        true);
+            }
         } else {
             PythonConstantsImplementor.loadName(methodVisitor, className, instruction.arg);
             DunderOperatorImplementor.binaryOperator(methodVisitor,

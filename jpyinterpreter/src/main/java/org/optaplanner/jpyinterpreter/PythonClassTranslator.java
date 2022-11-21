@@ -168,7 +168,7 @@ public class PythonClassTranslator {
             classWriter.visitField(Modifier.PUBLIC, getJavaFieldName(attributeName), javaFieldTypeDescriptor, null, null);
             FieldDescriptor fieldDescriptor =
                     new FieldDescriptor(attributeName, getJavaFieldName(attributeName), internalClassName,
-                            javaFieldTypeDescriptor, type);
+                            javaFieldTypeDescriptor, type, true);
             pythonLikeType.addInstanceField(fieldDescriptor);
         }
 

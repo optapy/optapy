@@ -76,8 +76,6 @@ public class PythonDefaultArgumentImplementor {
 
         final int defaultStart = methodDescriptor.getParameterTypes().length - defaultArgumentList.size();
         for (int i = 0; i < defaultArgumentList.size(); i++) {
-
-            PythonLikeObject value = defaultArgumentList.get(i);
             String fieldName = getConstantName(i);
             classWriter.visitField(Modifier.PUBLIC | Modifier.STATIC, fieldName,
                     methodDescriptor.getParameterTypes()[defaultStart + i].getDescriptor(),

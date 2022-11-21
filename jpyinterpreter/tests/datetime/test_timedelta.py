@@ -294,3 +294,17 @@ def test_repr():
     verifier.verify(timedelta(seconds=10, microseconds=123456),
                     expected_result='datetime.timedelta(seconds=10, microseconds=123456)')
     verifier.verify(timedelta(weeks=1, hours=16, minutes=30), expected_result='datetime.timedelta(days=7, seconds=59400)')
+
+
+def test_between_0_and_30_minutes():
+    def function(a: timedelta) -> bool:
+        return timedelta(minutes=0) <= a <= timedelta(minutes=30)
+
+    verifier = verifier_for(function)
+
+    verifier.verify(timedelta(minutes=0), expected_result=True)
+    verifier.verify(timedelta(minutes=15), expected_result=True)
+    verifier.verify(timedelta(minutes=30), expected_result=True)
+
+    verifier.verify(timedelta(minutes=-15), expected_result=False)
+    verifier.verify(timedelta(minutes=45), expected_result=False)

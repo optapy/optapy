@@ -62,6 +62,11 @@ public class StackMetadata {
         return stackValueSources.size();
     }
 
+    public List<PythonLikeType> getStackTypeList() {
+        return stackValueSources.stream().map(ValueSourceInfo::getValueType)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Returns the list index for the given stack index (stack index is how many
      * elements below TOS (i.e. 0 is TOS, 1 is TOS1)).

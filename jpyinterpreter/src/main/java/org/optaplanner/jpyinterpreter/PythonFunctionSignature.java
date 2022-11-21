@@ -508,13 +508,14 @@ public class PythonFunctionSignature {
         }
 
         // Load missing arguments with default values
+        int defaultOffset = argumentSpec.getTotalArgumentCount() - defaultArgumentList.size();
         for (int argumentIndex : argumentSpec.getUnspecifiedArgumentSet(positionalArgumentCount + positionalArgumentStart,
                 keywordArgumentNameList)) {
             if (argumentSpec.isArgumentNullable(argumentIndex)) {
                 methodVisitor.visitInsn(Opcodes.ACONST_NULL);
             } else {
                 methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, Type.getInternalName(defaultArgumentHolderClass),
-                        PythonDefaultArgumentImplementor.getConstantName(argumentIndex),
+                        PythonDefaultArgumentImplementor.getConstantName(argumentIndex - defaultOffset),
                         Type.getDescriptor(argumentSpec.getArgumentType(argumentIndex)));
             }
             localVariableHelper.writeTemp(methodVisitor, Type.getType(PythonLikeObject.class),
@@ -556,6 +557,20 @@ public class PythonFunctionSignature {
         }
 
         methodDescriptor.callMethod(methodVisitor);
+
+        // If it not a CLASS method, pop off the function object
+        // CLASS method consume the function object; Static and Virtual do not
+        if (!isClassMethod()) {
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitInsn(Opcodes.POP);
+        }
+
+        // Pop off NULL if it on the stack
+        if (stackMetadata.getTypeAtStackIndex(argumentCount + 1) == BuiltinTypes.NULL_TYPE) {
+            methodVisitor.visitInsn(Opcodes.SWAP);
+            methodVisitor.visitInsn(Opcodes.POP);
+        }
+
         // Free temporary locals for arguments
         for (int i = 0; i < argumentLocals.length; i++) {
             localVariableHelper.freeLocal();
