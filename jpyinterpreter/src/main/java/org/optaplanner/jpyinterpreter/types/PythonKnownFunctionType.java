@@ -27,6 +27,16 @@ public class PythonKnownFunctionType extends PythonLikeType {
         return overloadFunctionSignatureList.get(0).getMethodDescriptor().getMethodType() == MethodDescriptor.MethodType.CLASS;
     }
 
+    @Override
+    public PythonLikeType __getType() {
+        return BuiltinTypes.BASE_TYPE;
+    }
+
+    @Override
+    public PythonLikeType __getGenericType() {
+        return BuiltinTypes.BASE_TYPE;
+    }
+
     public Optional<PythonFunctionSignature> getDefaultFunctionSignature() {
         return overloadFunctionSignatureList.stream().findAny();
     }

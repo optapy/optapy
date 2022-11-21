@@ -511,6 +511,11 @@ public class PythonLikeType implements PythonLikeObject,
 
     @Override
     public PythonLikeType __getType() {
+        return BuiltinTypes.TYPE_TYPE;
+    }
+
+    @Override
+    public PythonLikeType __getGenericType() {
         return new PythonLikeGenericType(this);
     }
 

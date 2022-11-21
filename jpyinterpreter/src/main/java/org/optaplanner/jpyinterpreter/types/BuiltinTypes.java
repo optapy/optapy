@@ -29,6 +29,8 @@ import org.optaplanner.jpyinterpreter.types.numeric.PythonNumber;
 import org.optaplanner.jpyinterpreter.types.wrappers.JavaMethodReference;
 
 public class BuiltinTypes {
+    public static final PythonLikeType NULL_TYPE =
+            new PythonLikeType("NULL", PythonLikeObject.class, Collections.emptyList());
     public static final PythonLikeType BASE_TYPE =
             new PythonLikeType("base-object", PythonLikeObject.class, Collections.emptyList());
     public static final PythonLikeType TYPE_TYPE = new PythonLikeType("type", PythonLikeType.class, List.of(BASE_TYPE));

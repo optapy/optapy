@@ -253,6 +253,9 @@ public class FunctionImplementor {
     public static void call(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int argumentCount) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
         PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(argumentCount + 1);
+        if (functionType instanceof PythonLikeGenericType) {
+            functionType = ((PythonLikeGenericType) functionType).getOrigin().getConstructorType().orElse(null);
+        }
         if (functionType instanceof PythonKnownFunctionType) {
             PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
             List<String> keywordArgumentNameList = stackMetadata.getCallKeywordNameList();
@@ -265,11 +268,12 @@ public class FunctionImplementor {
                     .ifPresentOrElse(functionSignature -> {
                         functionSignature.callPython311andAbove(functionMetadata, stackMetadata, argumentCount,
                                 stackMetadata.getCallKeywordNameList());
-                        methodVisitor.visitInsn(Opcodes.SWAP);
-                        methodVisitor.visitInsn(Opcodes.POP);
                     }, () -> callGeneric(functionMetadata, stackMetadata, argumentCount));
         } else {
             functionType = stackMetadata.getTypeAtStackIndex(argumentCount);
+            if (functionType instanceof PythonLikeGenericType) {
+                functionType = ((PythonLikeGenericType) functionType).getOrigin().getConstructorType().orElse(null);
+            }
             if (functionType instanceof PythonKnownFunctionType) {
                 PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
                 List<String> keywordArgumentNameList = stackMetadata.getCallKeywordNameList();
@@ -282,8 +286,6 @@ public class FunctionImplementor {
                         .ifPresentOrElse(functionSignature -> {
                             functionSignature.callPython311andAbove(functionMetadata, stackMetadata, argumentCount,
                                     stackMetadata.getCallKeywordNameList());
-                            methodVisitor.visitInsn(Opcodes.SWAP);
-                            methodVisitor.visitInsn(Opcodes.POP);
                         }, () -> callGeneric(functionMetadata, stackMetadata, argumentCount));
             } else {
                 callGeneric(functionMetadata, stackMetadata, argumentCount);

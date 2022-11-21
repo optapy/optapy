@@ -2,6 +2,7 @@ package org.optaplanner.jpyinterpreter.types;
 
 import java.util.Optional;
 
+import org.optaplanner.jpyinterpreter.FieldDescriptor;
 import org.optaplanner.jpyinterpreter.PythonClassTranslator;
 
 public class PythonLikeGenericType extends PythonLikeType {
@@ -14,6 +15,22 @@ public class PythonLikeGenericType extends PythonLikeType {
 
     public PythonLikeType getOrigin() {
         return origin;
+    }
+
+    @Override
+    public Optional<FieldDescriptor> getInstanceFieldDescriptor(String fieldName) {
+        Optional<PythonKnownFunctionType> maybeMethodType = getMethodType(fieldName);
+        if (maybeMethodType.isEmpty()) {
+            return BuiltinTypes.TYPE_TYPE.getInstanceFieldDescriptor(fieldName);
+        } else {
+            PythonKnownFunctionType knownFunctionType = maybeMethodType.get();
+            FieldDescriptor out = new FieldDescriptor(fieldName,
+                    PythonClassTranslator.getJavaMethodName(fieldName),
+                    origin.getJavaTypeInternalName(),
+                    knownFunctionType.getJavaTypeDescriptor(),
+                    knownFunctionType, false);
+            return Optional.of(out);
+        }
     }
 
     @Override

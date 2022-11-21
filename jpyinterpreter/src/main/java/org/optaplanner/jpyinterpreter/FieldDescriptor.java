@@ -7,21 +7,21 @@ import org.optaplanner.jpyinterpreter.types.PythonLikeType;
 public class FieldDescriptor {
 
     final String pythonFieldName;
-
     final String javaFieldName;
-
     final String declaringClassInternalName;
     final String javaFieldTypeDescriptor;
     final PythonLikeType fieldPythonLikeType;
+    final boolean isTrueFieldDescriptor;
 
     public FieldDescriptor(String pythonFieldName, String javaFieldName,
             String declaringClassInternalName, String javaFieldTypeDescriptor,
-            PythonLikeType fieldPythonLikeType) {
+            PythonLikeType fieldPythonLikeType, boolean isTrueFieldDescriptor) {
         this.pythonFieldName = pythonFieldName;
         this.javaFieldName = javaFieldName;
         this.declaringClassInternalName = declaringClassInternalName;
         this.javaFieldTypeDescriptor = javaFieldTypeDescriptor;
         this.fieldPythonLikeType = fieldPythonLikeType;
+        this.isTrueFieldDescriptor = isTrueFieldDescriptor;
     }
 
     public String getPythonFieldName() {
@@ -44,6 +44,10 @@ public class FieldDescriptor {
         return fieldPythonLikeType;
     }
 
+    public boolean isTrueFieldDescriptor() {
+        return isTrueFieldDescriptor;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -56,13 +60,14 @@ public class FieldDescriptor {
         return pythonFieldName.equals(that.pythonFieldName) && javaFieldName.equals(that.javaFieldName)
                 && declaringClassInternalName.equals(that.declaringClassInternalName)
                 && javaFieldTypeDescriptor.equals(that.javaFieldTypeDescriptor)
-                && fieldPythonLikeType.equals(that.fieldPythonLikeType);
+                && fieldPythonLikeType.equals(that.fieldPythonLikeType)
+                && isTrueFieldDescriptor == that.isTrueFieldDescriptor;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(pythonFieldName, javaFieldName, declaringClassInternalName, javaFieldTypeDescriptor,
-                fieldPythonLikeType);
+                fieldPythonLikeType, isTrueFieldDescriptor);
     }
 
     @Override
@@ -73,6 +78,7 @@ public class FieldDescriptor {
                 ", declaringClassInternalName='" + declaringClassInternalName + '\'' +
                 ", javaFieldTypeDescriptor='" + javaFieldTypeDescriptor + '\'' +
                 ", fieldPythonLikeType=" + fieldPythonLikeType +
+                ", isTrueFieldDescriptor=" + isTrueFieldDescriptor +
                 '}';
     }
 }

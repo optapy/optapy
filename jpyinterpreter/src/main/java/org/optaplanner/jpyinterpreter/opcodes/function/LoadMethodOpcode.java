@@ -35,7 +35,7 @@ public class LoadMethodOpcode extends AbstractOpcode {
                 .orElseGet(() -> stackMetadata.pop()
                         .push(ValueSourceInfo.of(this, PythonLikeFunction.getFunctionType(),
                                 stackMetadata.getValueSourcesUpToStackIndex(1)))
-                        .push(ValueSourceInfo.of(this, BuiltinTypes.BASE_TYPE,
+                        .push(ValueSourceInfo.of(this, BuiltinTypes.NULL_TYPE,
                                 stackMetadata.getValueSourcesUpToStackIndex(1)))); // either TOS or NULL
     }
 
