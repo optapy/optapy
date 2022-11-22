@@ -100,7 +100,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='optapy',
-    version='8.28.0b0',
+    version='8.30.0b0',
     license='Apache License Version 2.0',
     license_file='LICENSE',
     description='An AI constraint solver that optimizes planning and scheduling problems',
@@ -112,7 +112,7 @@ setup(
         'OptaPlanner Homepage': 'https://www.optaplanner.org/',
     },
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Software Development :: Libraries :: Java Libraries',
