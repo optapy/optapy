@@ -40,7 +40,7 @@ jobs:
           maven-version: ${{ matrix.maven-version }}
           cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version }}
 
-      # Need to install both Python 3.9 and Python 3.10 for tox (has to be in the same run)
+      # Need to install both Python 3.9, Python 3.10 and Python 3.11 for tox (has to be in the same run)
       # Feature Request for setup action: https://github.com/actions/setup-python/issues/98
       - name: Python 3.9 Setup
         uses: actions/setup-python@v4
@@ -54,6 +54,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: |
+            **/setup.py
+
+      - name: Python 3.11 Setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: |
             **/setup.py
