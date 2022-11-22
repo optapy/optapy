@@ -820,8 +820,7 @@ the tuple `(SomePerson, USER)` is sent downstream twice.
 See <<constraintStreamsDealingWithDuplicateTuplesUsingDistinct,`distinct()`>> for how to deal with duplicate tuples.
 ====
 
-////
-TODO: Uncomment when ConstraintVerifier support is added
+
 [[constraintStreamsTesting]]
 == Testing a constraint stream
 
@@ -857,9 +856,9 @@ def test_horizontal_conflict_with_two_queens():
     column2 = Column(1)
     queen1 = Queen(0, row1, column1)
     queen2 = Queen(1, row1, column2)
-    constraint_verifier.verifyThat(horizontal_conflict) \
+    constraint_verifier.verify_that(horizontal_conflict) \
             .given(queen1, queen2) \
-            .penalizesBy(1)
+            .penalizes_by(1)
 ----
 
 This test ensures that the horizontal conflict constraint assigns a penalty of `1` when there are two queens on the same
@@ -893,22 +892,22 @@ Further down, the following code tests the constraint:
 
 [source,python,options="nowrap"]
 ----
-    constraint_verifier.verifyThat(horizontal_conflict) \
+    constraint_verifier.verify_that(horizontal_conflict) \
             .given(queen1, queen2) \
-            .penalizesBy(1)
+            .penalizes_by(1)
 ----
 
-The `verifyThat(...)` call is used to specify a function that provides the constraint.
+The `verify_that(...)` call is used to specify a function that provides the constraint.
 
 The `given(...)` call is used to enumerate all the facts that the constraint stream operates on.
 In this case, the `given(...)` call takes the `queen1` and `queen2` instances previously created.
-Alternatively, you can use a `givenSolution(...)` method here and provide a planning solution instead.
+Alternatively, you can use a `given_solution(...)` method here and provide a planning solution instead.
 
-Finally, the `penalizesBy(...)` call completes the test, making sure that the horizontal conflict constraint, given
+Finally, the `penalizes_by(...)` call completes the test, making sure that the horizontal conflict constraint, given
 one `Queen`, results in a penalty of `1`.
 This number is a product of multiplying the match weight, as defined in the constraint stream, by the number of matches.
 
-Alternatively, you can use a `rewardsWith(...)` call to check for rewards instead of penalties.
+Alternatively, you can use a `rewards_with(...)` call to check for rewards instead of penalties.
 The method to use here depends on whether the constraint stream in question is terminated with a `penalize` or a
 `reward` building block.
 
@@ -925,18 +924,17 @@ def given_facts_multiple_constraints():
     queen1 = Queen(0, row1, column1)
     queen2 = Queen(1, row2, column2)
     queen3 = Queen(2, row3, column3)
-    constraintVerifier.verifyThat() \
+    constraint_verifier.verify_that() \
             .given(queen1, queen2, queen3) \
             .scores(SimpleScore.of(-3))
 ----
 
 There are only two notable differences to the previous example.
-First, the `verifyThat()` call takes no argument here, signifying that the entire `@constraint_provider` function is
+First, the `verify_that()` call takes no argument here, signifying that the entire `@constraint_provider` function is
 being tested.
-Second, instead of either a `penalizesBy()` or `rewardsWith()` call, the `scores(...)` method is used.
+Second, instead of either a `penalizes_by()` or `rewards_with()` call, the `scores(...)` method is used.
 This runs the `ConstraintProvider` on the given facts and returns a sum of ``Score``s of all constraint matches resulting
 from the given facts.
 
 Using this method, you ensure that the constraint provider does not miss any constraints and that the scoring function
 remains consistent as your code base evolves.
-////
