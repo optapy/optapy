@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optapy-parent</artifactId>
-    <version>8.28.0.Final</version>
+    <version>8.30.0.Final</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>jpyinterpreter</artifactId>
