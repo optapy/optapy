@@ -6,9 +6,9 @@ import java.util.List;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.jpyinterpreter.ExceptionBlock;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.LocalVariableHelper;
-import org.optaplanner.jpyinterpreter.PythonExceptionTable;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.ValueSourceInfo;
@@ -253,7 +253,7 @@ public class StackManipulationImplementor {
     }
 
     public static void storeExceptionTableStack(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
-            PythonExceptionTable.ExceptionBlock exceptionBlock) {
+            ExceptionBlock exceptionBlock) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
         LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
         int[] stackLocalVariables = new int[stackMetadata.getStackSize()];
@@ -290,7 +290,7 @@ public class StackManipulationImplementor {
     }
 
     public static void restoreExceptionTableStack(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
-            PythonExceptionTable.ExceptionBlock exceptionBlock) {
+            ExceptionBlock exceptionBlock) {
         MethodVisitor methodVisitor = functionMetadata.methodVisitor;
         LocalVariableHelper localVariableHelper = stackMetadata.localVariableHelper;
 

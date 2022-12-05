@@ -9,9 +9,9 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import org.optaplanner.jpyinterpreter.ExceptionBlock;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
-import org.optaplanner.jpyinterpreter.PythonExceptionTable;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.opcodes.Opcode;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
@@ -116,7 +116,7 @@ public class FlowGraph {
         return out;
     }
 
-    private static StackMetadata getExceptionStackMetadata(PythonExceptionTable.ExceptionBlock exceptionBlock,
+    private static StackMetadata getExceptionStackMetadata(ExceptionBlock exceptionBlock,
             FunctionMetadata functionMetadata, StackMetadata initialStackMetadata,
             StackMetadata previousStackMetadata) {
         if (previousStackMetadata == StackMetadata.DEAD_CODE) {
@@ -182,7 +182,7 @@ public class FlowGraph {
                 }
             }
         }
-        for (PythonExceptionTable.ExceptionBlock exceptionBlock : functionMetadata.pythonCompiledFunction.co_exceptiontable
+        for (ExceptionBlock exceptionBlock : functionMetadata.pythonCompiledFunction.co_exceptiontable
                 .getEntries()) {
             try {
                 opcodeIndexToStackMetadata.merge(exceptionBlock.getTargetInstruction(),
@@ -253,7 +253,7 @@ public class FlowGraph {
                     }
                 }
             }
-            for (PythonExceptionTable.ExceptionBlock exceptionBlock : functionMetadata.pythonCompiledFunction.co_exceptiontable
+            for (ExceptionBlock exceptionBlock : functionMetadata.pythonCompiledFunction.co_exceptiontable
                     .getEntries()) {
                 try {
                     StackMetadata originalOpcodeMetadata =

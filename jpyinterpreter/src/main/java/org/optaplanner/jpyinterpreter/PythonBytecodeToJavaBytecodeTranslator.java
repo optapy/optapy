@@ -9,9 +9,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -1115,14 +1116,13 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         Map<Integer, List<Runnable>> exceptionTableTryBlockMap = new HashMap<>();
         Map<Integer, Label> exceptionTableStartLabelMap = new HashMap<>();
         Map<Integer, Label> exceptionTableTargetLabelMap = new HashMap<>();
-        Map<Integer, AtomicReference<int[]>> tryBlockStartToStoredStackMap = new HashMap<>();
+        Set<Integer> tryBlockStartInstructionSet = new HashSet<>();
 
-        for (PythonExceptionTable.ExceptionBlock exceptionBlock : pythonCompiledFunction.co_exceptiontable.getEntries()) {
+        for (ExceptionBlock exceptionBlock : pythonCompiledFunction.co_exceptiontable.getEntries()) {
             if (exceptionBlock.blockStartInstructionInclusive == exceptionBlock.blockEndInstructionExclusive) {
                 continue; // Empty try block range
             }
-            AtomicReference<int[]> storedStack = tryBlockStartToStoredStackMap
-                    .computeIfAbsent(exceptionBlock.blockStartInstructionInclusive, key -> new AtomicReference<>());
+            tryBlockStartInstructionSet.add(exceptionBlock.blockStartInstructionInclusive);
             StackMetadata stackMetadata = stackMetadataForOpcodeIndex.get(exceptionBlock.blockStartInstructionInclusive);
 
             exceptionTableTryBlockMap.computeIfAbsent(exceptionBlock.blockStartInstructionInclusive, index -> new ArrayList<>())
@@ -1144,7 +1144,7 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         }
 
         // Do this after so the startExceptBlock code is before the code to store the stack
-        for (Integer tryBlockStart : tryBlockStartToStoredStackMap.keySet()) {
+        for (Integer tryBlockStart : tryBlockStartInstructionSet) {
             StackMetadata stackMetadata = stackMetadataForOpcodeIndex.get(tryBlockStart);
             pythonCompiledFunction.co_exceptiontable.getEntries().stream()
                     .filter(block -> block.blockStartInstructionInclusive == tryBlockStart)

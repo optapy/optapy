@@ -3,7 +3,11 @@ package org.optaplanner.jpyinterpreter.util;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
 import org.optaplanner.jpyinterpreter.PythonVersion;
 
-public class JumpUtils {
+public final class JumpUtils {
+
+    private JumpUtils() {
+    }
+
     public static int getInstructionIndexForByteOffset(int byteOffset, PythonVersion pythonVersion) {
         return byteOffset >> 1;
     }
