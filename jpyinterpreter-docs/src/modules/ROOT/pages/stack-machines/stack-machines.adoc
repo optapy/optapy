@@ -1,0 +1,154 @@
+[[stackMachineIntroduction]]
+= Stack Machines Introduction
+:doctype: book
+:sectnums:
+:icons: font
+
+NOTE: This section uses a fake stack machine language for educational purposes, and is unrelated to both the Java bytecode machine language and the CPython bytecode machine language.
+
+[[whatIsAStackMachine]]
+== What is a Stack Machine?
+
+A Stack Machine is a type of virtual machine that uses a stack to store intermediary inputs and results.
+For instance, this program:
+
+```python
+def my_fun(x: int):
+    return x + 1
+```
+
+when compiled to a stack machine language, may look like this:
+
+```
+LOAD_LOCAL 0 (x)
+LOAD_CONSTANT 0 (1)
+ADD
+RETURN
+```
+
+The stack start initially empty, and each operation modifies it:
+
+```
+// []
+LOAD_LOCAL 0 (x) // push x to the stack
+// [x]
+LOAD_CONSTANT 0 (1) // push 1 to the stack
+// [x, 1]
+ADD // pop top two elements (x, 1) and push their sum
+// [(x+1)]
+RETURN // returns TOS (x+1) to the caller
+```
+
+The stack is often not the only means of storage. Usually, there are local variables that can also be read and written to. For instance, this function:
+
+```python
+def test(x):
+    a = x + x
+    b = x * x
+    return a + b
+```
+
+when compiled to a stack machine language, may look like this:
+
+```
+// stack: [] locals: {}
+LOAD_LOCAL 0 (x)
+// stack: [x] locals: {}
+DUP_TOP
+// stack: [x, x] locals: {}
+ADD
+// stack: [(x + x)] locals: {}
+STORE_LOCAL 1 (a)
+// stack: [], locals: {a: x+x}
+LOAD_LOCAL 0 (x)
+// stack: [x], locals: {a: x+x}
+DUP_TOP
+// stack: [x, x], locals: {a: x+x}
+MULTIPLY
+// stack: [(x*x)], locals: {a: x+x}
+STORE_LOCAL 2 (b)
+// stack: [], locals: {a: x+x, b: x*x}
+LOAD_LOCAL 1 (a)
+// stack: [x+x], locals: {a: x+x, b: x*x}
+LOAD_LOCAL 2 (b)
+// stack: [x+x, x*x], locals: {a: x+x, b: x*x}
+ADD
+// stack: [(x+x) + (x*x)] locals: {a: x+x, b: x*x}
+RETURN
+```
+
+[[jumpsInAStackMachine]]
+== Jumps in a Stack Machine
+
+An stack machine opcode could conditionally jump to a different location. For instance:
+
+```python
+def test(x):
+    a = 0
+    if x < 10:
+        a += x
+    return a
+```
+
+when compiled to a stack machine language, may look like this:
+
+```
+// stack: [] locals: {}
+LOAD_CONSTANT 0 (0)
+// stack: [0] locals: {}
+STORE_LOCAL 1 (a)
+// stack: [] locals: {a: 0}
+LOAD_LOCAL 0 (x)
+// stack: [x] locals: {a: 0}
+LOAD_CONSTANT 1 (10)
+// stack: [x, 1] locals: {a: 0}
+LESS_THAN
+// stack: [Type<bool>] locals: {a: 0}
+POP_JUMP_IF_FALSE skip_if
+// stack: [] locals: {a: 0}
+LOAD_LOCAL 1 (a)
+// stack: [a] locals: {a: 0}
+LOAD_LOCAL 0 (x)
+// stack: [a, x] locals: {a: 0}
+ADD
+// stack: [(a+x)] locals: {a: 0}
+STORE_LOCAL 1 (a)
+
+[label skip_if]
+// stack: [] locals: {a: 0 or (0 + x)}
+LOAD_LOCAL 1 (a)
+// stack: [a] locals: {a: 0 or (0 + x)}
+RETURN
+```
+
+In particular, the instruction after `POP_JUMP_IF_FALSE` will be the instruction after `skip_if` if TOS is False. If TOS is True, it will be the instruction after `POP_JUMP_IF_FALSE` instead.
+
+This means the instruction after the label `skip_if` has
+two possible predecessors:
+
+- `POP_JUMP_IF_FALSE` if TOS was False
+- `STORE_LOCAL (a + x)` if TOS was True
+
+In most stack based languages, stack state must be consistent.
+This means, among other things, the number of elements in the stack for a given opcode must be the same for all possible predecessors. For example, the following stack machine program is invalid:
+
+```
+// stack: []
+LOAD_LOCAL 0 (x)
+// stack: [x]
+LOAD_CONSTANT 0 (10)
+// stack: [x, 10]
+LESS_THAN
+// stack: [Type<bool>]
+POP_JUMP_IF_TRUE skip_if
+// stack: []
+LOAD_CONSTANT 0 (10)
+
+[label skip_if]
+// Cannot compute stack; stack size mismatch [10] (1) vs [] (0)
+LOAD_CONSTANT 0 (10)
+RETURN
+```
+
+The  `if` block pushed an extra element to the stack, but did not pop it, causing an inconsistent stack size after the if
+(either 1, if the if was taken, or 0,  if it was not).
