@@ -28,6 +28,18 @@ public class StackMetadata {
     }
 
     /**
+     * Returns the list index for the given stack index (stack index is how many
+     * elements below TOS (i.e. 0 is TOS, 1 is TOS1)).
+     *
+     * @param stackIndex The stack index (how many elements below TOS)
+     * @return The corresponding list index corresponding to the element at the given distance from TOS
+     *         (i.e. STACK_SIZE - distance - 1)
+     */
+    private int getListIndexForStackIndex(int stackIndex) {
+        return stackValueSources.size() - stackIndex - 1;
+    }
+
+    /**
      * Returns the value source for the given stack index (stack index is how many
      * elements below TOS (i.e. 0 is TOS, 1 is TOS1)).
      *
@@ -35,7 +47,7 @@ public class StackMetadata {
      * @return The type at the given stack index
      */
     public ValueSourceInfo getValueSourceForStackIndex(int index) {
-        return stackValueSources.get(stackValueSources.size() - index - 1);
+        return stackValueSources.get(getListIndexForStackIndex(index));
     }
 
     /**
@@ -57,7 +69,7 @@ public class StackMetadata {
      * @return The type at the given stack index
      */
     public PythonLikeType getTypeAtStackIndex(int index) {
-        ValueSourceInfo valueSourceInfo = stackValueSources.get(stackValueSources.size() - index - 1);
+        ValueSourceInfo valueSourceInfo = stackValueSources.get(getListIndexForStackIndex(index));
         if (valueSourceInfo != null) {
             return valueSourceInfo.valueType;
         }
@@ -198,7 +210,7 @@ public class StackMetadata {
 
     public StackMetadata set(int index, ValueSourceInfo type) {
         StackMetadata out = copy();
-        out.stackValueSources.set(stackValueSources.size() - index - 1, type);
+        out.stackValueSources.set(getListIndexForStackIndex(index), type);
         return out;
     }
 

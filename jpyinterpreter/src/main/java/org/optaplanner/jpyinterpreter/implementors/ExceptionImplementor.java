@@ -11,12 +11,12 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.jpyinterpreter.ExceptionBlock;
 import org.optaplanner.jpyinterpreter.FunctionMetadata;
 import org.optaplanner.jpyinterpreter.LocalVariableHelper;
 import org.optaplanner.jpyinterpreter.OpcodeIdentifier;
 import org.optaplanner.jpyinterpreter.PythonBytecodeInstruction;
 import org.optaplanner.jpyinterpreter.PythonBytecodeToJavaBytecodeTranslator;
-import org.optaplanner.jpyinterpreter.PythonExceptionTable;
 import org.optaplanner.jpyinterpreter.PythonInterpreter;
 import org.optaplanner.jpyinterpreter.PythonLikeObject;
 import org.optaplanner.jpyinterpreter.PythonUnaryOperator;
@@ -304,7 +304,7 @@ public class ExceptionImplementor {
     }
 
     public static void startExceptBlock(FunctionMetadata functionMetadata, StackMetadata stackMetadata,
-            PythonExceptionTable.ExceptionBlock exceptionBlock) {
+            ExceptionBlock exceptionBlock) {
         // In Python 3.11 and above, the stack here is
         // [(stack-before-try), exception]
 
