@@ -16,11 +16,11 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 public class MethodDescriptor {
-    final String declaringClassInternalName;
-    final String methodName;
-    final String methodDescriptor;
+    private final String declaringClassInternalName;
+    private final String methodName;
+    private final String methodDescriptor;
 
-    final MethodType methodType;
+    private final MethodType methodType;
 
     private static Type resolveGenericType(java.lang.reflect.Type type, TypeVariable[] interfaceTypeVariables,
             List<Class<?>> typeArgumentList) {
@@ -156,13 +156,14 @@ public class MethodDescriptor {
     }
 
     public void callMethod(MethodVisitor methodVisitor) {
-        methodVisitor.visitMethodInsn(methodType.getOpcode(), declaringClassInternalName, methodName, methodDescriptor,
-                methodType == MethodType.INTERFACE);
+        methodVisitor.visitMethodInsn(getMethodType().getOpcode(), getDeclaringClassInternalName(), getMethodName(),
+                getMethodDescriptor(),
+                getMethodType() == MethodType.INTERFACE);
     }
 
     public MethodDescriptor withReturnType(Type returnType) {
-        return new MethodDescriptor(declaringClassInternalName, methodType, methodName,
-                Type.getMethodDescriptor(returnType, Type.getArgumentTypes(methodDescriptor)));
+        return new MethodDescriptor(getDeclaringClassInternalName(), getMethodType(), getMethodName(),
+                Type.getMethodDescriptor(returnType, Type.getArgumentTypes(getMethodDescriptor())));
     }
 
     @Override
@@ -174,21 +175,22 @@ public class MethodDescriptor {
             return false;
         }
         MethodDescriptor that = (MethodDescriptor) o;
-        return declaringClassInternalName.equals(that.declaringClassInternalName) && methodName.equals(that.methodName)
-                && methodDescriptor.equals(that.methodDescriptor);
+        return getDeclaringClassInternalName().equals(that.getDeclaringClassInternalName())
+                && getMethodName().equals(that.getMethodName())
+                && getMethodDescriptor().equals(that.getMethodDescriptor());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(declaringClassInternalName, methodName, methodDescriptor);
+        return Objects.hash(getDeclaringClassInternalName(), getMethodName(), getMethodDescriptor());
     }
 
     public Type getReturnType() {
-        return Type.getReturnType(methodDescriptor);
+        return Type.getReturnType(getMethodDescriptor());
     }
 
     public Type[] getParameterTypes() {
-        return Type.getArgumentTypes(methodDescriptor);
+        return Type.getArgumentTypes(getMethodDescriptor());
     }
 
     public enum MethodType {

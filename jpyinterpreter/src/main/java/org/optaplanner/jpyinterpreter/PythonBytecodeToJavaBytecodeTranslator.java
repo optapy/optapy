@@ -234,17 +234,17 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         String internalClassName = className.replace('.', '/');
         ClassWriter classWriter = new JavaPythonClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
         classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null, Type.getInternalName(Object.class),
-                new String[] { methodDescriptor.declaringClassInternalName });
+                new String[] { methodDescriptor.getDeclaringClassInternalName() });
 
         final boolean isPythonLikeFunction =
-                methodDescriptor.declaringClassInternalName.equals(Type.getInternalName(PythonLikeFunction.class));
+                methodDescriptor.getDeclaringClassInternalName().equals(Type.getInternalName(PythonLikeFunction.class));
 
         createFields(classWriter);
         createConstructor(classWriter, internalClassName);
 
         MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC,
-                methodDescriptor.methodName,
-                methodDescriptor.methodDescriptor,
+                methodDescriptor.getMethodName(),
+                methodDescriptor.getMethodDescriptor(),
                 null,
                 null);
 
@@ -278,17 +278,17 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         String internalClassName = className.replace('.', '/');
         ClassWriter classWriter = new JavaPythonClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
         classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null, Type.getInternalName(Object.class),
-                new String[] { methodDescriptor.declaringClassInternalName });
+                new String[] { methodDescriptor.getDeclaringClassInternalName() });
 
         final boolean isPythonLikeFunction =
-                methodDescriptor.declaringClassInternalName.equals(Type.getInternalName(PythonLikeFunction.class));
+                methodDescriptor.getDeclaringClassInternalName().equals(Type.getInternalName(PythonLikeFunction.class));
 
         createFields(classWriter);
         createConstructor(classWriter, internalClassName);
 
         MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC,
-                methodDescriptor.methodName,
-                methodDescriptor.methodDescriptor,
+                methodDescriptor.getMethodName(),
+                methodDescriptor.getMethodDescriptor(),
                 null,
                 null);
 
@@ -296,9 +296,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 isPythonLikeFunction, Integer.MAX_VALUE, isVirtual); // TODO: Use actual python version
 
         String withoutGenericsSignature = Type.getMethodDescriptor(methodWithoutGenerics);
-        if (!withoutGenericsSignature.equals(methodDescriptor.methodDescriptor)) {
+        if (!withoutGenericsSignature.equals(methodDescriptor.getMethodDescriptor())) {
             methodVisitor =
-                    classWriter.visitMethod(Modifier.PUBLIC, methodDescriptor.methodName, withoutGenericsSignature, null, null);
+                    classWriter.visitMethod(Modifier.PUBLIC, methodDescriptor.getMethodName(), withoutGenericsSignature, null,
+                            null);
 
             methodVisitor.visitCode();
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -307,8 +308,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 methodVisitor.visitVarInsn(parameterType.getOpcode(Opcodes.ILOAD), i + 1);
                 methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getParameterTypes()[i].getInternalName());
             }
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, internalClassName, methodDescriptor.methodName,
-                    methodDescriptor.methodDescriptor, false);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, internalClassName, methodDescriptor.getMethodName(),
+                    methodDescriptor.getMethodDescriptor(), false);
             methodVisitor.visitInsn(methodDescriptor.getReturnType().getOpcode(Opcodes.IRETURN));
 
             methodVisitor.visitMaxs(-1, -1);
@@ -408,17 +409,17 @@ public class PythonBytecodeToJavaBytecodeTranslator {
         String internalClassName = className.replace('.', '/');
         ClassWriter classWriter = new JavaPythonClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
         classWriter.visit(Opcodes.V11, Modifier.PUBLIC, internalClassName, null, Type.getInternalName(Object.class),
-                new String[] { methodDescriptor.declaringClassInternalName });
+                new String[] { methodDescriptor.getDeclaringClassInternalName() });
 
         final boolean isPythonLikeFunction =
-                methodDescriptor.declaringClassInternalName.equals(Type.getInternalName(PythonLikeFunction.class));
+                methodDescriptor.getDeclaringClassInternalName().equals(Type.getInternalName(PythonLikeFunction.class));
 
         createFields(classWriter);
         createConstructor(classWriter, internalClassName);
 
         MethodVisitor methodVisitor = classWriter.visitMethod(Modifier.PUBLIC,
-                methodDescriptor.methodName,
-                methodDescriptor.methodDescriptor,
+                methodDescriptor.getMethodName(),
+                methodDescriptor.getMethodDescriptor(),
                 null,
                 null);
 
@@ -447,9 +448,10 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 pythonCompiledFunction); // TODO: Use actual python version
 
         String withoutGenericsSignature = Type.getMethodDescriptor(methodWithoutGenerics);
-        if (!withoutGenericsSignature.equals(methodDescriptor.methodDescriptor)) {
+        if (!withoutGenericsSignature.equals(methodDescriptor.getMethodDescriptor())) {
             methodVisitor =
-                    classWriter.visitMethod(Modifier.PUBLIC, methodDescriptor.methodName, withoutGenericsSignature, null, null);
+                    classWriter.visitMethod(Modifier.PUBLIC, methodDescriptor.getMethodName(), withoutGenericsSignature, null,
+                            null);
 
             methodVisitor.visitCode();
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
@@ -458,8 +460,8 @@ public class PythonBytecodeToJavaBytecodeTranslator {
                 methodVisitor.visitVarInsn(parameterType.getOpcode(Opcodes.ILOAD), i + 1);
                 methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, methodDescriptor.getParameterTypes()[i].getInternalName());
             }
-            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, internalClassName, methodDescriptor.methodName,
-                    methodDescriptor.methodDescriptor, false);
+            methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, internalClassName, methodDescriptor.getMethodName(),
+                    methodDescriptor.getMethodDescriptor(), false);
             methodVisitor.visitInsn(methodDescriptor.getReturnType().getOpcode(Opcodes.IRETURN));
 
             methodVisitor.visitMaxs(-1, -1);
