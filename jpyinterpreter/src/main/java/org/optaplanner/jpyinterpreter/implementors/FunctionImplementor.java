@@ -251,7 +251,6 @@ public class FunctionImplementor {
      * All of them are popped and the return value is pushed.
      */
     public static void call(FunctionMetadata functionMetadata, StackMetadata stackMetadata, int argumentCount) {
-        MethodVisitor methodVisitor = functionMetadata.methodVisitor;
         PythonLikeType functionType = stackMetadata.getTypeAtStackIndex(argumentCount + 1);
         if (functionType instanceof PythonLikeGenericType) {
             functionType = ((PythonLikeGenericType) functionType).getOrigin().getConstructorType().orElse(null);
@@ -266,7 +265,8 @@ public class FunctionImplementor {
                     .getFunctionForParameters(argumentCount - keywordArgumentNameList.size(), keywordArgumentNameList,
                             callStackParameterTypes)
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.callPython311andAbove(functionMetadata, stackMetadata, argumentCount,
+                        KnownCallImplementor.callPython311andAbove(functionSignature, functionMetadata, stackMetadata,
+                                argumentCount,
                                 stackMetadata.getCallKeywordNameList());
                     }, () -> callGeneric(functionMetadata, stackMetadata, argumentCount));
         } else {
@@ -284,7 +284,8 @@ public class FunctionImplementor {
                         .getFunctionForParameters(argumentCount - keywordArgumentNameList.size(), keywordArgumentNameList,
                                 callStackParameterTypes)
                         .ifPresentOrElse(functionSignature -> {
-                            functionSignature.callPython311andAbove(functionMetadata, stackMetadata, argumentCount,
+                            KnownCallImplementor.callPython311andAbove(functionSignature, functionMetadata, stackMetadata,
+                                    argumentCount,
                                     stackMetadata.getCallKeywordNameList());
                         }, () -> callGeneric(functionMetadata, stackMetadata, argumentCount));
             } else {
@@ -395,7 +396,7 @@ public class FunctionImplementor {
             }
             knownFunctionType.getFunctionForParameters(parameterTypes)
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.callMethod(methodVisitor, localVariableHelper, instruction.arg);
+                        KnownCallImplementor.callMethod(functionSignature, methodVisitor, localVariableHelper, instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
                         if (knownFunctionType.isStaticMethod()) {
@@ -484,7 +485,7 @@ public class FunctionImplementor {
             PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
             knownFunctionType.getDefaultFunctionSignature()
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.callWithoutKeywords(functionMetadata, stackMetadata,
+                        KnownCallImplementor.callWithoutKeywords(functionSignature, functionMetadata, stackMetadata,
                                 instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);
@@ -554,7 +555,7 @@ public class FunctionImplementor {
             PythonKnownFunctionType knownFunctionType = (PythonKnownFunctionType) functionType;
             knownFunctionType.getDefaultFunctionSignature()
                     .ifPresentOrElse(functionSignature -> {
-                        functionSignature.callWithKeywordsAndUnwrapSelf(functionMetadata, stackMetadata,
+                        KnownCallImplementor.callWithKeywordsAndUnwrapSelf(functionSignature, functionMetadata, stackMetadata,
                                 instruction.arg);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         methodVisitor.visitInsn(Opcodes.POP);

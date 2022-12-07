@@ -52,9 +52,9 @@ public class PythonDefaultArgumentImplementor {
             Optional<Integer> extraKeywordArgumentsVariableIndex,
             ArgumentSpec<?> argumentSpec) {
         String maybeClassName = PythonBytecodeToJavaBytecodeTranslator.GENERATED_PACKAGE_BASE +
-                methodDescriptor.declaringClassInternalName.replace('/', '.') +
+                methodDescriptor.getDeclaringClassInternalName().replace('/', '.') +
                 "."
-                + methodDescriptor.methodName + "$$Defaults";
+                + methodDescriptor.getMethodName() + "$$Defaults";
         int numberOfInstances =
                 PythonBytecodeToJavaBytecodeTranslator.classNameToSharedInstanceCount.merge(maybeClassName, 1, Integer::sum);
         if (numberOfInstances > 1) {

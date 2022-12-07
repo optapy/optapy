@@ -190,6 +190,11 @@ public class PythonCompiledFunction {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static <T> Class<T> getParameterJavaClass(List<PythonLikeType> parameterTypeList, int variableIndex) {
+        return (Class) parameterTypeList.get(variableIndex).getJavaClassOrDefault(PythonLikeObject.class);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public BiFunction<PythonLikeTuple, PythonLikeDict, ArgumentSpec<PythonLikeObject>> getArgumentSpecMapper() {
         return (defaultPositionalArguments, defaultKeywordArguments) -> {
             ArgumentSpec<PythonLikeObject> out = ArgumentSpec.forFunctionReturning(qualifiedName, getReturnType()
@@ -207,24 +212,23 @@ public class PythonCompiledFunction {
             for (; variableIndex < co_posonlyargcount; variableIndex++) {
                 if (variableIndex >= defaultPositionalStartIndex) {
                     out = out.addPositionalOnlyArgument(co_varnames.get(variableIndex),
-                            (Class) parameterTypeList.get(variableIndex)
-                                    .getJavaClassOrDefault(PythonLikeObject.class),
-                            defaultPositionalArguments.get(variableIndex - defaultPositionalStartIndex));
+                            getParameterJavaClass(parameterTypeList, variableIndex),
+                            defaultPositionalArguments.get(
+                                    variableIndex - defaultPositionalStartIndex));
                 } else {
                     out = out.addPositionalOnlyArgument(co_varnames.get(variableIndex),
-                            (Class) parameterTypeList.get(variableIndex)
-                                    .getJavaClassOrDefault(PythonLikeObject.class));
+                            getParameterJavaClass(parameterTypeList, variableIndex));
                 }
             }
 
             for (; variableIndex < co_argcount; variableIndex++) {
                 if (variableIndex >= defaultPositionalStartIndex) {
-                    out = out.addArgument(co_varnames.get(variableIndex), (Class) parameterTypeList.get(variableIndex)
-                            .getJavaClassOrDefault(PythonLikeObject.class),
+                    out = out.addArgument(co_varnames.get(variableIndex),
+                            getParameterJavaClass(parameterTypeList, variableIndex),
                             defaultPositionalArguments.get(variableIndex - defaultPositionalStartIndex));
                 } else {
-                    out = out.addArgument(co_varnames.get(variableIndex), (Class) parameterTypeList.get(variableIndex)
-                            .getJavaClassOrDefault(PythonLikeObject.class));
+                    out = out.addArgument(co_varnames.get(variableIndex),
+                            getParameterJavaClass(parameterTypeList, variableIndex));
                 }
             }
 
@@ -233,13 +237,11 @@ public class PythonCompiledFunction {
                         defaultKeywordArguments.get(PythonString.valueOf(co_varnames.get(variableIndex)));
                 if (maybeDefault != null) {
                     out = out.addKeywordOnlyArgument(co_varnames.get(variableIndex),
-                            (Class) parameterTypeList.get(variableIndex)
-                                    .getJavaClassOrDefault(PythonLikeObject.class),
+                            getParameterJavaClass(parameterTypeList, variableIndex),
                             maybeDefault);
                 } else {
                     out = out.addKeywordOnlyArgument(co_varnames.get(variableIndex),
-                            (Class) parameterTypeList.get(variableIndex)
-                                    .getJavaClassOrDefault(PythonLikeObject.class));
+                            getParameterJavaClass(parameterTypeList, variableIndex));
                 }
                 variableIndex++;
             }

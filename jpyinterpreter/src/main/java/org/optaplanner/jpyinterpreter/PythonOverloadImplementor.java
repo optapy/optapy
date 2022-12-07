@@ -19,6 +19,7 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.optaplanner.jpyinterpreter.implementors.KnownCallImplementor;
 import org.optaplanner.jpyinterpreter.types.BoundPythonLikeFunction;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonKnownFunctionType;
@@ -194,8 +195,8 @@ public class PythonOverloadImplementor {
         List<PythonFunctionSignature> overloadList = knownFunctionType.getOverloadFunctionSignatureList();
 
         Map<Integer, List<PythonFunctionSignature>> pythonFunctionSignatureByArgumentLength = overloadList.stream()
-                .filter(sig -> sig.extraPositionalArgumentsVariableIndex.isEmpty()
-                        && sig.extraKeywordArgumentsVariableIndex.isEmpty())
+                .filter(sig -> sig.getExtraPositionalArgumentsVariableIndex().isEmpty()
+                        && sig.getExtraKeywordArgumentsVariableIndex().isEmpty())
                 .collect(Collectors.groupingBy(sig -> sig.getParameterTypes().length));
 
         Optional<PythonFunctionSignature> maybeGenericFunctionSignature = overloadList.stream()
@@ -217,7 +218,7 @@ public class PythonOverloadImplementor {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
             methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, Type.getInternalName(Collection.class), "size",
                     Type.getMethodDescriptor(Type.INT_TYPE), true);
-            if (!overloadList.get(0).getMethodDescriptor().methodType.isStatic()) {
+            if (!overloadList.get(0).getMethodDescriptor().getMethodType().isStatic()) {
                 methodVisitor.visitInsn(Opcodes.ICONST_M1);
                 methodVisitor.visitInsn(Opcodes.IADD);
             }
@@ -263,7 +264,7 @@ public class PythonOverloadImplementor {
         methodVisitor.visitVarInsn(Opcodes.ASTORE, MATCHING_OVERLOAD_SET_VARIABLE_INDEX);
 
         int startIndex = 0;
-        if (!functionSignatureList.get(0).getMethodDescriptor().methodType.isStatic()) {
+        if (!functionSignatureList.get(0).getMethodDescriptor().getMethodType().isStatic()) {
             startIndex = 1;
         }
 
@@ -432,7 +433,7 @@ public class PythonOverloadImplementor {
             methodVisitor.visitInsn(Opcodes.ATHROW);
         } else {
             PythonFunctionSignature functionSignature = maybeGenericDispatch.get();
-            if (functionSignature.methodDescriptor.methodType != MethodDescriptor.MethodType.STATIC) {
+            if (functionSignature.getMethodDescriptor().getMethodType() != MethodDescriptor.MethodType.STATIC) {
                 // It a class/virtual method, so need to load instance/type from argument list
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
                 methodVisitor.visitLdcInsn(0);
@@ -441,7 +442,7 @@ public class PythonOverloadImplementor {
                         true);
                 methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(PythonLikeObject.class));
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 0);
-                if (functionSignature.methodDescriptor.methodType == MethodDescriptor.MethodType.CLASS) {
+                if (functionSignature.getMethodDescriptor().getMethodType() == MethodDescriptor.MethodType.CLASS) {
                     methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(BoundPythonLikeFunction.class),
                             "boundToTypeOfObject",
                             Type.getMethodDescriptor(Type.getType(BoundPythonLikeFunction.class),
@@ -473,7 +474,8 @@ public class PythonOverloadImplementor {
                 methodVisitor.visitVarInsn(Opcodes.ALOAD, 1);
             }
             methodVisitor.visitVarInsn(Opcodes.ALOAD, 2);
-            functionSignature.callUnpackListAndMap(methodVisitor);
+            KnownCallImplementor.callUnpackListAndMap(functionSignature.getDefaultArgumentHolderClass(),
+                    functionSignature.getMethodDescriptor(), methodVisitor);
             methodVisitor.visitInsn(Opcodes.ARETURN);
         }
     }
