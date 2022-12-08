@@ -11,7 +11,7 @@
 
   <properties>
     <java.module.name>jpyinterpreter</java.module.name>
-    <version.org.ow2.asm>9.3</version.org.ow2.asm>
+    <version.org.ow2.asm>9.4</version.org.ow2.asm>
   </properties>
 
   <dependencyManagement>
