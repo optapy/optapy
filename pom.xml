@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optaplanner-build-parent</artifactId>
-    <version>8.30.0.Final</version>
+    <version>8.31.1.Final</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -26,7 +26,7 @@
     <sonar.organization>optapy</sonar.organization>
     <sonar.sources>src/main/java,src/main/python</sonar.sources>
     <sonar.tests>src/test/java,tests</sonar.tests>
-    <sonar.python.version>3.9,3.10</sonar.python.version>
+    <sonar.python.version>3.9,3.10,3.11</sonar.python.version>
     <sonar.python.coverage.reportPaths>target/coverage.xml</sonar.python.coverage.reportPaths>
   </properties>
 
