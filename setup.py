@@ -11,6 +11,7 @@ from pathlib import Path
 from shutil import copyfile
 import sys
 
+
 class FetchDependencies(build_py):
     """
     A command class that fetch Java Dependencies and
@@ -35,8 +36,6 @@ class FetchDependencies(build_py):
         for fn in find_stub_files(str(project_root / 'org-stubs')):
             os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
             copyfile(os.path.join(str(project_root / 'org-stubs'), fn), os.path.join(target_dir, fn))
-
-
 
     def run(self):
         if not self.dry_run:
@@ -100,7 +99,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='optapy',
-    version='8.30.0b0',
+    version='8.31.1b0',
     license='Apache License Version 2.0',
     license_file='LICENSE',
     description='An AI constraint solver that optimizes planning and scheduling problems',
@@ -137,7 +136,7 @@ setup(
     test_suite='tests',
     python_requires='>=3.9',
     install_requires=[
-        'JPype1>=1.4.0',
+        'JPype1>=1.4.1',
     ],
     cmdclass={'build_py': FetchDependencies},
     package_data={

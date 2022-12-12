@@ -4,14 +4,14 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optapy-parent</artifactId>
-    <version>8.30.0.Final</version>
+    <version>8.31.1.Final</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>optapy</artifactId>
 
   <properties>
     <java.module.name>org.optaplanner.optapy</java.module.name>
-    <version.io.quarkus.gizmo>1.0.11.Final</version.io.quarkus.gizmo>
+    <version.io.quarkus.gizmo>1.4.0.Final</version.io.quarkus.gizmo>
   </properties>
 
   <dependencyManagement>
