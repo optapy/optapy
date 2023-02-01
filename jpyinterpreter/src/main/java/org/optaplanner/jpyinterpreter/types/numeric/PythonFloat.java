@@ -179,7 +179,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
     public PythonLikeTuple asFraction() {
         final BigInteger FIVE = BigInteger.valueOf(5L);
 
-        BigDecimal bigDecimal = BigDecimal.valueOf(value);
+        BigDecimal bigDecimal = new BigDecimal(value);
         BigInteger numerator = bigDecimal.movePointRight(bigDecimal.scale()).toBigIntegerExact();
         BigInteger denominator;
         if (bigDecimal.scale() < 0) {
@@ -363,7 +363,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         if (other.value.equals(BigInteger.ZERO)) {
             throw new ZeroDivisionError("float division");
         }
-        return new PythonFloat(BigDecimal.valueOf(value)
+        return new PythonFloat(new BigDecimal(value)
                 .divideToIntegralValue(new BigDecimal(other.value))
                 .doubleValue());
     }
@@ -379,7 +379,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
         if (other.value.equals(BigInteger.ZERO)) {
             throw new ZeroDivisionError("float division");
         }
-        return new PythonFloat(BigDecimal.valueOf(value)
+        return new PythonFloat(new BigDecimal(value)
                 .divide(new BigDecimal(other.value), RoundingMode.CEILING)
                 .doubleValue());
     }
@@ -521,7 +521,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
             return round();
         }
 
-        BigDecimal asDecimal = BigDecimal.valueOf(value);
+        BigDecimal asDecimal = new BigDecimal(value);
         return new PythonFloat(
                 asDecimal.setScale(digitsAfterDecimal.value.intValueExact(), RoundingMode.HALF_EVEN).doubleValue());
     }
@@ -713,7 +713,7 @@ public class PythonFloat extends AbstractPythonLikeObject implements PythonNumbe
             case LOCALE_SENSITIVE:
             case LOWERCASE_GENERAL:
             case UPPERCASE_GENERAL:
-                BigDecimal asBigDecimal = BigDecimal.valueOf(value);
+                BigDecimal asBigDecimal = new BigDecimal(value);
                 // total digits - digits to the right of the decimal point
                 int exponent;
                 if (asBigDecimal.precision() == asBigDecimal.scale() + 1) {

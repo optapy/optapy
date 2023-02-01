@@ -4,6 +4,15 @@ MAX_LONG = 0xFFFF_FFFF_FFFF_FFFF
 MIN_LONG = -MAX_LONG
 
 
+def test_use_64_bits():
+    def identity(x: float) -> float:
+        return x
+
+    identity_verifier = verifier_for(identity)
+
+    identity_verifier.verify(2345678.2345678, expected_result=2345678.2345678)
+
+
 def test_add():
     def int_add(a: float, b: int) -> float:
         return a + b

@@ -6,7 +6,7 @@ import sys
 import abc
 from typing import Union
 
-from jpype import JInt, JLong, JFloat, JBoolean, JProxy, JClass, JArray
+from jpype import JInt, JLong, JDouble, JBoolean, JProxy, JClass, JArray
 
 MINIMUM_SUPPORTED_PYTHON_VERSION = (3, 9)
 MAXIMUM_SUPPORTED_PYTHON_VERSION = (3, 11)
@@ -347,7 +347,7 @@ def convert_to_java_python_like_object(value, instance_map=None):
         put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, float):
-        out = PythonFloat.valueOf(JFloat(value))
+        out = PythonFloat.valueOf(JDouble(value))
         put_in_instance_map(instance_map, value, out)
         return out
     elif isinstance(value, complex):
