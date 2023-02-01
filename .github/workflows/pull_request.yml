@@ -72,6 +72,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install tox pytest
 
+      - name: Build with Maven to install parent poms for python build
+        run: mvn -B --fail-at-end clean install -Dasciidoctor.skip -Dassembly.skipAssembly
+
       - name: Run tox on optapy test suite
         run: python -m tox
 
