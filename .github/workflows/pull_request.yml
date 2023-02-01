@@ -1,0 +1,80 @@
+# Tests PRs on multiple operating systems and Python/Java versions
+name: Test Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches:
+      - main
+    paths-ignore:
+      - 'LICENSE*'
+      - '.gitignore'
+      - '**.md'
+      - '**.adoc'
+      - '*.txt'
+      - '.ci/**'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test-build:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        java-version: [ 11, 17 ]
+        maven-version: [ '3.8.6' ]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Java and Maven Setup
+        uses: kiegroup/kogito-pipelines/.ci/actions/maven@main
+        with:
+          java-version: ${{ matrix.java-version }}
+          maven-version: ${{ matrix.maven-version }}
+          cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version }}
+
+      # Need to install both Python 3.9, Python 3.10 and Python 3.11 for tox (has to be in the same run)
+      # Feature Request for setup action: https://github.com/actions/setup-python/issues/98
+      - name: Python 3.9 Setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+          cache-dependency-path: |
+            **/setup.py
+
+      - name: Python 3.10 Setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: |
+            **/setup.py
+
+      - name: Python 3.11 Setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            **/setup.py
+
+      - name: Install tox
+        run:
+          python -m pip install --upgrade pip
+          pip install tox pytest
+
+      - name: Run tox on optapy test suite
+        run: python -m tox
+
+      - name: Run tox on jpyinterpreter test suite
+        working-directory: ./jpyinterpreter
+        run: python -m tox
