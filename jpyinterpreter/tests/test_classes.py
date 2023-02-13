@@ -24,6 +24,29 @@ def test_create_instance():
     verifier.verify(3, expected_result=A(3))
 
 
+def test_deleted_field():
+    class A:
+        value: int
+
+        def __init__(self, value):
+            self.value = value
+
+        def my_method(self, param):
+            return self.value + param
+
+    def my_method(x: A, y: int) -> int:
+        return x.my_method(y)
+
+    verifier = verifier_for(my_method)
+
+    a = A(1)
+    verifier.verify(a, 1, expected_result=2)
+
+    del a.value
+
+    verifier.verify(a, 1, expected_error=AttributeError)
+
+
 def test_virtual_method():
     class A:
         value: int

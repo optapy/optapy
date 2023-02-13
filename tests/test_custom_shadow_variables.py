@@ -1,3 +1,4 @@
+from typing import Optional
 import optapy
 import optapy.constraint
 import optapy.score
@@ -33,8 +34,8 @@ def test_custom_shadow_variable():
 
     @optapy.planning_entity
     class MyPlanningEntity:
-        value: int
-        value_squared: int
+        value: Optional[int]
+        value_squared: Optional[int]
 
         def __init__(self):
             self.value = None
@@ -144,9 +145,9 @@ def test_custom_shadow_variable_with_variable_listener_ref():
 
     @optapy.planning_entity
     class MyPlanningEntity:
-        value: int
-        value_squared: int
-        twice_value: int
+        value: Optional[int]
+        value_squared: Optional[int]
+        twice_value: Optional[int]
 
         def __init__(self):
             self.value = None

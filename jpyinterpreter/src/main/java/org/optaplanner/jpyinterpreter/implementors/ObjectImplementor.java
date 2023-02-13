@@ -2,6 +2,7 @@ package org.optaplanner.jpyinterpreter.implementors;
 
 import java.util.Optional;
 
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -15,7 +16,9 @@ import org.optaplanner.jpyinterpreter.PythonTernaryOperators;
 import org.optaplanner.jpyinterpreter.StackMetadata;
 import org.optaplanner.jpyinterpreter.types.BuiltinTypes;
 import org.optaplanner.jpyinterpreter.types.PythonLikeType;
+import org.optaplanner.jpyinterpreter.types.PythonNone;
 import org.optaplanner.jpyinterpreter.types.PythonString;
+import org.optaplanner.jpyinterpreter.types.errors.AttributeError;
 
 /**
  * Implementations of opcodes related to objects
@@ -39,6 +42,35 @@ public class ObjectImplementor {
                 methodVisitor.visitFieldInsn(Opcodes.GETFIELD, fieldDescriptor.getDeclaringClassInternalName(),
                         fieldDescriptor.getJavaFieldName(),
                         fieldDescriptor.getJavaFieldTypeDescriptor());
+
+                // Check if field is null. If it is null, then it was deleted, so we should raise an AttributeError
+                methodVisitor.visitInsn(Opcodes.DUP);
+                methodVisitor.visitInsn(Opcodes.ACONST_NULL);
+
+                Label ifNotNull = new Label();
+                methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, ifNotNull);
+
+                // Throw attribute error
+                methodVisitor.visitTypeInsn(Opcodes.NEW, Type.getInternalName(AttributeError.class));
+                methodVisitor.visitInsn(Opcodes.DUP);
+
+                if (fieldDescriptor.getFieldPythonLikeType().isInstance(PythonNone.INSTANCE)) {
+                    methodVisitor.visitLdcInsn("'" + tosType.getTypeName() + "' object has no attribute '" + name + "'.");
+                } else {
+                    // None cannot be assigned to the field, meaning it will delete the attribute instead
+                    methodVisitor.visitLdcInsn("'" + tosType.getTypeName() + "' object has no attribute '" + name + "'. " +
+                            "It might of been deleted because None cannot be assigned to it; either use " +
+                            "hasattr(obj, '" + name + "') or change the typing to allow None (ex: typing.Optional[" +
+                            tosType.getTypeName() + "]).");
+                }
+                methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(AttributeError.class),
+                        "<init>",
+                        Type.getMethodDescriptor(Type.getType(void.class), Type.getType(String.class)),
+                        false);
+                methodVisitor.visitInsn(Opcodes.ATHROW);
+
+                // The attribute was not null
+                methodVisitor.visitLabel(ifNotNull);
             } else {
                 // It a false field descriptor, which means TOS is a type and this is a field for a method
                 // We can call $method$__getattribute__ directly (since type do not override it),

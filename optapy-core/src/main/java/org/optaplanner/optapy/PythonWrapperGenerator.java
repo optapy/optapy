@@ -1793,7 +1793,7 @@ public class PythonWrapperGenerator {
             createAnnotation(annotationCreator, annotation);
         }
 
-        // Getter is simply: return this.field
+        // Getter is simply reading the generated field
         methodCreator.returnValue(methodCreator.readInstanceField(fieldDescriptor, methodCreator.getThis()));
 
         // Assumption: all getters have a setter
@@ -1865,16 +1865,25 @@ public class PythonWrapperGenerator {
             try {
                 Method setterMethod = lookupMethod(parentClass, PythonClassTranslator.getJavaMethodName(setterMethodName));
 
-                if (actualReturnType instanceof Class && ((Class<?>) actualReturnType).isAssignableFrom(PythonNone.class)) {
-                    setterMethodCreator.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod),
-                            setterMethodCreator.getThis(),
+                if (setterMethod.getParameterTypes()[0].isAssignableFrom(PythonNone.class)) {
+                    // valueAsPythonLikeObject might be null if the getter returns a PythonLikeObject
+                    BranchResult isNullBranchResult = setterMethodCreator.ifNull(valueAsPythonLikeObject);
+                    BytecodeCreator currentBranch = isNullBranchResult.trueBranch();
+                    currentBranch.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod),
+                            currentBranch.getThis(),
+                            currentBranch.readStaticField(FieldDescriptor.of(PythonNone.class, "INSTANCE", PythonNone.class)));
+
+                    currentBranch = isNullBranchResult.falseBranch();
+                    currentBranch.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod),
+                            currentBranch.getThis(),
                             valueAsPythonLikeObject);
                 } else {
+                    // Cannot assign None due to typing, so use null
                     BranchResult isNullBranchResult = setterMethodCreator.ifNull(setterMethodCreator.getMethodParam(0));
                     BytecodeCreator currentBranch = isNullBranchResult.falseBranch();
 
                     BranchResult isNoneBranchResult = currentBranch.ifTrue(
-                            currentBranch.instanceOf(setterMethodCreator.getMethodParam(0), PythonNone.class));
+                            currentBranch.instanceOf(currentBranch.getMethodParam(0), PythonNone.class));
 
                     currentBranch = isNoneBranchResult.falseBranch();
                     currentBranch.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod), currentBranch.getThis(),
