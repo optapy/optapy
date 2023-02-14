@@ -95,6 +95,99 @@ def test_solve_partial():
     assert solution.entities[2].value == v1
 
 
+def test_solve_nullable():
+    class Code:
+        def __init__(self, value):
+            self.value = value
+
+    @optapy.problem_fact
+    class Value:
+        def __init__(self, code):
+            self.code = Code(code)
+
+    @optapy.planning_entity
+    class Entity:
+        def __init__(self, code, value=None):
+            self.code = Code(code)
+            self.value = value
+
+        @optapy.planning_variable(Value, nullable=True, value_range_provider_refs=['value_range'])
+        def get_value(self):
+            return self.value
+
+        def set_value(self, value):
+            self.value = value
+
+    def at_least_one_null(constraint_factory: optapy.constraint.ConstraintFactory):
+        return (constraint_factory.for_each_including_null_vars(Entity)
+                                  .filter(lambda e: e.value is None)
+                                  .group_by(optapy.constraint.ConstraintCollectors.count())
+                                  .filter(lambda count: count >= 1)
+                                  .reward('At least one null variable', optapy.score.HardSoftScore.ONE_SOFT)
+                )
+
+    def assign_to_v1(constraint_factory: optapy.constraint.ConstraintFactory):
+        return (constraint_factory.for_each_including_null_vars(Entity)
+                                  .filter(lambda e: e.value is not None and e.value.code.value == 'v1')
+                                  .group_by(optapy.constraint.ConstraintCollectors.count())
+                                  .filter(lambda count: count >= 1)
+                                  .reward('At least one v1', optapy.score.HardSoftScore.ONE_HARD)
+                )
+
+    @optapy.constraint_provider
+    def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
+        return [
+            at_least_one_null(constraint_factory),
+            assign_to_v1(constraint_factory)
+        ]
+
+    @optapy.planning_solution
+    class Solution:
+        def __init__(self, entities, values, score=None):
+            self.entities = entities
+            self.values = values
+            self.score = score
+
+        @optapy.planning_entity_collection_property(Entity)
+        def get_entities(self):
+            return self.entities
+
+        @optapy.problem_fact_collection_property(Value)
+        @optapy.value_range_provider(range_id='value_range')
+        def get_values(self):
+            return self.values
+
+        @optapy.planning_score(optapy.score.HardSoftScore)
+        def get_score(self) -> optapy.score.HardSoftScore:
+            return self.score
+
+        def set_score(self, score):
+            self.score = score
+
+    solver_config = optapy.config.solver.SolverConfig()
+    termination_config = optapy.config.solver.termination.TerminationConfig()
+    termination_config.setBestScoreLimit('1hard/1soft')
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
+        .withTerminationConfig(termination_config)
+
+    e1 = Entity('e1')
+    e2 = Entity('e2')
+
+    v1 = Value('v1')
+    v2 = Value('v2')
+
+    problem = Solution([e1, e2], [v1, v2])
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
+
+    assert solution.score.getHardScore() == 1
+    assert solution.score.getSoftScore() == 1
+    assert solution.entities[0].value == v1 or solution.entities[0].value == None
+    assert solution.entities[1].value == v1 or solution.entities[1].value == None
+
+
 def test_single_property():
     @optapy.planning_entity
     class Entity:
