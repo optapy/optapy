@@ -832,7 +832,7 @@ public class PythonWrapperGenerator {
     }
 
     // Used for debugging; prints a result handle
-    private static void print(MethodCreator methodCreator, ResultHandle toPrint) {
+    private static void print(BytecodeCreator methodCreator, ResultHandle toPrint) {
         ResultHandle out = methodCreator.readStaticField(FieldDescriptor.of(System.class, "out", PrintStream.class));
         methodCreator.invokeVirtualMethod(MethodDescriptor.ofMethod(PrintStream.class, "println", void.class, Object.class),
                 out, toPrint);
@@ -1865,7 +1865,14 @@ public class PythonWrapperGenerator {
             try {
                 Method setterMethod = lookupMethod(parentClass, PythonClassTranslator.getJavaMethodName(setterMethodName));
 
-                if (setterMethod.getParameterTypes()[0].isAssignableFrom(PythonNone.class)) {
+                Class<?> fieldType;
+                try {
+                    fieldType = parentClass.getField(PythonClassTranslator.getJavaFieldName(fieldName)).getType();
+                } catch (NoSuchFieldException e) {
+                    fieldType = null;
+                }
+                if ((fieldType == null || fieldType.isAssignableFrom(PythonNone.class))
+                        && setterMethod.getParameterTypes()[0].isAssignableFrom(PythonNone.class)) {
                     // valueAsPythonLikeObject might be null if the getter returns a PythonLikeObject
                     BranchResult isNullBranchResult = setterMethodCreator.ifNull(valueAsPythonLikeObject);
                     BytecodeCreator currentBranch = isNullBranchResult.trueBranch();
@@ -1888,6 +1895,7 @@ public class PythonWrapperGenerator {
                     currentBranch = isNoneBranchResult.falseBranch();
                     currentBranch.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod), currentBranch.getThis(),
                             valueAsPythonLikeObject);
+
                     currentBranch = isNoneBranchResult.trueBranch();
                     currentBranch.invokeSpecialMethod(MethodDescriptor.ofMethod(setterMethod), currentBranch.getThis(),
                             currentBranch.loadNull());
