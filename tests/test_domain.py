@@ -5,7 +5,7 @@ import optapy.config
 import optapy.constraint
 
 import dataclasses
-from typing import Optional
+from typing import Optional, Union, List
 
 
 def test_solve_partial():
@@ -30,7 +30,6 @@ def test_solve_partial():
 
         def set_value(self, value):
             self.value = value
-
 
     def is_value_one(constraint_factory: optapy.constraint.ConstraintFactory):
         return (constraint_factory.for_each(Entity)
@@ -283,6 +282,194 @@ def test_solve_typed():
     assert solution.score.getScore() == 2
     assert solution.entities[0].value == v1
     assert solution.entities[1].value == v1
+
+
+def test_solve_complex_problem_facts():
+    from abc import abstractmethod
+
+    @optapy.problem_fact
+    class BaseValue:
+        @abstractmethod
+        def get_id(self) -> str:
+            raise NotImplementedError('Calling function on abstract base class')
+
+        @abstractmethod
+        def __str__(self) -> str:
+            raise NotImplementedError('Calling function on abstract base class')
+
+    @optapy.problem_fact
+    class ExpiringValue(BaseValue):
+        def __init__(self, name: str, id: str, expiration_date: float = 0.0) -> None:
+            self.name = name
+            self.id = id
+            self.expiration_date = expiration_date
+
+        @optapy.planning_id
+        def get_id(self) -> str:
+            return self.id
+
+        def __str__(self) -> str:
+            return f'ExpiringValue(id={self.id}, name={self.name})'
+
+    @optapy.problem_fact
+    class SimpleValue(BaseValue):
+        def __init__(self, name: str, id: str) -> None:
+            self.name = name
+            self.id = id
+
+        @optapy.planning_id
+        def get_id(self) -> str:
+            return self.id
+
+        def __str__(self) -> str:
+            return f'SimpleValue(id={str(self.id)}, name={str(self.name)})'
+
+    @optapy.problem_fact
+    class NullValue(BaseValue):
+        def __init__(self) -> None:
+            self.name = 'NULL'
+            self.id = 'NULL'
+
+        @optapy.planning_id
+        def get_id(self) -> str:
+            return self.id
+
+        def __str__(self) -> str:
+            return f'NullValue(id={str(self.id)}, name={str(self.name)})'
+
+    @optapy.planning_entity
+    class Entity:
+        def __init__(
+                self,
+                id: str,  # Unique ID for this instance
+                list_of_suitable_values: List[BaseValue],
+                start_time: float = 0.0,
+                end_time: float = 1000000000.0,
+                value: Optional[BaseValue] = None,
+        ):
+            self.id = id
+            self.start_time = start_time
+            self.end_time = end_time
+            self.list_of_suitable_values = list_of_suitable_values
+            self.value = value
+
+        @optapy.planning_id
+        def get_id(self) -> str:
+            return self.id
+
+        @optapy.planning_variable(
+            BaseValue, value_range_provider_refs=['list_of_suitable_values']
+        )
+        def get_value(self) -> Optional[BaseValue]:
+            return self.value
+
+        def set_value(self, value: Union[BaseValue, None]) -> None:
+            self.value = value
+
+        @optapy.value_range_provider(value_range_type=BaseValue, range_id='list_of_suitable_values')
+        def get_allowable_values(self) -> List[BaseValue]:
+            return self.list_of_suitable_values
+
+        def __str__(self) -> str:
+            return (
+                f"Entity("
+                f"id={self.id}, "
+                f"start_time={self.start_time}, "
+                f"end_time={self.end_time}, "
+                f"value={self.value})"
+            )
+
+    @optapy.planning_solution
+    class Solution:
+        def __init__(
+                self,
+                entity_list: List[Entity],
+                score: Optional[float] = None,
+        ):
+            self.entity_list = entity_list
+            self.score = score
+
+        @optapy.planning_entity_collection_property(Entity)
+        def get_entity_list(self) -> List[Entity]:
+            return self.entity_list
+
+        @optapy.planning_score(optapy.score.HardSoftScore)
+        def get_score(self) -> optapy.score.HardSoftScore:
+            return self.score
+
+        def set_score(self, score: optapy.score.HardSoftScore) -> None:
+            self.score = score
+
+        def __str__(self) -> str:
+            return (
+                f"Solution("
+                f"entity_list={self.entity_list},\n"
+                f"score={str(self.score)}"
+                f")"
+            )
+
+    def is_present(r: Optional[BaseValue]) -> bool:
+        if isinstance(r, NullValue):
+            return False
+        elif isinstance(r, BaseValue):
+            return True
+        else:
+            return False
+
+    def simultaneous_values(constraint_factory):
+        return (
+            constraint_factory.for_each_unique_pair(
+                Entity,
+                # ... if they support overlapping times
+                (optapy.constraint.Joiners.overlapping(lambda entity: entity.start_time,
+                                                       lambda entity: entity.end_time)),
+            )
+            .filter(
+                lambda entity_1, entity_2: (is_present(entity_1.value)
+                                            and is_present(entity_2.value)
+                                            and entity_1.value.get_id() == entity_2.value.get_id())
+            )
+            # Then penalize it!
+            .penalize("Simultaneous values", optapy.score.HardSoftScore.ONE_HARD)
+        )
+
+    def empty_value(constraint_factory):
+        return (
+            constraint_factory.for_each(Entity)
+            .filter(lambda entity: not is_present(entity.value))
+            .penalize("Prefer present value", optapy.score.HardSoftScore.ONE_SOFT)
+        )
+
+    @optapy.constraint_provider
+    def my_constraints(constraint_factory: optapy.constraint.ConstraintFactory):
+        return [
+            simultaneous_values(constraint_factory),
+            empty_value(constraint_factory)
+        ]
+
+    solver_config = optapy.config.solver.SolverConfig()
+    termination_config = optapy.config.solver.termination.TerminationConfig()
+    termination_config.setBestScoreLimit('0hard/0soft')
+    solver_config.withSolutionClass(Solution) \
+        .withEntityClasses(Entity) \
+        .withConstraintProviderClass(my_constraints) \
+        .withTerminationConfig(termination_config)
+
+    v1 = ExpiringValue('expiring', '0')
+    v2 = SimpleValue('simple', '1')
+    v3 = NullValue()
+
+    e1 = Entity('e1', [v1, v2])
+    e2 = Entity('e2', [v1, v3])
+
+    problem = Solution([e1, e2])
+    solver = optapy.solver_factory_create(solver_config).buildSolver()
+    solution = solver.solve(problem)
+
+    assert solution.score.getHardScore() == 0
+    assert solution.score.getSoftScore() == 0
+    assert solution.entity_list[0].value == v2
+    assert solution.entity_list[1].value == v1
 
 
 def test_single_property():

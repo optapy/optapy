@@ -1,13 +1,16 @@
 package org.optaplanner.optapy;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 import org.optaplanner.core.api.domain.solution.cloner.SolutionCloner;
 import org.optaplanner.core.api.function.TriFunction;
+import org.optaplanner.jpyinterpreter.types.CPythonBackedPythonLikeObject;
 import org.optaplanner.jpyinterpreter.types.wrappers.OpaquePythonReference;
 
 public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
@@ -62,8 +65,17 @@ public class PythonPlanningSolutionCloner implements SolutionCloner<Object> {
         //  which is used when cloning. If score/list variable was garbage collected by Python, another
         //  Python Object can have the same id, leading to the old value in the map being returned,
         //  causing an exception (or worse, a subtle bug))
+        Map<Number, Object> newReferenceMap = new MirrorWithExtrasMap<>(out.get__optapy_reference_map());
         out.readFromPythonObject(Collections.newSetFromMap(new IdentityHashMap<>()),
-                new MirrorWithExtrasMap<>(out.get__optapy_reference_map()));
+                newReferenceMap);
+
+        List<Object> referencedValues = new ArrayList<>(newReferenceMap.values());
+        for (Object value : referencedValues) {
+            if (value instanceof CPythonBackedPythonLikeObject) {
+                ((CPythonBackedPythonLikeObject) value).$readFieldsFromCPythonReference();
+            }
+        }
+
         return out;
     }
 }
