@@ -1466,9 +1466,7 @@ public class PythonWrapperGenerator {
             methodCreator.setModifiers(Modifier.PUBLIC);
             methodCreator.invokeSpecialMethod(MethodDescriptor.ofConstructor(parentClass, PythonLikeType.class),
                     methodCreator.getThis(),
-                    methodCreator.readStaticField(FieldDescriptor.of(classCreator.getClassName(),
-                            "$TYPE",
-                            PythonLikeType.class)));
+                    methodCreator.getMethodParam(0));
             methodCreator.returnValue(methodCreator.getThis());
         } else {
             // Entity(OpaquePythonReference) constructor, for subclasses
