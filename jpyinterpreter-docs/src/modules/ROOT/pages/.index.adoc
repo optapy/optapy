@@ -1,4 +1,4 @@
-= JPyInterpreter User Guide
+= JPyInterpreter Developer Guide
 The OptaPy Team <https://www.optaplanner.org/community/team.html>
 :doctype: book
 :imagesdir: .
@@ -19,3 +19,5 @@ image::shared/optaPyLogo.png[align="center"]
 endif::[]
 
 include::jpyinterpreter-introduction/jpyinterpreter-introduction.adoc[leveloffset=+1]
+include::stack-machines/stack-machines.adoc[leveloffset=+1]
+include::python-function-structure/python-function-structure.adoc[leveloffset=+1]

@@ -1,1 +1,2 @@
 * xref:jpyinterpreter-introduction/jpyinterpreter-introduction.adoc[leveloffset=+1]
+* xref:stack-machines/stack-machines.adoc[leveloffset=+1]
