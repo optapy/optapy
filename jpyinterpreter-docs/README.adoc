@@ -1,6 +1,3 @@
-= OptaPy Documentation
+= JPyInterpreter Developer Documentation
 
-View the documentation at https://www.optapy.org[the OptaPy documentation website].
-The documentation will not render correctly on GitHub.
-
-This module contains the sources for OptaPy's documentation website.
+This module contains the sources for JPyInterpreter Developer Guide.

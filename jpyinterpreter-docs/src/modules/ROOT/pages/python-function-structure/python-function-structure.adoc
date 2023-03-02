@@ -1,8 +1,10 @@
 == Python Function Structure
 
 In Python, the details about a function, including
-its implementation and argument spec, it accessible
-from the https://docs.python.org/3.11/reference/datamodel.html#index-33[function object]. It has several attributes. In particular, we are interested in:
+its implementation and argument spec, are accessible
+from the https://docs.python.org/3.11/reference/datamodel.html#index-33[function object].
+In `jpyinterpreter`, this information is stored in the class `PythonCompiledFunction`.
+It has several attributes. In particular, we are interested in:
 
 - `\\__globals__`: The globals dict that is used by the function. All classes defined in the same file share the same globals. Classes defined in different files have different globals. All globals variables are stored in this dict.
 
@@ -90,8 +92,8 @@ def my_function():
 ```
 +
 `co_constants` would be `(1, 2)`. In CPython, objects
-eglible to be constants are:
-
+eligible to be constants are:
++
 ** `int` objects (ex: `1`, `42`)
 ** `float` objects (ex: `1.5`, `NaN`)
 ** `bool` objects (`True` and `False`)
@@ -99,5 +101,90 @@ eglible to be constants are:
 ** `bytes` objects (ex: `b'hello world'`)
 ** `None` (`None`)
 ** `Ellipsis` (`...`)
-
++
 The following objects an ineligible to be used as constants, and are loaded with `LOAD_GLOBAL` instead:
++
+** `class` objects (ex: `int`, `str`, user defined classes)
+** `function` objects (ex: `max`, `range`, user defined functions)
+** Instances of user defined classes
+
+- `co_exceptiontable`: a mapping from bytecode instruction ranges to their exception handler.
+ The exception handler have the following properties:
++
+** `targetInstruction`: the bytecode index to jump to
+** `stackDepth`: the stack depth prior to the try block (required for restoring the stack state)
+** `pushLastIndex`: A boolean, that if true, indicates the handler should push the bytecode index that raised the exception prior to pushing the exception (otherwise, only the exception is pushed).
++
+This attribute is only present in Python 3.11 and above; previous versions of Python use bytecode instruction to push and pop exception blocks.
+ For example, the function:
++
+```python
+def my_function():
+    for x in range(10):
+        try:
+            y = other_function_1(x)
+            try:
+                other_function_2(x, y)
+            except:
+                print('other 2 exception')
+        except:
+            print('other 1 exception')
+```
++
+would have (simplified) bytecode looking like this:
++
+```
+0  LOAD_GLOBAL 0 (range)
+1  LOAD_CONSTANT 1 (10)
+2  CALL 1
+3  GET_ITER
+4  FOR_ITER 19 (23 LOAD_CONSTANT)
+5  STORE_LOCAL 0 (x)
+6  LOAD_GLOBAL 1 (other_function_1)
+7  LOAD_LOCAL 0 (x)
+8  CALL 1
+9  STORE_LOCAL 1 (y)
+10 LOAD_GLOBAL 2 (other_function_2)
+11 LOAD_LOCAL 0 (x)
+12 LOAD_LOCAL 1 (y)
+13 CALL 2
+14 JUMP_BACKWARDS 10 (4 FOR_ITER)
+15 POP_TOP
+16 LOAD_GLOBAL 3 (print)
+17 LOAD_CONSTANT 2 ('other 2 exception')
+18 JUMP_BACKWARDS 14 (4 FOR_ITER)
+19 POP_TOP
+20 LOAD_GLOBAL 3 (print)
+21 LOAD_CONSTANT 2 ('other 1 exception')
+22 JUMP_BACKWARDS 18 (4 FOR_ITER)
+23 LOAD_CONSTANT 0 (None)
+24 RETURN
+```
++
+For simplicity, the code that handles exceptions in exception handlers has been excluded. The above bytecode would have the corresponding exception table below:
++
+```
+Exception Table:
+[12, 14) -> 15 (stack-depth: 1)
+[5,  18) -> 19 (stack-depth: 1)
+```
++
+Stack depth is 1 because the iterator was on the stack prior to the try block.
+
+- `co_argcount` the number of allow-positional arguments the function takes. For example, for the function below:
++
+```python
+def my_function(a, b, /, c, d=10, *, e=20):
+    pass
+```
++
+`co_argcount` would be `4`, since `a`, `b`, `c`, and `d` can be specified as a positional argument (`a`, `b` are required positional only arguments,
+`c` is a positional-or-keyword required argument,
+`d` is a positional-or-keyword optional argument,
+`e` is a keyword-only optional argument).
+
+- `co_kwonlyargcount` is the number of keyword-only arguments.
+For the example given in `co_argcount`, it would be `1`, since `e` is the only keyword-only argument.
+
+- `co_posonlyargcount` is the number of positional-only arguments.
+For the example given in `co_argcount`, it would be `2`, since `a` and `b` are the only positional-only arguments.
