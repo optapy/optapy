@@ -16,6 +16,7 @@ public class UnpackSequenceWithTailOpcode extends AbstractOpcode {
 
     @Override
     protected StackMetadata getStackMetadataAfterInstruction(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        // TODO: Correctly handle when high byte is set
         StackMetadata newStackMetadata = stackMetadata.pop();
 
         newStackMetadata = newStackMetadata

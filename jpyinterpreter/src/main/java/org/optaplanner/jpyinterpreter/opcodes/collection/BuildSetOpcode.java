@@ -23,6 +23,8 @@ public class BuildSetOpcode extends AbstractOpcode {
 
     @Override
     public void implement(FunctionMetadata functionMetadata, StackMetadata stackMetadata) {
+        // TODO: either modify reverseAdd for PythonLikeSet so it replaces already encountered elements
+        //       or store the top count items in local variables and do it in forward order.
         CollectionImplementor.buildCollection(PythonLikeSet.class, functionMetadata.methodVisitor, instruction.arg);
     }
 }
