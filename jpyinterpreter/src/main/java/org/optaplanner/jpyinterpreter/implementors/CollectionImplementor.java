@@ -205,6 +205,7 @@ public class CollectionImplementor {
      */
     public static void unpackSequenceWithTail(MethodVisitor methodVisitor, int toUnpack,
             LocalVariableHelper localVariableHelper) {
+        // TODO: Correctly handle when high byte is set
         // Initialize size, unpacked elements and tail local variables
         int sizeLocal = localVariableHelper.newLocal();
 
@@ -480,7 +481,7 @@ public class CollectionImplementor {
                 .pop(2)
                 .push(stackMetadata.getTOSValueSource())
                 .push(stackMetadata.getValueSourceForStackIndex(1)), PythonBinaryOperators.CONTAINS);
-        // TODO: implement fallback on __getitem__ if __contains__ does not exist
+        // TODO: implement fallback on __iter__ if __contains__ does not exist
         if (instruction.arg == 1) {
             PythonBuiltinOperatorImplementor.performNotOnTOS(methodVisitor);
         }
