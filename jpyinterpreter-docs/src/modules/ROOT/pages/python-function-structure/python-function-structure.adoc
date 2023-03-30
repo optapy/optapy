@@ -1,4 +1,5 @@
-== Python Function Structure
+[[pythonFunctionStructure]]
+= Python Function Structure
 
 In Python, the details about a function, including
 its implementation and argument spec, are accessible
@@ -51,7 +52,7 @@ def typed_function(a: int, b: str) -> 'A':
 
 - `\\__code__`: The code object of the function, containing the function bytecode and argument spec. Code objects are described below.
 
-=== Code Objects
+== Code Objects
 
 https://docs.python.org/3.11/reference/datamodel.html#index-55[Code objects] is the byte-compiled Python function. The primary difference between function objects and code objects is that function objects contain context (i.e. globals, defaults, closure) whereas code objects are context-free. Of its attributes, we are interested in:
 

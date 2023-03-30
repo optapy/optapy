@@ -1,10 +1,11 @@
-== CPython Opcode Instructions
+[[cpythonOpcodes]]
+= CPython Opcode Instructions
 
 CPython compiles function into bytecode.
 The opcodes for this bytecode are listed here and can also be found in `OpcodeIdentifier`.
 CPython bytecode structure in not stable, and opcode behaviour may change between releases.
 
-=== General Format
+== General Format
 
 Each opcode will be listed in the following format:
 
@@ -53,9 +54,9 @@ So an absolute jump with argument 2 will go to the instruction at address 2 rega
 Relative jumps go to the instruction that are argument addresses away from it.
 So a relative jump with argument 2 will go to the instruction at address 3 if the jump is at address 1, or 4 if the jump is at address 2.
 
-=== Opcode Listing
+== Opcode Listing
 
-==== NOP
+=== NOP
 
 Python Versions: ALL
 
@@ -73,7 +74,7 @@ Example Sources:
 pass  # `pass` represent a NOP in Python
 ```
 
-==== RESUME
+=== RESUME
 
 Python Versions: 3.11+
 
@@ -99,7 +100,7 @@ yield 10 # A RESUME opcode is placed after
          # each YIELD_VALUE opcode
 ```
 
-==== CACHE
+=== CACHE
 
 Python Versions: 3.11+
 
@@ -116,7 +117,7 @@ Example Sources:
 x + y
 ```
 
-==== POP_TOP
+=== POP_TOP
 
 Python Versions: ALL
 
@@ -135,7 +136,7 @@ my_fun() # POP_TOP is generated after the function call
          # since the result of my_fun is unused.
 ```
 
-==== ROT_TWO
+=== ROT_TWO
 
 Python Versions: \<= 3.10
 
@@ -155,7 +156,7 @@ Example Sources:
 x, y = y, x
 ```
 
-==== ROT_THREE
+=== ROT_THREE
 
 Python Versions: \<= 3.10
 
@@ -178,7 +179,7 @@ Example Sources:
 x, y, z = z, y, x
 ```
 
-==== ROT_FOUR
+=== ROT_FOUR
 
 Python Versions: >= 3.8 and \<= 3.10
 
@@ -202,7 +203,7 @@ Example Sources:
 w, x, y, z = z, y, x, w
 ```
 
-==== DUP_TOP
+=== DUP_TOP
 
 Python Versions: >= 3.2
 
@@ -218,7 +219,7 @@ Example Sources:
 
 #TODO#
 
-==== DUP_TOP_TWO
+=== DUP_TOP_TWO
 
 Python Versions: >= 3.2
 
@@ -233,7 +234,7 @@ Example Sources:
 
 #TODO#
 
-==== COPY(i)
+=== COPY(i)
 
 Python Versions: >= 3.11
 
@@ -249,7 +250,7 @@ Example Sources:
 
 #TODO#
 
-==== SWAP(i)
+=== SWAP(i)
 
 Python Versions: >= 3.11
 
@@ -264,7 +265,7 @@ Example Sources:
 
 #TODO#
 
-==== UNARY_POSITIVE
+=== UNARY_POSITIVE
 
 Python Versions: ALL
 
@@ -282,7 +283,7 @@ Example Sources:
 +x
 ```
 
-==== UNARY_NEGATIVE
+=== UNARY_NEGATIVE
 
 Python Versions: ALL
 
@@ -300,7 +301,7 @@ Example Sources:
 -x
 ```
 
-==== UNARY_INVERT
+=== UNARY_INVERT
 
 Python Versions: ALL
 
@@ -318,7 +319,7 @@ Example Sources:
 ~x
 ```
 
-==== GET_ITER
+=== GET_ITER
 
 Python Versions: ALL
 
@@ -338,7 +339,7 @@ for item in iterable:
     ...
 ```
 
-==== GET_YIELD_FROM_ITER
+=== GET_YIELD_FROM_ITER
 
 Python Versions: >= 3.5
 
@@ -359,7 +360,7 @@ Example Sources:
 yield from [1, 2, 3]
 ```
 
-==== BINARY_OP(op)
+=== BINARY_OP(op)
 
 Python Versions: >= 3.11
 
@@ -443,7 +444,7 @@ x + 1
 x -= y
 ```
 
-==== BINARY_POWER
+=== BINARY_POWER
 
 Python Versions: \<= 3.10
 
@@ -460,7 +461,7 @@ Example Sources:
 base ** expotent
 ```
 
-==== BINARY_MULTIPLY
+=== BINARY_MULTIPLY
 
 Python Versions: \<= 3.10
 
@@ -477,7 +478,7 @@ Example Sources:
 left_factor * right_factor
 ```
 
-==== BINARY_MATRIX_MULTIPLY
+=== BINARY_MATRIX_MULTIPLY
 
 Python Versions: >= 3.5 and \<= 3.10
 
@@ -494,7 +495,7 @@ Example Sources:
 left_factor @ right_factor
 ```
 
-==== BINARY_FLOOR_DIVIDE
+=== BINARY_FLOOR_DIVIDE
 
 Python Versions: \<= 3.10
 
@@ -511,7 +512,7 @@ Example Sources:
 dividend // divisor
 ```
 
-==== BINARY_TRUE_DIVIDE
+=== BINARY_TRUE_DIVIDE
 
 Python Versions: \<= 3.10
 
@@ -528,7 +529,7 @@ Example Sources:
 dividend / divisor
 ```
 
-==== BINARY_MODULO
+=== BINARY_MODULO
 
 Python Versions: \<= 3.10
 
@@ -545,7 +546,7 @@ Example Sources:
 dividend % divisor
 ```
 
-==== BINARY_ADD
+=== BINARY_ADD
 
 Python Versions: \<= 3.10
 
@@ -562,7 +563,7 @@ Example Sources:
 augend + addend
 ```
 
-==== BINARY_SUBTRACT
+=== BINARY_SUBTRACT
 
 Python Versions: \<= 3.10
 
@@ -580,7 +581,7 @@ minuend - subtrahend
 ```
 
 
-==== BINARY_LSHIFT
+=== BINARY_LSHIFT
 
 Python Versions: \<= 3.10
 
@@ -597,7 +598,7 @@ Example Sources:
 to_shift << shift
 ```
 
-==== BINARY_RSHIFT
+=== BINARY_RSHIFT
 
 Python Versions: \<= 3.10
 
@@ -614,7 +615,7 @@ Example Sources:
 to_shift >> shift
 ```
 
-==== BINARY_AND
+=== BINARY_AND
 
 Python Versions: \<= 3.10
 
@@ -632,7 +633,7 @@ left_conjunct & right_conjunct
 ```
 
 
-==== BINARY_OR
+=== BINARY_OR
 
 Python Versions: \<= 3.10
 
@@ -650,7 +651,7 @@ left_disjunct | right_disjunct
 ```
 
 
-==== BINARY_XOR
+=== BINARY_XOR
 
 Python Versions: \<= 3.10
 
@@ -668,7 +669,7 @@ left_disjunct ^ right_disjunct
 ```
 
 
-==== INPLACE_POWER
+=== INPLACE_POWER
 
 Python Versions: \<= 3.10
 
@@ -685,7 +686,7 @@ Example Sources:
 base **= expotent
 ```
 
-==== INPLACE_MULTIPLY
+=== INPLACE_MULTIPLY
 
 Python Versions: \<= 3.10
 
@@ -702,7 +703,7 @@ Example Sources:
 left_factor *= right_factor
 ```
 
-==== INPLACE_MATRIX_MULTIPLY
+=== INPLACE_MATRIX_MULTIPLY
 
 Python Versions: >= 3.5 and \<= 3.10
 
@@ -719,7 +720,7 @@ Example Sources:
 left_factor @= right_factor
 ```
 
-==== INPLACE_FLOOR_DIVIDE
+=== INPLACE_FLOOR_DIVIDE
 
 Python Versions: \<= 3.10
 
@@ -736,7 +737,7 @@ Example Sources:
 dividend //= divisor
 ```
 
-==== INPLACE_TRUE_DIVIDE
+=== INPLACE_TRUE_DIVIDE
 
 Python Versions: \<= 3.10
 
@@ -753,7 +754,7 @@ Example Sources:
 dividend /= divisor
 ```
 
-==== INPLACE_MODULO
+=== INPLACE_MODULO
 
 Python Versions: \<= 3.10
 
@@ -770,7 +771,7 @@ Example Sources:
 dividend %= divisor
 ```
 
-==== INPLACE_ADD
+=== INPLACE_ADD
 
 Python Versions: \<= 3.10
 
@@ -787,7 +788,7 @@ Example Sources:
 augend += addend
 ```
 
-==== INPLACE_SUBTRACT
+=== INPLACE_SUBTRACT
 
 Python Versions: \<= 3.10
 
@@ -805,7 +806,7 @@ minuend -= subtrahend
 ```
 
 
-==== INPLACE_LSHIFT
+=== INPLACE_LSHIFT
 
 Python Versions: \<= 3.10
 
@@ -822,7 +823,7 @@ Example Sources:
 to_shift <<= shift
 ```
 
-==== INPLACE_RSHIFT
+=== INPLACE_RSHIFT
 
 Python Versions: \<= 3.10
 
@@ -839,7 +840,7 @@ Example Sources:
 to_shift >>= shift
 ```
 
-==== INPLACE_AND
+=== INPLACE_AND
 
 Python Versions: \<= 3.10
 
@@ -857,7 +858,7 @@ left_conjunct &= right_conjunct
 ```
 
 
-==== INPLACE_OR
+=== INPLACE_OR
 
 Python Versions: \<= 3.10
 
@@ -875,7 +876,7 @@ left_disjunct |= right_disjunct
 ```
 
 
-==== INPLACE_XOR
+=== INPLACE_XOR
 
 Python Versions: \<= 3.10
 
@@ -893,7 +894,7 @@ left_disjunct ^= right_disjunct
 ```
 
 
-==== BINARY_SUBSCR
+=== BINARY_SUBSCR
 
 Python Versions: ALL
 
@@ -911,7 +912,7 @@ collection[key]
 ```
 
 
-==== STORE_SUBSCR
+=== STORE_SUBSCR
 
 Python Versions: ALL
 
@@ -929,7 +930,7 @@ collection[key] = value
 ```
 
 
-==== DELETE_SUBSCR
+=== DELETE_SUBSCR
 
 Python Versions: ALL
 
@@ -947,7 +948,7 @@ del collection[key]
 ```
 
 
-==== GET_AWAITABLE(where)
+=== GET_AWAITABLE(where)
 
 Python Versions: >= 3.5
 
@@ -972,7 +973,7 @@ await awaitable
 ```
 
 
-==== GET_AITER
+=== GET_AITER
 
 Python Versions: >= 3.5
 
@@ -1018,7 +1019,7 @@ The bytecode in 3.11 looks like this:
 ```
 
 
-==== GET_ANEXT
+=== GET_ANEXT
 
 Python Versions: >= 3.5
 
@@ -1039,7 +1040,7 @@ Example Sources:
 See <<GET_AITER>> for an example.
 
 
-==== END_ASYNC_FOR
+=== END_ASYNC_FOR
 
 Python Versions: >= 3.5, \<= 3.10
 
@@ -1072,7 +1073,7 @@ Example Sources:
 See <<GET_AITER>> for an example.
 
 
-==== BEFORE_ASYNC_WITH
+=== BEFORE_ASYNC_WITH
 
 Python Versions: >= 3.5
 
@@ -1094,7 +1095,7 @@ async with async_context_manager as async_context:
 ```
 
 
-==== SETUP_ASYNC_WITH
+=== SETUP_ASYNC_WITH
 
 Python Versions: >= 3.5, \<= 3.10
 
@@ -1113,7 +1114,7 @@ async with async_context_manager as async_context:
 ```
 
 
-==== PRINT_EXPR
+=== PRINT_EXPR
 
 Python Versions: ALL
 
@@ -1131,7 +1132,7 @@ Example Sources:
 It cannot be emitted in a function, and thus has no example sources.
 It is emitted as the final opcode when the CPython interactive interpreter compiles an expression outside a block.
 
-==== SET_ADD(i)
+=== SET_ADD(i)
 
 Python Versions: ALL
 
@@ -1151,7 +1152,7 @@ Example Sources:
 ```
 
 
-==== LIST_APPEND(i)
+=== LIST_APPEND(i)
 
 Python Versions: ALL
 
@@ -1171,7 +1172,7 @@ Example Sources:
 ```
 
 
-==== MAP_ADD(i)
+=== MAP_ADD(i)
 
 Python Versions: ALL
 
@@ -1190,7 +1191,7 @@ Example Sources:
 {key: value for key, value in item_list}
 ```
 
-==== RETURN_VALUE
+=== RETURN_VALUE
 
 Python Versions: ALL
 
@@ -1216,7 +1217,7 @@ return  # This is actually `return None` in disguise
 return value
 ```
 
-==== RETURN_GENERATOR
+=== RETURN_GENERATOR
 
 Python Versions: >= 3.11
 
@@ -1249,7 +1250,7 @@ def function():
 ```
 
 
-==== GEN_START(kind)
+=== GEN_START(kind)
 
 Python Versions: == 3.10
 
@@ -1277,7 +1278,7 @@ def function():
 ```
 
 
-==== SEND(target_delta)
+=== SEND(target_delta)
 
 Python Versions: >= 3.11
 
@@ -1317,7 +1318,7 @@ await awaitable
 ```
 
 
-==== YIELD_VALUE
+=== YIELD_VALUE
 
 Python Versions: ALL
 
@@ -1345,7 +1346,7 @@ sent_value = yield 10
 ```
 
 
-==== YIELD_FROM
+=== YIELD_FROM
 
 Python Versions: >= 3.3, \<= 3.10
 
@@ -1378,7 +1379,7 @@ Example Sources:
 yield from subgenerator
 ```
 
-==== SETUP_ANNOTATIONS
+=== SETUP_ANNOTATIONS
 
 Python Versions: >= 3.6
 
@@ -1404,7 +1405,7 @@ class MyClass:
 ```
 
 
-==== IMPORT_STAR
+=== IMPORT_STAR
 
 Python Versions: ALL
 
@@ -1425,7 +1426,7 @@ from module import *
 ```
 
 
-==== POP_BLOCK
+=== POP_BLOCK
 
 Python Versions: \<= 3.10
 
@@ -1450,7 +1451,7 @@ except:
 ```
 
 
-==== POP_EXCEPT
+=== POP_EXCEPT
 
 Python Versions: ALL
 
@@ -1483,7 +1484,7 @@ except:
 ```
 
 
-==== PUSH_EXC_INFO
+=== PUSH_EXC_INFO
 
 Python Versions: >= 3.11
 
@@ -1514,7 +1515,7 @@ except Exception:
 ```
 
 
-==== CHECK_EXC_MATCH
+=== CHECK_EXC_MATCH
 
 Python Versions: >= 3.11
 
@@ -1540,7 +1541,7 @@ except ValueError:  # CHECK_EXC_MATCH is used here with
 ```
 
 
-==== RERAISE(set_f_lasti)
+=== RERAISE(set_f_lasti)
 
 Python Versions: >= 3.9
 
@@ -1574,7 +1575,7 @@ except:
 ```
 
 
-==== WITH_EXCEPT_START
+=== WITH_EXCEPT_START
 
 Python Versions: >= 3.9
 
@@ -1605,7 +1606,7 @@ with context:
 ```
 
 
-==== LOAD_ASSERTION_ERROR
+=== LOAD_ASSERTION_ERROR
 
 Python Versions: >= 3.9
 
@@ -1624,7 +1625,7 @@ assert False
 ```
 
 
-==== LOAD_BUILD_CLASS
+=== LOAD_BUILD_CLASS
 
 Python Versions: ALL
 
@@ -1673,7 +1674,7 @@ class C(A, metaclass=M, metaclass_arg=1):
 ```
 
 
-==== SETUP_WITH(except_delta)
+=== SETUP_WITH(except_delta)
 
 Python Versions: \<= 3.10
 
@@ -1707,7 +1708,7 @@ with context_manager:
 ```
 
 
-==== STORE_NAME(namei)
+=== STORE_NAME(namei)
 
 Python Versions: ALL
 
@@ -1729,7 +1730,7 @@ class C:
 ```
 
 
-==== DELETE_NAME(namei)
+=== DELETE_NAME(namei)
 
 Python Versions: ALL
 
@@ -1749,7 +1750,7 @@ class C:
     del x # this emits a DELETE_NAME('x') opcode
 ```
 
-==== UNPACK_SEQUENCE(count)
+=== UNPACK_SEQUENCE(count)
 
 Python Versions: ALL
 
@@ -1786,7 +1787,7 @@ x, y = (1, 2)
 ```
 
 
-==== UNPACK_EX((high byte) end_index | (low byte) start_index)
+=== UNPACK_EX((high byte) end_index | (low byte) start_index)
 
 Python Versions: ALL
 
@@ -1831,7 +1832,7 @@ b_0, *extra, a_0, a_1 = (1, 2, 3, 4, 5)
 ```
 
 
-==== STORE_ATTR(namei)
+=== STORE_ATTR(namei)
 
 Python Versions: ALL
 
@@ -1853,7 +1854,7 @@ my_object.attribute = value
 ```
 
 
-==== DELETE_ATTR(namei)
+=== DELETE_ATTR(namei)
 
 Python Versions: ALL
 
@@ -1875,7 +1876,7 @@ del my_object.attribute
 ```
 
 
-==== STORE_GLOBAL(namei)
+=== STORE_GLOBAL(namei)
 
 Python Versions: ALL
 
@@ -1898,7 +1899,7 @@ variable = 5
 ```
 
 
-==== DELETE_GLOBAL(namei)
+=== DELETE_GLOBAL(namei)
 
 Python Versions: ALL
 
@@ -1920,7 +1921,7 @@ del variable
 ```
 
 
-==== LOAD_CONST(consti)
+=== LOAD_CONST(consti)
 
 Python Versions: ALL
 
@@ -1946,7 +1947,7 @@ Example Sources:
 ```
 
 
-==== LOAD_NAME(namei)
+=== LOAD_NAME(namei)
 
 Python Versions: ALL
 
@@ -1966,7 +1967,7 @@ class C:
 ```
 
 
-==== BUILD_TUPLE(count)
+=== BUILD_TUPLE(count)
 
 Python Versions: ALL
 
@@ -1991,7 +1992,7 @@ z = (x, y)  # This creates a BUILD_TUPLE opcode:
 ```
 
 
-==== BUILD_LIST(count)
+=== BUILD_LIST(count)
 
 Python Versions: ALL
 
@@ -2016,7 +2017,7 @@ z = [x, y]  # This creates a BUILD_LIST opcode:
 ```
 
 
-==== BUILD_SET(count)
+=== BUILD_SET(count)
 
 Python Versions: ALL
 
@@ -2042,7 +2043,7 @@ z = {x, y}  # This creates a BUILD_SET opcode:
 ```
 
 
-==== BUILD_MAP(count)
+=== BUILD_MAP(count)
 
 Python Versions: ALL
 
@@ -2076,7 +2077,7 @@ z = {
 ```
 
 
-==== BUILD_CONST_KEY_MAP(count)
+=== BUILD_CONST_KEY_MAP(count)
 
 Python Versions: >= 3.6
 
@@ -2109,7 +2110,7 @@ z = {
 ```
 
 
-==== BUILD_STRING(count)
+=== BUILD_STRING(count)
 
 Python Versions: >= 3.6
 
@@ -2140,7 +2141,7 @@ f'{a} {b}'
 ```
 
 
-==== LIST_TO_TUPLE
+=== LIST_TO_TUPLE
 
 Python Versions: >= 3.9
 
@@ -2177,7 +2178,7 @@ Example Sources:
 ```
 
 
-==== LIST_EXTEND(i)
+=== LIST_EXTEND(i)
 
 Python Versions: >= 3.9
 
@@ -2196,7 +2197,7 @@ Example Sources:
 See <<LIST_TO_TUPLE>>.
 
 
-==== SET_UPDATE(i)
+=== SET_UPDATE(i)
 
 Python Versions: >= 3.9
 
@@ -2225,7 +2226,7 @@ Example Sources:
 ```
 
 
-==== DICT_UPDATE(i)
+=== DICT_UPDATE(i)
 
 Python Versions: >= 3.9
 
@@ -2260,7 +2261,7 @@ Example Sources:
 ```
 
 
-==== DICT_MERGE(i)
+=== DICT_MERGE(i)
 
 Python Versions: >= 3.9
 
@@ -2294,7 +2295,7 @@ my_function(a=1, **b)
 ```
 
 
-==== LOAD_ATTR(namei)
+=== LOAD_ATTR(namei)
 
 Python Versions: ALL
 
@@ -2315,7 +2316,7 @@ my_object.attribute
 ```
 
 
-==== COMPARE_OP(op)
+=== COMPARE_OP(op)
 
 Python Versions: ALL
 
@@ -2347,7 +2348,7 @@ left_comparable == right_comparable
 ```
 
 
-==== IS_OP(invert)
+=== IS_OP(invert)
 
 Python Versions: ALL
 
@@ -2379,7 +2380,7 @@ left is right  # True
 left is not right
 ```
 
-==== CONTAINS_OP(invert)
+=== CONTAINS_OP(invert)
 
 Python Versions: ALL
 
@@ -2408,7 +2409,7 @@ Example Sources:
 ```
 
 
-==== IMPORT_NAME(namei)
+=== IMPORT_NAME(namei)
 
 Python Versions: ALL
 
@@ -2437,7 +2438,7 @@ from module import a, b, c
 
 
 
-==== IMPORT_FROM(namei)
+=== IMPORT_FROM(namei)
 
 Python Versions: ALL
 
@@ -2457,7 +2458,7 @@ from module import a, b, c
 ```
 
 
-==== JUMP_FORWARD(target_delta)
+=== JUMP_FORWARD(target_delta)
 
 Python Versions: ALL
 
@@ -2482,7 +2483,7 @@ return x * 2
 ```
 
 
-==== JUMP_BACKWARD(target_delta)
+=== JUMP_BACKWARD(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2516,7 +2517,7 @@ while True:
 ```
 
 
-==== JUMP_BACKWARD_NO_INTERRUPT(target_delta)
+=== JUMP_BACKWARD_NO_INTERRUPT(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2540,7 +2541,7 @@ yield from generator
 ```
 
 
-==== POP_JUMP_IF_TRUE(target)
+=== POP_JUMP_IF_TRUE(target)
 
 Python Versions: \<= 3.10
 
@@ -2572,7 +2573,7 @@ while not cond:  # A POP_JUMP_IF_TRUE
 ```
 
 
-==== POP_JUMP_FORWARD_IF_TRUE(target_delta)
+=== POP_JUMP_FORWARD_IF_TRUE(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2604,7 +2605,7 @@ while not cond:  # A POP_JUMP_FORWARD_IF_TRUE
 ```
 
 
-==== POP_JUMP_BACKWARD_IF_TRUE(target_delta)
+=== POP_JUMP_BACKWARD_IF_TRUE(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2626,7 +2627,7 @@ while cond:
 ```
 
 
-==== POP_JUMP_IF_FALSE(target)
+=== POP_JUMP_IF_FALSE(target)
 
 Python Versions: \<= 3.10
 
@@ -2657,7 +2658,7 @@ while cond:  # A POP_JUMP_IF_FALSE
     pass
 ```
 
-==== POP_JUMP_FORWARD_IF_FALSE(target_delta)
+=== POP_JUMP_FORWARD_IF_FALSE(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2689,7 +2690,7 @@ while cond:  # A POP_JUMP_IF_FALSE
 ```
 
 
-==== POP_JUMP_BACKWARD_IF_FALSE(target_delta)
+=== POP_JUMP_BACKWARD_IF_FALSE(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2711,7 +2712,7 @@ while not cond:
 ```
 
 
-==== POP_JUMP_FORWARD_IF_NOT_NONE(target_delta)
+=== POP_JUMP_FORWARD_IF_NOT_NONE(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2745,7 +2746,7 @@ while item is None:
 ```
 
 
-==== POP_JUMP_BACKWARD_IF_NOT_NONE(target_delta)
+=== POP_JUMP_BACKWARD_IF_NOT_NONE(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2767,7 +2768,7 @@ while item is not None:
 ```
 
 
-==== POP_JUMP_FORWARD_IF_NONE(target_delta)
+=== POP_JUMP_FORWARD_IF_NONE(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2801,7 +2802,7 @@ while item is not None:
 ```
 
 
-==== POP_JUMP_BACKWARD_IF_NONE(target_delta)
+=== POP_JUMP_BACKWARD_IF_NONE(target_delta)
 
 Python Versions: >= 3.11
 
@@ -2823,7 +2824,7 @@ while item is None:
 ```
 
 
-==== JUMP_IF_NOT_EXC_MATCH(target)
+=== JUMP_IF_NOT_EXC_MATCH(target)
 
 Python Versions: >= 3.9, \<= 3.10
 
@@ -2847,7 +2848,7 @@ except ValueError as e:
 ```
 
 
-==== JUMP_IF_TRUE_OR_POP(target)
+=== JUMP_IF_TRUE_OR_POP(target)
 
 Python Versions: ALL
 
@@ -2877,7 +2878,7 @@ a or b
 ```
 
 
-==== JUMP_IF_FALSE_OR_POP(target)
+=== JUMP_IF_FALSE_OR_POP(target)
 
 Python Versions: ALL
 
@@ -2907,7 +2908,7 @@ a and b
 ```
 
 
-==== JUMP_ABSOLUTE(target)
+=== JUMP_ABSOLUTE(target)
 
 Python Versions: ALL
 
@@ -2934,7 +2935,7 @@ while True:
 ```
 
 
-==== FOR_ITER(target_delta)
+=== FOR_ITER(target_delta)
 
 Python Versions: ALL
 
@@ -2968,7 +2969,7 @@ for item in iterable:
 ```
 
 
-==== LOAD_GLOBAL(namei)
+=== LOAD_GLOBAL(namei)
 
 Python Versions: ALL
 
@@ -3003,7 +3004,7 @@ function(1,2,3)
 ```
 
 
-==== SETUP_FINALLY(target_delta)
+=== SETUP_FINALLY(target_delta)
 
 Python Versions: \<= 3.10
 
@@ -3038,7 +3039,7 @@ except:
 ```
 
 
-==== LOAD_FAST(var_num)
+=== LOAD_FAST(var_num)
 
 Python Versions: ALL
 
@@ -3057,7 +3058,7 @@ variable
 ```
 
 
-==== STORE_FAST(var_num)
+=== STORE_FAST(var_num)
 
 Python Versions: ALL
 
@@ -3076,7 +3077,7 @@ variable = value
 ```
 
 
-==== DELETE_FAST(var_num)
+=== DELETE_FAST(var_num)
 
 Python Versions: ALL
 
@@ -3095,7 +3096,7 @@ del variable
 ```
 
 
-==== MAKE_CELL(i)
+=== MAKE_CELL(i)
 
 Python Versions: >= 3.11
 
@@ -3130,7 +3131,7 @@ def outer_function(a):
 ```
 
 
-==== COPY_FREE_VARS(n)
+=== COPY_FREE_VARS(n)
 
 Python Versions: >= 3.11
 
@@ -3163,7 +3164,7 @@ def outer_function(a):
 ```
 
 
-==== LOAD_CLOSURE(i)
+=== LOAD_CLOSURE(i)
 
 Python Versions: ALL
 
@@ -3192,7 +3193,7 @@ def outer():
 ```
 
 
-==== LOAD_DEREF(i)
+=== LOAD_DEREF(i)
 
 Python Versions: ALL
 
@@ -3228,7 +3229,7 @@ def outer():
 ```
 
 
-==== LOAD_CLASSDEREF(i)
+=== LOAD_CLASSDEREF(i)
 
 Python Versions: ALL
 
@@ -3256,7 +3257,7 @@ def outer():
 ```
 
 
-==== STORE_DEREF(i)
+=== STORE_DEREF(i)
 
 Python Versions: ALL
 
@@ -3294,7 +3295,7 @@ def outer():
 ```
 
 
-==== DELETE_DEREF(i)
+=== DELETE_DEREF(i)
 
 Python Versions: ALL
 
@@ -3332,7 +3333,7 @@ def outer():
 ```
 
 
-==== RAISE_VARARGS(argc)
+=== RAISE_VARARGS(argc)
 
 Python Versions: ALL
 
@@ -3381,7 +3382,7 @@ raise Exception() from cause  # argc = 2
 ```
 
 
-==== KW_NAMES(consti)
+=== KW_NAMES(consti)
 
 Python Versions: >= 3.11
 
@@ -3402,7 +3403,7 @@ my_function(a=1, b=2)
 ```
 
 
-==== PRECALL(argc)
+=== PRECALL(argc)
 
 Python Versions: >= 3.11
 
@@ -3423,7 +3424,7 @@ my_function(1, 2, a=3)
 ```
 
 
-==== PUSH_NULL
+=== PUSH_NULL
 
 Python Versions: >= 3.11
 
@@ -3444,7 +3445,7 @@ my_function(1, 2, a=3)
 ```
 
 
-==== CALL(argc)
+=== CALL(argc)
 
 Python Versions: >= 3.11
 
@@ -3481,7 +3482,7 @@ my_object.my_function(1, 2, a=3)
 ```
 
 
-==== CALL_FUNCTION(argc)
+=== CALL_FUNCTION(argc)
 
 Python Versions: \<= 3.10
 
@@ -3504,7 +3505,7 @@ function(1, 2, 3)
 ```
 
 
-==== CALL_FUNCTION_KW(argc)
+=== CALL_FUNCTION_KW(argc)
 
 Python Versions: \<= 3.10
 
@@ -3530,7 +3531,7 @@ function(1, 2, arg_1=3)
 ```
 
 
-==== CALL_FUNCTION_EX(flags)
+=== CALL_FUNCTION_EX(flags)
 
 Python Versions: ALL
 
@@ -3586,7 +3587,7 @@ function(1, arg=1, *iterable)
 ```
 
 
-==== LOAD_METHOD(namei)
+=== LOAD_METHOD(namei)
 
 Python Versions: ALL
 
@@ -3613,7 +3614,7 @@ my_onject.function
 ```
 
 
-==== CALL_METHOD(argc)
+=== CALL_METHOD(argc)
 
 Python Versions: \<= 3.10
 
@@ -3638,7 +3639,7 @@ my_object.function()
 ```
 
 
-==== MAKE_FUNCTION(flags)
+=== MAKE_FUNCTION(flags)
 
 Python Versions: ALL
 
@@ -3711,7 +3712,7 @@ def outer():
 ```
 
 
-==== BUILD_SLICE(argc)
+=== BUILD_SLICE(argc)
 
 Python Versions: ALL
 
@@ -3750,7 +3751,7 @@ my_list[1:2:3]
 ```
 
 
-==== EXTENDED_ARG(ext)
+=== EXTENDED_ARG(ext)
 
 Python Versions: ALL
 
@@ -3781,7 +3782,7 @@ Example Sources:
 ```
 
 
-==== FORMAT_VALUE(flags)
+=== FORMAT_VALUE(flags)
 
 Python Versions: ALL
 
