@@ -17,7 +17,7 @@ It is responsible for:
 
 ** Setting up the `JavaPythonClassWriter` and `MethodVisitor` used for bytecode generation.
 
-** Creating and setting fields on the generated class objects  #TODO Describe required fields in a different doc#.
+** Creating and setting fields on the generated class objects (See <<_pythonbytecodetojavabytecodetranslator>> for details).
 
 ** Do the leg work of moving/translating Java parameters (ex: `int`) into `PythonLikeObject`.
 
@@ -52,3 +52,74 @@ They can be found in the `implementors` package.
 In a diagram, the overall process of compiling a function looks like this:
 
 image::jpyinterpreter-architecture/jpyinterpreter-architecture.png[A diagram showing how JPyInterpreter classes interact]
+
+
+== Types
+
+The builtin types for JPyInterpreter can be found in the `types` package.
+They all implement `PythonLikeObject`, which the interface the bytecode uses to represent arbitrary objects.
+If type flow analysis determines a more specific type can be used (via `StackMetadata`), the more specific type is used directly instead.
+`PythonLikeObject` have several methods:
+
+- `\\__getAttributeOrNull`: returns the attribute with the given name if it exists, otherwise returns null.
+This is NOT `__getattribute\__` (which is implemented by `$method$\__getattribute\__` instead).
+This is more akin to `self.\__dict\__[attribute]`.
+The default `$method$\__getattribute__` uses it to get the attribute (with additional magic to handle descriptors).
+
+- `__getAttributeOrError`: returns the attribute with the given name if it exists, otherwise raises `AttributeError`.
+Used in bytecode generation to lookup methods on types.
+
+- `\\__setAttribute`: sets the attribute with the given name to the given value.
+This is NOT `__setattr\__` (which is implemented by `$method$\__setattr\__` instead).
+This is more akin to `self.\__dict\__[attribute] = value`.
+The default `$method$\__setattr__` uses it to set the attribute.
+
+- `\\__deleteAttribute`: deletes the attribute with the given name.
+This is NOT `__delattr\__` (which is implemented by `$method$\__delattr\__` instead).
+This is more akin to `del self.\__dict\__[attribute]`.
+The default `$method$\__delattr__` uses it to delete the attribute.
+
+- `__getType`: returns the type of the object.
+Used to implement `type(object)`.
+
+- `__getGenericType`: returns the generic type of the object (ex: `list[int]`).
+Used for typeflow analysis.
+
+- `$method$<method-name>`: the builtin methods on every object in Python.
+The `$method$<method-name>` naming is to allow custom classes to override them (custom classes prefix method names with `$method$` to not clash with Java method names).
+
+== PythonBytecodeToJavaBytecodeTranslator
+
+The entrypoint for function translation, and the glue code for the many subsystems of the translator.
+It is responsible for setting up the `JavaPythonClassWriter`, `MethodVisitor` and configuring the class' fields.
+The fields it configures are:
+
+- `co_consts`: Static; a `List<PythonLikeObject>` that stores constants used in the bytecode.
+
+- `co_names`: Static; a `List<PythonString>` that stores names used in the bytecode.
+
+- `co_varnames`: Static; a `List<PythonString>` that stores variable names used in the bytecode.
+
+- `\\__globals__`: Static; a `Map<String, PythonLikeObject>` used to read and store globals.
+
+- `\\__spec_getter__`: Static; a `BiFunction<PythonLikeTuple, PythonLikeDict, ArgumentSpec<PythonLikeObject>>` that maps default arguments (which are per function) to an `ArgumentSpec` that can be used to set parameters.
+
+- `\\__defaults__`: Instance; a `PythonLikeTuple` that stores default positional arguments.
+
+- `\\__kwdefaults__`: Instance; a `PythonLikeDict` that stores default keyword arguments.
+
+- `\\__annotations__`: Instance; a `PythonLikeDict` that stores type annotations on the function.
+
+- `\\__closure__`: Instance; a `PythonLikeTuple` that stores the function's closure (i.e. the free variable cells).
+
+- `\\__qualname__`: Instance; a `PythonString` that stores the qualified name of the function.
+
+- `\\__spec__`: Instance; an `ArgumentSpec` that can be used to receive parameter (and correctly handle default arguments).
+
+- `\\__interpreter__`: Instance; the `PythonInterpreter` this function runs in (used to perform imports and lookup unknown globals).
+
+If a Python function cannot be translated for any reason (ex: native code), the following fields are also added:
+
+- `\\__code__`: Static; an opaque pointer to the function's CPython code object (used in the construct to make the wrapped CPython function).
+
+- `\\__function__`: Instance; a `PythonObjectWrapper` that wraps the CPython function (used to call the CPython function).
