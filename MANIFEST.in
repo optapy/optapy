@@ -13,3 +13,6 @@ graft jpyinterpreter/src/test/java
 
 include optapy-docs/pom.xml
 graft optapy-docs/src
+
+include jpyinterpreter-docs/pom.xml
+graft jpyinterpreter-docs/src
