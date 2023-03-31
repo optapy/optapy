@@ -1,0 +1,54 @@
+[[jpyinterpreterArchitecture]]
+= JPyInterpreter Architecture
+
+The architecture of JPyInterpreter is composed of several components spread across Python and Java.
+The Python components are:
+
+- `jvm_setup.py`, which sets up the JVM and the hooks JPyInterpreter uses to communicate with CPython (to look up packages, call native methods, and converting CPython object to Java object and vice-versa).
+
+- `python_to_java_bytecode_translator.py`, which acts as the Python's frontend to JPyInterpreter.
+Users supply a CPython function to translate (and an optional Java functional interface it implements) to `translate_python_bytecode_to_java_bytecode`, which then converts that function to a `PythonCompiledFunction` and pass it to `PythonBytecodeToJavaBytecodeTranslator` to translate the function.
+It also provides the `translate_python_class_to_java_class` function, which converts a user supplied CPython class, convert it to a `PythonCompiledClass`, and pass it to `PythonClassTranslator` to translate the class.
+
+The Java components are:
+
+- `PythonBytecodeToJavaBytecodeTranslator`, which acts as the entrypoint for function translation.
+It is responsible for:
+
+** Setting up the `JavaPythonClassWriter` and `MethodVisitor` used for bytecode generation.
+
+** Creating and setting fields on the generated class objects  #TODO Describe required fields in a different doc#.
+
+** Do the leg work of moving/translating Java parameters (ex: `int`) into `PythonLikeObject`.
+
+** Setup cells variables.
+
+** Delegating to `PythonGeneratorTranslator` when it detects the function being translated is a generator.
+
+** Using `FlowGraph` to calculate the `StackMetadata` of each instruction.
+
+** Calling the `implement` method on every opcode in the `Opcode` list with the `StackMetadata` for the opcode and the `FunctionMetadata` for the overall function.
+
+- `PythonGeneratorTranslator` is like `PythonBytecodeToJavaBytecodeTranslator` but for generators.
+It breaks a single generator function into multiple `advance` functions, and generate each `advance` function bytecode independently.
+
+- `FlowGraph`, which calculates the `StackMetadata` that corresponds to each `Opcode`.
+It is responsible for unifying the `StackMetadata` from all jump sources for each `Opcode` that is a jump target.
+For instance, if two sources with the same target have post `StackMetadata` of `... int` and `... bool` respectively, `FlowGraph` will unify that to `... int` (since `bool` is a subclass of `int`, for better or worse).
+
+- `StackMetadata` stores metadata about the stack and local variables.
+Each `Opcode` get its own `StackMetadata` instance.
+It is mostly used to perform optimizations; for instance, if we detect the top two items on the stack are `int` and `int` for the `BINARY_ADD` instruction, we can change the (normally complex due to Python semantics) `BINARY_ADD` bytecode into a single method call.
+
+- `FunctionMetadata` stores metadata about the function (for instance, the `MethodVisitor` to use to generate bytecode). Each `Opcode` get the same `FunctionMetadata` instance.
+
+- `Opcode` are the interface between CPython opcodes and the `Implementors`.
+Each describe a particular operation, and are usually (but not always) correspond to a CPython opcode.
+Some CPython opcodes will map to the same `Opcode` implementation.
+
+- `Implementors` are responsible for generating the Java bytecode corresponding to CPython bytecode.
+They can be found in the `implementors` package.
+
+In a diagram, the overall process of compiling a function looks like this:
+
+image::jpyinterpreter-architecture/jpyinterpreter-architecture.png[A diagram showing how JPyInterpreter classes interact]
