@@ -1,8 +1,5 @@
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
-from distutils.command.build_py import build_py
+from setuptools import setup
+from setuptools.command.build_py import build_py
 import glob
 import os
 import platform
@@ -18,24 +15,23 @@ class FetchDependencies(build_py):
     add them as files within a python package
     """
     def create_stubs(self, project_root, command):
+        working_directory = project_root / 'optapy-core'
         subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies'],
-                       cwd=(project_root / 'optapy-core'), check=True)
+                       cwd=working_directory, check=True)
         subprocess.run([str((project_root / command).absolute()), 'dependency:copy-dependencies',
-                        '-Dclassifier=javadoc'], cwd=project_root, check=True)
+                        '-Dclassifier=javadoc'], cwd=working_directory, check=True)
         subprocess.run([sys.executable, str((project_root / 'create-stubs.py').absolute())],
-                       cwd=(project_root / 'optapy-core'), check=True)
-        target_dir = os.path.join(self.build_lib, 'java-stubs')
-        for fn in find_stub_files(str(project_root / 'java-stubs')):
-            os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
-            copyfile(os.path.join(str(project_root / 'java-stubs'), fn), os.path.join(target_dir, fn))
-        target_dir = os.path.join(self.build_lib, 'jpype-stubs')
-        for fn in find_stub_files(str(project_root / 'jpype-stubs')):
-            os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
-            copyfile(os.path.join(str(project_root / 'jpype-stubs'), fn), os.path.join(target_dir, fn))
-        target_dir = os.path.join(self.build_lib, 'org-stubs')
-        for fn in find_stub_files(str(project_root / 'org-stubs')):
-            os.makedirs(os.path.dirname(os.path.join(target_dir, fn)), exist_ok=True)
-            copyfile(os.path.join(str(project_root / 'org-stubs'), fn), os.path.join(target_dir, fn))
+                       cwd=working_directory, check=True)
+        target_dir = self.build_lib
+        for file_name in find_stub_files(str(working_directory / 'java-stubs')):
+            os.makedirs(os.path.dirname(os.path.join(target_dir, file_name)), exist_ok=True)
+            copyfile(os.path.join(str(working_directory), file_name), os.path.join(target_dir, file_name))
+        for file_name in find_stub_files(str(working_directory / 'jpype-stubs')):
+            os.makedirs(os.path.dirname(os.path.join(target_dir, file_name)), exist_ok=True)
+            copyfile(os.path.join(str(working_directory), file_name), os.path.join(target_dir, file_name))
+        for file_name in find_stub_files(str(working_directory / 'org-stubs')):
+            os.makedirs(os.path.dirname(os.path.join(target_dir, file_name)), exist_ok=True)
+            copyfile(os.path.join(str(working_directory), file_name), os.path.join(target_dir, file_name))
 
     def run(self):
         if not self.dry_run:
@@ -83,15 +79,12 @@ def find_stub_files(stub_root: str):
     It's licensed under Apache 2.0:
     https://github.com/dropbox/sqlalchemy-stubs/blob/master/LICENSE
     """
-    result = []
     for root, dirs, files in os.walk(stub_root):
         for file in files:
             if file.endswith(".pyi"):
                 if os.path.sep in root:
                     sub_root = root.split(os.path.sep, 1)[-1]
-                    file = os.path.join(sub_root, file)
-                result.append(file)
-    return result
+                    yield os.path.join(sub_root, file)
 
 
 this_directory = Path(__file__).parent
