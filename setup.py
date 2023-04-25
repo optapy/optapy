@@ -92,7 +92,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='optapy',
-    version='8.31.1b0',
+    version='9.37.0b0',
     license='Apache License Version 2.0',
     license_file='LICENSE',
     description='An AI constraint solver that optimizes planning and scheduling problems',

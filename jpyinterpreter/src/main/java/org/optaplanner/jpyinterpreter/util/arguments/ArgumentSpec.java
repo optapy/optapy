@@ -148,7 +148,7 @@ public final class ArgumentSpec<Out_> {
 
     /**
      * Returns the index of an argument with the given name. Returns -1 if no argument has the given name.
-     * 
+     *
      * @param argumentName The name of the argument.
      * @return the index of an argument with the given name, or -1 if no argument has that name
      */

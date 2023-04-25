@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optaplanner-build-parent</artifactId>
-    <version>8.31.1.Final</version>
+    <version>9.37.0.Final</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -17,7 +17,6 @@
     <maven.compiler.release>11</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <version.ch.qos.logback>1.2.10</version.ch.qos.logback>
     <version.compiler.plugin>3.8.1</version.compiler.plugin>
     <version.surefire.plugin>2.22.2</version.surefire.plugin>
     <version.apache.collections4>4.4</version.apache.collections4>
