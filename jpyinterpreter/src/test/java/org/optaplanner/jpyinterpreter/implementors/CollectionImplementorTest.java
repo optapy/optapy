@@ -472,13 +472,13 @@ public class CollectionImplementorTest {
                 PythonInteger.valueOf(3),
                 PythonInteger.valueOf(4),
                 PythonInteger.valueOf(5))), 1, 2))
-                        .isEqualTo(new PythonLikeList(List.of(PythonInteger.valueOf(2))));
+                .isEqualTo(new PythonLikeList(List.of(PythonInteger.valueOf(2))));
 
         assertThat(javaFunction.apply(PythonLikeTuple.fromList(List.of(PythonInteger.valueOf(1),
                 PythonInteger.valueOf(2),
                 PythonInteger.valueOf(3),
                 PythonInteger.valueOf(4),
                 PythonInteger.valueOf(5))), 1, 2))
-                        .isEqualTo(PythonLikeTuple.fromList(List.of(PythonInteger.valueOf(2))));
+                .isEqualTo(PythonLikeTuple.fromList(List.of(PythonInteger.valueOf(2))));
     }
 }

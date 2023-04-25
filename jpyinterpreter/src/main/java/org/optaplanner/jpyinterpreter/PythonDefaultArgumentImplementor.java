@@ -239,7 +239,7 @@ public class PythonDefaultArgumentImplementor {
      *     }
      * }
      * </pre>
-     * 
+     *
      * @param classVisitor
      * @param classInternalName
      * @param methodDescriptor

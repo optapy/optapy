@@ -335,7 +335,7 @@ public class CollectionImplementor {
      *     collection.reverseAdd(TOS(itemCount - 1));
      * </pre>
      * </code>
-     * 
+     *
      * @param collectionType The type of collection to create
      * @param itemCount The number of items to put into collection from the stack
      */
@@ -387,7 +387,7 @@ public class CollectionImplementor {
      *     collection.put(TTOS(2*itemCount - 1), TOS(2*itemCount - 2));
      * </pre>
      * </code>
-     * 
+     *
      * @param mapType The type of map to create
      * @param itemCount The number of key value pairs to put into map from the stack
      */
@@ -424,7 +424,7 @@ public class CollectionImplementor {
      *     collection.put(TOS[itemCount-1], TOS(itemCount));
      * </pre>
      * </code>
-     * 
+     *
      * @param mapType The type of map to create
      * @param itemCount The number of key value pairs to put into map from the stack
      */

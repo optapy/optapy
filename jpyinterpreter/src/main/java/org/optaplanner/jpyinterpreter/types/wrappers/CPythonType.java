@@ -23,7 +23,7 @@ public class CPythonType extends PythonLikeType {
     private static String getTypeName(OpaquePythonReference pythonReference) {
         return ((PythonString) CPythonBackedPythonInterpreter
                 .lookupAttributeOnPythonReference(pythonReference, "__name__"))
-                        .getValue();
+                .getValue();
     }
 
     public static CPythonType lookupTypeOfPythonObject(OpaquePythonReference reference) {

@@ -4,14 +4,15 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optapy-parent</artifactId>
-    <version>8.31.1.Final</version>
+    <version>9.37.0.Final</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>jpyinterpreter</artifactId>
 
   <properties>
     <java.module.name>jpyinterpreter</java.module.name>
-    <version.org.ow2.asm>9.4</version.org.ow2.asm>
+    <version.org.ow2.asm>9.5</version.org.ow2.asm>
   </properties>
 
   <dependencyManagement>

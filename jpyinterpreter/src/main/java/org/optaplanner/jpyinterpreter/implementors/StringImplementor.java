@@ -35,7 +35,7 @@ public class StringImplementor {
      *     TOS' = PythonString.valueOf(builder.toString())
      * </pre>
      * </code>
-     * 
+     *
      * @param itemCount The number of items to put into collection from the stack
      */
     public static void buildString(MethodVisitor methodVisitor,
