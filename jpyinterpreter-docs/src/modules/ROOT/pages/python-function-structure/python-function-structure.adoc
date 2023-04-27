@@ -103,7 +103,7 @@ eligible to be constants are:
 ** `None` (`None`)
 ** `Ellipsis` (`...`)
 +
-The following objects an ineligible to be used as constants, and are loaded with `LOAD_GLOBAL` instead:
+The following objects are not eligible to be used as constants, and are loaded with `LOAD_GLOBAL` instead:
 +
 ** `class` objects (ex: `int`, `str`, user defined classes)
 ** `function` objects (ex: `max`, `range`, user defined functions)

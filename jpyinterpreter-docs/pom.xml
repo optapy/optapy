@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.optaplanner</groupId>
     <artifactId>optapy-parent</artifactId>
-    <version>8.31.1.Final</version>
+    <version>9.37.0.Final</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -27,8 +27,7 @@
     duplicating the other content.
     -->
     <source.document.name>.index.adoc</source.document.name>
-
-    <version.jpyinterpreter>8.30.0b0</version.jpyinterpreter>
+    <version.jpyinterpreter>${project.python.version}</version.jpyinterpreter>
   </properties>
 
   <build>
