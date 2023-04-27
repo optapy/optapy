@@ -29,8 +29,7 @@
     duplicating the other content.
     -->
     <source.document.name>.index.adoc</source.document.name>
-
-    <version.optapy>9.37.0b0</version.optapy>
+    <version.optapy>${project.python.version}</version.optapy>
   </properties>
 
   <build>

@@ -1234,7 +1234,7 @@ Generators basically act as two separate functions:
 * One outer function that just set locals and return a generator object that wraps the inner function.
 * One inner function that yield values.
 
-In this way, it is similar to returning a new anonymous class in a Java function, where you need to pass the function locals to the anonymous class.
+In this way, it is similar to returning a new anonymous class in a Java function, where we need to pass the function locals to the anonymous class.
 
 However, unlike Java, the outer function and the inner function share the same bytecode. So a generator will start with the `RETURN_GENERATOR` opcode (which returns the generator object), followed by the bytecode for the generator.
 
@@ -2305,7 +2305,7 @@ Stack After: ... attribute
 ```
 
 Loads the attribute with the name `co_names[namei]` on the object at the top of the stack; the top of stack is popped.
-The value is gotten by calling the `\\__getattribute__(self, name: str)` method on the type of object with `object` and `co_names[namei]` as the arguments.
+The value is retrieved by calling the `\\__getattribute__(self, name: str)` method on the type of object with `object` and `co_names[namei]` as the arguments.
 
 Example Sources:
 

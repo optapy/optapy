@@ -40,7 +40,7 @@ RETURN
 +
 since the expected stack size prior to RETURN is 0 for both branches of `if_icmpeq`.
 
-- The stack is typed, and will cause verification errors if you try to call a method with invalid types on the stack.
+- The stack is typed, and will cause verification errors if we were to try to call a method with invalid types on the stack.
 For instance, this is invalid:
 +
 ```
@@ -48,7 +48,7 @@ ILOAD 1
 INVOKESTATIC [MyClass.method(float) -> float]
 ```
 +
-since you are calling a method that expects a `float` with an `int`.
+since we are calling a method that expects a `float` with an `int`.
 This is also invalid:
 +
 ```
@@ -56,8 +56,8 @@ ALOAD 1 [Object]
 INVOKEVIRTUAL [MyClass.method() -> void]
 ```
 +
-Since you trying to call a `MyClass` method on `Object` (which may or may not be a `MyClass` instance).
-To fix it, you would need to cast it first:
+Since we are trying to call a `MyClass` method on `Object` (which may or may not be a `MyClass` instance).
+To fix it, we need to cast it first:
 +
 ```
 ALOAD 1 [Object]
@@ -74,7 +74,7 @@ A full explanation of the Java Virtual Machine's instruction set can be viewed a
 Java bytecode instructions are generated with the https://asm.ow2.io/[ASM library].
 Functions are created by creating a `JavaPythonClassWriter` (which is a `ClassWriter` that overrides `getCommonSuperClass` to prevent `TypeNotPresent` errors) instance,
 getting the MethodVisitor for its https://docs.oracle.com/javase/specs/jls/se8/html/jls-9.html#jls-9.8[functional interface method],
-adapting the method visitor with `MethodVisitorAdapters.adapt` (which sorts try blocks for you as well as give better error messages),
+adapting the method visitor with `MethodVisitorAdapters.adapt` (which sorts try blocks for us and gives us better error messages),
 and then generating the Java bytecode using that method visitor.
 It looks like this in the code:
 
@@ -108,30 +108,30 @@ To generate a particular opcode instruction, identify what kind of instruction i
 - Instructions that either conditionally or unconditionally jump to a label are created with `visitJumpInsn`, which take the label to either conditionally or unconditionally jump to.
 
 - Instructions that load parameters or local variables are created with `visitVarInsn`, which take an `int` to identify which slot to load the parameter/local variable from.
-You can use the `LocalVariableHelper` on `StackMetadata` to obtain the slot number of parameters and local variables.
+We can use the `LocalVariableHelper` on `StackMetadata` to obtain the slot number of parameters and local variables.
 
 - Instructions that operate on the stack are created with `visitInsn` (for instance, popping a value or adding the top two `int` on the stack). No parameter (beside the opcode to generate) is needed for these opcodes.
 
 - Instructions that call methods are created with `visitMethodInsn`, which takes.
 
 ** The internal name of the declaring class.
-This can be gotten with `Type.getInternalName`.
+This can be retrieved with `Type.getInternalName`.
 
 ** The method name.
 
 ** The method descriptor string that describe the parameter and return types of the method.
-This can be received with `Type.getMethodDescriptor(Type returnType, Type... parameterTypes)` (you can get the `Type` object of a class with `Type.getType`).
+This can be received with `Type.getMethodDescriptor(Type returnType, Type... parameterTypes)` (the `Type` object of a class can be received with `Type.getType`).
 
-** A boolean that true if the method is defined on an interface, false otherwise.
+** A boolean that is true if the method is defined on an interface, false otherwise.
 
 - Instructions that read or set fields are created with `visitFieldInsn`, which takes
 
-** The internal name of the class this field belongs to. This can be gotten with `Type.getInternalName`.
+** The internal name of the class this field belongs to. This can be retrieved with `Type.getInternalName`.
 
 ** The field's name.
 
 ** The field's type descriptor string. This can be received with `Type.getDescriptor`.
 
-- Instructions that operate on types (i.e. `CHECKCAST`, `INSTANCEOF` and `NEW`) are generated with `visitTypeInsn`. It takes the internal name of the class to cast/instanceof/new as an argument (this can be gotten with `Type.getInternalName`).
+- Instructions that operate on types (i.e. `CHECKCAST`, `INSTANCEOF` and `NEW`) are generated with `visitTypeInsn`. It takes the internal name of the class to cast/instanceof/new as an argument (this can be retrieved with `Type.getInternalName`).
 
 - The instruction that load constants onto the stack can be generated with `visitLDC`; it takes the constant to load (which *must* be a primitive type, Type object, or a String) as its only argument.

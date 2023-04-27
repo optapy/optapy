@@ -26,7 +26,7 @@ ADD
 RETURN
 ```
 
-The stack start initially empty, and each operation modifies it:
+The stack starts initially empty, and each operation modifies it:
 
 ```
 // []
@@ -94,7 +94,7 @@ RETURN
 [[jumpsInAStackMachine]]
 == Jumps in a Stack Machine
 
-An stack machine opcode could conditionally jump to a different location. For instance:
+A stack machine opcode could conditionally jump to a different location. For instance:
 
 ```python
 def test(x):
@@ -145,7 +145,7 @@ LOAD_LOCAL 1 (a) <------------------------|
 RETURN
 ```
 
-In particular, the instruction after `POP_JUMP_IF_FALSE` will be the instruction after `skip_if` if TOS is False. If TOS is True, it will be the instruction after `POP_JUMP_IF_FALSE` instead.
+In particular, the instruction after `POP_JUMP_IF_FALSE` will be the instruction after `skip_if` if TOS is False. If TOS is True, it will be the instruction after `POP_JUMP_IF_FALSE` instead. We call the possible next instruction(s) for a given instruction that instruction's target(s).
 
 This means the instruction after the label `skip_if` has
 two possible predecessors:
