@@ -205,7 +205,7 @@ w, x, y, z = z, y, x, w
 
 === DUP_TOP
 
-Python Versions: >= 3.2
+Python Versions: >= 3.2, \<= 3.10
 
 ```
 Stack Prior: ... top
@@ -217,11 +217,14 @@ Used to preserve a stack value that is used in multiple operations.
 
 Example Sources:
 
-#TODO#
+```python
+# Python 3.10 and below
+a == b == c
+```
 
 === DUP_TOP_TWO
 
-Python Versions: >= 3.2
+Python Versions: >= 3.2, \<= 3.10
 
 ```
 Stack Prior: ... a, b
@@ -232,7 +235,9 @@ Duplicates the top two elements of the stack.
 
 Example Sources:
 
-#TODO#
+```python
+a[b] += a[c]
+```
 
 === COPY(i)
 
@@ -248,7 +253,10 @@ The item is not removed from its original position.
 
 Example Sources:
 
-#TODO#
+```python
+# Python 3.11 and above
+a == b == c
+```
 
 === SWAP(i)
 
@@ -263,7 +271,10 @@ Swaps the item at the given 1-based index in the stack with the top of stack.
 
 Example Sources:
 
-#TODO#
+```python
+# Python 3.11 and above
+a == b == c
+```
 
 === UNARY_POSITIVE
 
