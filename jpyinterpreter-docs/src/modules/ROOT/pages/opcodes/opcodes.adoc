@@ -54,6 +54,25 @@ So an absolute jump with argument 2 will go to the instruction at address 2 rega
 Relative jumps go to the instruction that are argument addresses away from it.
 So a relative jump with argument 2 will go to the instruction at address 3 if the jump is at address 1, or 4 if the jump is at address 2.
 
+
+[#_cell_variable_index]
+== Cell Variable Index
+
+In Python 3.10 and below, the argument for `LOAD_CLOSURE`, `LOAD_CLASSDEREF`, `LOAD_DEREF`, `STORE_DEREF` and `DELETE_DEREF` correspond to the index of the variable name in the combined list `co_cellvars + co_freevars`.
+For instance, if `co_cellvars = ['a', 'b']` and `co_freevars = ['c', 'd']`, the argument to read/modify/delete the variable corresponding to each name would be:
+
+- 'a': 0
+- 'b': 1
+- 'c': 2
+- 'd': 3
+
+In Python 3.11, the indices for cell variables that do not correspond to parameters are offset by `co_varnames`. If a cell variable corresponds to a parameter, it uses the parameter index in `co_varnames` as its cell index. For instance, if `co_varnames = ['a', 'x', 'y']`, `co_cellvars = ['a', 'b']` and `co_freevars = ['c', 'd']`, the argument to read/modify/delete the variable corresponding to each name would be:
+
+- 'a': 0
+- 'b': 3
+- 'c': 4
+- 'd': 5
+
 == Opcode Listing
 
 === NOP
@@ -3184,8 +3203,7 @@ Stack Prior: ...
 Stack After: ... cell
 ```
 
-Loads the cell (not its value) in slot `i`.
-#TODO explain where to get the variable name#
+Loads the cell (not its value) in slot `i` as described by <<_cell_variable_index>>.
 A cell corresponds to either a shared or free variable.
 Used to pass shared variables from an outer function to an inner function (where they be free variables).
 
@@ -3213,8 +3231,7 @@ Stack Prior: ...
 Stack After: ... cell_value
 ```
 
-Loads the value contained in the cell at slot `i`.
-#TODO explain where to get the variable name#
+Loads the value contained in the cell at slot `i` as described by <<_cell_variable_index>>.
 A cell corresponds to either a shared or free variable.
 Used to read shared and free variables.
 
@@ -3250,8 +3267,7 @@ Stack After: ... cell_value
 ```
 
 If locals has a variable corresponding to the name of slot `i`, push its value.
-Otherwise, push the value contained in the cell at slot `i`.
-#TODO explain where to get the variable name#
+Otherwise, push the value contained in the cell at slot `i` as described by <<_cell_variable_index>>.
 A cell corresponds to either a shared or free variable.
 Used to read shared and free variables in class bodies.
 
@@ -3277,8 +3293,7 @@ Stack Prior: ... cell_value
 Stack After: ...
 ```
 
-Pop off the top of the stack and sets the value contained in the cell at slot `i` to the popped value.
-#TODO explain where to get the variable name#
+Pop off the top of the stack and sets the value contained in the cell at slot `i` as described by <<_cell_variable_index>> to the popped value.
 A cell corresponds to either a shared or free variable.
 Used to set shared and free variables.
 
@@ -3315,10 +3330,9 @@ Stack Prior: ...
 Stack After: ...
 ```
 
-Deletes the value contained in the cell at slot `i`.
+Deletes the value contained in the cell at slot `i` as described by <<_cell_variable_index>>.
 The actual cell is NOT deleted, but has no associated
 value.
-#TODO explain where to get the variable name#
 A cell corresponds to either a shared or free variable.
 Used to delete shared and free variables.
 
