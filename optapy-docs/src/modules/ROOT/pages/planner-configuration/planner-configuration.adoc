@@ -154,7 +154,7 @@ def user_request(..., user_input):
     solver_config = optapy.config.solver.SolverConfig(template) # Copy it
     solver_config.getTerminationConfig().setMinutesSpentLimit(user_input)
     solver_factory = solver_factory_create(solver_config)
-    solver = solver_factory.buildSolver();
+    solver = solver_factory.buildSolver()
     ...
 
 ----
@@ -680,7 +680,7 @@ from optapy.types import CountableValueRange, ValueRangeFactory
     @value_range_provider(range_id = "stock_amount_range", value_range_type = CountableValueRange)
     def get_stock_amount_range(self) {
         # Range: 0, 200, 400, 600, ..., 9999600, 9999800, 10000000
-        return ValueRangeFactory.createIntValueRange(0, 10000000, 200);
+        return ValueRangeFactory.createIntValueRange(0, 10000000, 200)
     }
 ----
 
@@ -1136,13 +1136,13 @@ For example in examination, a cached problem fact `TopicConflict` is created for
         for left_topic in self.topic_list:
             for right_topic in self.topic_list:
                 if left_topic.topic_id < right_topic.topic_id:
-                    student_size = 0;
+                    student_size = 0
                     for student in left_topic.student_list:
                         if student in right_topic.student_list:
                             student_size += 1
                     if student_size > 0:
                         topic_conflict_list.append(TopicConflict(left_topic, right_topic, student_size))
-        return topic_conflict_list;
+        return topic_conflict_list
 ----
 
 Where a score constraint needs to check that no two exams with a topic that shares a student are scheduled close together (depending on the constraint: at the same time, in a row, or in the same day), the `TopicConflict` instance can be used as a problem fact, rather than having to combine every two `Student` instances.
@@ -1230,10 +1230,10 @@ For example in n queens, an `NQueens` instance is created with the required `Col
             queen = Queen()
             queen.queen_id = id
             queen_id += 1
-            queen.column = column;
+            queen.column = column
             # Notice that we leave the PlanningVariable properties as None
-            queen_list.append(queen);
-        return queen_list;
+            queen_list.append(queen)
+        return queen_list
 ----
 
 .Uninitialized Solution for the Four Queens Puzzle
