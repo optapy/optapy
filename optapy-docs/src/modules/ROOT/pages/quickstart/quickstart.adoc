@@ -233,7 +233,7 @@ def student_group_conflict(constraint_factory: ConstraintFactory):
 
 The `@constraint_provider` decorator allows OptaPy to use a function as a constraint provider.
 The function must take exactly one argument; the passed argument is a `ConstraintFactory` used for creating constraints.
-For more information, see https://docs.optaplanner.org/latest/optaplanner-docs/html_single/index.html#constraintStreams[Constraint Streams] in the OptaPy documentation.
+For more information, see https://www.optapy.org/docs/latest/constraint-streams/constraint-streams.html[Constraint Streams] in the OptaPy documentation.
 
 == Gather the domain objects in a planning solution
 
