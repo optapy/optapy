@@ -1,3 +1,5 @@
+.User Guide
+
 * xref:planner-introduction/planner-introduction.adoc[leveloffset=+1]
 * xref:quickstart/quickstart.adoc[leveloffset=+1]
 * xref:planner-configuration/planner-configuration.adoc[leveloffset=+1]
@@ -13,3 +15,12 @@
 * xref:partitioned-search/partitioned-search.adoc[leveloffset=+1]
 * xref:repeated-planning/repeated-planning.adoc[leveloffset=+1]
 * xref:design-patterns/design-patterns.adoc[leveloffset=+1]
+
+.Developer Guide
+
+* xref:jpyinterpreter-introduction/jpyinterpreter-introduction.adoc[leveloffset=+1]
+* xref:stack-machines/stack-machines.adoc[leveloffset=+1]
+* xref:python-function-structure/python-function-structure.adoc[leveloffset=+1]
+* xref:opcodes/opcodes.adoc[leveloffset=+1]
+* xref:java-bytecode/java-bytecode.adoc[leveloffset=+1]
+* xref:jpyinterpreter-architecture/jpyinterpreter-architecture.adoc[leveloffset=+1]

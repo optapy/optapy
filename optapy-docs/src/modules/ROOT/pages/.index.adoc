@@ -33,3 +33,14 @@ include::evolutionary-algorithms/evolutionary-algorithms.adoc[leveloffset=+1]
 include::partitioned-search/partitioned-search.adoc[leveloffset=+1]
 include::repeated-planning/repeated-planning.adoc[leveloffset=+1]
 include::design-patterns/design-patterns.adoc[leveloffset=+1]
+
+= OptaPy Developer Guide
+
+image::shared/optaPyLogo.png[align="center"]
+
+include::jpyinterpreter-introduction/jpyinterpreter-introduction.adoc[leveloffset=+1]
+include::stack-machines/stack-machines.adoc[leveloffset=+1]
+include::python-function-structure/python-function-structure.adoc[leveloffset=+1]
+include::opcodes/opcodes.adoc[leveloffset=+1]
+include::java-bytecode/java-bytecode.adoc[leveloffset=+1]
+include::jpyinterpreter-architecture/jpyinterpreter-architecture.adoc[leveloffset=+1]

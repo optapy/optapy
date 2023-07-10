@@ -10,6 +10,7 @@ version: latest
 asciidoc:
   attributes:
     optapy-version: ${version.optapy}
+    jpyinterpreter-version: ${version.jpyinterpreter}
     java-version: ${maven.compiler.release}
 nav:
   - modules/ROOT/nav.adoc
