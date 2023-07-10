@@ -1,7 +1,6 @@
 [[jpyinterpreterIntroduction]]
 = JPyInterpreter Introduction
 // Redirect to this page from .../docs/jpyinterpreter/latest.
-:page-aliases: ../index.adoc
 :doctype: book
 :sectnums:
 :icons: font

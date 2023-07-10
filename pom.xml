@@ -49,7 +49,6 @@
     <module>jpyinterpreter</module>
     <module>optapy-core</module>
     <module>optapy-docs</module>
-    <module>jpyinterpreter-docs</module>
   </modules>
 
   <repositories>

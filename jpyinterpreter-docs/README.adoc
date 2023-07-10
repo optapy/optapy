@@ -1,3 +1,0 @@
-= JPyInterpreter Developer Documentation
-
-This module contains the sources for JPyInterpreter Developer Guide.

@@ -30,6 +30,7 @@
     -->
     <source.document.name>.index.adoc</source.document.name>
     <version.optapy>${project.python.version}</version.optapy>
+    <version.jpyinterpreter>${project.python.version}</version.jpyinterpreter>
   </properties>
 
   <build>
